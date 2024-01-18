@@ -29,14 +29,10 @@ class Command : public TCSObject {
       std::shared_ptr<data::order::DriverOrder>);
   void vehicle_execute_cb(bool);  // 车辆通知动作结果
   void run_once();
+  ~Command() { LOG(TRACE) << name << " ok"; }
 
  public:
   State state{State::INIT};
-  std::function<void()> done_cb;  // 通知车辆命令执行结束
-  std::function<void(std::shared_ptr<data::order::DriverOrder::Destination>)>
-      execute_action;  // 通知车辆执行动作
-  std::function<void(std::shared_ptr<data::order::Step>)>
-      execute_move;  // 通知车辆执行移动
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<driver::Vehicle> vehicle;
   std::shared_ptr<data::order::TransportOrder> order;

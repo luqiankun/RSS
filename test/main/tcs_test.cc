@@ -28,9 +28,8 @@ int main(int argc, const char** argv) {
   ops.push_back(op);
   ops2.push_back(op2);
   std::hash<std::string> hash_fn;
-  auto ord = tcs->dispatcher->new_orderseq(ops, hash_fn("test"));
-  auto ord2 = tcs->dispatcher->new_orderseq(ops2, hash_fn("test2"));
-  tcs->dispatcher->orderpool->orderpool.push_back(ord);
-  tcs->dispatcher->orderpool->orderpool.push_back(ord2);
+  tcs->dispatcher->add_task(ops, hash_fn("test"));
+  std::this_thread::sleep_for(std::chrono::microseconds(10));
+  tcs->dispatcher->add_task(ops2, hash_fn("test2"));
   std::cin.get();
 }

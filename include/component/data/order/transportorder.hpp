@@ -24,6 +24,13 @@ class TransportOrder : public TCSObject {
     FAILED,
     UNROUTABLE
   };
+  ~TransportOrder() {
+    if (state == State::BEING_PROCESSED) {
+      LOG(TRACE) << name << "not finished, now will be drop";
+    } else {
+      LOG(TRACE) << name << " drop";
+    }
+  }
 
  public:
   std::chrono::system_clock::time_point create_time;

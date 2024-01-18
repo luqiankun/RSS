@@ -9,11 +9,14 @@
 
 class TCS : public std::enable_shared_from_this<TCS> {
  public:
-  bool init_all(const std::string& xml_path, double r = 80);
+  bool init_all(const std::string& xml_path, double r = 30);
   bool init_resource(const std::string& xml_path);
   bool init_dispatcher();
   bool init_scheduler();
+  bool init_orderpool();
+
   void run();
+  ~TCS();
 
  public:
 #ifdef VISUAL
@@ -24,5 +27,6 @@ class TCS : public std::enable_shared_from_this<TCS> {
   std::shared_ptr<kernel::allocate::ResourceManager> resource;
   std::shared_ptr<kernel::schedule::Scheduler> scheduler;
   std::shared_ptr<kernel::dispatch::Dispatcher> dispatcher;
+  std::shared_ptr<kernel::allocate::OrderPool> orderpool;
 };
 #endif

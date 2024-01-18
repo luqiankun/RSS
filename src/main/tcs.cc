@@ -162,6 +162,7 @@ bool TCS::init_resource(const std::string &xml_path) {
     veh->current_point = resource->points.front();
     std::hash<std::string> hash_fn;
     veh->uuid = hash_fn(name);
+    veh->dispatcher = dispatcher;
     veh->run();
     dispatcher->vehicles.push_back(veh);
     vehicle = vehicle.next_sibling();
@@ -173,11 +174,23 @@ bool TCS::init_resource(const std::string &xml_path) {
   return true;
 }
 
+TCS::~TCS() {
+  LOG(INFO) << "stop";
+#ifdef VISUAL
+  visualizer->stop();
+#endif
+  dispatcher->stop();
+}
+
 bool TCS::init_dispatcher() {
   dispatcher = std::make_shared<kernel::dispatch::Dispatcher>("Dispatcher");
-  dispatcher->orderpool =
-      std::make_shared<kernel::allocate::OrderPool>("OrderPool");
+  dispatcher->orderpool = orderpool;
   LOG(INFO) << "init dispatcher ok";
+  return true;
+}
+bool TCS::init_orderpool() {
+  orderpool = std::make_shared<kernel::allocate::OrderPool>("OrderPool");
+  LOG(INFO) << "init orderpool ok";
   return true;
 }
 bool TCS::init_scheduler() {
@@ -192,6 +205,9 @@ bool TCS::init_visualizer(double resolution) {
 }
 #endif
 bool TCS::init_all(const std::string &xml_path, double r) {
+  if (!init_orderpool()) {
+    return false;
+  }
   if (!init_dispatcher()) {
     return false;
   }

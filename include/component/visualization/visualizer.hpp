@@ -9,15 +9,24 @@ class Visualizer {
   bool init(double resolution, std::shared_ptr<TCS>);
   void run();
   void update();
+  void stop() { dispose = true; }
+  ~Visualizer() {
+    stop();
+    if (th.joinable()) {
+      th.join();
+    }
+    LOG(TRACE) << "visual"
+               << " close";
+  }
 
  private:
   double resolution;
-  std::thread visual_th;
   cv::Mat map_view;
   cv::Mat vehicle_view;
   Eigen::Vector4i mat_limit;
   std::weak_ptr<TCS> tcs;
   std::thread th;
+  bool dispose{false};
 };
 }  // namespace visual
 

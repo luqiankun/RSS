@@ -9,10 +9,16 @@ class DriverOrder : public TCSObject {
  public:
   std::string get_cmd_name() {
     if (route->steps.empty()) {
-      return "[]";
+      return "->operation]";
     } else {
-      return "[" + route->current_step->name + "]" +
-             std::to_string((int)route->current_step->vehicle_orientation);
+      std::string msg;
+      if (route->current_step->vehicle_orientation ==
+          Step::Orientation::FORWARD) {
+        msg = "->forward]";
+      } else {
+        msg = "->backward]";
+      }
+      return "[" + route->current_step->name + msg;
     }
   }
 

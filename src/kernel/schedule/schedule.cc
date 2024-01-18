@@ -9,9 +9,12 @@ namespace schedule {
 void Scheduler::run() {
   schedule_th = std::thread([&] {
     LOG(INFO) << this->name << " run....";
-    while (true) {
+    while (!dispose) {
       std::unique_lock<std::mutex> lock(mut);
-      con_var.wait(lock, [&] { return !commands.empty(); });
+      con_var.wait(lock, [&] { return !commands.empty() || dispose; });
+      if (dispose) {
+        break;
+      }
       for (auto it = commands.begin(); it != commands.end();) {
         if ((*it)->state == driver::Command::State::DISPOSABLE) {
           it = commands.erase(it);
@@ -20,7 +23,7 @@ void Scheduler::run() {
           it++;
         }
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   });
 }
@@ -35,15 +38,6 @@ void Scheduler::add_command(std::shared_ptr<driver::Command> cmd) {
 std::shared_ptr<driver::Command> Scheduler::new_command(
     std::shared_ptr<driver::Vehicle> v) {
   // TODO
-  if (!v->current_order) {
-    if (v->orders.empty()) {
-      LOG(WARNING) << "no ord there";
-      return nullptr;
-    } else {
-      v->current_order = v->orders.front();
-      v->orders.pop_front();
-    }
-  }
   if (!v->current_order) {
     LOG(WARNING) << "no ord there";
     return nullptr;
@@ -60,13 +54,6 @@ std::shared_ptr<driver::Command> Scheduler::new_command(
   cmd->vehicle = v;
   cmd->order = v->current_order;
   cmd->scheduler = shared_from_this();
-  cmd->done_cb = std::bind(&driver::Vehicle::command_done, v);
-  cmd->execute_action =
-      std::bind(&driver::Vehicle::execute_action, v, std::placeholders::_1);
-  cmd->execute_move =
-      std::bind(&driver::Vehicle::execute_move, v, std::placeholders::_1);
-  v->notify_result = std::bind(&driver::Command::vehicle_execute_cb, cmd,
-                               std::placeholders::_1);
   return cmd;
 }
 }  // namespace schedule

@@ -6,6 +6,8 @@ namespace kernel {
 namespace allocate {
 class OrderPool : public TCSObject {
  public:
+  ~OrderPool() { LOG(INFO) << name << " close"; }
+
  public:
   using TCSObject::TCSObject;
   std::deque<std::shared_ptr<data::order::TransportOrder>> orderpool;

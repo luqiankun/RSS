@@ -12,6 +12,7 @@ namespace allocate {
 class ResourceManager : public TCSObject {
  public:
   using TCSObject::TCSObject;
+  ~ResourceManager() { LOG(INFO) << name << " close"; }
   bool allocate(const std::vector<std::shared_ptr<TCSResource>>&,
                 const std::shared_ptr<schedule::Client>&);
   bool claim(const std::vector<std::shared_ptr<TCSResource>>&,

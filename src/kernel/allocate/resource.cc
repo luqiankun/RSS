@@ -34,10 +34,13 @@ bool ResourceManager::allocate(
 bool ResourceManager::claim(
     const std::vector<std::shared_ptr<TCSResource> >& res,
     const std::shared_ptr<schedule::Client>& client) {
+  std::stringstream ss;
+  ss << client->name << " claim ";
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
     for (auto& p : points) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
+        ss << p->name << " ";
         auto it = p->owner.lock();
         if (!it || it == client) {
           p->owner = client;
@@ -57,6 +60,7 @@ bool ResourceManager::claim(
     }
     for (auto& p : paths) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
+        ss << p->name << " ";
         auto it = p->owner.lock();
         if (!it || it == client) {
           p->owner = client;
@@ -76,6 +80,7 @@ bool ResourceManager::claim(
     }
     for (auto& p : locations) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
+        ss << p->name << " ";
         auto it = p->owner.lock();
         if (!it || it == client) {
           p->owner = client;
@@ -94,6 +99,7 @@ bool ResourceManager::claim(
       }
     }
   }
+  LOG(INFO) << ss.str();
   return true;
 }
 

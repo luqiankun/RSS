@@ -1,6 +1,8 @@
 
 #include "../../../include/kernel/driver/vehicle.hpp"
 
+#include "../../../include/kernel/dispatch/dispatch.hpp"
+
 namespace kernel {
 namespace driver {
 void Vehicle::execute_action(
@@ -16,9 +18,7 @@ void Vehicle::execute_action(
     }
     LOG(INFO) << current_order->name << " action : "
               << " ok";
-    if (notify_result) {
-      notify_result(op_ret);
-    }
+    current_command->vehicle_execute_cb(op_ret);
   });
 }
 void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
@@ -33,30 +33,80 @@ void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
     }
     LOG(INFO) << current_order->name << " move : " << step->name.c_str()
               << " ok";
-    if (notify_result) {
-      notify_result(move_ret);
-    }
+    current_command->vehicle_execute_cb(move_ret);
   });
 }
 void Vehicle::run() {
   run_th = std::thread([&] {
 #if BOOST_VERSION > 107001
     boost::asio::executor_work_guard<io_service_type::executor_type> work =
-        boost::asio::make_work_guard(ctx);
+        boost::asio::make_work_guard(*ctx);
 #else
-    boost::asio::io_service::work w(*(io_context.get()));
+    boost::asio::io_service::work w(*ctx));
 #endif
-    io_service_type::strand st(ctx);
-    strand = std::shared_ptr<io_service_type::strand>(&st);
     try {
-      ctx.run();
+      ctx->run();
     } catch (boost::system::error_code& ec) {
       LOG(ERROR) << "client err " << ec.message() << "\n";
     }
+    // LOG(TRACE) << name << " stop";
   });
 }
+void Vehicle::close() {
+  if (!ctx->stopped()) {
+    ctx->stop();
+  }
+  if (run_th.joinable()) {
+    run_th.join();
+  }
+  current_command.reset();
+}
+Vehicle::~Vehicle() {
+  close();
+  LOG(TRACE) << name << " close";
+}
 
-Vehicle::~Vehicle() { ctx.stop(); }
+void Vehicle::plan_route() {
+  // TODO  solver
+  auto start_planner = current_point;
+  std::shared_ptr<data::model::Point> end_planner;
+  for (auto& op : current_order->driverorders) {
+    auto dest = op->destination->destination.lock();
+    auto start_check = dispatcher.lock()->find(dest->name);
+    auto destination = dispatcher.lock()->res_to_destination(
+        start_check.second, op->destination->operation);
+    op->destination = destination;
+    bool able{false};
+    if (start_check.first == kernel::dispatch::Dispatcher::ResType::Point) {
+      end_planner =
+          std::dynamic_pointer_cast<data::model::Point>(start_check.second);
+    } else if (start_check.first ==
+               kernel::dispatch::Dispatcher::ResType::Location) {
+      end_planner =
+          std::dynamic_pointer_cast<data::model::Location>(start_check.second)
+              ->link.lock();
+    }
+    if (!end_planner) {
+      current_order->state = data::order::TransportOrder::State::UNROUTABLE;
+      LOG(WARNING) << current_order->name << " can not find obj";
+    }
+    auto path =
+        dispatcher.lock()->planner->find_paths(start_planner, end_planner);
+    if (path.empty()) {
+      current_order->state = data::order::TransportOrder::State::UNROUTABLE;
+      LOG(WARNING) << current_order->name << " can not routable";
+    } else {
+      auto driverorder = dispatcher.lock()->route_to_driverorder(
+          dispatcher.lock()->paths_to_route(path.front()), destination);
+      driverorder->transport_order = current_order;
+      op = driverorder;
+      able = true;
+    }
+    if (!able) {
+      current_order->state = data::order::TransportOrder::State::UNROUTABLE;
+    }
+  }
+}
 
 void Vehicle::command_done() {
   // 完成step or action
@@ -71,8 +121,8 @@ void Vehicle::command_done() {
     current_order->state = data::order::TransportOrder::State::FINISHED;
     LOG(INFO) << current_order->name << " finished";
     current_order->finished_time = std::chrono::system_clock::now();
-    current_order = nullptr;
-    current_command = nullptr;
+    current_order.reset();
+    current_command.reset();
     // 获取新订单
     for (;;) {
       if (orders.empty()) {
@@ -81,18 +131,18 @@ void Vehicle::command_done() {
         break;
       } else {
         current_order = orders.front();
+        // TODO  solver
+        plan_route();
         orders.pop_front();
         if (current_order->state !=
-            data::order::TransportOrder::State::DISPATCHABLE) {
-          current_order = nullptr;
+            data::order::TransportOrder::State::BEING_PROCESSED) {
+          current_order.reset();
         } else {
           break;
         }
       }
     }
     if (current_order) {
-      current_order->state =
-          data::order::TransportOrder::State::BEING_PROCESSED;
       state = State::EXECUTING;
       proc_state = ProcState::PROCESSING_ORDER;
       next_command();
@@ -110,9 +160,22 @@ void Vehicle::command_done() {
 }
 
 void Vehicle::next_command() {
-  current_command = scheduler->new_command(shared_from_this());
+  if (!current_order) {
+    if (orders.empty()) {
+      return;
+    } else {
+      current_order = orders.front();
+      // TODO  solver
+      plan_route();
+      orders.pop_front();
+    }
+  }
+  if (!current_order) {
+    return;
+  }
+  current_command = scheduler.lock()->new_command(shared_from_this());
   // run
-  scheduler->add_command(current_command);
+  scheduler.lock()->add_command(current_command);
 }
 void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
   LOG(INFO) << name << " receive new order " << order->name;
@@ -135,7 +198,6 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
 bool SimVehicle::action(
     std::shared_ptr<data::order::DriverOrder::Destination> dest) {
   if (dest->operation == data::order::DriverOrder::Destination::OpType::NOP) {
-    LOG(INFO) << "action |";
     auto t = std::dynamic_pointer_cast<data::model::Location>(
         dest->destination.lock());
     position.x() = t->link.lock()->pose.x();
@@ -190,7 +252,6 @@ bool SimVehicle::action(
 }
 
 bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
-  LOG(INFO) << "move |";
   if (!step->path) {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(step->wait_time / rate));

@@ -12,7 +12,7 @@ std::shared_ptr<data::order::Route> Dispatcher::paths_to_route(
   auto res = std::make_shared<data::order::Route>(route_name);
   int index{0};
   for (auto it = ps.begin(); it != ps.end() - 1; it++) {
-    for (auto& x : resource->paths) {
+    for (auto& x : resource.lock()->paths) {
       if (x->source_point.lock() == *it &&
           x->destination_point.lock() == *(it + 1)) {
         auto step = std::make_shared<data::order::Step>(x->name);
@@ -52,14 +52,14 @@ std::shared_ptr<data::order::DriverOrder> Dispatcher::route_to_driverorder(
 std::pair<Dispatcher::ResType, std::shared_ptr<TCSResource>> Dispatcher::find(
     const std::string& name) {
   std::shared_ptr<TCSResource> res;
-  for (auto& p : resource->points) {
+  for (auto& p : resource.lock()->points) {
     if (p->name == name) {
       res = p;
       return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Point,
                                                               res);
     }
   }
-  for (auto& l : resource->locations) {
+  for (auto& l : resource.lock()->locations) {
     if (l->name == name) {
       res = l;
       return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Location,
@@ -69,8 +69,8 @@ std::pair<Dispatcher::ResType, std::shared_ptr<TCSResource>> Dispatcher::find(
   return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Err, res);
 }
 
-std::shared_ptr<data::order::TransportOrder> Dispatcher::new_orderseq(
-    std::vector<Oper> oper, size_t uuid, int strategy) {
+void Dispatcher::add_task(std::vector<Oper> ops, std::size_t uuid,
+                          int strategy) {
   auto time = std::chrono::system_clock::now();
   std::shared_ptr<data::order::TransportOrder> ord =
       std::make_shared<data::order::TransportOrder>("transorder_" +
@@ -79,90 +79,36 @@ std::shared_ptr<data::order::TransportOrder> Dispatcher::new_orderseq(
   ord->create_time = time;
   ord->state = data::order::TransportOrder::State::RAW;
   LOG(INFO) << "new ord " << ord->name << " uuid " << ord->uuid;
-  if (oper.empty()) {
+  if (ops.empty()) {
     LOG(WARNING) << ord->name << " op is null";
     ord->state = data::order::TransportOrder::State::FAILED;
-    return ord;
-  }
-  auto start_check = find(std::get<0>(oper.front()));
-  if (start_check.first == ResType::Err) {
-    ord->state = data::order::TransportOrder::State::FAILED;
-    return ord;
-  }
-  std::shared_ptr<data::model::Point> start;
-  if (start_check.first == ResType::Point) {
-    start = std::dynamic_pointer_cast<data::model::Point>(start_check.second);
-  } else if (start_check.first == ResType::Location) {
-    start = std::dynamic_pointer_cast<data::model::Location>(start_check.second)
-                ->link.lock();
-  }
-  std::shared_ptr<driver::Vehicle> vehicle;
-  if (strategy >= 0) {
-    for (auto& v : vehicles) {
-      if (v->uuid == strategy) {
-        vehicle = v;
+    orderpool.lock()->ended_orderpool.push_back(ord);
+  } else {
+    for (auto& op : ops) {
+      auto dest = std::get<0>(op);
+      auto op_type = std::get<1>(op);
+      auto dest_check = find(dest);
+      if (dest_check.first == ResType::Err) {
+        ord->state = data::order::TransportOrder::State::UNROUTABLE;
+        orderpool.lock()->ended_orderpool.push_back(ord);
+        return;
+      }
+      auto destination = res_to_destination(dest_check.second, op_type);
+      auto dr =
+          std::make_shared<data::order::DriverOrder>("driverorder_" + dest);
+      dr->destination = destination;
+      dr->transport_order = ord;
+      ord->driverorders.push_back(dr);
+    }
+    if (strategy >= 0) {
+      for (auto& v : vehicles) {
+        if (v->uuid == uuid) {
+          ord->intended_vehicle = v;
+        }
       }
     }
-  } else {
-    LOG(INFO) << "will find vehicle";
-    vehicle = select_vehicle(start);
+    orderpool.lock()->orderpool.push_back(ord);
   }
-  if (!vehicle) {
-    ord->state = data::order::TransportOrder::State::FAILED;
-    LOG(WARNING) << ord->name << " vehicle null ";
-    return ord;
-  }
-  ord->intended_vehicle = vehicle;
-  LOG(INFO) << "intended_vehicle " << vehicle->name;
-  //
-  auto start_planner = vehicle->current_point;
-  std::shared_ptr<data::model::Point> end_planner;
-  for (auto& op : oper) {
-    auto dest = std::get<0>(op);
-    LOG(INFO) << dest;
-    auto op_type = std::get<1>(op);
-    // dest
-    start_check = find(dest);
-    auto destination = res_to_destination(start_check.second, op_type);
-    bool able{false};
-    // point
-    auto obj_point = find(dest);
-    if (obj_point.first == ResType::Point) {
-      end_planner =
-          std::dynamic_pointer_cast<data::model::Point>(obj_point.second);
-    } else if (obj_point.first == ResType::Location) {
-      end_planner =
-          std::dynamic_pointer_cast<data::model::Location>(obj_point.second)
-              ->link.lock();
-    }
-    if (!end_planner) {
-      ord->state = data::order::TransportOrder::State::UNROUTABLE;
-      LOG(WARNING) << ord->name << " can not find obj";
-      return ord;
-    }
-    // 路径
-    auto path = planner->find_paths(start_planner, end_planner);
-    if (path.empty()) {
-      ord->state = data::order::TransportOrder::State::UNROUTABLE;
-      LOG(WARNING) << ord->name << " can not routable";
-      return ord;
-    } else {
-      auto driverorder =
-          route_to_driverorder(paths_to_route(path.front()), destination);
-      driverorder->transport_order = ord;
-      ord->driverorders.push_back(driverorder);
-      able = true;
-    }
-
-    if (!able) {
-      ord->state = data::order::TransportOrder::State::UNROUTABLE;
-      return ord;
-    }
-    // next
-    start_planner = end_planner;
-  }
-  LOG(INFO) << ord->name << " init ok";
-  return ord;
 }
 
 std::shared_ptr<data::order::DriverOrder::Destination>
@@ -181,21 +127,39 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
   if (vehicles.empty()) {
     return nullptr;
   }
-  std::vector<std::shared_ptr<driver::Vehicle>> idle_temp;
-  std::vector<std::shared_ptr<driver::Vehicle>> busy_temp;
-  std::vector<std::shared_ptr<driver::Vehicle>> charge_temp;
+  std::vector<std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>>>
+      idle_temp;
+  std::vector<std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>>>
+      busy_temp;
+  std::vector<std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>>>
+      charge_temp;
 
   for (auto& v : vehicles) {
+    Eigen::Vector2i v_pos{0, 0};
+    v_pos.x() = v->position.x();
+    v_pos.y() = v->position.y();
     // if (v->state == driver::Vehicle::State::IDLE &&
     //     v->proc_state == driver::Vehicle::ProcState::AWAITING_ORDER) {
     if (v->state == driver::Vehicle::State::IDLE) {
       if (!v->paused) {
-        idle_temp.push_back(v);
+        idle_temp.push_back(std::pair(v_pos, v));
       }
     } else if (v->state == driver::Vehicle::State::EXECUTING) {
-      busy_temp.push_back(v);
+      auto dest = v->orders.back()
+                      ->driverorders.back()
+                      ->destination->destination.lock();
+      auto dest_check = find(dest->name);
+      if (dest_check.first == ResType::Point) {
+        auto p = std::dynamic_pointer_cast<data::model::Point>(dest);
+        v_pos = p->pose;
+      } else {
+        auto p =
+            std::dynamic_pointer_cast<data::model::Location>(dest)->link.lock();
+        v_pos = p->pose;
+      }
+      busy_temp.push_back(std::pair(v_pos, v));
     } else if (v->state == driver::Vehicle::State::CHARGING) {
-      charge_temp.push_back(v);
+      charge_temp.push_back(std::pair(v_pos, v));
     }
   }
   if (idle_temp.empty()) {
@@ -205,40 +169,36 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
       } else {
         std::sort(
             charge_temp.begin(), charge_temp.end(),
-            [=](const std::shared_ptr<driver::Vehicle>& a,
-                const std::shared_ptr<driver::Vehicle>& b) {
-              auto dis_a = Eigen::Vector2i(a->position.x(), a->position.y()) -
-                           start->pose;
-              auto dis_b = Eigen::Vector2i(b->position.x(), b->position.y()) -
-                           start->pose;
+            [=](std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>> a,
+                std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>>
+                    b) {
+              auto dis_a = start->pose - a.first;
+              auto dis_b = start->pose - b.first;
               return dis_a.norm() < dis_b.norm();
             });
-        return charge_temp.front();
+        return charge_temp.front().second;
       }
     } else {
       std::sort(
-          busy_temp.begin(), busy_temp.end(),
-          [=](const std::shared_ptr<driver::Vehicle>& a,
-              const std::shared_ptr<driver::Vehicle>& b) {
-            auto dis_a =
-                Eigen::Vector2i(a->position.x(), a->position.y()) - start->pose;
-            auto dis_b =
-                Eigen::Vector2i(b->position.x(), b->position.y()) - start->pose;
+          charge_temp.begin(), charge_temp.end(),
+          [=](std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>> a,
+              std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>> b) {
+            auto dis_a = start->pose - a.first;
+            auto dis_b = start->pose - b.first;
             return dis_a.norm() < dis_b.norm();
           });
-      return busy_temp.front();
+      return busy_temp.front().second;
     }
   } else {
-    std::sort(idle_temp.begin(), idle_temp.end(),
-              [=](const std::shared_ptr<driver::Vehicle>& a,
-                  const std::shared_ptr<driver::Vehicle>& b) {
-                auto dis_a = Eigen::Vector2i(a->position.x(), a->position.y()) -
-                             start->pose;
-                auto dis_b = Eigen::Vector2i(b->position.x(), b->position.y()) -
-                             start->pose;
-                return dis_a.norm() < dis_b.norm();
-              });
-    return idle_temp.front();
+    std::sort(
+        charge_temp.begin(), charge_temp.end(),
+        [=](std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>> a,
+            std::pair<Eigen::Vector2i, std::shared_ptr<driver::Vehicle>> b) {
+          auto dis_a = start->pose - a.first;
+          auto dis_b = start->pose - b.first;
+          return dis_a.norm() < dis_b.norm();
+        });
+    return idle_temp.front().second;
   }
 }
 
@@ -283,17 +243,13 @@ std::shared_ptr<driver::Vehicle> Dispatcher::find_owner(
   return nullptr;
 }
 
-void Dispatcher::cancel_vehicle_order(size_t order_uuid) {
-  for (auto& v : vehicles) {
-    for (auto& ord : v->orders) {
-      if (ord->uuid == order_uuid) {
-        ord->state = data::order::TransportOrder::State::WITHDRAWN;
-      }
+void Dispatcher::cancel_order(size_t order_uuid) {
+  for (auto& x : orderpool.lock()->orderpool) {
+    if (x->uuid == order_uuid) {
+      x->state = data::order::TransportOrder::State::WITHDRAWN;
     }
   }
-}
-void Dispatcher::cancel_order(size_t order_uuid) {
-  for (auto& x : orderpool->orderpool) {
+  for (auto& x : orderpool.lock()->ended_orderpool) {
     if (x->uuid == order_uuid) {
       x->state = data::order::TransportOrder::State::WITHDRAWN;
     }
@@ -308,13 +264,28 @@ void Dispatcher::cancel_vehicle_all_order(size_t vehicle_uuid) {
   }
 }
 
+void Dispatcher::stop() {
+  for (auto& v : vehicles) {
+    v->close();
+  }
+  dispose = true;
+}
+
+Dispatcher::~Dispatcher() {
+  stop();
+  if (dispatch_th.joinable()) {
+    dispatch_th.join();
+  }
+  LOG(TRACE) << name << " close";
+}
+
 void Dispatcher::dispatch_once() {
-  if (orderpool->orderpool.empty()) {
+  if (orderpool.lock()->orderpool.empty()) {
     return;
   } else {
-    auto current = orderpool->orderpool.front();
-    orderpool->ended_orderpool.push_back(current);
-    orderpool->orderpool.pop_front();
+    auto current = orderpool.lock()->orderpool.front();
+    orderpool.lock()->ended_orderpool.push_back(current);
+    orderpool.lock()->orderpool.pop_front();
     LOG(INFO) << current->name << " status: raw";
     if (current->state == data::order::TransportOrder::State::RAW) {
       // TODO
@@ -330,14 +301,33 @@ void Dispatcher::dispatch_once() {
       // TODO
       auto v = current->intended_vehicle.lock();
       if (v) {
-        //
+        // 订单指定了车辆
         current->state = data::order::TransportOrder::State::DISPATCHABLE;
         LOG(INFO) << current->name << " status: dispatchable";
 
       } else {
-        //
-        current->state = data::order::TransportOrder::State::FAILED;
-        LOG(INFO) << current->name << " status: failed";
+        // 自动分配车辆
+        auto dest = current->driverorders[current->current_driver_index]
+                        ->destination->destination.lock();
+        auto dest_check = find(dest->name);
+        std::shared_ptr<data::model::Point> start;
+        if (dest_check.first == ResType::Point) {
+          start =
+              std::dynamic_pointer_cast<data::model::Point>(dest_check.second);
+        } else if (dest_check.first == ResType::Location) {
+          start = std::dynamic_pointer_cast<data::model::Location>(
+                      dest_check.second)
+                      ->link.lock();
+        }
+        auto v = select_vehicle(start);
+        if (v) {
+          current->intended_vehicle = v;
+          current->state = data::order::TransportOrder::State::DISPATCHABLE;
+          LOG(INFO) << current->name << " status: dispatchable";
+        } else {
+          current->state = data::order::TransportOrder::State::FAILED;
+          LOG(INFO) << current->name << " status: failed";
+        }
       }
     }
     if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
@@ -364,17 +354,20 @@ void Dispatcher::dispatch_once() {
   }
 }
 void Dispatcher::brake_deadlock(
-    std::vector<std::vector<std::shared_ptr<driver::Vehicle>>>) {
+    std::vector<std::vector<std::shared_ptr<driver::Vehicle>>> d_loop) {
   // TODO
+  if (!d_loop.empty()) {
+    LOG(WARNING) << "there has deadlock";
+  }
 }
 
 void Dispatcher::run() {
   dispatch_th = std::thread([&] {
     LOG(INFO) << this->name << " run....";
-    while (true) {
+    while (!dispose) {
       dispatch_once();
       brake_deadlock(deadlock_loop());
-      std::this_thread::sleep_for(std::chrono::milliseconds(300));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   });
 }

@@ -21,13 +21,23 @@ class Scheduler : public TCSObject,
       std::shared_ptr<driver::Vehicle>);
   void add_command(std::shared_ptr<driver::Command>);
   void run();
+  ~Scheduler() {
+    commands.clear();
+    dispose = true;
+    con_var.notify_all();
+    if (schedule_th.joinable()) {
+      schedule_th.join();
+    }
+    LOG(TRACE) << name << " close";
+  }
 
  public:
   std::list<std::shared_ptr<driver::Command>> commands;
-  std::shared_ptr<allocate::ResourceManager> res;
+  std::weak_ptr<allocate::ResourceManager> res;
   std::thread schedule_th;
   std::condition_variable con_var;
   std::mutex mut;
+  bool dispose{false};
 };
 }  // namespace schedule
 }  // namespace kernel

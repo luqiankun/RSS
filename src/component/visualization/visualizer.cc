@@ -69,7 +69,7 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
     // LOG(INFO) << p_x << " " << p_y;
     cv::putText(mat, x->name, cv::Point2i(p_x + 5, p_y + 20),
                 cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
-                cv::Scalar(90, 90, 90));
+                cv::Scalar(90, 90, 90), 1, cv::LINE_AA);
     cv::circle(mat, cv::Point2i(p_x, p_y), 3, cv::Scalar(0, 0, 0), 1,
                cv::LINE_AA);
   }
@@ -97,13 +97,13 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
                     cv::Point2i(be_x + line.normalized().x() * 6,
                                 be_y + line.normalized().y() * 6),
                     cv::Point2i(be_x + norm_line.x(), be_y + norm_line.y()),
-                    cv::Scalar(90, 90, 90), 1, 8, 0, tip);
+                    cv::Scalar(90, 90, 90), 1, cv::LINE_AA, 0, tip);
     if (x->max_reverse_vel > 0) {
       cv::arrowedLine(mat,
                       cv::Point2i(be_x + norm_line.x(), be_y + norm_line.y()),
                       cv::Point2i(be_x + line.normalized().x() * 6,
                                   be_y + line.normalized().y() * 6),
-                      cv::Scalar(40, 90, 50), 1, 8, 0, tip);
+                      cv::Scalar(40, 90, 50), 1, cv::LINE_AA, 0, tip);
     }
   }
 
@@ -115,10 +115,11 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
                               (x->layout.y() - mat_limit.z()) / resolution);
     cv::putText(mat, x->name, cv::Point2i(p_x - 30, p_y - 22),
                 cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
-                cv::Scalar(90, 90, 90));
+                cv::Scalar(90, 90, 90), 1, cv::LINE_AA);
     cv::rectangle(mat, cv::Rect(p_x - 14, p_y - 10, 28, 20),
-                  cv::Scalar(10, 20, 20), 1, 8, 0);
-    cv::circle(mat, cv::Point2i(p_x, p_y), 3, cv::Scalar(70, 70, 70), 1, 16);
+                  cv::Scalar(10, 20, 20), 1, cv::LINE_AA, 0);
+    cv::circle(mat, cv::Point2i(p_x, p_y), 3, cv::Scalar(70, 70, 70), 1,
+               cv::LINE_AA);
 
     if (x->link.lock()) {
       auto link_x = static_cast<uint32_t>(
@@ -131,16 +132,16 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
       int step_y = (static_cast<int>(link_y) - static_cast<int>(p_y)) / 8;
       cv::line(mat, cv::Point2i(p_x, p_y),
                cv::Point2i(p_x + step_x, p_y + step_y), cv::Scalar(10, 40, 230),
-               1, 8, 0);
+               1, cv::LINE_AA, 0);
       cv::line(mat, cv::Point2i(p_x + 2 * step_x, p_y + 2 * step_y),
                cv::Point2i(p_x + 3 * step_x, p_y + 3 * step_y),
-               cv::Scalar(10, 40, 230), 1, 8, 0);
+               cv::Scalar(10, 40, 230), 1, cv::LINE_AA, 0);
       cv::line(mat, cv::Point2i(p_x + 4 * step_x, p_y + 4 * step_y),
                cv::Point2i(p_x + 5 * step_x, p_y + 5 * step_y),
-               cv::Scalar(10, 40, 230), 1, 8, 0);
+               cv::Scalar(10, 40, 230), 1, cv::LINE_AA, 0);
       cv::line(mat, cv::Point2i(p_x + 6 * step_x, p_y + 6 * step_y),
                cv::Point2i(p_x + 7 * step_x, p_y + 7 * step_y),
-               cv::Scalar(10, 40, 230), 1, 8, 0);
+               cv::Scalar(10, 40, 230), 1, cv::LINE_AA, 0);
     }
   }
   // axis label
@@ -149,34 +150,34 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
   int len_x = mat.cols - 30 - 50;
   int len_y = mat.rows - 30 - 50;
   cv::circle(mat, cv::Point2i(label_x, label_y), 5, cv::Scalar(0, 0, 255), 1,
-             16, 0);
+             cv::LINE_AA, 0);
   cv::arrowedLine(mat, cv::Point2i(label_x, label_y),
                   cv::Point2i(label_x, label_y - len_y), cv::Scalar(10, 40, 80),
-                  1, 8, 0, 0.01);
+                  1, cv::LINE_AA, 0, 0.01);
   cv::arrowedLine(mat, cv::Point2i(label_x, label_y),
                   cv::Point2i(label_x + len_x, label_y), cv::Scalar(10, 40, 80),
-                  1, 8, 0, 0.01);
+                  1, cv::LINE_AA, 0, 0.01);
   int step = 50;
   for (int i = 0; i < mat.cols / step; i++) {
     int label_real_x =
         static_cast<int>((label_x + step * i) * resolution) + mat_limit.x();
     cv::line(mat, cv::Point2i(label_x + step * i, label_y),
              cv::Point2i(label_x + step * i, label_y - 5),
-             cv::Scalar(10, 40, 80), 1, 8, 0);
+             cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
     cv::putText(mat, std::to_string(label_real_x),
-                cv::Point2i(label_x + step * i - 9, label_y + 13), 1, 0.5,
-                cv::Scalar(10, 10, 80), true);
+                cv::Point2i(label_x + step * i - 9, label_y + 13), 1, 0.2,
+                cv::Scalar(10, 10, 80), 1, cv::LINE_AA);
   }
   for (int i = 0; i < mat.rows / step; i++) {
     int label_real_y =
         static_cast<int>((mat.rows - (label_y - step * i)) * resolution) +
         mat_limit.z();
     cv::putText(mat, std::to_string(label_real_y),
-                cv::Point2i(label_x + 5, label_y - step * i - 5), 1, 0.5,
-                cv::Scalar(10, 10, 80), true);
+                cv::Point2i(label_x + 5, label_y - step * i - 5), 1, 0.2,
+                cv::Scalar(10, 10, 80), true, cv::LINE_AA);
     cv::line(mat, cv::Point2i(label_x, label_y - step * i),
              cv::Point2i(label_x + 5, label_y - step * i),
-             cv::Scalar(10, 40, 80), 1, 8, 0);
+             cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
   }
   map_view = mat.clone();
   return true;
@@ -185,7 +186,7 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
 void Visualizer::run() {
   th = std::thread{[this] {
     namedWindow("TCS_VIEW", cv::WINDOW_NORMAL);
-    while (true) {
+    while (!dispose) {
       update();
       cv::Mat img = map_view.clone();
       cv::Mat mask;
@@ -196,16 +197,24 @@ void Visualizer::run() {
       cv::bitwise_not(map_view, img, mask);
       cv::add(img, vehicle_view, img);
       cv::imshow("TCS_VIEW", img);
-      if (cv::waitKey(500) == 27) {  // 如果用户按下 ESC 键，退出循环
-        cv::destroyAllWindows();
+      if (cv::waitKey(200) == 27) {  // 如果用户按下 ESC 键，退出循环
         break;
       }
     }
+    cv::destroyAllWindows();
+    cv::waitKey(1);
   }};
 }
 void Visualizer::update() {
+  if (!tcs.lock()) {
+    return;
+  }
   vehicle_view =
       cv::Mat(cv::Size(map_view.cols, map_view.rows), CV_8UC3, cv::Scalar(0));
+  if (!tcs.lock()) {
+    dispose = true;
+    return;
+  }
   for (auto &v : tcs.lock()->dispatcher->vehicles) {
     // 自身坐标系
     Eigen::Vector3i left_bottom = Eigen::Vector3i::Ones();
@@ -268,17 +277,17 @@ void Visualizer::update() {
     cv::line(
         vehicle_view, left_bottom_cv, right_bottom_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        2);
+        3, cv::LINE_AA);
     cv::line(
         vehicle_view, left_mid_cv, left_top_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        2);
+        3, cv::LINE_AA);
     cv::line(
         vehicle_view, right_mid_cv, right_top_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        2);
-    cv::putText(vehicle_view, v->name, left_bottom_cv, 1, 0.5,
-                cv::Scalar(10, 10, 80), true);
+        3, cv::LINE_AA);
+    cv::putText(vehicle_view, v->name, cv::Point2i(0, 9) + left_bottom_cv, 1,
+                0.7, cv::Scalar(10, 10, 80), 1, cv::LINE_AA, true);
 
     //
     // 路线
@@ -303,23 +312,23 @@ void Visualizer::update() {
               auto end_y = vehicle_view.rows -
                            static_cast<uint32_t>(
                                (end->pose.y() - mat_limit.z()) / resolution);
-              cv::circle(vehicle_view, cv::Point2i(beg_x, beg_y), 3,
-                         cv::Scalar(0, 0, 139), 2, cv::LINE_AA);
-              cv::circle(vehicle_view, cv::Point2i(end_x, end_y), 3,
-                         cv::Scalar(0, 0, 139), 2, cv::LINE_AA);
-              double arrowed_len = 10;
+              cv::circle(vehicle_view, cv::Point2i(beg_x, beg_y), 5,
+                         cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
+              cv::circle(vehicle_view, cv::Point2i(end_x, end_y), 5,
+                         cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
+              double arrowed_len = 12;
               if (dr->route->current_step->vehicle_orientation ==
                   data::order::Step::Orientation::FORWARD) {
                 cv::arrowedLine(
                     vehicle_view, cv::Point2i(beg_x, beg_y),
-                    cv::Point2i(end_x, end_y), cv::Scalar(0, 0, 137), 2, 8, 0,
+                    cv::Point2i(end_x, end_y), cv::Scalar(0, 0, 137), 5, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               } else if (dr->route->current_step->vehicle_orientation ==
                          data::order::Step::Orientation::BACKWARD) {
                 cv::arrowedLine(
                     vehicle_view, cv::Point2i(end_x, end_y),
-                    cv::Point2i(beg_x, beg_y), cv::Scalar(0, 0, 137), 2, 8, 0,
+                    cv::Point2i(beg_x, beg_y), cv::Scalar(0, 0, 137), 5, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               }
@@ -340,22 +349,28 @@ void Visualizer::update() {
                            static_cast<uint32_t>(
                                (end->pose.y() - mat_limit.z()) / resolution);
               cv::circle(vehicle_view, cv::Point2i(beg_x, beg_y), 3,
-                         cv::Scalar(0, 0, 139), 2, cv::LINE_AA);
+                         cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
               cv::circle(vehicle_view, cv::Point2i(end_x, end_y), 3,
-                         cv::Scalar(0, 0, 139), 2, cv::LINE_AA);
+                         cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
               double arrowed_len = 10;
               if (path->vehicle_orientation ==
                   data::order::Step::Orientation::FORWARD) {
                 cv::arrowedLine(
                     vehicle_view, cv::Point2i(beg_x, beg_y),
-                    cv::Point2i(end_x, end_y), cv::Scalar(0, 0, 137), 2, 8, 0,
+                    cv::Point2i(end_x, end_y),
+                    cv::Scalar(std::get<2>(color), std::get<1>(color),
+                               std::get<0>(color)),
+                    5, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               } else if (path->vehicle_orientation ==
                          data::order::Step::Orientation::BACKWARD) {
                 cv::arrowedLine(
                     vehicle_view, cv::Point2i(end_x, end_y),
-                    cv::Point2i(beg_x, beg_y), cv::Scalar(0, 0, 137), 2, 8, 0,
+                    cv::Point2i(beg_x, beg_y),
+                    cv::Scalar(std::get<2>(color), std::get<1>(color),
+                               std::get<0>(color)),
+                    5, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               }
@@ -377,7 +392,7 @@ void Visualizer::update() {
                   static_cast<uint32_t>(
                       (loction->position.y() - mat_limit.z()) / resolution);
               cv::rectangle(vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(10, 20, 255), 3, 8, 0);
+                            cv::Scalar(10, 20, 255), 4, cv::LINE_AA, 0);
             } else if (dr->destination->operation ==
                        data::order::DriverOrder::Destination::OpType::LOAD) {
               // TODO
@@ -391,7 +406,7 @@ void Visualizer::update() {
                   static_cast<uint32_t>(
                       (loction->position.y() - mat_limit.z()) / resolution);
               cv::rectangle(vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(10, 20, 255), 3, 8, 0);
+                            cv::Scalar(10, 20, 255), 4, cv::LINE_AA, 0);
             } else if (dr->destination->operation ==
                        data::order::DriverOrder::Destination::OpType::UNLOAD) {
               // TODO
@@ -405,7 +420,7 @@ void Visualizer::update() {
                   static_cast<uint32_t>(
                       (loction->position.y() - mat_limit.z()) / resolution);
               cv::rectangle(vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(10, 20, 255), 3, 8, 0);
+                            cv::Scalar(10, 20, 255), 4, cv::LINE_AA, 0);
             }
           }
         }

@@ -22,9 +22,8 @@ class Dispatcher : public TCSObject {
   std::shared_ptr<data::order::DriverOrder> route_to_driverorder(
       std::shared_ptr<data::order::Route>,
       std::shared_ptr<data::order::DriverOrder::Destination>);
-  std::shared_ptr<data::order::TransportOrder> new_orderseq(
-      std::vector<Oper>, std::size_t uuid,
-      int strategy = -1);  // strategy<0 自动  >=0 指定执行端
+  void add_task(std::vector<Oper> ops, std::size_t uuid,
+                int strategy = -1);  // strategy<0 自动  >=0 指定执行端
   std::shared_ptr<driver::Vehicle> select_vehicle(
       std::shared_ptr<data::model::Point>);
   std::shared_ptr<driver::Vehicle> find_owner(
@@ -35,17 +34,19 @@ class Dispatcher : public TCSObject {
       std::vector<std::vector<std::shared_ptr<driver::Vehicle>>>);  // 解锁
   void dispatch_once();
   void add_vehicle(const std::string& type, const std::string& name);
-  void cancel_vehicle_order(size_t order_uuid);  // 已分配未下发的订单
-  void cancel_order(size_t order_uuid);          // 未分配的订单
+  void cancel_order(size_t order_uuid);                // 未分配的订单
   void cancel_vehicle_all_order(size_t vehicle_uuid);  // 已分配未下发的所有订单
   void run();
+  void stop();
+  ~Dispatcher();
 
  public:
-  std::shared_ptr<allocate::ResourceManager> resource;
+  std::weak_ptr<allocate::ResourceManager> resource;
   std::vector<std::shared_ptr<driver::Vehicle>> vehicles;
   std::shared_ptr<planner::Planner> planner;
-  std::shared_ptr<allocate::OrderPool> orderpool;
+  std::weak_ptr<allocate::OrderPool> orderpool;
   std::thread dispatch_th;
+  bool dispose{false};
 };
 }  // namespace dispatch
 }  // namespace kernel
