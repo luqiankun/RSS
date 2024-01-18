@@ -1,0 +1,73 @@
+
+#include "../../../include/kernel/schedule/schedule.hpp"
+
+#include "../../../include/kernel/driver/command.hpp"
+#include "../../../include/kernel/driver/vehicle.hpp"
+
+namespace kernel {
+namespace schedule {
+void Scheduler::run() {
+  schedule_th = std::thread([&] {
+    LOG(INFO) << this->name << " run....";
+    while (true) {
+      std::unique_lock<std::mutex> lock(mut);
+      con_var.wait(lock, [&] { return !commands.empty(); });
+      for (auto it = commands.begin(); it != commands.end();) {
+        if ((*it)->state == driver::Command::State::DISPOSABLE) {
+          it = commands.erase(it);
+        } else {
+          (*it)->run_once();
+          it++;
+        }
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  });
+}
+
+void Scheduler::add_command(std::shared_ptr<driver::Command> cmd) {
+  if (cmd) {
+    LOG(INFO) << "add new cmd " << cmd->name;
+    commands.push_back(cmd);
+    con_var.notify_one();
+  }
+}
+std::shared_ptr<driver::Command> Scheduler::new_command(
+    std::shared_ptr<driver::Vehicle> v) {
+  // TODO
+  if (!v->current_order) {
+    if (v->orders.empty()) {
+      LOG(WARNING) << "no ord there";
+      return nullptr;
+    } else {
+      v->current_order = v->orders.front();
+      v->orders.pop_front();
+    }
+  }
+  if (!v->current_order) {
+    LOG(WARNING) << "no ord there";
+    return nullptr;
+  }
+  if (v->current_order->state !=
+      data::order::TransportOrder::State::BEING_PROCESSED) {
+    return nullptr;
+  }
+  std::string cmd_name{
+      "command_" + v->name + "_" + v->current_order->name + "_" +
+      v->current_order->driverorders[v->current_order->current_driver_index]
+          ->get_cmd_name()};
+  auto cmd = std::make_shared<driver::Command>(cmd_name);
+  cmd->vehicle = v;
+  cmd->order = v->current_order;
+  cmd->scheduler = shared_from_this();
+  cmd->done_cb = std::bind(&driver::Vehicle::command_done, v);
+  cmd->execute_action =
+      std::bind(&driver::Vehicle::execute_action, v, std::placeholders::_1);
+  cmd->execute_move =
+      std::bind(&driver::Vehicle::execute_move, v, std::placeholders::_1);
+  v->notify_result = std::bind(&driver::Command::vehicle_execute_cb, cmd,
+                               std::placeholders::_1);
+  return cmd;
+}
+}  // namespace schedule
+}  // namespace kernel

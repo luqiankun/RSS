@@ -1,0 +1,34 @@
+#ifndef SCHEDULE_HPP
+#define SCHEDULE_HPP
+#include "../../component/tcsresource.hpp"
+#include "../allocate/resource.hpp"
+#include "../driver/command.hpp"
+namespace kernel {
+namespace schedule {
+class Client : public TCSObject {
+ public:
+  using TCSObject::TCSObject;
+  std::size_t uuid;
+  std::unordered_set<std::shared_ptr<TCSResource>> allocate_resources;
+  std::unordered_set<std::shared_ptr<TCSResource>> claim_resources;
+  std::unordered_set<std::shared_ptr<TCSResource>> future_claim_resources;
+};
+class Scheduler : public TCSObject,
+                  public std::enable_shared_from_this<Scheduler> {
+ public:
+  using TCSObject::TCSObject;
+  std::shared_ptr<driver::Command> new_command(
+      std::shared_ptr<driver::Vehicle>);
+  void add_command(std::shared_ptr<driver::Command>);
+  void run();
+
+ public:
+  std::list<std::shared_ptr<driver::Command>> commands;
+  std::shared_ptr<allocate::ResourceManager> res;
+  std::thread schedule_th;
+  std::condition_variable con_var;
+  std::mutex mut;
+};
+}  // namespace schedule
+}  // namespace kernel
+#endif
