@@ -5,6 +5,7 @@ namespace event {
 class Event : public TCSObject {
  public:
   using TCSObject::TCSObject;
+  virtual ~Event() = default;
   std::chrono::steady_clock::time_point event_time;
   std::string event_type;
   std::weak_ptr<TCSObject> event_source;

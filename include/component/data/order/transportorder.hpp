@@ -35,7 +35,7 @@ class TransportOrder : public TCSObject {
  public:
   std::chrono::system_clock::time_point create_time;
   std::chrono::system_clock::time_point end_time;
-  std::chrono::system_clock::time_point finished_time;
+  std::chrono::system_clock::time_point dead_time;
   std::string type;
   State state{State::RAW};
   size_t uuid;

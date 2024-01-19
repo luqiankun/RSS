@@ -202,47 +202,63 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
   }
 }
 
-std::vector<std::vector<std::shared_ptr<driver::Vehicle>>>
-Dispatcher::deadlock_loop() {
-  std::vector<std::vector<std::shared_ptr<driver::Vehicle>>> res;
+std::vector<std::shared_ptr<driver::Vehicle>> Dispatcher::deadlock_loop() {
+  std::vector<std::shared_ptr<driver::Vehicle>> res;
   // 死锁检测
   for (auto& v : vehicles) {
     std::stack<std::shared_ptr<driver::Vehicle>> vs;
     std::vector<std::shared_ptr<driver::Vehicle>> exist;
     vs.push(v);
     while (!vs.empty()) {
-      auto top = vs.top();
+      auto& x = vs.top();
       vs.pop();
-      auto it = std::find(exist.begin(), exist.end(), top);
+      auto it = std::find(exist.begin(), exist.end(), x);
       if (it != exist.end()) {
-        res.emplace_back(
-            std::vector<std::shared_ptr<driver::Vehicle>>(it, exist.end()));
-        LOG(WARNING) << v->name << "deadlock";
-        break;
-      } else {
-        exist.push_back(top);
+        return std::vector<std::shared_ptr<driver::Vehicle>>(it, exist.end());
       }
-      for (auto& r : top->future_claim_resources) {
-        auto owner = find_owner(r);
-        if (owner) {
-          vs.push(owner);
+      exist.push_back(x);
+
+      auto depens = find_owners(x);
+      if (!depens.empty()) {
+        for (auto& x : depens) {
+          vs.push(x);
         }
+      } else {
+        exist.pop_back();
       }
     }
   }
   return res;
 }
 
-std::shared_ptr<driver::Vehicle> Dispatcher::find_owner(
-    const std::shared_ptr<TCSResource>& res) {
-  for (auto& v : vehicles) {
-    for (auto& r : v->claim_resources) {
-      if (r == res) {
-        return v;
-      }
+std::set<std::shared_ptr<driver::Vehicle>> Dispatcher::find_owners(
+    const std::shared_ptr<driver::Vehicle>& vs) {
+  std::set<std::shared_ptr<driver::Vehicle>> res;
+  for (auto& f : vs->future_claim_resources) {
+    auto f_veh = f->owner.lock();
+    if (f_veh) {
+      auto veh = std::dynamic_pointer_cast<driver::Vehicle>(f_veh);
+      res.insert(veh);
     }
   }
-  return nullptr;
+  return res;
+}
+
+void Dispatcher::cancel_all_order() {
+  for (auto& x : orderpool.lock()->orderpool) {
+    if (x->state == data::order::TransportOrder::State::RAW ||
+        x->state == data::order::TransportOrder::State::ACTIVE ||
+        x->state == data::order::TransportOrder::State::DISPATCHABLE ||
+        x->state == data::order::TransportOrder::State::BEING_PROCESSED)
+      x->state = data::order::TransportOrder::State::WITHDRAWN;
+  }
+  for (auto& x : orderpool.lock()->ended_orderpool) {
+    if (x->state == data::order::TransportOrder::State::RAW ||
+        x->state == data::order::TransportOrder::State::ACTIVE ||
+        x->state == data::order::TransportOrder::State::DISPATCHABLE ||
+        x->state == data::order::TransportOrder::State::BEING_PROCESSED)
+      x->state = data::order::TransportOrder::State::WITHDRAWN;
+  }
 }
 
 void Dispatcher::cancel_order(size_t order_uuid) {
@@ -261,8 +277,15 @@ void Dispatcher::cancel_order(size_t order_uuid) {
 void Dispatcher::cancel_vehicle_all_order(size_t vehicle_uuid) {
   for (auto& v : vehicles) {
     if (v->uuid == vehicle_uuid) {
-      v->orders.clear();
+      for (auto& ord : v->orders) {
+        if (ord->state == data::order::TransportOrder::State::RAW ||
+            ord->state == data::order::TransportOrder::State::ACTIVE ||
+            ord->state == data::order::TransportOrder::State::DISPATCHABLE ||
+            ord->state == data::order::TransportOrder::State::BEING_PROCESSED)
+          ord->state = data::order::TransportOrder::State::WITHDRAWN;
+      }
     }
+    v->orders.clear();
   }
 }
 
@@ -279,6 +302,27 @@ Dispatcher::~Dispatcher() {
     dispatch_th.join();
   }
   LOG(INFO) << name << " close";
+}
+
+void Dispatcher::idle_detect() {
+  for (auto& v : vehicles) {
+    if (v->state == driver::Vehicle::State::IDLE) {
+      auto now = std::chrono::system_clock::now();
+      auto dt = now - v->idle_time;
+      auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
+      if (dt_s.count() > 10) {
+        if (v->current_point != v->init_point) {
+          auto op = kernel::dispatch::Oper(
+              v->init_point->name,
+              data::order::DriverOrder::Destination::OpType::NOP);
+          std::vector<kernel::dispatch::Oper> ops;
+          ops.push_back(op);
+          std::hash<std::string> hash_fn;
+          add_task(ops, hash_fn("gohome"), hash_fn(name));
+        }
+      }
+    }
+  }
 }
 
 void Dispatcher::dispatch_once() {
@@ -356,10 +400,9 @@ void Dispatcher::dispatch_once() {
   }
 }
 void Dispatcher::brake_deadlock(
-    std::vector<std::vector<std::shared_ptr<driver::Vehicle>>> d_loop) {
+    std::vector<std::shared_ptr<driver::Vehicle>> d_loop) {
   // TODO
   if (!d_loop.empty()) {
-    LOG(WARNING) << "there has deadlock";
   }
 }
 
@@ -367,9 +410,17 @@ void Dispatcher::run() {
   dispatch_th = std::thread([&] {
     LOG(INFO) << this->name << " run....";
     while (!dispose) {
+      idle_detect();
       dispatch_once();
       auto loop = deadlock_loop();
       if (!loop.empty()) {
+        std::stringstream ss;
+        ss << "[";
+        for (auto& v : loop) {
+          ss << v->name << " ,";
+        }
+        ss << "]";
+        LOG_EVERY_N(100, ERROR) << "deadlock --> " << ss.str();
         brake_deadlock(loop);
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(10));

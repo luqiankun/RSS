@@ -108,7 +108,50 @@ void Vehicle::plan_route() {
   }
 }
 
+void Vehicle::get_next_ord() {
+  // 订单结束了
+  current_order->state = data::order::TransportOrder::State::FINISHED;
+  LOG(INFO) << current_order->name << " finished";
+  current_order->end_time = std::chrono::system_clock::now();
+  current_order.reset();
+  current_command.reset();
+  // 获取新订单
+  for (;;) {
+    if (orders.empty()) {
+      proc_state = ProcState::AWAITING_ORDER;
+      state = State::IDLE;
+      break;
+    } else {
+      current_order = orders.front();
+      // TODO  solver
+      plan_route();
+      orders.pop_front();
+      if (current_order->state !=
+          data::order::TransportOrder::State::BEING_PROCESSED) {
+        current_order.reset();
+      } else {
+        break;
+      }
+    }
+  }
+  if (current_order) {
+    state = State::EXECUTING;
+    proc_state = ProcState::PROCESSING_ORDER;
+    next_command();
+  } else {
+    proc_state = ProcState::AWAITING_ORDER;
+    state = State::IDLE;
+    idle_time = std::chrono::system_clock::now();
+  }
+}
+
 void Vehicle::command_done() {
+  bool ord_shutdown{false};
+  if (current_order->state == data::order::TransportOrder::State::WITHDRAWN) {
+    // 订单取消
+    get_next_ord();
+    return;
+  }
   // 完成step or action
   auto dr = (current_order->driverorders[current_order->current_driver_index]);
   if (dr->state == data::order::DriverOrder::State::FINISHED ||
@@ -117,45 +160,18 @@ void Vehicle::command_done() {
   }
   if (current_order->driverorders.size() <=
       current_order->current_driver_index) {
-    // 订单结束了
-    current_order->state = data::order::TransportOrder::State::FINISHED;
-    LOG(INFO) << current_order->name << " finished";
-    current_order->finished_time = std::chrono::system_clock::now();
-    current_order.reset();
-    current_command.reset();
-    // 获取新订单
-    for (;;) {
-      if (orders.empty()) {
-        proc_state = ProcState::AWAITING_ORDER;
-        state = State::IDLE;
-        break;
-      } else {
-        current_order = orders.front();
-        // TODO  solver
-        plan_route();
-        orders.pop_front();
-        if (current_order->state !=
-            data::order::TransportOrder::State::BEING_PROCESSED) {
-          current_order.reset();
-        } else {
-          break;
-        }
-      }
-    }
-    if (current_order) {
-      state = State::EXECUTING;
-      proc_state = ProcState::PROCESSING_ORDER;
-      next_command();
-    } else {
-      proc_state = ProcState::AWAITING_ORDER;
-      state = State::IDLE;
-    }
-    //
+    get_next_ord();
   } else {
     // 继续执行订单
-    next_command();
-    state = State::EXECUTING;
-    proc_state = ProcState::PROCESSING_ORDER;
+    if (current_order->state ==
+        data::order::TransportOrder::State::BEING_PROCESSED) {
+      next_command();
+      state = State::EXECUTING;
+      proc_state = ProcState::PROCESSING_ORDER;
+    } else {
+      // 订单取消了或失败了
+      command_done();
+    }
   }
 }
 
@@ -184,6 +200,7 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
     // TODO
   } else if (state == State::IDLE) {
     // TODO
+    current_order.reset();
     orders.push_back(order);
     next_command();
     state = State::EXECUTING;
@@ -198,11 +215,11 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
 bool SimVehicle::action(
     std::shared_ptr<data::order::DriverOrder::Destination> dest) {
   if (dest->operation == data::order::DriverOrder::Destination::OpType::NOP) {
-    auto t = std::dynamic_pointer_cast<data::model::Location>(
-        dest->destination.lock());
-    position.x() = t->link.lock()->pose.x();
-    position.y() = t->link.lock()->pose.y();
-    current_point = t->link.lock();
+    auto t =
+        std::dynamic_pointer_cast<data::model::Point>(dest->destination.lock());
+    position.x() = t->pose.x();
+    position.y() = t->pose.y();
+    current_point = t;
     return true;
   } else if (dest->operation ==
              data::order::DriverOrder::Destination::OpType::LOAD) {
@@ -237,15 +254,6 @@ bool SimVehicle::action(
     current_point = t->link.lock();
     LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
               << ")";
-    return true;
-  } else if (dest->operation ==
-             data::order::DriverOrder::Destination::OpType::PARK) {
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    auto t = std::dynamic_pointer_cast<data::model::Location>(
-        dest->destination.lock());
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    position = t->position;
     return true;
   }
   return true;

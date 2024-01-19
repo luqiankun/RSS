@@ -7,6 +7,7 @@ namespace kernel {
 namespace schedule {
 class Client : public TCSObject {
  public:
+  virtual ~Client() = default;
   using TCSObject::TCSObject;
   std::size_t uuid;
   std::unordered_set<std::shared_ptr<TCSResource>> allocate_resources;

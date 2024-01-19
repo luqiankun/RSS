@@ -393,22 +393,6 @@ void Visualizer::update() {
                 data::order::DriverOrder::Destination::OpType::NOP) {
               // TODO
             } else if (dr->destination->operation ==
-                       data::order::DriverOrder::Destination::OpType::PARK) {
-              // TODO
-              auto loction = std::dynamic_pointer_cast<data::model::Location>(
-                  dr->destination->destination.lock());
-              auto p_x = static_cast<uint32_t>(
-                  (loction->position.x() - mat_limit.x()) / resolution);
-
-              auto p_y =
-                  vehicle_view->rows -
-                  static_cast<uint32_t>(
-                      (loction->position.y() - mat_limit.z()) / resolution);
-              cv::rectangle(*vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                       std::get<0>(color)),
-                            4, cv::LINE_AA, 0);
-            } else if (dr->destination->operation ==
                        data::order::DriverOrder::Destination::OpType::LOAD) {
               // TODO
               auto loction = std::dynamic_pointer_cast<data::model::Location>(

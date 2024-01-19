@@ -34,6 +34,7 @@ class Vehicle : public schedule::Client,
                                                                 // //
   void command_done();  // 命令完成回调
   void plan_route();
+  void get_next_ord();
   void run();
   void close();
   virtual bool action(
@@ -59,12 +60,14 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::order::TransportOrder> current_order;
   std::shared_ptr<Command> current_command;
   std::shared_ptr<data::model::Point> current_point;
+  std::shared_ptr<data::model::Point> init_point;
   std::thread run_th;
   Eigen::Vector3i position;
   float angle{0};
   Eigen::Vector3i layout;
   std::shared_ptr<io_service_type> ctx;
   std::shared_ptr<io_service_type::strand> strand;
+  std::chrono::system_clock::time_point idle_time;
 };
 class SimVehicle : public Vehicle {
  public:
@@ -74,7 +77,7 @@ class SimVehicle : public Vehicle {
   void update() override;
 
  public:
-  int rate{5};
+  int rate{5};  // 时间快进比例
 };
 // TODO 工厂
 }  // namespace driver

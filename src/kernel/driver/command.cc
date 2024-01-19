@@ -15,12 +15,6 @@ void Command::run_once() {
       }
     }
   }
-  if (order->state != data::order::TransportOrder::State::BEING_PROCESSED) {
-    // 无需处理
-    state = State::END;
-    vehicle.lock()->command_done();
-    return;
-  }
   if (state == State::INIT) {
     state = State::CLAIMING;
   } else if (state == State::CLAIMING) {
@@ -50,6 +44,18 @@ void Command::run_once() {
             }
           }
           state = State::CLAIMED;
+        } else {
+          for (auto& x : temp) {
+            bool has{false};
+            for (auto& c : vehicle.lock()->claim_resources) {
+              if (c == x) {
+                has = true;
+              }
+            }
+            if (!has) {
+              vehicle.lock()->future_claim_resources.insert(x);
+            }
+          }
         }
       }
     }

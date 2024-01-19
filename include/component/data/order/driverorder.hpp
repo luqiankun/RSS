@@ -27,7 +27,11 @@ class DriverOrder : public TCSObject {
   enum class State { PRISTINE, TRAVELLING, OPERATING, FINISHED, FAILED };
 
   struct Destination {
-    enum class OpType { NOP, PARK, LOAD, UNLOAD };
+    enum class OpType {
+      NOP,    // 去某point
+      LOAD,   // 去某location load
+      UNLOAD  // 去某location unload
+    };
     std::map<std::string, std::string> properties;
     std::weak_ptr<TCSResource> destination;
     OpType operation{OpType::NOP};

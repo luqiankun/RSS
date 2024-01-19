@@ -149,6 +149,9 @@ bool TCS::init_resource(const std::string &xml_path) {
     int maxReverseVelocity = vehicle.attribute("maxReverseVelocity").as_int();
     std::string color =
         vehicle.child("vehicleLayout").attribute("color").as_string();
+    ///////////////////
+    /// // 使用仿真车辆
+    //////////////////
     auto veh = std::make_shared<kernel::driver::SimVehicle>(name);
     veh->scheduler = scheduler;
     veh->length = length;
@@ -159,12 +162,14 @@ bool TCS::init_resource(const std::string &xml_path) {
     veh->position.x() = resource->points.front()->pose.x();
     veh->position.y() = resource->points.front()->pose.y();
     veh->layout = veh->layout;
-    veh->current_point = resource->points.front();
+    veh->current_point = resource->points.front();  // 当前点
+    veh->init_point = resource->points.front();     // 初始点
     std::hash<std::string> hash_fn;
     veh->uuid = hash_fn(name);
     veh->dispatcher = dispatcher;
     veh->run();
     dispatcher->vehicles.push_back(veh);
+    ///////////////////////
     vehicle = vehicle.next_sibling();
   }
   LOG(INFO) << "init vehicle size " << dispatcher->vehicles.size();
@@ -174,8 +179,13 @@ bool TCS::init_resource(const std::string &xml_path) {
   return true;
 }
 
+void TCS::add_task(std::vector<kernel::dispatch::Oper> ops, std::size_t uuid,
+                   int strategy) {
+  dispatcher->add_task(ops, uuid, strategy);
+}
+
 TCS::~TCS() {
-  LOG(INFO) << "stop";
+  LOG(INFO) << "TCS  stop";
 #ifdef VISUAL
   visualizer->stop();
 #endif
@@ -225,6 +235,14 @@ bool TCS::init_all(const std::string &xml_path, double r) {
   return true;
 }
 
+void TCS::cancel_all_order() { dispatcher->cancel_all_order(); }
+
+void TCS::cancel_order(size_t order_uuid) {
+  dispatcher->cancel_order(order_uuid);
+}
+void TCS::cancel_vehicle_all_order(size_t vehicle_uuid) {
+  dispatcher->cancel_vehicle_all_order(vehicle_uuid);
+}
 void TCS::run() {
   dispatcher->run();
   std::this_thread::sleep_for(std::chrono::milliseconds(10));

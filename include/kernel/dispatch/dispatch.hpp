@@ -26,16 +26,18 @@ class Dispatcher : public TCSObject {
                 int strategy = -1);  // strategy<0 自动  >=0 指定执行端
   std::shared_ptr<driver::Vehicle> select_vehicle(
       std::shared_ptr<data::model::Point>);
-  std::shared_ptr<driver::Vehicle> find_owner(
-      const std::shared_ptr<TCSResource>&);
-  std::vector<std::vector<std::shared_ptr<driver::Vehicle>>>
+  std::set<std::shared_ptr<driver::Vehicle>> find_owners(
+      const std::shared_ptr<driver::Vehicle>&);
+  std::vector<std::shared_ptr<driver::Vehicle>>
   deadlock_loop();  // 死锁车辆环路
   void brake_deadlock(
-      std::vector<std::vector<std::shared_ptr<driver::Vehicle>>>);  // 解锁
+      std::vector<std::shared_ptr<driver::Vehicle>>);  // TODO 解锁
   void dispatch_once();
-  void add_vehicle(const std::string& type, const std::string& name);
-  void cancel_order(size_t order_uuid);                // 未分配的订单
-  void cancel_vehicle_all_order(size_t vehicle_uuid);  // 已分配未下发的所有订单
+  void idle_detect();
+  void add_vehicle(const std::string& type, const std::string& name);  // TODO
+  void cancel_order(size_t order_uuid);                // 取消某个订单
+  void cancel_all_order();                             // 取消所有订单
+  void cancel_vehicle_all_order(size_t vehicle_uuid);  // 取消某辆车所有订单
   void run();
   void stop();
   ~Dispatcher();

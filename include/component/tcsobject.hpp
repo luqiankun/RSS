@@ -21,6 +21,7 @@
 class TCSObject {
  public:
   TCSObject() = delete;
+  virtual ~TCSObject() = default;
   explicit TCSObject(const std::string& n) : name(n) {}
 
  public:

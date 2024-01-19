@@ -27,7 +27,11 @@ class TCS : public std::enable_shared_from_this<TCS> {
   bool init_dispatcher();
   bool init_scheduler();
   bool init_orderpool();
-
+  void add_task(std::vector<kernel::dispatch::Oper> ops, std::size_t uuid,
+                int strategy = -1);  // strategy<0 自动  >=0 指定执行端
+  void cancel_order(size_t order_uuid);                // 取消某个订单
+  void cancel_all_order();                             // 取消所有订单
+  void cancel_vehicle_all_order(size_t vehicle_uuid);  // 取消某辆车所有订单
   void run();
   ~TCS();
 
