@@ -212,15 +212,17 @@ Dispatcher::deadlock_loop() {
     vs.push(v);
     while (!vs.empty()) {
       auto top = vs.top();
+      vs.pop();
       auto it = std::find(exist.begin(), exist.end(), top);
       if (it != exist.end()) {
         res.emplace_back(
             std::vector<std::shared_ptr<driver::Vehicle>>(it, exist.end()));
+        LOG(WARNING) << v->name << "deadlock";
+        break;
       } else {
         exist.push_back(top);
       }
-      vs.pop();
-      for (auto& r : v->future_claim_resources) {
+      for (auto& r : top->future_claim_resources) {
         auto owner = find_owner(r);
         if (owner) {
           vs.push(owner);
@@ -276,7 +278,7 @@ Dispatcher::~Dispatcher() {
   if (dispatch_th.joinable()) {
     dispatch_th.join();
   }
-  LOG(TRACE) << name << " close";
+  LOG(INFO) << name << " close";
 }
 
 void Dispatcher::dispatch_once() {
@@ -366,7 +368,10 @@ void Dispatcher::run() {
     LOG(INFO) << this->name << " run....";
     while (!dispose) {
       dispatch_once();
-      brake_deadlock(deadlock_loop());
+      auto loop = deadlock_loop();
+      if (!loop.empty()) {
+        brake_deadlock(loop);
+      }
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   });

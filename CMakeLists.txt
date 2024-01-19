@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.10)
 project(TCS)
-set(CMAKE_BUILD_TYPE "Debug")
+# set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(VISUALIZATION "enable visualization" OFF)
 set(BOOST_ROOT "/usr/include/boost")
-set(BOOST_LIBRARYDIR "/usr/lib/x86_64-linux-gnu")
+# set(BOOST_LIBRARYDIR "/usr/lib/x86_64-linux-gnu")
 find_package(Boost REQUIRED)
 if(DEFINED VISUALIZATION)
     message(STATUS  "visualization: " ${VISUALIZATION})
@@ -42,7 +43,7 @@ if(VISUALIZATION)
 else()
    add_executable(TCS_test test/main/tcs_test.cc
    ${KERNEL_SRC}
-#    ${LOG_SRC}
+   ${LOG_SRC}
    ${XML_SRC}
    ${COMPONENTS_SRC}
    ${MAIN_SRC}

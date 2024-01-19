@@ -39,7 +39,15 @@ void Command::run_once() {
         if (scheduler.lock()->res.lock()->claim(temp, vehicle.lock())) {
           // TODO 添加future_claim
           for (auto& x : get_future(driver_order)) {
-            vehicle.lock()->future_claim_resources.insert(x);
+            bool has{false};
+            for (auto& c : vehicle.lock()->claim_resources) {
+              if (c == x) {
+                has = true;
+              }
+            }
+            if (!has) {
+              vehicle.lock()->future_claim_resources.insert(x);
+            }
           }
           state = State::CLAIMED;
         }

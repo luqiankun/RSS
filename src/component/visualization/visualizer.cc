@@ -179,24 +179,25 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
              cv::Point2i(label_x + 5, label_y - step * i),
              cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
   }
-  map_view = mat.clone();
+  map_view = std::shared_ptr<cv::Mat>(new cv::Mat(mat));
   return true;
 }
 
 void Visualizer::run() {
   th = std::thread{[this] {
-    namedWindow("TCS_VIEW", cv::WINDOW_NORMAL);
     while (!dispose) {
       update();
-      cv::Mat img = map_view.clone();
-      cv::Mat mask;
-      cv::cvtColor(vehicle_view, mask, cv::COLOR_BGR2GRAY);
-      cv::threshold(mask, mask, 10, 255, cv::THRESH_BINARY);
+
+      auto img = std::shared_ptr<cv::Mat>(new cv::Mat(map_view->clone()));
+      auto mask = std::shared_ptr<cv::Mat>(new cv::Mat);
+      cv::cvtColor(*vehicle_view, *mask, cv::COLOR_BGR2GRAY);
+      cv::threshold(*mask, *mask, 10, 255, cv::THRESH_BINARY);
       // cv::bitwise_not(mask, mask);
 
-      cv::bitwise_not(map_view, img, mask);
-      cv::add(img, vehicle_view, img);
-      cv::imshow("TCS_VIEW", img);
+      cv::bitwise_not(*map_view, *img, *mask);
+      cv::add(*img, *vehicle_view, *img);
+      namedWindow("TCS_VIEW", cv::WINDOW_NORMAL);
+      cv::imshow("TCS_VIEW", *img);
       if (cv::waitKey(200) == 27) {  // 如果用户按下 ESC 键，退出循环
         break;
       }
@@ -209,8 +210,8 @@ void Visualizer::update() {
   if (!tcs.lock()) {
     return;
   }
-  vehicle_view =
-      cv::Mat(cv::Size(map_view.cols, map_view.rows), CV_8UC3, cv::Scalar(0));
+  vehicle_view = std::shared_ptr<cv::Mat>(new cv::Mat(
+      cv::Size(map_view->cols, map_view->rows), CV_8UC3, cv::Scalar(0)));
   if (!tcs.lock()) {
     dispose = true;
     return;
@@ -249,44 +250,46 @@ void Visualizer::update() {
     Eigen::Vector3i right_top_ = T * right_top;
     cv::Point2i left_bottom_cv(
         static_cast<uint32_t>((left_bottom_.x() - mat_limit.x()) / resolution),
-        vehicle_view.rows -
+        vehicle_view->rows -
             static_cast<uint32_t>((left_bottom_.y() - mat_limit.z()) /
                                   resolution));
     cv::Point2i right_bottom_cv(
         static_cast<uint32_t>((right_bottom_.x() - mat_limit.x()) / resolution),
-        vehicle_view.rows -
+        vehicle_view->rows -
             static_cast<uint32_t>((right_bottom_.y() - mat_limit.z()) /
                                   resolution));
     cv::Point2i left_mid_cv(
         static_cast<uint32_t>((left_mid_.x() - mat_limit.x()) / resolution),
-        vehicle_view.rows - static_cast<uint32_t>(
-                                (left_mid_.y() - mat_limit.z()) / resolution));
+        vehicle_view->rows - static_cast<uint32_t>(
+                                 (left_mid_.y() - mat_limit.z()) / resolution));
     cv::Point2i right_mid_cv(
         static_cast<uint32_t>((right_mid_.x() - mat_limit.x()) / resolution),
-        vehicle_view.rows - static_cast<uint32_t>(
-                                (right_mid_.y() - mat_limit.z()) / resolution));
+        vehicle_view->rows -
+            static_cast<uint32_t>((right_mid_.y() - mat_limit.z()) /
+                                  resolution));
     cv::Point2i left_top_cv(
         static_cast<uint32_t>((left_top_.x() - mat_limit.x()) / resolution),
-        vehicle_view.rows - static_cast<uint32_t>(
-                                (left_top_.y() - mat_limit.z()) / resolution));
+        vehicle_view->rows - static_cast<uint32_t>(
+                                 (left_top_.y() - mat_limit.z()) / resolution));
     cv::Point2i right_top_cv(
         static_cast<uint32_t>((right_top_.x() - mat_limit.x()) / resolution),
-        vehicle_view.rows - static_cast<uint32_t>(
-                                (right_top_.y() - mat_limit.z()) / resolution));
+        vehicle_view->rows -
+            static_cast<uint32_t>((right_top_.y() - mat_limit.z()) /
+                                  resolution));
     auto color = hexToRgb(v->color);
     cv::line(
-        vehicle_view, left_bottom_cv, right_bottom_cv,
+        *vehicle_view, left_bottom_cv, right_bottom_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
         3, cv::LINE_AA);
     cv::line(
-        vehicle_view, left_mid_cv, left_top_cv,
+        *vehicle_view, left_mid_cv, left_top_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
         3, cv::LINE_AA);
     cv::line(
-        vehicle_view, right_mid_cv, right_top_cv,
+        *vehicle_view, right_mid_cv, right_top_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
         3, cv::LINE_AA);
-    cv::putText(vehicle_view, v->name, cv::Point2i(0, 9) + left_bottom_cv, 1,
+    cv::putText(*vehicle_view, v->name, cv::Point2i(0, 9) + left_bottom_cv, 1,
                 0.7, cv::Scalar(10, 10, 80), 1, cv::LINE_AA, true);
 
     //
@@ -304,31 +307,41 @@ void Visualizer::update() {
                   dr->route->current_step->path->destination_point.lock();
               auto beg_x = static_cast<uint32_t>(
                   (beg->pose.x() - mat_limit.x()) / resolution);
-              auto beg_y = vehicle_view.rows -
+              auto beg_y = vehicle_view->rows -
                            static_cast<uint32_t>(
                                (beg->pose.y() - mat_limit.z()) / resolution);
               auto end_x = static_cast<uint32_t>(
                   (end->pose.x() - mat_limit.x()) / resolution);
-              auto end_y = vehicle_view.rows -
+              auto end_y = vehicle_view->rows -
                            static_cast<uint32_t>(
                                (end->pose.y() - mat_limit.z()) / resolution);
-              cv::circle(vehicle_view, cv::Point2i(beg_x, beg_y), 5,
-                         cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
-              cv::circle(vehicle_view, cv::Point2i(end_x, end_y), 5,
-                         cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
+              cv::circle(*vehicle_view, cv::Point2i(beg_x, beg_y), 5,
+                         cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                    std::get<0>(color)),
+                         -1, cv::LINE_AA);
+              cv::circle(*vehicle_view, cv::Point2i(end_x, end_y), 5,
+                         cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                    std::get<0>(color)),
+                         -1, cv::LINE_AA);
               double arrowed_len = 12;
               if (dr->route->current_step->vehicle_orientation ==
                   data::order::Step::Orientation::FORWARD) {
                 cv::arrowedLine(
-                    vehicle_view, cv::Point2i(beg_x, beg_y),
-                    cv::Point2i(end_x, end_y), cv::Scalar(0, 0, 137), 5, 8, 0,
+                    *vehicle_view, cv::Point2i(beg_x, beg_y),
+                    cv::Point2i(end_x, end_y),
+                    cv::Scalar(std::get<2>(color), std::get<1>(color),
+                               std::get<0>(color)),
+                    5, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               } else if (dr->route->current_step->vehicle_orientation ==
                          data::order::Step::Orientation::BACKWARD) {
                 cv::arrowedLine(
-                    vehicle_view, cv::Point2i(end_x, end_y),
-                    cv::Point2i(beg_x, beg_y), cv::Scalar(0, 0, 137), 5, 8, 0,
+                    *vehicle_view, cv::Point2i(end_x, end_y),
+                    cv::Point2i(beg_x, beg_y),
+                    cv::Scalar(std::get<2>(color), std::get<1>(color),
+                               std::get<0>(color)),
+                    5, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               }
@@ -340,23 +353,23 @@ void Visualizer::update() {
               auto end = path->path->destination_point.lock();
               auto beg_x = static_cast<uint32_t>(
                   (beg->pose.x() - mat_limit.x()) / resolution);
-              auto beg_y = vehicle_view.rows -
+              auto beg_y = vehicle_view->rows -
                            static_cast<uint32_t>(
                                (beg->pose.y() - mat_limit.z()) / resolution);
               auto end_x = static_cast<uint32_t>(
                   (end->pose.x() - mat_limit.x()) / resolution);
-              auto end_y = vehicle_view.rows -
+              auto end_y = vehicle_view->rows -
                            static_cast<uint32_t>(
                                (end->pose.y() - mat_limit.z()) / resolution);
-              cv::circle(vehicle_view, cv::Point2i(beg_x, beg_y), 3,
+              cv::circle(*vehicle_view, cv::Point2i(beg_x, beg_y), 3,
                          cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
-              cv::circle(vehicle_view, cv::Point2i(end_x, end_y), 3,
+              cv::circle(*vehicle_view, cv::Point2i(end_x, end_y), 3,
                          cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
               double arrowed_len = 10;
               if (path->vehicle_orientation ==
                   data::order::Step::Orientation::FORWARD) {
                 cv::arrowedLine(
-                    vehicle_view, cv::Point2i(beg_x, beg_y),
+                    *vehicle_view, cv::Point2i(beg_x, beg_y),
                     cv::Point2i(end_x, end_y),
                     cv::Scalar(std::get<2>(color), std::get<1>(color),
                                std::get<0>(color)),
@@ -366,7 +379,7 @@ void Visualizer::update() {
               } else if (path->vehicle_orientation ==
                          data::order::Step::Orientation::BACKWARD) {
                 cv::arrowedLine(
-                    vehicle_view, cv::Point2i(end_x, end_y),
+                    *vehicle_view, cv::Point2i(end_x, end_y),
                     cv::Point2i(beg_x, beg_y),
                     cv::Scalar(std::get<2>(color), std::get<1>(color),
                                std::get<0>(color)),
@@ -388,11 +401,13 @@ void Visualizer::update() {
                   (loction->position.x() - mat_limit.x()) / resolution);
 
               auto p_y =
-                  vehicle_view.rows -
+                  vehicle_view->rows -
                   static_cast<uint32_t>(
                       (loction->position.y() - mat_limit.z()) / resolution);
-              cv::rectangle(vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(10, 20, 255), 4, cv::LINE_AA, 0);
+              cv::rectangle(*vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
+                            cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                       std::get<0>(color)),
+                            4, cv::LINE_AA, 0);
             } else if (dr->destination->operation ==
                        data::order::DriverOrder::Destination::OpType::LOAD) {
               // TODO
@@ -402,11 +417,13 @@ void Visualizer::update() {
                   (loction->position.x() - mat_limit.x()) / resolution);
 
               auto p_y =
-                  vehicle_view.rows -
+                  vehicle_view->rows -
                   static_cast<uint32_t>(
                       (loction->position.y() - mat_limit.z()) / resolution);
-              cv::rectangle(vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(10, 20, 255), 4, cv::LINE_AA, 0);
+              cv::rectangle(*vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
+                            cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                       std::get<0>(color)),
+                            4, cv::LINE_AA, 0);
             } else if (dr->destination->operation ==
                        data::order::DriverOrder::Destination::OpType::UNLOAD) {
               // TODO
@@ -416,11 +433,13 @@ void Visualizer::update() {
                   (loction->position.x() - mat_limit.x()) / resolution);
 
               auto p_y =
-                  vehicle_view.rows -
+                  vehicle_view->rows -
                   static_cast<uint32_t>(
                       (loction->position.y() - mat_limit.z()) / resolution);
-              cv::rectangle(vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(10, 20, 255), 4, cv::LINE_AA, 0);
+              cv::rectangle(*vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
+                            cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                       std::get<0>(color)),
+                            4, cv::LINE_AA, 0);
             }
           }
         }

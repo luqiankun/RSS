@@ -49,7 +49,7 @@ void Vehicle::run() {
     } catch (boost::system::error_code& ec) {
       LOG(ERROR) << "client err " << ec.message() << "\n";
     }
-    // LOG(TRACE) << name << " stop";
+    // LOG(INFO) << name << " stop";
   });
 }
 void Vehicle::close() {
@@ -63,7 +63,7 @@ void Vehicle::close() {
 }
 Vehicle::~Vehicle() {
   close();
-  LOG(TRACE) << name << " close";
+  LOG(INFO) << name << " close";
 }
 
 void Vehicle::plan_route() {
@@ -259,10 +259,16 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
   }
   if (step->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
     auto end = step->path->destination_point.lock();
-    size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-    std::this_thread::sleep_for(std::chrono::milliseconds(t));
     std::this_thread::sleep_for(
         std::chrono::milliseconds(step->wait_time / rate));
+    size_t t = step->path->length * 1000 / max_vel / rate;  // ms
+    int x_len = end->pose.x() - position.x();
+    int y_len = end->pose.y() - position.y();
+    for (int i = 0; i < 10; i++) {
+      position.x() += x_len / 10;
+      position.y() += y_len / 10;
+      std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+    }
     position.x() = end->pose.x();
     position.y() = end->pose.y();
     current_point = end;
@@ -273,9 +279,15 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
              data::order::Step::Orientation::BACKWARD) {
     auto end = step->path->source_point.lock();
     size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-    std::this_thread::sleep_for(std::chrono::milliseconds(t));
     std::this_thread::sleep_for(
         std::chrono::milliseconds(step->wait_time / rate));
+    int x_len = end->pose.x() - position.x();
+    int y_len = end->pose.y() - position.y();
+    for (int i = 0; i < 10; i++) {
+      position.x() += x_len / 10;
+      position.y() += y_len / 10;
+      std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+    }
     position.x() = end->pose.x();
     position.y() = end->pose.y();
     current_point = end;

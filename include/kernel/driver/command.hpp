@@ -29,7 +29,7 @@ class Command : public TCSObject {
       std::shared_ptr<data::order::DriverOrder>);
   void vehicle_execute_cb(bool);  // 车辆通知动作结果
   void run_once();
-  ~Command() { LOG(TRACE) << name << " ok"; }
+  ~Command() { LOG(INFO) << name << " ok"; }
 
  public:
   State state{State::INIT};

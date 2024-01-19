@@ -21,8 +21,8 @@ class Visualizer {
 
  private:
   double resolution;
-  cv::Mat map_view;
-  cv::Mat vehicle_view;
+  std::shared_ptr<cv::Mat> map_view;
+  std::shared_ptr<cv::Mat> vehicle_view;
   Eigen::Vector4i mat_limit;
   std::weak_ptr<TCS> tcs;
   std::thread th;

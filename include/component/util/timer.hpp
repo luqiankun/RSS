@@ -35,5 +35,15 @@ inline std::string get_time_fmt(std::chrono::system_clock::time_point t) {
        << "Z";
   return time.str();
 }
+inline std::string get_date_fmt() {
+  auto t = std::chrono::system_clock::now();
+  auto tm = std::chrono::system_clock::to_time_t(t);
+  std::stringstream time;
+  auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
+               t.time_since_epoch())
+               .count();
+  time << std::put_time(std::localtime(&tm), "%Y-%m-%d");
+  return time.str();
+}
 
 #endif

@@ -48,6 +48,7 @@ bool ResourceManager::claim(
                x != client->future_claim_resources.end();) {
             if (*x == p) {
               x = client->future_claim_resources.erase(x);
+              LOG(INFO) << p->name << " from future to claim";
             } else {
               x++;
             }
@@ -68,6 +69,7 @@ bool ResourceManager::claim(
                x != client->future_claim_resources.end();) {
             if (*x == p) {
               x = client->future_claim_resources.erase(x);
+              LOG(INFO) << p->name << " from future to claim";
             } else {
               x++;
             }
@@ -88,6 +90,7 @@ bool ResourceManager::claim(
                x != client->future_claim_resources.end();) {
             if (*x == p) {
               x = client->future_claim_resources.erase(x);
+              LOG(INFO) << p->name << " from future to claim";
             } else {
               x++;
             }

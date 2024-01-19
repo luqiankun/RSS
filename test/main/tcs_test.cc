@@ -2,18 +2,9 @@
 #include "../../include/main/tcs.hpp"
 
 #include "../../include/component/log/easylogging++.h"
-
 INITIALIZE_EASYLOGGINGPP
 int main(int argc, const char** argv) {
-  el::Configurations conf;
-  conf.setGlobally(el::ConfigurationType::Format,
-                   "[%levshort] %datetime %fbase:%line] %msg");
-  conf.setGlobally(el::ConfigurationType::Filename,
-                   "/home/luqk/c++/TCS/build/logs/tcs.log");
-  conf.set(el::Level::Debug, el::ConfigurationType::Format,
-           "%datetime{%d/%M} %func [%fbase:%line] %msg");
-  el::Loggers::reconfigureLogger("default", conf);
-  el::Loggers::reconfigureAllLoggers(conf);
+  MY_EASYLOG_CONIFG("./tcs_logs")
   auto tcs = std::make_shared<TCS>();
   if (tcs->init_all("/home/luqk/c++/TCS/config/map.xml")) {
     tcs->run();

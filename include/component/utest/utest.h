@@ -1259,9 +1259,9 @@ static UTEST_INLINE char *utest_strncpy_gcc(char *const dst,
 #pragma clang diagnostic ignored "-Wc++98-compat-pedantic"
 #endif
 
-UTEST_WEAK
-double utest_fabs(double d);
-UTEST_WEAK
+// UTEST_WEAK
+// double utest_fabs(double d);
+// UTEST_WEAK
 inline double utest_fabs(double d) {
   union {
     double d;
@@ -1272,9 +1272,9 @@ inline double utest_fabs(double d) {
   return both.d;
 }
 
-UTEST_WEAK
-int utest_isnan(double d);
-UTEST_WEAK
+// UTEST_WEAK
+// int utest_isnan(double d);
+// UTEST_WEAK
 inline int utest_isnan(double d) {
   union {
     double d;
@@ -1296,9 +1296,9 @@ inline int utest_isnan(double d) {
 #endif
 #endif
 
-UTEST_WEAK
-int utest_should_filter_test(const char *filter, const char *testcase);
-UTEST_WEAK
+// UTEST_WEAK
+// int utest_should_filter_test(const char *filter, const char *testcase);
+// UTEST_WEAK
 inline int utest_should_filter_test(const char *filter, const char *testcase) {
   if (filter) {
     const char *filter_cur = filter;
