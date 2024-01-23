@@ -1,29 +1,19 @@
 #ifndef DISPATCH_HPP
 #define DISPATCH_HPP
+#include <boost/signals2.hpp>
+
 #include "../allocate/order.hpp"
 #include "../allocate/resource.hpp"
 #include "../planner/planner.hpp"
-namespace kernel {
-namespace dispatch {
 using Oper = std::tuple<
     std::string,
     data::order::DriverOrder::Destination::OpType>;  // 目标点和动作类型
+namespace kernel {
+namespace dispatch {
 class Dispatcher : public TCSObject {
  public:
   using TCSObject::TCSObject;
-  enum class ResType { Point = 0, Location = 1, Err = 2 };
-  std::shared_ptr<data::order::Route> paths_to_route(
-      std::vector<std::shared_ptr<data::model::Point>>);
-  std::pair<ResType, std::shared_ptr<TCSResource>> find(
-      const std::string& name);
-  std::shared_ptr<data::order::DriverOrder::Destination> res_to_destination(
-      const std::shared_ptr<TCSResource>&,
-      data::order::DriverOrder::Destination::OpType);
-  std::shared_ptr<data::order::DriverOrder> route_to_driverorder(
-      std::shared_ptr<data::order::Route>,
-      std::shared_ptr<data::order::DriverOrder::Destination>);
-  void add_task(std::vector<Oper> ops, std::size_t uuid,
-                int strategy = -1);  // strategy<0 自动  >=0 指定执行端
+
   std::shared_ptr<driver::Vehicle> select_vehicle(
       std::shared_ptr<data::model::Point>);
   std::set<std::shared_ptr<driver::Vehicle>> find_owners(
@@ -34,21 +24,24 @@ class Dispatcher : public TCSObject {
       std::vector<std::shared_ptr<driver::Vehicle>>);  // TODO 解锁
   void dispatch_once();
   void idle_detect();
-  void add_vehicle(const std::string& type, const std::string& name);  // TODO
-  void cancel_order(size_t order_uuid);                // 取消某个订单
-  void cancel_all_order();                             // 取消所有订单
-  void cancel_vehicle_all_order(size_t vehicle_uuid);  // 取消某辆车所有订单
   void run();
   void stop();
   ~Dispatcher();
 
  public:
-  std::weak_ptr<allocate::ResourceManager> resource;
-  std::vector<std::shared_ptr<driver::Vehicle>> vehicles;
-  std::shared_ptr<planner::Planner> planner;
-  std::weak_ptr<allocate::OrderPool> orderpool;
   std::thread dispatch_th;
   bool dispose{false};
+  std::vector<std::shared_ptr<driver::Vehicle>> vehicles;
+  /// signals
+  boost::signals2::signal<std::pair<allocate::ResourceManager::ResType,
+                                    std::shared_ptr<TCSResource>>(
+      const std::string& name)>
+      find_res;
+  boost::signals2::signal<void(std::vector<Oper>, const std::string&,
+                               const std::string&)>
+      add_task;
+  boost::signals2::signal<std::shared_ptr<data::order::TransportOrder>()>
+      get_next_ord;
 };
 }  // namespace dispatch
 }  // namespace kernel

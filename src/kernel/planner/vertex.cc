@@ -7,9 +7,9 @@ namespace planner {
 
 Vertex::Vertex(const std::shared_ptr<data::model::Point> &p) {
   equal_point = p;
-  location = p->pose;
+  location = Eigen::Vector2i(p->position.x(), p->position.y());
   this->name = p->name;
-  layout = p->layout;
+  layout = p->layout.position;
 }
 
 void Vertex::set_type(AType type) { this->type = type; }
@@ -66,8 +66,8 @@ float Vertex::get_h_vlaue(const VertexPtr &vertex) {
 }
 
 std::optional<float> Vertex::get_g_value() {
-  //获取从起点到该点代价，为0则深度优先
-  // return 0;
+  // 获取从起点到该点代价，为0则深度优先
+  //  return 0;
   if (parents.empty()) {
     return std::nullopt;
   }

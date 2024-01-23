@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "../../../include/component/utest/utest.h"
-#include "../../../include/component/xml/pugixml.hpp"
+#include "../../../../include/component/tools/utest/utest.h"
+#include "../../../../include/component/tools/xml/pugixml.hpp"
 
 UTEST(load_file, case1) {
   pugi::xml_document doc;
@@ -28,5 +28,4 @@ UTEST(load_file, case2) {
     p = p.next_sibling();
   }
 }
-
 UTEST_MAIN();

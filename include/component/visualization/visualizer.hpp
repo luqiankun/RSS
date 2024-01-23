@@ -15,8 +15,8 @@ class Visualizer {
     if (th.joinable()) {
       th.join();
     }
-    LOG(TRACE) << "visual"
-               << " close";
+    LOG(INFO) << "visual"
+              << " close";
   }
 
  private:

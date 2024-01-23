@@ -26,9 +26,9 @@ class TransportOrder : public TCSObject {
   };
   ~TransportOrder() {
     if (state == State::BEING_PROCESSED) {
-      LOG(TRACE) << name << "not finished, now will be drop";
+      LOG(INFO) << "order: " << name << " not finished, now will be drop";
     } else {
-      LOG(TRACE) << name << " drop";
+      LOG(INFO) << name << " drop";
     }
   }
 
@@ -38,7 +38,7 @@ class TransportOrder : public TCSObject {
   std::chrono::system_clock::time_point dead_time;
   std::string type;
   State state{State::RAW};
-  size_t uuid;
+  size_t name_hash;
   std::deque<std::weak_ptr<TransportOrder>> dependencies;
   std::deque<std::shared_ptr<DriverOrder>> driverorders;
   int current_driver_index{0};

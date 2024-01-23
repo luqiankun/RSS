@@ -9,7 +9,7 @@ class Client : public TCSObject {
  public:
   virtual ~Client() = default;
   using TCSObject::TCSObject;
-  std::size_t uuid;
+  std::size_t name_hash;
   std::unordered_set<std::shared_ptr<TCSResource>> allocate_resources;
   std::unordered_set<std::shared_ptr<TCSResource>> claim_resources;
   std::unordered_set<std::shared_ptr<TCSResource>> future_claim_resources;
@@ -34,7 +34,7 @@ class Scheduler : public TCSObject,
 
  public:
   std::list<std::shared_ptr<driver::Command>> commands;
-  std::weak_ptr<allocate::ResourceManager> res;
+  std::weak_ptr<allocate::ResourceManager> resource;
   std::thread schedule_th;
   std::condition_variable con_var;
   std::mutex mut;

@@ -24,31 +24,31 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
   int min_y = std::numeric_limits<int>::max();
   int max_y = std::numeric_limits<int>::min();
   for (auto &x : tcs->resource->points) {
-    if (x->layout.x() <= min_x) {
-      min_x = x->layout.x();
+    if (x->layout.position.x() <= min_x) {
+      min_x = x->layout.position.x();
     }
-    if (x->layout.x() >= max_x) {
-      max_x = x->layout.x();
+    if (x->layout.position.x() >= max_x) {
+      max_x = x->layout.position.x();
     }
-    if (x->layout.y() <= min_y) {
-      min_y = x->layout.y();
+    if (x->layout.position.y() <= min_y) {
+      min_y = x->layout.position.y();
     }
-    if (x->layout.y() >= max_y) {
-      max_y = x->layout.y();
+    if (x->layout.position.y() >= max_y) {
+      max_y = x->layout.position.y();
     }
   }
   for (auto &x : tcs->resource->locations) {
-    if (x->layout.x() <= min_x) {
-      min_x = x->layout.x();
+    if (x->layout.position.x() <= min_x) {
+      min_x = x->layout.position.x();
     }
-    if (x->layout.x() >= max_x) {
-      max_x = x->layout.x();
+    if (x->layout.position.x() >= max_x) {
+      max_x = x->layout.position.x();
     }
-    if (x->layout.y() <= min_y) {
-      min_y = x->layout.y();
+    if (x->layout.position.y() <= min_y) {
+      min_y = x->layout.position.y();
     }
-    if (x->layout.y() >= max_y) {
-      max_y = x->layout.y();
+    if (x->layout.position.y() >= max_y) {
+      max_y = x->layout.position.y();
     }
   }
   mat_limit =
@@ -62,10 +62,11 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
   cv::Mat mat = cv::Mat(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
   LOG(INFO) << "image size " << mat.size;
   for (auto &x : tcs->resource->points) {
-    auto p_x =
-        static_cast<uint32_t>((x->layout.x() - mat_limit.x()) / resolution);
-    auto p_y = mat.rows - static_cast<uint32_t>(
-                              (x->layout.y() - mat_limit.z()) / resolution);
+    auto p_x = static_cast<uint32_t>((x->layout.position.x() - mat_limit.x()) /
+                                     resolution);
+    auto p_y =
+        mat.rows - static_cast<uint32_t>(
+                       (x->layout.position.y() - mat_limit.z()) / resolution);
     // LOG(INFO) << p_x << " " << p_y;
     cv::putText(mat, x->name, cv::Point2i(p_x + 5, p_y + 20),
                 cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
@@ -75,17 +76,20 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
   }
   for (auto &x : tcs->resource->paths) {
     auto be_x = static_cast<uint32_t>(
-        (x->source_point.lock()->layout.x() - mat_limit.x()) / resolution);
+        (x->source_point.lock()->layout.position.x() - mat_limit.x()) /
+        resolution);
     auto be_y =
         mat.rows -
         static_cast<uint32_t>(
-            (x->source_point.lock()->layout.y() - mat_limit.z()) / resolution);
+            (x->source_point.lock()->layout.position.y() - mat_limit.z()) /
+            resolution);
     auto end_layout_x = static_cast<uint32_t>(
-        (x->destination_point.lock()->layout.x() - mat_limit.x()) / resolution);
+        (x->destination_point.lock()->layout.position.x() - mat_limit.x()) /
+        resolution);
     auto end_layout_y =
         mat.rows -
         static_cast<uint32_t>(
-            (x->destination_point.lock()->layout.y() - mat_limit.z()) /
+            (x->destination_point.lock()->layout.position.y() - mat_limit.z()) /
             resolution);
     double arrowed_len = 5;
     Eigen::Vector2f line;
@@ -108,11 +112,12 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
   }
 
   for (auto &x : tcs->resource->locations) {
-    auto p_x =
-        static_cast<uint32_t>((x->layout.x() - mat_limit.x()) / resolution);
+    auto p_x = static_cast<uint32_t>((x->layout.position.x() - mat_limit.x()) /
+                                     resolution);
 
-    auto p_y = mat.rows - static_cast<uint32_t>(
-                              (x->layout.y() - mat_limit.z()) / resolution);
+    auto p_y =
+        mat.rows - static_cast<uint32_t>(
+                       (x->layout.position.y() - mat_limit.z()) / resolution);
     cv::putText(mat, x->name, cv::Point2i(p_x - 30, p_y - 22),
                 cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
                 cv::Scalar(90, 90, 90), 1, cv::LINE_AA);
@@ -123,11 +128,11 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
 
     if (x->link.lock()) {
       auto link_x = static_cast<uint32_t>(
-          (x->link.lock()->layout.x() - mat_limit.x()) / resolution);
+          (x->link.lock()->layout.position.x() - mat_limit.x()) / resolution);
       auto link_y =
-          mat.rows -
-          static_cast<uint32_t>((x->link.lock()->layout.y() - mat_limit.z()) /
-                                resolution);
+          mat.rows - static_cast<uint32_t>(
+                         (x->link.lock()->layout.position.y() - mat_limit.z()) /
+                         resolution);
       int step_x = (static_cast<int>(link_x) - static_cast<int>(p_x)) / 8;
       int step_y = (static_cast<int>(link_y) - static_cast<int>(p_y)) / 8;
       cv::line(mat, cv::Point2i(p_x, p_y),
@@ -184,7 +189,8 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
 }
 
 void Visualizer::run() {
-  th = std::thread{[this] {
+  th = std::thread{[&] {
+    LOG(INFO) << "visualization run";
     while (!dispose) {
       update();
 
@@ -306,15 +312,17 @@ void Visualizer::update() {
               auto end =
                   dr->route->current_step->path->destination_point.lock();
               auto beg_x = static_cast<uint32_t>(
-                  (beg->pose.x() - mat_limit.x()) / resolution);
-              auto beg_y = vehicle_view->rows -
-                           static_cast<uint32_t>(
-                               (beg->pose.y() - mat_limit.z()) / resolution);
+                  (beg->position.x() - mat_limit.x()) / resolution);
+              auto beg_y =
+                  vehicle_view->rows -
+                  static_cast<uint32_t>((beg->position.y() - mat_limit.z()) /
+                                        resolution);
               auto end_x = static_cast<uint32_t>(
-                  (end->pose.x() - mat_limit.x()) / resolution);
-              auto end_y = vehicle_view->rows -
-                           static_cast<uint32_t>(
-                               (end->pose.y() - mat_limit.z()) / resolution);
+                  (end->position.x() - mat_limit.x()) / resolution);
+              auto end_y =
+                  vehicle_view->rows -
+                  static_cast<uint32_t>((end->position.y() - mat_limit.z()) /
+                                        resolution);
               cv::circle(*vehicle_view, cv::Point2i(beg_x, beg_y), 5,
                          cv::Scalar(std::get<2>(color), std::get<1>(color),
                                     std::get<0>(color)),
@@ -352,15 +360,17 @@ void Visualizer::update() {
               auto beg = path->path->source_point.lock();
               auto end = path->path->destination_point.lock();
               auto beg_x = static_cast<uint32_t>(
-                  (beg->pose.x() - mat_limit.x()) / resolution);
-              auto beg_y = vehicle_view->rows -
-                           static_cast<uint32_t>(
-                               (beg->pose.y() - mat_limit.z()) / resolution);
+                  (beg->position.x() - mat_limit.x()) / resolution);
+              auto beg_y =
+                  vehicle_view->rows -
+                  static_cast<uint32_t>((beg->position.y() - mat_limit.z()) /
+                                        resolution);
               auto end_x = static_cast<uint32_t>(
-                  (end->pose.x() - mat_limit.x()) / resolution);
-              auto end_y = vehicle_view->rows -
-                           static_cast<uint32_t>(
-                               (end->pose.y() - mat_limit.z()) / resolution);
+                  (end->position.x() - mat_limit.x()) / resolution);
+              auto end_y =
+                  vehicle_view->rows -
+                  static_cast<uint32_t>((end->position.y() - mat_limit.z()) /
+                                        resolution);
               cv::circle(*vehicle_view, cv::Point2i(beg_x, beg_y), 3,
                          cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
               cv::circle(*vehicle_view, cv::Point2i(end_x, end_y), 3,

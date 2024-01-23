@@ -1,11 +1,15 @@
 #ifndef VEHICLE_HPP
 #define VEHICLE_HPP
+#define BOOST_ERROR_CODE_HEADER_ONLY
 #include <boost/asio.hpp>
 
-#include "../../../include/component/log/easylogging++.h"
+#include "../../../include/component/tools/log/easylogging++.h"
 #include "../../component/data/order/orderquence.hpp"
 #include "../../component/tcsobject.hpp"
+#include "../allocate/order.hpp"
+#include "../planner/planner.hpp"
 #include "../schedule/schedule.hpp"
+
 #if BOOST_VERSION >= 107001
 using io_service_type = boost::asio::io_context;
 #else
@@ -36,6 +40,7 @@ class Vehicle : public schedule::Client,
   void plan_route();
   void get_next_ord();
   void run();
+  void cancel_all_order();
   void close();
   virtual bool action(
       std::shared_ptr<data::order::DriverOrder::Destination>) = 0;  // 执行动作
@@ -53,10 +58,12 @@ class Vehicle : public schedule::Client,
   std::string color;
   ProcState proc_state{ProcState::IDLE};
   State state{State::IDLE};
-  bool paused;
+  bool paused{false};
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
-  std::weak_ptr<dispatch::Dispatcher> dispatcher;
+  std::weak_ptr<allocate::ResourceManager> resource;
+  std::weak_ptr<allocate::OrderPool> orderpool;
+  std::weak_ptr<planner::Planner> planner;
   std::shared_ptr<data::order::TransportOrder> current_order;
   std::shared_ptr<Command> current_command;
   std::shared_ptr<data::model::Point> current_point;

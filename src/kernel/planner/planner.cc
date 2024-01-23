@@ -50,7 +50,8 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
   // std::cout << "generate " << edges.size() << " edge\n";
   for (auto &x : manager->locations) {
     auto console = std::make_shared<Console>(
-        Eigen::Vector2i(x->position.x(), x->position.y()), x->layout, x->name);
+        Eigen::Vector2i(x->position.x(), x->position.y()), x->layout.position,
+        x->name);
     VertexPtr link;
     for (auto &v : vertexs) {
       if (v->equal_point == x->link.lock()) {

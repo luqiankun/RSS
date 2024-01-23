@@ -6,6 +6,15 @@ namespace kernel {
 namespace allocate {
 class OrderPool : public TCSObject {
  public:
+  std::shared_ptr<data::order::DriverOrder> route_to_driverorder(
+      std::shared_ptr<data::order::Route> route,
+      std::shared_ptr<data::order::DriverOrder::Destination> dest);
+  std::shared_ptr<data::order::DriverOrder::Destination> res_to_destination(
+      const std::shared_ptr<TCSResource>& res,
+      data::order::DriverOrder::Destination::OpType op);
+  void cancel_all_order();
+  void cancel_order(size_t order_uuid);
+  std::shared_ptr<data::order::TransportOrder> pop();
   ~OrderPool() { LOG(INFO) << name << " close"; }
 
  public:

@@ -21,20 +21,18 @@ file(GLOB_RECURSE COMPONENTS_SRC src/component/data/*.cc
  src/component/event/*.cc
 )
 file(GLOB_RECURSE KERNEL_SRC src/kernel/*.cc )
-file(GLOB_RECURSE LOG_SRC src/component/log/*.cc )
-file(GLOB_RECURSE XML_SRC src/component/xml/*.cc )
+file(GLOB_RECURSE TOOLS_SRC src/component/tools/*.cc )
 file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
 
 
 #test
 add_executable(test_event test/component/event/event_test.cc ${COMPONENTS_SRC})
-add_executable(log_event test/component/log/log_test.cc ${LOG_SRC} )
-add_executable(xml_test test/component/xml/xml_test.cc ${XML_SRC})
+add_executable(log_event test/component/tools/log/log_test.cc ${TOOLS_SRC} )
+add_executable(xml_test test/component/tools/xml/xml_test.cc  src/component/tools/xml/pugixml.cc)
 if(VISUALIZATION)
    add_executable(TCS_test  test/main/tcs_test.cc
    ${KERNEL_SRC}
-   ${LOG_SRC}
-   ${XML_SRC}
+   ${TOOLS_SRC}
    ${COMPONENTS_SRC}
    ${VISUAL_SRC}
    ${MAIN_SRC}
@@ -43,8 +41,7 @@ if(VISUALIZATION)
 else()
    add_executable(TCS_test test/main/tcs_test.cc
    ${KERNEL_SRC}
-   ${LOG_SRC}
-   ${XML_SRC}
+   ${TOOLS_SRC}
    ${COMPONENTS_SRC}
    ${MAIN_SRC}
    )

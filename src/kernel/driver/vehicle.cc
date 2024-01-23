@@ -1,8 +1,9 @@
 
 #include "../../../include/kernel/driver/vehicle.hpp"
 
+#include "../../../include/kernel/allocate/order.hpp"
+#include "../../../include/kernel/allocate/resource.hpp"
 #include "../../../include/kernel/dispatch/dispatch.hpp"
-
 namespace kernel {
 namespace driver {
 void Vehicle::execute_action(
@@ -36,6 +37,18 @@ void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
     current_command->vehicle_execute_cb(move_ret);
   });
 }
+
+void Vehicle::cancel_all_order() {
+  for (auto& ord : orders) {
+    if (ord->state == data::order::TransportOrder::State::RAW ||
+        ord->state == data::order::TransportOrder::State::ACTIVE ||
+        ord->state == data::order::TransportOrder::State::DISPATCHABLE ||
+        ord->state == data::order::TransportOrder::State::BEING_PROCESSED)
+      ord->state = data::order::TransportOrder::State::WITHDRAWN;
+  }
+  orders.clear();
+}
+
 void Vehicle::run() {
   run_th = std::thread([&] {
 #if BOOST_VERSION > 107001
@@ -72,16 +85,16 @@ void Vehicle::plan_route() {
   std::shared_ptr<data::model::Point> end_planner;
   for (auto& op : current_order->driverorders) {
     auto dest = op->destination->destination.lock();
-    auto start_check = dispatcher.lock()->find(dest->name);
-    auto destination = dispatcher.lock()->res_to_destination(
+    auto start_check = resource.lock()->find(dest->name);
+    auto destination = orderpool.lock()->res_to_destination(
         start_check.second, op->destination->operation);
     op->destination = destination;
     bool able{false};
-    if (start_check.first == kernel::dispatch::Dispatcher::ResType::Point) {
+    if (start_check.first == allocate::ResourceManager::ResType::Point) {
       end_planner =
           std::dynamic_pointer_cast<data::model::Point>(start_check.second);
     } else if (start_check.first ==
-               kernel::dispatch::Dispatcher::ResType::Location) {
+               allocate::ResourceManager::ResType::Location) {
       end_planner =
           std::dynamic_pointer_cast<data::model::Location>(start_check.second)
               ->link.lock();
@@ -90,14 +103,13 @@ void Vehicle::plan_route() {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
       LOG(WARNING) << current_order->name << " can not find obj";
     }
-    auto path =
-        dispatcher.lock()->planner->find_paths(start_planner, end_planner);
+    auto path = planner.lock()->find_paths(start_planner, end_planner);
     if (path.empty()) {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
       LOG(WARNING) << current_order->name << " can not routable";
     } else {
-      auto driverorder = dispatcher.lock()->route_to_driverorder(
-          dispatcher.lock()->paths_to_route(path.front()), destination);
+      auto driverorder = orderpool.lock()->route_to_driverorder(
+          resource.lock()->paths_to_route(path.front()), destination);
       driverorder->transport_order = current_order;
       op = driverorder;
       able = true;
@@ -217,8 +229,8 @@ bool SimVehicle::action(
   if (dest->operation == data::order::DriverOrder::Destination::OpType::NOP) {
     auto t =
         std::dynamic_pointer_cast<data::model::Point>(dest->destination.lock());
-    position.x() = t->pose.x();
-    position.y() = t->pose.y();
+    position.x() = t->position.x();
+    position.y() = t->position.y();
     current_point = t;
     return true;
   } else if (dest->operation ==
@@ -232,8 +244,8 @@ bool SimVehicle::action(
     LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
               << ")";
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    position.x() = t->link.lock()->pose.x();
-    position.y() = t->link.lock()->pose.y();
+    position.x() = t->link.lock()->position.x();
+    position.y() = t->link.lock()->position.y();
     current_point = t->link.lock();
     LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
               << ")";
@@ -249,8 +261,8 @@ bool SimVehicle::action(
     LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
               << ")";
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    position.x() = t->link.lock()->pose.x();
-    position.y() = t->link.lock()->pose.y();
+    position.x() = t->link.lock()->position.x();
+    position.y() = t->link.lock()->position.y();
     current_point = t->link.lock();
     LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
               << ")";
@@ -270,15 +282,15 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(step->wait_time / rate));
     size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-    int x_len = end->pose.x() - position.x();
-    int y_len = end->pose.y() - position.y();
+    int x_len = end->position.x() - position.x();
+    int y_len = end->position.y() - position.y();
     for (int i = 0; i < 10; i++) {
       position.x() += x_len / 10;
       position.y() += y_len / 10;
       std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
     }
-    position.x() = end->pose.x();
-    position.y() = end->pose.y();
+    position.x() = end->position.x();
+    position.y() = end->position.y();
     current_point = end;
     LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
               << ")";
@@ -289,15 +301,15 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
     size_t t = step->path->length * 1000 / max_vel / rate;  // ms
     std::this_thread::sleep_for(
         std::chrono::milliseconds(step->wait_time / rate));
-    int x_len = end->pose.x() - position.x();
-    int y_len = end->pose.y() - position.y();
+    int x_len = end->position.x() - position.x();
+    int y_len = end->position.y() - position.y();
     for (int i = 0; i < 10; i++) {
       position.x() += x_len / 10;
       position.y() += y_len / 10;
       std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
     }
-    position.x() = end->pose.x();
-    position.y() = end->pose.y();
+    position.x() = end->position.x();
+    position.y() = end->position.y();
     current_point = end;
     LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
               << ")";

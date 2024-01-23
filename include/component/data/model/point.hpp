@@ -8,6 +8,11 @@ class Location;
 class Point : public TCSResource {
  public:
   using TCSResource::TCSResource;
+  struct Layout {
+    Eigen::Vector2i position;
+    Eigen::Vector2i label_offset;
+    int layer_id{0};
+  };
   enum class Type {
     REPORT_POSITION,
     HALT_POSITION,
@@ -15,8 +20,8 @@ class Point : public TCSResource {
     NORMAL_POSITION,
     UNKNOWN
   };
-  Eigen::Vector2i pose{0, 0};  // x y
-  Eigen::Vector2i layout{0, 0};
+  Eigen::Vector3i position{0, 0, 0};  // x y
+  Layout layout;
   Type type{Type::UNKNOWN};
   std::vector<std::shared_ptr<Path>> incoming_paths;
   std::vector<std::shared_ptr<Path>> outgoing_paths;

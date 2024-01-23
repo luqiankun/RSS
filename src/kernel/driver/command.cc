@@ -7,6 +7,9 @@ void Command::run_once() {
   if (!vehicle.lock()) {
     return;
   }
+  if (vehicle.lock()->paused) {
+    return;
+  }
   for (auto& x : order->dependencies) {
     auto dep = x.lock();
     if (dep) {
@@ -30,7 +33,7 @@ void Command::run_once() {
         std::vector<std::shared_ptr<TCSResource>> temp;
         temp.push_back(step->path->source_point.lock());
         temp.push_back(step->path->destination_point.lock());
-        if (scheduler.lock()->res.lock()->claim(temp, vehicle.lock())) {
+        if (scheduler.lock()->resource.lock()->claim(temp, vehicle.lock())) {
           // TODO 添加future_claim
           for (auto& x : get_future(driver_order)) {
             bool has{false};
@@ -63,7 +66,7 @@ void Command::run_once() {
       auto dest = get_dest(driver_order);
       std::vector<std::shared_ptr<TCSResource>> temp;
       temp.push_back(dest->destination.lock());
-      if (scheduler.lock()->res.lock()->claim(temp, vehicle.lock())) {
+      if (scheduler.lock()->resource.lock()->claim(temp, vehicle.lock())) {
         state = State::CLAIMED;
       }
     }
@@ -75,14 +78,14 @@ void Command::run_once() {
       if (!step) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
       } else {
-        vehicle.lock()->execute_move(step);
+        move(step);
         state = State::EXECUTING;
       }
 
     } else if (driver_order->state ==
                data::order::DriverOrder::State::OPERATING) {
       auto dest = get_dest(driver_order);
-      vehicle.lock()->execute_action(dest);
+      action(dest);
       state = State::EXECUTING;
 
     } else {
@@ -102,7 +105,7 @@ void Command::run_once() {
         ss << x->name << " ";
       }
     }
-    if (scheduler.lock()->res.lock()->unclaim(temp, vehicle.lock())) {
+    if (scheduler.lock()->resource.lock()->unclaim(temp, vehicle.lock())) {
       state = State::END;
       LOG(INFO) << ss.str();
     }

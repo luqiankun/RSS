@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "../log/easylogging++.h"
+#include "../tools/log/easylogging++.h"
 class cpu_timer {
  public:
   explicit cpu_timer(const std::string &n = "") : name(n) {
