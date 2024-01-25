@@ -216,7 +216,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret->second, "application/json");
             }
           });
-  srv.Put(R"(/paths/([^/+])/locked)",
+  srv.Put(R"(/paths/([^/]+)/locked)",
           [=](const httplib::Request &req, httplib::Response &res) {
             bool value{false};
             if (req.get_param_value("newValue") == "true" ||
@@ -231,7 +231,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret->second, "application/json");
             }
           });
-  srv.Put(R"(/locations/([^/+])/locked)",
+  srv.Put(R"(/locations/([^/]+)/locked)",
           [=](const httplib::Request &req, httplib::Response &res) {
             bool value{false};
             if (req.get_param_value("newValue") == "true" ||

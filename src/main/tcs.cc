@@ -275,12 +275,6 @@ void TCS::recovery_vehicle(const std::string &name) {
 }
 
 void TCS::stop() {
-#ifdef VISUAL
-  if (visualizer) {
-    visualizer->stop();
-    visualizer.reset();
-  }
-#endif
   if (dispatcher) {
     dispatcher->stop();
     dispatcher.reset();
@@ -317,6 +311,12 @@ void TCS::home_order(const std::string &name,
 }
 
 TCS::~TCS() {
+#ifdef VISUAL
+  if (visualizer) {
+    visualizer->stop();
+    visualizer.reset();
+  }
+#endif
   LOG(INFO) << "TCS  stop";
   stop();
 }
@@ -410,15 +410,20 @@ void TCS::cancel_vehicle_all_order(const std::string &vehicle_name) {
   }
 }
 void TCS::run() {
-  for (auto &v : dispatcher->vehicles) {
-    v->run();
+  if (dispatcher) {
+    for (auto &v : dispatcher->vehicles) {
+      v->run();
+    }
+    dispatcher->run();
   }
-  dispatcher->run();
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  scheduler->run();
+  if (scheduler) {
+    scheduler->run();
+  }
 #ifdef VISUAL
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  visualizer->run();
+  if (visualizer) {
+    visualizer->run();
+  }
 #endif
 }
 
@@ -641,9 +646,21 @@ std::pair<int, std::string> TCS::post_transport_order(
     }
     return std::pair<int, std::string>(200, res.dump());
   } catch (json::parse_error ec) {
-    LOG(ERROR) << ec.what();
+    LOG(ERROR) << "parse failed :" << ec.what();
     json res = json::array();
-    auto msg = "Could not parse JSON input.";
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(400, res.dump());
+  } catch (json::type_error ec) {
+    LOG(ERROR) << "type error :" << ec.what();
+    json res = json::array();
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(400, res.dump());
+  } catch (json::other_error ec) {
+    LOG(ERROR) << "other error :" << ec.what();
+    json res = json::array();
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   }
@@ -772,9 +789,21 @@ std::pair<int, std::string> TCS::post_ordersequence(
     res.push_back(msg);
     return std::pair<int, std::string>(404, res.dump());
   } catch (json::parse_error ec) {
-    LOG(ERROR) << ec.what();
+    LOG(ERROR) << "parse error:" << ec.what();
     json res = json::array();
-    auto msg = "Could not parse JSON input.";
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(400, res.dump());
+  } catch (json::type_error ec) {
+    LOG(ERROR) << "type error :" << ec.what();
+    json res = json::array();
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(400, res.dump());
+  } catch (json::other_error ec) {
+    LOG(ERROR) << "other error :" << ec.what();
+    json res = json::array();
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   }
@@ -1001,7 +1030,9 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       point->position.x() = p["position"]["x"].get<int>();
       point->position.y() = p["position"]["y"].get<int>();
       point->position.z() = p["position"]["z"].get<int>();
-      point->client_angle = p["vehicleOrientationAngle"].get<int>();
+      if (p.contains("vehicleOrientationAngle")) {
+        point->client_angle = p["vehicleOrientationAngle"].get<int>();
+      }
       point->type = data::model::Point::new_type(p["type"].get<std::string>());
       point->layout.position.x() = p["layout"]["position"]["x"].get<int>();
       point->layout.position.y() = p["layout"]["position"]["y"].get<int>();
@@ -1010,9 +1041,11 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       point->layout.label_offset.y() =
           p["layout"]["labelOffset"]["y"].get<int>();
       point->layout.layer_id = p["layout"]["layerId"].get<int>();
-      for (auto &pro : p["properties"]) {
-        point->properties.insert(std::pair<std::string, std::string>(
-            pro["name"].get<std::string>(), pro["value"].get<std::string>()));
+      if (p.contains("properties")) {
+        for (auto &pro : p["properties"]) {
+          point->properties.insert(std::pair<std::string, std::string>(
+              pro["name"].get<std::string>(), pro["value"].get<std::string>()));
+        }
       }
       resource->points.push_back(point);
     }
@@ -1030,16 +1063,18 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           x->incoming_paths.push_back(path);
         }
         if (x->name == p["destPointName"].get<std::string>()) {
-          path->source_point = x;
+          path->destination_point = x;
           x->outgoing_paths.push_back(path);
         }
       }
       path->layout.layer_id = p["layout"]["layerId"].get<int>();
       path->layout.connect_type =
           data::model::Path::new_connect_type(p["layout"]["connectionType"]);
-      for (auto &pro : p["properties"]) {
-        path->properties.insert(std::pair<std::string, std::string>(
-            pro["name"].get<std::string>(), pro["value"].get<std::string>()));
+      if (p.contains("properties")) {
+        for (auto &pro : p["properties"]) {
+          path->properties.insert(std::pair<std::string, std::string>(
+              pro["name"].get<std::string>(), pro["value"].get<std::string>()));
+        }
       }
       if (!p.contains("length")) {
         path->length = (path->source_point.lock()->position -
@@ -1056,7 +1091,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       loc->position.y() = l["position"]["y"].get<int>();
       loc->position.z() = l["position"]["z"].get<int>();
       if (!l["links"].empty()) {
-        auto p_name = l["link"].front()["pointName"].get<std::string>();
+        auto p_name = l["links"].front()["pointName"].get<std::string>();
         for (auto &x : resource->points) {
           if (x->name == p_name) {
             loc->link = x;
@@ -1069,9 +1104,11 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       loc->layout.label_offset.x() = l["layout"]["labelOffset"]["x"].get<int>();
       loc->layout.label_offset.y() = l["layout"]["labelOffset"]["y"].get<int>();
       loc->layout.layer_id = l["layout"]["layerId"].get<int>();
-      loc->type.layout.location_representation =
-          data::model::Location::new_location_type(
-              l["layout"]["locationRepresentation"].get<std::string>());
+      if (l["layout"].contains("locationRepresentation")) {
+        loc->type.layout.location_representation =
+            data::model::Location::new_location_type(
+                l["layout"]["locationRepresentation"].get<std::string>());
+      }
       resource->locations.push_back(loc);
     }
     // vehicle
@@ -1096,15 +1133,6 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
 
     // for (auto &v : model["blocks"]) {
     // }
-
-#ifdef VISUAL
-    if (model["visualLayout"].contains("resolution")) {
-      int r = model["visualLayout"]["resolution"].get<int>();
-      init_visualizer(r);
-    } else {
-      init_visualizer(80);
-    }
-#endif
     //
     scheduler->resource = resource;
     // connect signals
@@ -1121,10 +1149,29 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       v->orderpool = orderpool;
       v->resource = resource;
     }
+#ifdef VISUAL
+    if (!visualizer) {
+      init_visualizer();
+    } else {
+      visualizer->init(visualizer->resolution, shared_from_this());
+    }
+#endif
     run();
     return std::pair<int, std::string>(200, "");
   } catch (json::parse_error ec) {
-    LOG(ERROR) << ec.what();
+    LOG(ERROR) << "parse error: " << ec.what();
+    json res = json::array();
+    auto msg = "Could not parse JSON input.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(400, res.dump());
+  } catch (json::type_error ec) {
+    LOG(ERROR) << "type error :" << ec.what();
+    json res = json::array();
+    auto msg = "Could not parse JSON input.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(400, res.dump());
+  } catch (json::other_error ec) {
+    LOG(ERROR) << "other error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input.";
     res.push_back(msg);
@@ -1142,6 +1189,9 @@ std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
       } else {
         planner->reset_edge(x->name);
       }
+#ifdef VISUAL
+      visualizer->init(visualizer->resolution, shared_from_this());
+#endif
       return std::pair<int, std::string>(200, "");
     }
   }
@@ -1156,6 +1206,9 @@ std::pair<int, std::string> TCS::put_location_locked(
   for (auto &x : resource->locations) {
     if (x->name == loc_name) {
       x->locked = new_value;
+#ifdef VISUAL
+      visualizer->init(visualizer->resolution, shared_from_this());
+#endif
       return std::pair<int, std::string>(200, "");
     }
   }

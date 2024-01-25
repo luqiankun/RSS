@@ -9,7 +9,7 @@ int main(int argc, const char** argv) {
                "--------------";
   auto tcs = std::make_shared<TCS>();
   auto srv = std::make_shared<HTTPServer>();
-  if (tcs->init_all("/home/luqk/c++/TCS/config/map.xml")) {
+  if (true) {
     srv->get_transport_order.connect(
         std::bind(&TCS::get_transport_order, tcs, std::placeholders::_1));
     srv->get_transport_orders.connect(

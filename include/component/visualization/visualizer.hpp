@@ -19,7 +19,7 @@ class Visualizer {
               << " close";
   }
 
- private:
+ public:
   double resolution;
   std::shared_ptr<cv::Mat> map_view;
   std::shared_ptr<cv::Mat> vehicle_view;
@@ -27,6 +27,7 @@ class Visualizer {
   std::weak_ptr<TCS> tcs;
   std::thread th;
   bool dispose{false};
+  bool is_run{false};
 };
 }  // namespace visual
 

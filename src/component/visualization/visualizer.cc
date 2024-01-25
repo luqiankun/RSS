@@ -97,17 +97,23 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
     line.y() = static_cast<double>(end_layout_y) - static_cast<double>(be_y);
     Eigen::Vector2f norm_line = line.normalized() * (line.norm() - 6);
     double tip = arrowed_len / line.norm();
+    cv::Scalar color = cv::Scalar(90, 90, 90);
+    int thickness = 1;
+    if (x->locked) {
+      color = cv::Scalar(255, 255, 255);
+      thickness = 3;
+    }
     cv::arrowedLine(mat,
                     cv::Point2i(be_x + line.normalized().x() * 6,
                                 be_y + line.normalized().y() * 6),
                     cv::Point2i(be_x + norm_line.x(), be_y + norm_line.y()),
-                    cv::Scalar(90, 90, 90), 1, cv::LINE_AA, 0, tip);
+                    color, thickness, cv::LINE_AA, 0, tip);
     if (x->max_reverse_vel > 0) {
       cv::arrowedLine(mat,
                       cv::Point2i(be_x + norm_line.x(), be_y + norm_line.y()),
                       cv::Point2i(be_x + line.normalized().x() * 6,
                                   be_y + line.normalized().y() * 6),
-                      cv::Scalar(40, 90, 50), 1, cv::LINE_AA, 0, tip);
+                      color, thickness, cv::LINE_AA, 0, tip);
     }
   }
 
@@ -118,11 +124,17 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
     auto p_y =
         mat.rows - static_cast<uint32_t>(
                        (x->layout.position.y() - mat_limit.z()) / resolution);
+    cv::Scalar color = cv::Scalar(10, 20, 20);
+    int thickness = 2;
+    if (x->locked) {
+      color = cv::Scalar(150, 150, 150);
+      thickness = -1;
+    }
     cv::putText(mat, x->name, cv::Point2i(p_x - 30, p_y - 22),
                 cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
                 cv::Scalar(90, 90, 90), 1, cv::LINE_AA);
-    cv::rectangle(mat, cv::Rect(p_x - 14, p_y - 10, 28, 20),
-                  cv::Scalar(10, 20, 20), 1, cv::LINE_AA, 0);
+    cv::rectangle(mat, cv::Rect(p_x - 14, p_y - 10, 28, 20), color, thickness,
+                  cv::LINE_AA, 0);
     cv::circle(mat, cv::Point2i(p_x, p_y), 3, cv::Scalar(70, 70, 70), 1,
                cv::LINE_AA);
 
@@ -189,28 +201,30 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
 }
 
 void Visualizer::run() {
-  th = std::thread{[&] {
-    LOG(INFO) << "visualization run";
-    while (!dispose) {
-      update();
+  if (!is_run) {
+    is_run = true;
+    th = std::thread{[&] {
+      LOG(INFO) << "visualization run";
+      while (!dispose) {
+        update();
+        auto img = std::shared_ptr<cv::Mat>(new cv::Mat(map_view->clone()));
+        auto mask = std::shared_ptr<cv::Mat>(new cv::Mat);
+        cv::cvtColor(*vehicle_view, *mask, cv::COLOR_BGR2GRAY);
+        cv::threshold(*mask, *mask, 10, 255, cv::THRESH_BINARY);
+        // cv::bitwise_not(mask, mask);
 
-      auto img = std::shared_ptr<cv::Mat>(new cv::Mat(map_view->clone()));
-      auto mask = std::shared_ptr<cv::Mat>(new cv::Mat);
-      cv::cvtColor(*vehicle_view, *mask, cv::COLOR_BGR2GRAY);
-      cv::threshold(*mask, *mask, 10, 255, cv::THRESH_BINARY);
-      // cv::bitwise_not(mask, mask);
-
-      cv::bitwise_not(*map_view, *img, *mask);
-      cv::add(*img, *vehicle_view, *img);
-      namedWindow("TCS_VIEW", cv::WINDOW_NORMAL);
-      cv::imshow("TCS_VIEW", *img);
-      if (cv::waitKey(200) == 27) {  // 如果用户按下 ESC 键，退出循环
-        break;
+        cv::bitwise_not(*map_view, *img, *mask);
+        cv::add(*img, *vehicle_view, *img);
+        namedWindow("TCS_VIEW", cv::WINDOW_NORMAL);
+        cv::imshow("TCS_VIEW", *img);
+        if (cv::waitKey(200) == 27) {  // 如果用户按下 ESC 键，退出循环
+          break;
+        }
       }
-    }
-    cv::destroyAllWindows();
-    cv::waitKey(1);
-  }};
+      cv::destroyAllWindows();
+      cv::waitKey(1);
+    }};
+  }
 }
 void Visualizer::update() {
   if (!tcs.lock()) {
@@ -220,6 +234,9 @@ void Visualizer::update() {
       cv::Size(map_view->cols, map_view->rows), CV_8UC3, cv::Scalar(0)));
   if (!tcs.lock()) {
     dispose = true;
+    return;
+  }
+  if (!tcs.lock()->dispatcher) {
     return;
   }
   for (auto &v : tcs.lock()->dispatcher->vehicles) {

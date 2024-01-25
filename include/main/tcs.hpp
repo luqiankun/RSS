@@ -84,7 +84,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
  public:
 #ifdef VISUAL
   std::shared_ptr<visual::Visualizer> visualizer;
-  bool init_visualizer(double);
+  bool init_visualizer(double = 80);
 #endif
  public:
   std::shared_ptr<kernel::allocate::ResourceManager> resource;
