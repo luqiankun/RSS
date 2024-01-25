@@ -49,6 +49,7 @@ class Console {
   Eigen::Vector2i location;
   Eigen::Vector2i layout;
   VertexPtr link{nullptr};
+  bool locked{false};
 };
 using ConsolePtr = std::shared_ptr<Console>;
 }  // namespace planner

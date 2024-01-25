@@ -9,7 +9,6 @@ class Client : public TCSObject {
  public:
   virtual ~Client() = default;
   using TCSObject::TCSObject;
-  std::size_t name_hash;
   std::unordered_set<std::shared_ptr<TCSResource>> allocate_resources;
   std::unordered_set<std::shared_ptr<TCSResource>> claim_resources;
   std::unordered_set<std::shared_ptr<TCSResource>> future_claim_resources;

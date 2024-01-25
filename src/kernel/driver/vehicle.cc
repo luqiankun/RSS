@@ -44,7 +44,7 @@ void Vehicle::cancel_all_order() {
         ord->state == data::order::TransportOrder::State::ACTIVE ||
         ord->state == data::order::TransportOrder::State::DISPATCHABLE ||
         ord->state == data::order::TransportOrder::State::BEING_PROCESSED)
-      ord->state = data::order::TransportOrder::State::WITHDRAWN;
+      ord->state = data::order::TransportOrder::State::WITHDRAWL;
   }
   orders.clear();
 }
@@ -95,9 +95,11 @@ void Vehicle::plan_route() {
           std::dynamic_pointer_cast<data::model::Point>(start_check.second);
     } else if (start_check.first ==
                allocate::ResourceManager::ResType::Location) {
-      end_planner =
-          std::dynamic_pointer_cast<data::model::Location>(start_check.second)
-              ->link.lock();
+      auto temp =
+          std::dynamic_pointer_cast<data::model::Location>(start_check.second);
+      if (!temp->locked) {
+        end_planner = temp->link.lock();
+      }
     }
     if (!end_planner) {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
@@ -121,12 +123,6 @@ void Vehicle::plan_route() {
 }
 
 void Vehicle::get_next_ord() {
-  // 订单结束了
-  current_order->state = data::order::TransportOrder::State::FINISHED;
-  LOG(INFO) << current_order->name << " finished";
-  current_order->end_time = std::chrono::system_clock::now();
-  current_order.reset();
-  current_command.reset();
   // 获取新订单
   for (;;) {
     if (orders.empty()) {
@@ -136,11 +132,18 @@ void Vehicle::get_next_ord() {
     } else {
       current_order = orders.front();
       // TODO  solver
-      plan_route();
-      orders.pop_front();
       if (current_order->state !=
           data::order::TransportOrder::State::BEING_PROCESSED) {
         current_order.reset();
+        continue;
+      }
+      // route
+      plan_route();
+      orders.pop_front();
+      if (current_order->state ==
+          data::order::TransportOrder::State::UNROUTABLE) {
+        current_order.reset();
+        continue;
       } else {
         break;
       }
@@ -159,8 +162,13 @@ void Vehicle::get_next_ord() {
 
 void Vehicle::command_done() {
   bool ord_shutdown{false};
-  if (current_order->state == data::order::TransportOrder::State::WITHDRAWN) {
+  if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     // 订单取消
+    get_next_ord();
+    return;
+  }
+  if (current_order->state == data::order::TransportOrder::State::FAILED) {
+    // 订单失败
     get_next_ord();
     return;
   }
@@ -172,6 +180,11 @@ void Vehicle::command_done() {
   }
   if (current_order->driverorders.size() <=
       current_order->current_driver_index) {
+    current_order->state = data::order::TransportOrder::State::FINISHED;
+    LOG(INFO) << current_order->name << " finished";
+    current_order->end_time = std::chrono::system_clock::now();
+    current_order.reset();
+    current_command.reset();
     get_next_ord();
   } else {
     // 继续执行订单
@@ -187,6 +200,40 @@ void Vehicle::command_done() {
   }
 }
 
+std::string Vehicle::get_state() {
+  if (state == State::IDLE) {
+    return "IDLE";
+  } else if (state == State::EXECUTING) {
+    return "EXECUTING";
+
+  } else if (state == State::CHARGING) {
+    return "CHARGING";
+
+  } else if (state == State::ERROR) {
+    return "ERROR";
+
+  } else if (state == State::UNAVAILABLE) {
+    return "UNAVAILABLE";
+
+  } else {
+    return "UNKNOWN";
+  }
+}
+std::optional<std::string> Vehicle::get_proc_state(ProcState s) {
+  if (s == kernel::driver::Vehicle::ProcState::IDLE) {
+    return "IDLE";
+  } else if (s == kernel::driver::Vehicle::ProcState::AWAITING_ORDER) {
+    return "AWAITING_ORDER";
+  } else if (s == kernel::driver::Vehicle::ProcState::PROCESSING_ORDER) {
+    return "PROCESSING_ORDER";
+  } else {
+    return std::nullopt;
+  }
+}
+std::string Vehicle::get_proc_state() {
+  auto res = Vehicle::get_proc_state(this->proc_state);
+  return res.value_or("");
+}
 void Vehicle::next_command() {
   if (!current_order) {
     if (orders.empty()) {
@@ -210,23 +257,29 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
   if (state == State::ERROR) {  // TODO
   } else if (state == State::UNAVAILABLE) {
     // TODO
+    orders.push_back(order);
   } else if (state == State::IDLE) {
     // TODO
     current_order.reset();
     orders.push_back(order);
     next_command();
     state = State::EXECUTING;
+    proc_state = ProcState::PROCESSING_ORDER;
   } else if (state == State::EXECUTING) {
     orders.push_back(order);
   } else if (state == State::CHARGING) {
     orders.push_back(order);
+    if (engerg_level > energy_level_good) {
+      state = State::EXECUTING;
+      next_command();
+    }
   } else {
     // TODO
   }
 }
 bool SimVehicle::action(
     std::shared_ptr<data::order::DriverOrder::Destination> dest) {
-  if (dest->operation == data::order::DriverOrder::Destination::OpType::NOP) {
+  if (dest->operation == data::order::DriverOrder::Destination::OpType::MOVE) {
     auto t =
         std::dynamic_pointer_cast<data::model::Point>(dest->destination.lock());
     position.x() = t->position.x();
@@ -266,6 +319,9 @@ bool SimVehicle::action(
     current_point = t->link.lock();
     LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
               << ")";
+    return true;
+  } else if (dest->operation ==
+             data::order::DriverOrder::Destination::OpType::NOP) {
     return true;
   }
   return true;
@@ -319,7 +375,23 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
   }
 }
 
-void SimVehicle::update() {}
+void SimVehicle::update() {
+  static bool run{false};
+  if (!run) {
+    if (!resource.lock()) {
+      return;
+    }
+    if (resource.lock()->points.empty()) {
+      return;
+    }
+
+    position.x() = resource.lock()->points.front()->position.x();
+    position.y() = resource.lock()->points.front()->position.y();
+    current_point = resource.lock()->points.front();  // 当前点
+    init_point = resource.lock()->points.front();     // 初始点
+    run = true;
+  }
+}
 
 }  // namespace driver
 }  // namespace kernel

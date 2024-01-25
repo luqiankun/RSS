@@ -16,11 +16,13 @@ class OrderPool : public TCSObject {
   void cancel_order(size_t order_uuid);
   std::shared_ptr<data::order::TransportOrder> pop();
   ~OrderPool() { LOG(INFO) << name << " close"; }
+  void update_quence();
 
  public:
   using TCSObject::TCSObject;
   std::deque<std::shared_ptr<data::order::TransportOrder>> orderpool;
   std::deque<std::shared_ptr<data::order::TransportOrder>> ended_orderpool;
+  std::deque<std::shared_ptr<data::order::OrderSequence>> orderquence;
 };
 }  // namespace allocate
 }  // namespace kernel

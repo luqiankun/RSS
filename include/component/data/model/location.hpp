@@ -67,8 +67,8 @@ class Location : public TCSResource {
     RECHARGE_ALT_2
   };
   struct Layout {
-    Eigen::Vector2i position;
-    Eigen::Vector2i label_offset;
+    Eigen::Vector2i position{0, 0};
+    Eigen::Vector2i label_offset{0, 0};
     int layer_id;
   };
   struct LocationTypeLayout {
@@ -80,6 +80,69 @@ class Location : public TCSResource {
     std::vector<std::string> allowrd_per_ops;
     LocationTypeLayout layout;
   };
+  static std::string get_Representation(LocationRepresentation l) {
+    if (l == LocationRepresentation::LOAD_TRANSFER_ALT_1) {
+      return "LOAD_TRANSFER_ALT_1";
+    } else if (l == LocationRepresentation::LOAD_TRANSFER_ALT_2) {
+      return "LOAD_TRANSFER_ALT_2";
+    } else if (l == LocationRepresentation::LOAD_TRANSFER_ALT_3) {
+      return "LOAD_TRANSFER_ALT_3";
+    } else if (l == LocationRepresentation::LOAD_TRANSFER_ALT_4) {
+      return "LOAD_TRANSFER_ALT_4";
+    } else if (l == LocationRepresentation::LOAD_TRANSFER_GENERIC) {
+      return "LOAD_TRANSFER_GENERIC";
+    } else if (l == LocationRepresentation::LOAD_TRANSFER_ALT_5) {
+      return "LOAD_TRANSFER_ALT_5";
+    } else if (l == LocationRepresentation::RECHARGE_ALT_1) {
+      return "RECHARGE_ALT_1";
+    } else if (l == LocationRepresentation::RECHARGE_ALT_2) {
+      return "RECHARGE_ALT_2";
+    } else if (l == LocationRepresentation::WORKING_ALT_1) {
+      return "WORKING_ALT_1";
+    } else if (l == LocationRepresentation::WORKING_ALT_2) {
+      return "WORKING_ALT_2";
+    } else if (l == LocationRepresentation::RECHARGE_GENERIC) {
+      return "RECHARGE_GENERIC";
+    } else if (l == LocationRepresentation::WORKING_GENERIC) {
+      return "WORKING_GENERIC";
+    } else if (l == LocationRepresentation::DEFAULT) {
+      return "DEFAULT";
+    } else {
+      return "NONE";
+    }
+  }
+  static LocationRepresentation new_location_type(const std::string& name) {
+    if (name == "DEFAULT") {
+      return LocationRepresentation::DEFAULT;
+    } else if (name == "WORKING_GENERIC") {
+      return LocationRepresentation::WORKING_GENERIC;
+    } else if (name == "RECHARGE_GENERIC") {
+      return LocationRepresentation::RECHARGE_GENERIC;
+    } else if (name == "WORKING_ALT_2") {
+      return LocationRepresentation::WORKING_ALT_2;
+    } else if (name == "WORKING_ALT_1") {
+      return LocationRepresentation::WORKING_ALT_1;
+    } else if (name == "RECHARGE_ALT_2") {
+      return LocationRepresentation::RECHARGE_ALT_2;
+    } else if (name == "RECHARGE_ALT_1") {
+      return LocationRepresentation::RECHARGE_ALT_1;
+    } else if (name == "LOAD_TRANSFER_ALT_5") {
+      return LocationRepresentation::LOAD_TRANSFER_ALT_5;
+    } else if (name == "LOAD_TRANSFER_GENERIC") {
+      return LocationRepresentation::LOAD_TRANSFER_GENERIC;
+    } else if (name == "LOAD_TRANSFER_ALT_4") {
+      return LocationRepresentation::LOAD_TRANSFER_ALT_4;
+    } else if (name == "LOAD_TRANSFER_ALT_3") {
+      return LocationRepresentation::LOAD_TRANSFER_ALT_3;
+    } else if (name == "LOAD_TRANSFER_ALT_2") {
+      return LocationRepresentation::LOAD_TRANSFER_ALT_2;
+    } else if (name == "LOAD_TRANSFER_ALT_1") {
+      return LocationRepresentation::LOAD_TRANSFER_ALT_1;
+    } else {
+      return LocationRepresentation::NONE;
+    }
+  }
+
   using TCSResource::TCSResource;
   Eigen::Vector3i position{0, 0, 0};
   Layout layout;

@@ -51,6 +51,9 @@ ResourceManager::find(const std::string& name) {
   }
   for (auto& l : locations) {
     if (l->name == name) {
+      if (l->locked) {
+        break;
+      }
       res = l;
       return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Location,
                                                               res);

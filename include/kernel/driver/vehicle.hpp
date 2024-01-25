@@ -30,6 +30,10 @@ class Vehicle : public schedule::Client,
   }
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
   enum class ProcState { IDLE, AWAITING_ORDER, PROCESSING_ORDER };
+  std::string get_state();
+  std::string get_proc_state();
+  static std::optional<std::string> get_proc_state(ProcState);
+
   void receive_task(std::shared_ptr<data::order::TransportOrder>);
   void next_command();
   void execute_move(std::shared_ptr<data::order::Step>);  // 执行移动回调
@@ -49,12 +53,17 @@ class Vehicle : public schedule::Client,
   virtual ~Vehicle();
 
  public:
-  int priority_level;
+  int priority_level{0};
   int length;  // mm
   int width;
-  int max_vel;
-  int max_reverse_vel;
-  int engerg_level;
+  int max_vel{0};
+  int max_reverse_vel{0};
+  int energy_level_good{0};
+  int energy_level_critical{0};
+  int engrgy_level_recharge{0};
+  int engrgy_level_full{0};
+  int engerg_level{100};
+  std::string integration_level;
   std::string color;
   ProcState proc_state{ProcState::IDLE};
   State state{State::IDLE};

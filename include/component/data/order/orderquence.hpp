@@ -13,21 +13,36 @@ class OrderSequence : public TCSObject {
     TYPE_PARK,
     TYPE_TRANSPORT
   };
-  std::optional<TransportOrder> get_next() {
-    if (finished || (finished_index + 1 >= orders.size())) {
-      return std::nullopt;
+
+  std::string get_type() {
+    if (type == Type::TYPE_ANY) {
+      return "ANY";
+    } else if (type == Type::TYPE_NONE) {
+      return "NONE";
+    } else if (type == Type::TYPE_CHARGE) {
+      return "CHARGE";
+    } else if (type == Type::TYPE_TRANSPORT) {
+      return "TRANSPORT";
     } else {
-      return orders.at(finished_index + 1);
+      return "PARK";
+    }
+  }
+  bool add_transport_ord(std::shared_ptr<TransportOrder> ord) {
+    if (complete) {
+      return false;
+    } else {
+      orders.push_back(ord);
+      return true;
     }
   }
 
  public:
-  std::deque<TransportOrder> orders;
-  Type type;
+  std::deque<std::shared_ptr<TransportOrder>> orders;
+  Type type{Type::TYPE_NONE};
   int finished_index{-1};
-  bool complete;
-  bool finished;
-  bool failure_fatal;
+  bool complete{false};
+  bool finished{false};
+  bool failure_fatal{false};
   std::weak_ptr<kernel::driver::Vehicle> intended_vehicle;
   std::weak_ptr<kernel::driver::Vehicle> processing_vehicle;
 };

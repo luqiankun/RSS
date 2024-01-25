@@ -37,6 +37,34 @@ class Path : public TCSResource {
     ConnectType connect_type{ConnectType::DIRECT};
     std::vector<Eigen::Vector2i> control_points;
   };
+  static std::string get_connect_type(ConnectType t) {
+    if (t == ConnectType::BEZIER) {
+      return "BEZIER";
+    } else if (t == ConnectType::BEZIER_3) {
+      return "BEZIER_3";
+    } else if (t == ConnectType::DIRECT) {
+      return "DIRECT";
+    } else if (t == ConnectType::ELBOW) {
+      return "ELBOW";
+    } else if (t == ConnectType::POLYPATH) {
+      return "POLYPATH";
+    } else {
+      return "SLANTED";
+    }
+  }
+  static ConnectType new_connect_type(const std::string& name) {
+    if (name == "BEZIER") {
+      return ConnectType::BEZIER;
+    } else if (name == "BEZIER_3") {
+      return ConnectType::BEZIER_3;
+    } else if (name == "DIRECT") {
+      return ConnectType::DIRECT;
+    } else if (name == "ELBOW") {
+      return ConnectType::ELBOW;
+    } else {
+      return ConnectType::POLYPATH;
+    }
+  }
 
  public:
   using TCSResource::TCSResource;
@@ -47,6 +75,7 @@ class Path : public TCSResource {
   int max_reverse_vel{0};
   bool locked{false};
   PathLayout layout;
+  bool single{false};
 };
 }  // namespace model
 }  // namespace data

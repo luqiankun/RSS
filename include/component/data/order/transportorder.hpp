@@ -11,6 +11,7 @@ class Vehicle;
 }  // namespace kernel
 namespace data {
 namespace order {
+class OrderSequence;
 class TransportOrder : public TCSObject {
  public:
   using TCSObject::TCSObject;
@@ -19,11 +20,36 @@ class TransportOrder : public TCSObject {
     ACTIVE,
     DISPATCHABLE,
     BEING_PROCESSED,
-    WITHDRAWN,
+    WITHDRAWL,
     FINISHED,
     FAILED,
     UNROUTABLE
   };
+  std::string get_state() {
+    if (state == State::RAW) {
+      return "RAW";
+    } else if (state == State::ACTIVE) {
+      return "ACTIVE";
+
+    } else if (state == State::DISPATCHABLE) {
+      return "DISPATCHABLE";
+
+    } else if (state == State::BEING_PROCESSED) {
+      return "BEING_PROCESSED";
+
+    } else if (state == State::WITHDRAWL) {
+      return "WITHDRAWN";
+
+    } else if (state == State::FINISHED) {
+      return "FINISHED";
+
+    } else if (state == State::FAILED) {
+      return "FAILED";
+
+    } else {
+      return "UNROUTABLE";
+    }
+  }
   ~TransportOrder() {
     if (state == State::BEING_PROCESSED) {
       LOG(INFO) << "order: " << name << " not finished, now will be drop";
@@ -38,9 +64,9 @@ class TransportOrder : public TCSObject {
   std::chrono::system_clock::time_point dead_time;
   std::string type;
   State state{State::RAW};
-  size_t name_hash;
   std::deque<std::weak_ptr<TransportOrder>> dependencies;
   std::deque<std::shared_ptr<DriverOrder>> driverorders;
+  std::weak_ptr<OrderSequence> ordersequence;
   int current_driver_index{0};
   bool dispensable{false};
   std::weak_ptr<kernel::driver::Vehicle> intended_vehicle;

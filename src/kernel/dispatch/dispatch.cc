@@ -154,12 +154,7 @@ void Dispatcher::idle_detect() {
       auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
       if (dt_s.count() > 10) {
         if (v->current_point != v->init_point) {
-          auto op = Oper(v->init_point->name,
-                         data::order::DriverOrder::Destination::OpType::NOP);
-          std::vector<Oper> ops;
-          ops.push_back(op);
-          std::hash<std::string> hash_fn;
-          add_task(ops, v->name + "_gohome", name);
+          go_home(v->name + "_gohome", v);
         }
       }
     }
@@ -191,25 +186,29 @@ void Dispatcher::dispatch_once() {
         LOG(INFO) << current->name << " status: dispatchable";
 
       } else {
-        // 自动分配车辆
-        auto dest = current->driverorders[current->current_driver_index]
-                        ->destination->destination.lock();
-        auto dest_check = find_res(dest->name);
-        std::shared_ptr<data::model::Point> start;
-        if (dest_check->first == allocate::ResourceManager::ResType::Point) {
-          start =
-              std::dynamic_pointer_cast<data::model::Point>(dest_check->second);
-        } else if (dest_check->first ==
-                   allocate::ResourceManager::ResType::Location) {
-          start = std::dynamic_pointer_cast<data::model::Location>(
-                      dest_check->second)
-                      ->link.lock();
-        }
-        auto v = select_vehicle(start);
-        if (v) {
-          current->intended_vehicle = v;
-          current->state = data::order::TransportOrder::State::DISPATCHABLE;
-          LOG(INFO) << current->name << " status: dispatchable";
+        if (auto_select) {  // 自动分配车辆
+          auto dest = current->driverorders[current->current_driver_index]
+                          ->destination->destination.lock();
+          auto dest_check = find_res(dest->name);
+          std::shared_ptr<data::model::Point> start;
+          if (dest_check->first == allocate::ResourceManager::ResType::Point) {
+            start = std::dynamic_pointer_cast<data::model::Point>(
+                dest_check->second);
+          } else if (dest_check->first ==
+                     allocate::ResourceManager::ResType::Location) {
+            start = std::dynamic_pointer_cast<data::model::Location>(
+                        dest_check->second)
+                        ->link.lock();
+          }
+          auto v = select_vehicle(start);
+          if (v) {
+            current->intended_vehicle = v;
+            current->state = data::order::TransportOrder::State::DISPATCHABLE;
+            LOG(INFO) << current->name << " status: dispatchable";
+          } else {
+            current->state = data::order::TransportOrder::State::FAILED;
+            LOG(INFO) << current->name << " status: failed";
+          }
         } else {
           current->state = data::order::TransportOrder::State::FAILED;
           LOG(INFO) << current->name << " status: failed";
@@ -219,14 +218,20 @@ void Dispatcher::dispatch_once() {
     if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
       current->state = data::order::TransportOrder::State::BEING_PROCESSED;
       LOG(INFO) << current->name << " status: being_processed";
-      current->intended_vehicle.lock()->receive_task(current);
-      current->processing_vehicle = current->intended_vehicle;
+      if (current->intended_vehicle.lock()->state ==
+          driver::Vehicle::State::UNAVAILABLE) {
+        current->state = data::order::TransportOrder::State::FAILED;
+        LOG(INFO) << current->name << " status: failed";
+      } else {
+        current->intended_vehicle.lock()->receive_task(current);
+        current->processing_vehicle = current->intended_vehicle;
+      }
       // TODO
     }
     if (current->state == data::order::TransportOrder::State::BEING_PROCESSED) {
       // wait  do nothing
     }
-    if (current->state == data::order::TransportOrder::State::WITHDRAWN) {
+    if (current->state == data::order::TransportOrder::State::WITHDRAWL) {
       // TODO
     } else if (current->state == data::order::TransportOrder::State::FINISHED) {
       // TODO

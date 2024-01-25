@@ -19,10 +19,10 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
   for (auto &x : manager->paths) {
     bool ban{false};  // 路段是否禁止
     bool single{false};
-    if (x->max_reverse_vel == 0) {
+    if (x->single) {
       single = true;
     }
-    if (single && x->max_vel == 0) {
+    if (x->locked) {
       ban = true;
     }
     VertexPtr be{nullptr};
@@ -61,6 +61,7 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
     if (link) {
       console->set_link_node(link);
     }
+    console->locked = x->locked;
     consoles.push_back(console);
   }
   // std::cout << "generate " << consoles.size() << " console\n";

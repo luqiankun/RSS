@@ -18,6 +18,15 @@ void Command::run_once() {
       }
     }
   }
+  if (order->dead_time < std::chrono::system_clock::now()) {
+    LOG(ERROR) << order->name << " timeout.";
+    order->state = data::order::TransportOrder::State::FAILED;
+    state = State::END;
+  }
+  if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
+    state = State::END;
+  }
+
   if (state == State::INIT) {
     state = State::CLAIMING;
   } else if (state == State::CLAIMING) {
@@ -124,7 +133,6 @@ void Command::vehicle_execute_cb(bool ret) {
         driver_order->state = data::order::DriverOrder::State::FAILED;
       }
     }
-
     state = State::EXECUTED;
   }
 }

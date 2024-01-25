@@ -22,10 +22,14 @@ class TCSObject {
  public:
   TCSObject() = delete;
   virtual ~TCSObject() = default;
-  explicit TCSObject(const std::string& n) : name(n) {}
+  explicit TCSObject(const std::string& n) : name(n) {
+    std::hash<std::string> hash_fn;
+    name_hash = hash_fn(n);
+  }
 
  public:
   std::string name;
+  size_t name_hash;
   std::map<std::string, std::string> properties_readonly;
   std::map<std::string, std::string> properties;
 };

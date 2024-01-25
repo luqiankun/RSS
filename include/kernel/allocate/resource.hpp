@@ -29,6 +29,7 @@ class ResourceManager : public TCSObject {
 
  public:
   std::mutex mut;
+  std::string model_name;
   std::vector<std::shared_ptr<data::model::Path>> paths;
   std::vector<std::shared_ptr<data::model::Point>> points;
   std::vector<std::shared_ptr<data::model::Location>> locations;

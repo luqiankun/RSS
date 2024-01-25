@@ -24,17 +24,18 @@ OrderPool::res_to_destination(
 void OrderPool::cancel_order(size_t order_uuid) {
   for (auto& x : orderpool) {
     if (x->name_hash == order_uuid) {
-      x->state = data::order::TransportOrder::State::WITHDRAWN;
+      x->state = data::order::TransportOrder::State::WITHDRAWL;
     }
   }
   for (auto& x : ended_orderpool) {
     if (x->name_hash == order_uuid) {
-      x->state = data::order::TransportOrder::State::WITHDRAWN;
+      x->state = data::order::TransportOrder::State::WITHDRAWL;
     }
   }
 }
 
 std::shared_ptr<data::order::TransportOrder> OrderPool::pop() {
+  update_quence();
   if (orderpool.empty()) {
     return nullptr;
   } else {
@@ -45,20 +46,44 @@ std::shared_ptr<data::order::TransportOrder> OrderPool::pop() {
   }
 }
 
+void OrderPool::update_quence() {
+  for (auto& seq : orderquence) {
+    for (int i = 0; i < seq->orders.size(); i++) {
+      if (seq->orders[i]->state == data::order::TransportOrder::State::FAILED) {
+        seq->failure_fatal = true;
+        break;
+      } else if (seq->orders[i]->state ==
+                 data::order::TransportOrder::State::FINISHED) {
+        seq->finished_index = i;
+      } else if (seq->orders[i]->state ==
+                 data::order::TransportOrder::State::BEING_PROCESSED) {
+        seq->processing_vehicle = seq->orders[i]->processing_vehicle;
+      }
+    }
+    if (!seq->failure_fatal) {
+      if (seq->complete) {
+        if (seq->finished_index == seq->orders.size()) {
+          seq->finished = true;
+        }
+      }
+    }
+  }
+}
+
 void OrderPool::cancel_all_order() {
   for (auto& x : orderpool) {
     if (x->state == data::order::TransportOrder::State::RAW ||
         x->state == data::order::TransportOrder::State::ACTIVE ||
         x->state == data::order::TransportOrder::State::DISPATCHABLE ||
         x->state == data::order::TransportOrder::State::BEING_PROCESSED)
-      x->state = data::order::TransportOrder::State::WITHDRAWN;
+      x->state = data::order::TransportOrder::State::WITHDRAWL;
   }
   for (auto& x : ended_orderpool) {
     if (x->state == data::order::TransportOrder::State::RAW ||
         x->state == data::order::TransportOrder::State::ACTIVE ||
         x->state == data::order::TransportOrder::State::DISPATCHABLE ||
         x->state == data::order::TransportOrder::State::BEING_PROCESSED)
-      x->state = data::order::TransportOrder::State::WITHDRAWN;
+      x->state = data::order::TransportOrder::State::WITHDRAWL;
   }
 }
 }  // namespace allocate

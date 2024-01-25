@@ -31,15 +31,16 @@ class Dispatcher : public TCSObject {
  public:
   std::thread dispatch_th;
   bool dispose{false};
+  bool auto_select{true};  // 没有指定车辆时自动选择
   std::vector<std::shared_ptr<driver::Vehicle>> vehicles;
   /// signals
   boost::signals2::signal<std::pair<allocate::ResourceManager::ResType,
                                     std::shared_ptr<TCSResource>>(
       const std::string& name)>
       find_res;
-  boost::signals2::signal<void(std::vector<Oper>, const std::string&,
-                               const std::string&)>
-      add_task;
+  boost::signals2::signal<void(const std::string&,
+                               std::shared_ptr<driver::Vehicle>)>
+      go_home;
   boost::signals2::signal<std::shared_ptr<data::order::TransportOrder>()>
       get_next_ord;
 };

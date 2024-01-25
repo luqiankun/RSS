@@ -38,6 +38,14 @@ if(VISUALIZATION)
    ${MAIN_SRC}
    )
    target_link_libraries(TCS_test ${OpenCV_LIBS})
+    add_executable(server_test  test/main/server_test.cc
+   ${KERNEL_SRC}
+   ${TOOLS_SRC}
+   ${COMPONENTS_SRC}
+   ${VISUAL_SRC}
+   ${MAIN_SRC}
+   )
+   target_link_libraries(server_test ${OpenCV_LIBS})
 else()
    add_executable(TCS_test test/main/tcs_test.cc
    ${KERNEL_SRC}
@@ -45,7 +53,18 @@ else()
    ${COMPONENTS_SRC}
    ${MAIN_SRC}
    )
+   add_executable(server_test  test/main/server_test.cc
+   ${KERNEL_SRC}
+   ${TOOLS_SRC}
+   ${COMPONENTS_SRC}
+   ${MAIN_SRC}
+   )
 endif()
+add_executable(http_test test/component/tools/http/http_test.cc)
+add_executable(json_test test/component/tools/json/json_test.cc 
+   ${TOOLS_SRC}
+)
+
 
 
 
