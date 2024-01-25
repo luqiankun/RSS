@@ -78,6 +78,7 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::model::Point> current_point;
   std::shared_ptr<data::model::Point> init_point;
   std::thread run_th;
+  std::thread update_th;
   Eigen::Vector3i position;
   float angle{0};
   Eigen::Vector3i layout;

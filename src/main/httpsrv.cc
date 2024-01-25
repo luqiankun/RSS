@@ -34,9 +34,9 @@ std::string log(const httplib::Request &req, const httplib::Response &res) {
 
   s += dump_headers(req.headers);
   s += "\n";
-  if (!req.body.empty()) {
-    s += req.body;
-  }
+  // if (!req.body.empty()) {
+  //   s += req.body;
+  // }
   s += "\n";
   s += "--------------------------------\n";
 
@@ -44,9 +44,9 @@ std::string log(const httplib::Request &req, const httplib::Response &res) {
   s += buf;
   s += dump_headers(res.headers);
   s += "\n";
-  if (!res.body.empty()) {
-    s += res.body;
-  }
+  // if (!res.body.empty()) {
+  //   s += res.body;
+  // }
   s += "\n";
 
   return s;
@@ -210,10 +210,22 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
           });
   srv.Put(R"(/plantModel)",
           [=](const httplib::Request &req, httplib::Response &res) {
-            auto ret = put_model(req.body);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            bool use_xml{false};
+            if (req.has_param("type")) {
+              use_xml = req.get_param_value("type") == "xml" ? true : false;
+            }
+            if (use_xml) {
+              auto ret = put_model_xml(req.body);
+              res.status = ret->first;
+              if (!ret->second.empty()) {
+                res.set_content(ret->second, "application/json");
+              }
+            } else {
+              auto ret = put_model(req.body);
+              res.status = ret->first;
+              if (!ret->second.empty()) {
+                res.set_content(ret->second, "application/json");
+              }
             }
           });
   srv.Put(R"(/paths/([^/]+)/locked)",

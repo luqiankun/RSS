@@ -2,259 +2,311 @@
 
 #include "../../include/kernel/driver/vehicle.hpp"
 
-bool TCS::init_resource(const std::string &xml_path) {
-  this->resource.reset();
+std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
+  stop();
+  init_orderpool();
+  init_planner();
+  init_scheduler();
+  init_dispatcher();
   this->resource =
       std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
   pugi::xml_document doc;
-  auto ret = doc.load_file(xml_path.c_str());
-  if (ret.status != pugi::status_ok) {
-    return false;
-  }
-  //
-  auto root = doc.first_child();  // <model>
-  if (std::string(root.name()) != "model") {
-    return false;
-  }
-  {  // point
-    auto point = root.find_child([](pugi::xml_node node) {
-      return std::string(node.name()) == "point";
-    });
-    while (point.type() != pugi::node_null) {
-      if (std::string(point.name()) != "point") {
-        break;
-      }
-      std::string name = point.attribute("name").as_string();
-      std::string type = point.attribute("type").as_string();
-      int xPosition = point.attribute("xPosition").as_int();
-      int yPosition = point.attribute("yPosition").as_int();
-      int zPosition = point.attribute("zPosition").as_int();
-      int xPosition_layout =
-          point.child("pointLayout").attribute("xPosition").as_int();
-      int yPosition_layout =
-          point.child("pointLayout").attribute("yPosition").as_int();
-      int xLabelOffset =
-          point.child("pointLayout").attribute("xLabelOffset").as_int();
-      int yLabelOffset =
-          point.child("pointLayout").attribute("yLabelOffset").as_int();
-      int layerId = point.child("pointLayout").attribute("layerId").as_int();
-      data::model::Point::Layout layout;
-      layout.layer_id = layerId;
-      layout.label_offset = Eigen::Vector2i(xLabelOffset, yLabelOffset);
-      layout.position = Eigen::Vector2i(xPosition_layout, yPosition_layout);
-      auto p = std::make_shared<data::model::Point>(name);
-      p->position.x() = xPosition;
-      p->position.y() = yPosition;
-      p->layout = layout;
-      if (type == "HALT_POSITION") {
-        p->type = data::model::Point::Type::HALT_POSITION;
-      } else if (type == "REPORT_POSITION") {
-        p->type = data::model::Point::Type::REPORT_POSITION;
-      } else if (type == "PARK_POSITION") {
-        p->type = data::model::Point::Type::PARK_POSITION;
-      } else if (type == "NORMAL_POSITION") {
-        p->type = data::model::Point::Type::NORMAL_POSITION;
-      } else {
-        p->type = data::model::Point::Type::UNKNOWN;
-      }
-      resource->points.push_back(p);
-      point = point.next_sibling();
+  try {
+    auto ret = doc.load_string(body.c_str());
+    if (ret.status != pugi::status_ok) {
+      LOG(ERROR) << "parse error: " << ret.description();
+      json res = json::array();
+      auto msg =
+          "Could not parse XML input '" + std::string(ret.description()) + "'.";
+      res.push_back(msg);
+      return std::pair<int, std::string>(400, res.dump());
     }
-    LOG(INFO) << "init point size " << resource->points.size();
-  }
-
-  {  // path
-    auto path = root.find_child(
-        [](pugi::xml_node node) { return std::string(node.name()) == "path"; });
-    while (path.type() != pugi::node_null) {
-      if (std::string(path.name()) != "path") {
-        break;
-      }
-      std::string name = path.attribute("name").as_string();
-      std::string sourcePoint = path.attribute("sourcePoint").as_string();
-      std::string destinationPoint =
-          path.attribute("destinationPoint").as_string();
-      int length = path.attribute("length").as_int();
-      int maxVelocity = path.attribute("maxVelocity").as_int();
-      int maxReverseVelocity = path.attribute("maxReverseVelocity").as_int();
-      bool locked = path.attribute("locked").as_bool();
-      std::string connectionType =
-          path.child("pathLayout").attribute("connectionType").as_string();
-      int layerId = path.child("pointLayout").attribute("layerId").as_int();
-      std::weak_ptr<data::model::Point> source_point;
-      std::weak_ptr<data::model::Point> destination_point;
-      for (auto &p : resource->points) {
-        if (p->name == sourcePoint) {
-          source_point = p;
+    //
+    auto root = doc.first_child();  // <model>
+    if (std::string(root.name()) != "model") {
+      LOG(ERROR) << "parse error: "
+                 << "'don't has model'";
+      json res = json::array();
+      auto msg =
+          "Could not parse XML input '" + std::string("'don't has model'.");
+      res.push_back(msg);
+      return std::pair<int, std::string>(400, res.dump());
+    }
+    {  // point
+      auto point = root.find_child([](pugi::xml_node node) {
+        return std::string(node.name()) == "point";
+      });
+      while (point.type() != pugi::node_null) {
+        if (std::string(point.name()) != "point") {
+          break;
         }
-        if (p->name == destinationPoint) {
-          destination_point = p;
+        std::string name = point.attribute("name").as_string();
+        std::string type = point.attribute("type").as_string();
+        int xPosition = point.attribute("xPosition").as_int();
+        int yPosition = point.attribute("yPosition").as_int();
+        int zPosition = point.attribute("zPosition").as_int();
+        int xPosition_layout =
+            point.child("pointLayout").attribute("xPosition").as_int();
+        int yPosition_layout =
+            point.child("pointLayout").attribute("yPosition").as_int();
+        int xLabelOffset =
+            point.child("pointLayout").attribute("xLabelOffset").as_int();
+        int yLabelOffset =
+            point.child("pointLayout").attribute("yLabelOffset").as_int();
+        int layerId = point.child("pointLayout").attribute("layerId").as_int();
+        data::model::Point::Layout layout;
+        layout.layer_id = layerId;
+        layout.label_offset = Eigen::Vector2i(xLabelOffset, yLabelOffset);
+        layout.position = Eigen::Vector2i(xPosition_layout, yPosition_layout);
+        auto p = std::make_shared<data::model::Point>(name);
+        p->position.x() = xPosition;
+        p->position.y() = yPosition;
+        p->layout = layout;
+        if (type == "HALT_POSITION") {
+          p->type = data::model::Point::Type::HALT_POSITION;
+        } else if (type == "REPORT_POSITION") {
+          p->type = data::model::Point::Type::REPORT_POSITION;
+        } else if (type == "PARK_POSITION") {
+          p->type = data::model::Point::Type::PARK_POSITION;
+        } else if (type == "NORMAL_POSITION") {
+          p->type = data::model::Point::Type::NORMAL_POSITION;
+        } else {
+          p->type = data::model::Point::Type::UNKNOWN;
         }
+        resource->points.push_back(p);
+        point = point.next_sibling();
       }
-      data::model::Path::PathLayout layout;
-      layout.layer_id = layerId;
-      data::model::Path::new_connect_type(connectionType);
-      auto p = std::make_shared<data::model::Path>(name);
-      p->layout = layout;
-      p->source_point = source_point;
-      p->destination_point = destination_point;
-      p->length = length;
-      p->max_vel = maxVelocity;
-      p->max_reverse_vel = maxReverseVelocity;
-      p->locked = locked;
-      p->source_point.lock()->incoming_paths.push_back(p);
-      p->destination_point.lock()->outgoing_paths.push_back(p);
-      resource->paths.push_back(p);
-      path = path.next_sibling();
+      LOG(INFO) << "init point size " << resource->points.size();
     }
-    LOG(INFO) << "init path size " << resource->paths.size();
-  }
 
-  {  // location
-    auto location = root.find_child([](pugi::xml_node node) {
-      return std::string(node.name()) == "location";
-    });
-    while (location.type() != pugi::node_null) {
-      if (std::string(location.name()) != "location") {
-        break;
-      }
-      std::string name = location.attribute("name").as_string();
-      std::string type = location.attribute("type").as_string();
-      std::string link_point =
-          location.child("link").attribute("point").as_string();
-      int xPosition = location.attribute("xPosition").as_int();
-      int yPosition = location.attribute("yPosition").as_int();
-      int zPosition = location.attribute("zPosition").as_int();
-      bool locked = location.attribute("locked").as_bool();
-      int xPosition_layout =
-          location.child("locationLayout").attribute("xPosition").as_int();
-      int yPosition_layout =
-          location.child("locationLayout").attribute("yPosition").as_int();
-      int xLabelOffset =
-          location.child("locationLayout").attribute("xLabelOffset").as_int();
-      int yLabelOffset =
-          location.child("locationLayout").attribute("yLabelOffset").as_int();
-      int layerId =
-          location.child("locationLayout").attribute("layerId").as_int();
-      std::string locationRepresentation =
-          location.child("locationLayout")
-              .attribute("locationRepresentation")
-              .as_string();
-      data::model::Location::Layout layout;
-      layout.position = Eigen::Vector2i(xPosition_layout, yPosition_layout);
-      layout.label_offset = Eigen::Vector2i(xLabelOffset, yLabelOffset);
-      layout.layer_id = layerId;
-      // data::model::Location::LocationTypeLayout location_type_layout;
-      // if (locationRepresentation == "NONE") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::NONE;
-      // } else if (locationRepresentation == "DEFAULT") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::DEFAULT;
-      // } else if (locationRepresentation == "LOAD_TRANSFER_GENERIC") {
-      //   location_type_layout.location_representation =
-      //   data::model::Location::
-      //       LocationRepresentation::LOAD_TRANSFER_GENERIC;
-      // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_1") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_1;
-      // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_2") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_2;
-      // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_3") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_3;
-      // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_4") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_4;
-      // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_5") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_5;
-      // } else if (locationRepresentation == "WORKING_GENERIC") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::WORKING_GENERIC;
-      // } else if (locationRepresentation == "WORKING_ALT_1") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::WORKING_ALT_1;
-      // } else if (locationRepresentation == "WORKING_ALT_2") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::WORKING_ALT_2;
-      // } else if (locationRepresentation == "RECHARGE_GENERIC") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::RECHARGE_GENERIC;
-      // } else if (locationRepresentation == "RECHARGE_ALT_1") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::RECHARGE_ALT_1;
-      // } else if (locationRepresentation == "RECHARGE_ALT_2") {
-      //   location_type_layout.location_representation =
-      //       data::model::Location::LocationRepresentation::RECHARGE_ALT_2;
-      // }
-      auto loc = std::make_shared<data::model::Location>(name);
-      std::weak_ptr<data::model::Point> link;
-      for (auto &p : resource->points) {
-        if (p->name == link_point) {
-          link = p;
-          p->attached_links.push_back(loc);
+    {  // path
+      auto path = root.find_child([](pugi::xml_node node) {
+        return std::string(node.name()) == "path";
+      });
+      while (path.type() != pugi::node_null) {
+        if (std::string(path.name()) != "path") {
+          break;
         }
+        std::string name = path.attribute("name").as_string();
+        std::string sourcePoint = path.attribute("sourcePoint").as_string();
+        std::string destinationPoint =
+            path.attribute("destinationPoint").as_string();
+        int length = path.attribute("length").as_int();
+        int maxVelocity = path.attribute("maxVelocity").as_int();
+        int maxReverseVelocity = path.attribute("maxReverseVelocity").as_int();
+        bool locked = path.attribute("locked").as_bool();
+        std::string connectionType =
+            path.child("pathLayout").attribute("connectionType").as_string();
+        int layerId = path.child("pointLayout").attribute("layerId").as_int();
+        std::weak_ptr<data::model::Point> source_point;
+        std::weak_ptr<data::model::Point> destination_point;
+        for (auto &p : resource->points) {
+          if (p->name == sourcePoint) {
+            source_point = p;
+          }
+          if (p->name == destinationPoint) {
+            destination_point = p;
+          }
+        }
+        data::model::Path::PathLayout layout;
+        layout.layer_id = layerId;
+        data::model::Path::new_connect_type(connectionType);
+        auto p = std::make_shared<data::model::Path>(name);
+        p->layout = layout;
+        p->source_point = source_point;
+        p->destination_point = destination_point;
+        p->length = length;
+        p->max_vel = maxVelocity;
+        p->max_reverse_vel = maxReverseVelocity;
+        p->locked = locked;
+        p->source_point.lock()->incoming_paths.push_back(p);
+        p->destination_point.lock()->outgoing_paths.push_back(p);
+        resource->paths.push_back(p);
+        path = path.next_sibling();
       }
-      loc->position = Eigen::Vector3i(xPosition, yPosition, zPosition);
-      loc->layout = layout;
-      loc->link = link;
-      loc->locked = locked;
-      resource->locations.push_back(loc);
-      location = location.next_sibling();
+      LOG(INFO) << "init path size " << resource->paths.size();
     }
-    LOG(INFO) << "init location size " << resource->locations.size();
-  }
 
-  //
-  auto vehicle = root.find_child([](pugi::xml_node node) {
-    return std::string(node.name()) == "vehicle";
-  });
-  while (vehicle.type() != pugi::node_null) {
-    if (std::string(vehicle.name()) != "vehicle") {
-      break;
+    {  // location
+      auto location = root.find_child([](pugi::xml_node node) {
+        return std::string(node.name()) == "location";
+      });
+      while (location.type() != pugi::node_null) {
+        if (std::string(location.name()) != "location") {
+          break;
+        }
+        std::string name = location.attribute("name").as_string();
+        std::string type = location.attribute("type").as_string();
+        std::string link_point =
+            location.child("link").attribute("point").as_string();
+        int xPosition = location.attribute("xPosition").as_int();
+        int yPosition = location.attribute("yPosition").as_int();
+        int zPosition = location.attribute("zPosition").as_int();
+        bool locked = location.attribute("locked").as_bool();
+        int xPosition_layout =
+            location.child("locationLayout").attribute("xPosition").as_int();
+        int yPosition_layout =
+            location.child("locationLayout").attribute("yPosition").as_int();
+        int xLabelOffset =
+            location.child("locationLayout").attribute("xLabelOffset").as_int();
+        int yLabelOffset =
+            location.child("locationLayout").attribute("yLabelOffset").as_int();
+        int layerId =
+            location.child("locationLayout").attribute("layerId").as_int();
+        std::string locationRepresentation =
+            location.child("locationLayout")
+                .attribute("locationRepresentation")
+                .as_string();
+        data::model::Location::Layout layout;
+        layout.position = Eigen::Vector2i(xPosition_layout, yPosition_layout);
+        layout.label_offset = Eigen::Vector2i(xLabelOffset, yLabelOffset);
+        layout.layer_id = layerId;
+        // data::model::Location::LocationTypeLayout location_type_layout;
+        // if (locationRepresentation == "NONE") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::NONE;
+        // } else if (locationRepresentation == "DEFAULT") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::DEFAULT;
+        // } else if (locationRepresentation == "LOAD_TRANSFER_GENERIC") {
+        //   location_type_layout.location_representation =
+        //   data::model::Location::
+        //       LocationRepresentation::LOAD_TRANSFER_GENERIC;
+        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_1") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_1;
+        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_2") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_2;
+        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_3") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_3;
+        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_4") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_4;
+        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_5") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_5;
+        // } else if (locationRepresentation == "WORKING_GENERIC") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::WORKING_GENERIC;
+        // } else if (locationRepresentation == "WORKING_ALT_1") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::WORKING_ALT_1;
+        // } else if (locationRepresentation == "WORKING_ALT_2") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::WORKING_ALT_2;
+        // } else if (locationRepresentation == "RECHARGE_GENERIC") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::RECHARGE_GENERIC;
+        // } else if (locationRepresentation == "RECHARGE_ALT_1") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::RECHARGE_ALT_1;
+        // } else if (locationRepresentation == "RECHARGE_ALT_2") {
+        //   location_type_layout.location_representation =
+        //       data::model::Location::LocationRepresentation::RECHARGE_ALT_2;
+        // }
+        auto loc = std::make_shared<data::model::Location>(name);
+        std::weak_ptr<data::model::Point> link;
+        for (auto &p : resource->points) {
+          if (p->name == link_point) {
+            link = p;
+            p->attached_links.push_back(loc);
+          }
+        }
+        loc->position = Eigen::Vector3i(xPosition, yPosition, zPosition);
+        loc->layout = layout;
+        loc->link = link;
+        loc->locked = locked;
+        resource->locations.push_back(loc);
+        location = location.next_sibling();
+      }
+      LOG(INFO) << "init location size " << resource->locations.size();
     }
-    std::string name = vehicle.attribute("name").as_string();
-    int length = vehicle.attribute("length").as_int();
-    int maxVelocity = vehicle.attribute("maxVelocity").as_int();
-    int maxReverseVelocity = vehicle.attribute("maxReverseVelocity").as_int();
-    std::string color =
-        vehicle.child("vehicleLayout").attribute("color").as_string();
-    int energyLevelCritical = vehicle.attribute("energyLevelCritical").as_int();
-    int energyLevelGood = vehicle.attribute("energyLevelGood").as_int();
-    int energyLevelFullyRecharged =
-        vehicle.attribute("energyLevelFullyRecharged").as_int();
-    int energyLevelSufficientlyRecharged =
-        vehicle.attribute("energyLevelSufficientlyRecharged").as_int();
-    ///////////////////
-    /// // 使用仿真车辆
-    //////////////////
-    auto veh = std::make_shared<kernel::driver::SimVehicle>(name);
-    veh->length = length;
-    veh->width = 2.0 * length / 4;
-    veh->max_reverse_vel = maxReverseVelocity;
-    veh->max_vel = maxVelocity;
-    veh->color = color;
-    veh->energy_level_critical = energyLevelCritical;
-    veh->energy_level_good = energyLevelGood;
-    veh->engrgy_level_full = energyLevelFullyRecharged;
-    veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
-    veh->position.x() = resource->points.front()->position.x();
-    veh->position.y() = resource->points.front()->position.y();
-    veh->layout = veh->layout;
-    veh->current_point = resource->points.front();  // 当前点
-    veh->init_point = resource->points.front();     // 初始点
-    // veh->run();
-    dispatcher->vehicles.push_back(veh);
-    ///////////////////////
-    vehicle = vehicle.next_sibling();
-  }
-  LOG(INFO) << "init vehicle size " << dispatcher->vehicles.size();
 
-  ///
-  LOG(INFO) << "init resource ok";
-  return true;
+    //
+    {
+      auto vehicle = root.find_child([](pugi::xml_node node) {
+        return std::string(node.name()) == "vehicle";
+      });
+      while (vehicle.type() != pugi::node_null) {
+        if (std::string(vehicle.name()) != "vehicle") {
+          break;
+        }
+        std::string name = vehicle.attribute("name").as_string();
+        int length = vehicle.attribute("length").as_int();
+        int maxVelocity = vehicle.attribute("maxVelocity").as_int();
+        int maxReverseVelocity =
+            vehicle.attribute("maxReverseVelocity").as_int();
+        std::string color =
+            vehicle.child("vehicleLayout").attribute("color").as_string();
+        int energyLevelCritical =
+            vehicle.attribute("energyLevelCritical").as_int();
+        int energyLevelGood = vehicle.attribute("energyLevelGood").as_int();
+        int energyLevelFullyRecharged =
+            vehicle.attribute("energyLevelFullyRecharged").as_int();
+        int energyLevelSufficientlyRecharged =
+            vehicle.attribute("energyLevelSufficientlyRecharged").as_int();
+        ///////////////////
+        /// // 使用仿真车辆
+        //////////////////
+        auto veh = std::make_shared<kernel::driver::SimVehicle>(name);
+        veh->length = length;
+        veh->width = 2.0 * length / 4;
+        veh->max_reverse_vel = maxReverseVelocity;
+        veh->max_vel = maxVelocity;
+        veh->color = color;
+        veh->energy_level_critical = energyLevelCritical;
+        veh->energy_level_good = energyLevelGood;
+        veh->engrgy_level_full = energyLevelFullyRecharged;
+        veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
+        //////////仿真 假定在第一个点
+        veh->position.x() = resource->points.front()->position.x();
+        veh->position.y() = resource->points.front()->position.y();
+        veh->layout = veh->layout;
+        veh->current_point = resource->points.front();  // 当前点
+        veh->init_point = resource->points.front();     // 初始点
+        ///////////////////////////
+        dispatcher->vehicles.push_back(veh);
+        ///////////////////////
+        vehicle = vehicle.next_sibling();
+      }
+      LOG(INFO) << "init vehicle size " << dispatcher->vehicles.size();
+    }
+    ///
+    LOG(INFO) << "init resource ok";
+    init_planner();
+    scheduler->resource = resource;
+    // connect signals
+    dispatcher->find_res.connect(
+        std::bind(&kernel::allocate::ResourceManager::find, resource,
+                  std::placeholders::_1));
+    dispatcher->go_home.connect(std::bind(
+        &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2));
+    dispatcher->get_next_ord.connect(
+        std::bind(&kernel::allocate::OrderPool::pop, orderpool));
+    for (auto &v : dispatcher->vehicles) {
+      v->planner = planner;
+      v->scheduler = scheduler;
+      v->orderpool = orderpool;
+      v->resource = resource;
+    }
+#ifdef VISUAL
+    if (!visualizer) {
+      init_visualizer();
+    } else {
+      visualizer->init(visualizer->resolution, shared_from_this());
+    }
+#endif
+    run();
+    return std::pair<int, std::string>(200, "");
+  } catch (pugi::xpath_exception ec) {
+    LOG(ERROR) << "parse error: " << ec.what();
+    json res = json::array();
+    auto msg = "Could not parse XML input '" + std::string(ec.what()) + "'.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(400, res.dump());
+  }
 }
 
 void TCS::paused_vehicle(const std::string &name) {
@@ -362,9 +414,6 @@ bool TCS::init_all(const std::string &xml_path, double r) {
     return false;
   }
   if (!init_dispatcher()) {
-    return false;
-  }
-  if (!init_resource(xml_path)) {
     return false;
   }
   if (!init_planner()) {
@@ -1015,14 +1064,15 @@ std::pair<int, std::string> TCS::get_model() {
 std::pair<int, std::string> TCS::put_model(const std::string &body) {
   stop();
   init_orderpool();
-  init_planner();
   init_scheduler();
   init_dispatcher();
   try {
     json model = json::parse(body);
     resource =
         std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
-    resource->model_name = model["name"].get<std::string>();
+    if (model.contains("name")) {
+      resource->model_name = model["name"].get<std::string>();
+    }
     // point
     for (auto &p : model["points"]) {
       auto point =
@@ -1126,7 +1176,12 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       vehicle->max_reverse_vel = v["maxReverseVelocity"].get<int>();
       vehicle->color = v["layout"]["routeColor"].get<std::string>();
       vehicle->width = 2.0 * vehicle->length / 4;
-      // vehicle->run();
+      //////////仿真 假定在第一个点
+      vehicle->position.x() = resource->points.front()->position.x();
+      vehicle->position.y() = resource->points.front()->position.y();
+      vehicle->current_point = resource->points.front();  // 当前点
+      vehicle->init_point = resource->points.front();     // 初始点
+      ///////////////////////////
       dispatcher->vehicles.push_back(vehicle);
     }
     // TODO blocks
@@ -1134,6 +1189,8 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     // for (auto &v : model["blocks"]) {
     // }
     //
+    LOG(INFO) << "init resource ok";
+    init_planner();
     scheduler->resource = resource;
     // connect signals
     dispatcher->find_res.connect(
@@ -1161,19 +1218,19 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
   } catch (json::parse_error ec) {
     LOG(ERROR) << "parse error: " << ec.what();
     json res = json::array();
-    auto msg = "Could not parse JSON input.";
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   } catch (json::type_error ec) {
     LOG(ERROR) << "type error :" << ec.what();
     json res = json::array();
-    auto msg = "Could not parse JSON input.";
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   } catch (json::other_error ec) {
     LOG(ERROR) << "other error :" << ec.what();
     json res = json::array();
-    auto msg = "Could not parse JSON input.";
+    auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   }

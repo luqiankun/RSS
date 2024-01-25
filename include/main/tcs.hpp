@@ -59,10 +59,10 @@ class TCS : public std::enable_shared_from_this<TCS> {
                                               bool new_value);
   std::pair<int, std::string> put_location_locked(const std::string& loc_name,
                                                   bool new_value);
+  std::pair<int, std::string> put_model_xml(const std::string& body);
 
  public:
   bool init_all(const std::string& xml_path, double r = 30);
-  bool init_resource(const std::string& xml_path);
   bool init_dispatcher();
   bool init_scheduler();
   bool init_orderpool();

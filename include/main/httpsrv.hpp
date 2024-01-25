@@ -28,6 +28,7 @@ class HTTPServer {
       post_vehicle_withdrawl;
   boost::signals2::signal<TCSRep()> get_model;
   boost::signals2::signal<TCSRep(std::string)> put_model;
+  boost::signals2::signal<TCSRep(std::string)> put_model_xml;
   boost::signals2::signal<TCSRep(std::string, bool)> put_path_locked;
   boost::signals2::signal<TCSRep(std::string, bool)> put_location_locked;
 

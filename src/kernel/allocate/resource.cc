@@ -105,7 +105,8 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
                x != client->future_claim_resources.end();) {
             if (*x == p) {
               x = client->future_claim_resources.erase(x);
-              LOG(INFO) << p->name << " from future to claim";
+              LOG(INFO) << p->name << " from future to claim of "
+                        << client->name;
             } else {
               x++;
             }
@@ -126,7 +127,8 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
                x != client->future_claim_resources.end();) {
             if (*x == p) {
               x = client->future_claim_resources.erase(x);
-              LOG(INFO) << p->name << " from future to claim";
+              LOG(INFO) << p->name << " from future to claim of "
+                        << client->name;
             } else {
               x++;
             }
@@ -147,7 +149,8 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
                x != client->future_claim_resources.end();) {
             if (*x == p) {
               x = client->future_claim_resources.erase(x);
-              LOG(INFO) << p->name << " from future to claim";
+              LOG(INFO) << p->name << " from future to claim of "
+                        << client->name;
             } else {
               x++;
             }

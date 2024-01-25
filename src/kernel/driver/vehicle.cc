@@ -68,6 +68,12 @@ void Vehicle::run() {
     }
     // LOG(INFO) << name << " stop";
   });
+  update_th = std::thread([&] {
+    while (!ctx->stopped()) {
+      update();
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+  });
 }
 void Vehicle::close() {
   if (!ctx->stopped()) {
@@ -75,6 +81,9 @@ void Vehicle::close() {
   }
   if (run_th.joinable()) {
     run_th.join();
+  }
+  if (update_th.joinable()) {
+    update_th.join();
   }
   current_command.reset();
 }
@@ -390,21 +399,8 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
 }
 
 void SimVehicle::update() {
-  static bool run{false};
-  if (!run) {
-    if (!resource.lock()) {
-      return;
-    }
-    if (resource.lock()->points.empty()) {
-      return;
-    }
-
-    position.x() = resource.lock()->points.front()->position.x();
-    position.y() = resource.lock()->points.front()->position.y();
-    current_point = resource.lock()->points.front();  // 当前点
-    init_point = resource.lock()->points.front();     // 初始点
-    run = true;
-  }
+  LOG_EVERY_N(200, INFO) << "simvehicle " << name
+                         << " update status from outside";
 }
 
 }  // namespace driver

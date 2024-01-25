@@ -5,8 +5,11 @@
 INITIALIZE_EASYLOGGINGPP
 int main(int argc, const char** argv) {
   MY_EASYLOG_CONIFG("./tcs_logs")
-  LOG(INFO) << "---------------------------------------------------------------"
-               "--------------";
+  auto now = get_time_fmt(std::chrono::system_clock::now());
+  LOG(INFO) << "start.....\n---------------------------------------------------"
+               "--------\n"
+            << now
+            << "-----------------------------------------------------------\n";
   auto tcs = std::make_shared<TCS>();
   auto srv = std::make_shared<HTTPServer>();
   if (true) {
@@ -37,6 +40,8 @@ int main(int argc, const char** argv) {
     srv->get_model.connect(std::bind(&TCS::get_model, tcs));
     srv->put_model.connect(
         std::bind(&TCS::put_model, tcs, std::placeholders::_1));
+    srv->put_model_xml.connect(
+        std::bind(&TCS::put_model_xml, tcs, std::placeholders::_1));
     srv->put_path_locked.connect(std::bind(&TCS::put_path_locked, tcs,
                                            std::placeholders::_1,
                                            std::placeholders::_2));

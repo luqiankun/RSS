@@ -71,7 +71,7 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
     cv::putText(mat, x->name, cv::Point2i(p_x + 5, p_y + 20),
                 cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
                 cv::Scalar(90, 90, 90), 1, cv::LINE_AA);
-    cv::circle(mat, cv::Point2i(p_x, p_y), 3, cv::Scalar(0, 0, 0), 1,
+    cv::circle(mat, cv::Point2i(p_x, p_y), 4, cv::Scalar(0, 0, 0), 1,
                cv::LINE_AA);
   }
   for (auto &x : tcs->resource->paths) {
@@ -91,13 +91,13 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
         static_cast<uint32_t>(
             (x->destination_point.lock()->layout.position.y() - mat_limit.z()) /
             resolution);
-    double arrowed_len = 5;
+    double arrowed_len = 7;
     Eigen::Vector2f line;
     line.x() = static_cast<double>(end_layout_x) - static_cast<double>(be_x);
     line.y() = static_cast<double>(end_layout_y) - static_cast<double>(be_y);
     Eigen::Vector2f norm_line = line.normalized() * (line.norm() - 6);
     double tip = arrowed_len / line.norm();
-    cv::Scalar color = cv::Scalar(90, 90, 90);
+    cv::Scalar color = cv::Scalar(9, 9, 9);
     int thickness = 1;
     if (x->locked) {
       color = cv::Scalar(255, 255, 255);
@@ -124,8 +124,8 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
     auto p_y =
         mat.rows - static_cast<uint32_t>(
                        (x->layout.position.y() - mat_limit.z()) / resolution);
-    cv::Scalar color = cv::Scalar(10, 20, 20);
-    int thickness = 2;
+    cv::Scalar color = cv::Scalar(90, 90, 90);
+    int thickness = 1;
     if (x->locked) {
       color = cv::Scalar(150, 150, 150);
       thickness = -1;
@@ -162,40 +162,44 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
     }
   }
   // axis label
-  int label_x = 30;
-  int label_y = mat.rows - 30;
-  int len_x = mat.cols - 30 - 50;
-  int len_y = mat.rows - 30 - 50;
-  cv::circle(mat, cv::Point2i(label_x, label_y), 5, cv::Scalar(0, 0, 255), 1,
-             cv::LINE_AA, 0);
-  cv::arrowedLine(mat, cv::Point2i(label_x, label_y),
-                  cv::Point2i(label_x, label_y - len_y), cv::Scalar(10, 40, 80),
-                  1, cv::LINE_AA, 0, 0.01);
-  cv::arrowedLine(mat, cv::Point2i(label_x, label_y),
-                  cv::Point2i(label_x + len_x, label_y), cv::Scalar(10, 40, 80),
-                  1, cv::LINE_AA, 0, 0.01);
-  int step = 50;
-  for (int i = 0; i < mat.cols / step; i++) {
-    int label_real_x =
-        static_cast<int>((label_x + step * i) * resolution) + mat_limit.x();
-    cv::line(mat, cv::Point2i(label_x + step * i, label_y),
-             cv::Point2i(label_x + step * i, label_y - 5),
-             cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
-    cv::putText(mat, std::to_string(label_real_x),
-                cv::Point2i(label_x + step * i - 9, label_y + 13), 1, 0.2,
-                cv::Scalar(10, 10, 80), 1, cv::LINE_AA);
-  }
-  for (int i = 0; i < mat.rows / step; i++) {
-    int label_real_y =
-        static_cast<int>((mat.rows - (label_y - step * i)) * resolution) +
-        mat_limit.z();
-    cv::putText(mat, std::to_string(label_real_y),
-                cv::Point2i(label_x + 5, label_y - step * i - 5), 1, 0.2,
-                cv::Scalar(10, 10, 80), true, cv::LINE_AA);
-    cv::line(mat, cv::Point2i(label_x, label_y - step * i),
-             cv::Point2i(label_x + 5, label_y - step * i),
-             cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
-  }
+  // {
+  //   int label_x = 30;
+  //   int label_y = mat.rows - 30;
+  //   int len_x = mat.cols - 30 - 50;
+  //   int len_y = mat.rows - 30 - 50;
+  //   cv::circle(mat, cv::Point2i(label_x, label_y), 5, cv::Scalar(0, 0, 255),
+  //   1,
+  //              cv::LINE_AA, 0);
+  //   cv::arrowedLine(mat, cv::Point2i(label_x, label_y),
+  //                   cv::Point2i(label_x, label_y - len_y),
+  //                   cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0, 0.01);
+  //   cv::arrowedLine(mat, cv::Point2i(label_x, label_y),
+  //                   cv::Point2i(label_x + len_x, label_y),
+  //                   cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0, 0.01);
+  //   int step = 50;
+  //   for (int i = 0; i < mat.cols / step; i++) {
+  //     int label_real_x =
+  //         static_cast<int>((label_x + step * i) * resolution) +
+  //         mat_limit.x();
+  //     cv::line(mat, cv::Point2i(label_x + step * i, label_y),
+  //              cv::Point2i(label_x + step * i, label_y - 5),
+  //              cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
+  //     cv::putText(mat, std::to_string(label_real_x),
+  //                 cv::Point2i(label_x + step * i - 9, label_y + 13), 1, 0.2,
+  //                 cv::Scalar(10, 10, 80), 1, cv::LINE_AA);
+  //   }
+  //   for (int i = 0; i < mat.rows / step; i++) {
+  //     int label_real_y =
+  //         static_cast<int>((mat.rows - (label_y - step * i)) * resolution) +
+  //         mat_limit.z();
+  //     cv::putText(mat, std::to_string(label_real_y),
+  //                 cv::Point2i(label_x + 5, label_y - step * i - 5), 1, 0.2,
+  //                 cv::Scalar(10, 10, 80), true, cv::LINE_AA);
+  //     cv::line(mat, cv::Point2i(label_x, label_y - step * i),
+  //              cv::Point2i(label_x + 5, label_y - step * i),
+  //              cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
+  //   }
+  // }
   map_view = std::shared_ptr<cv::Mat>(new cv::Mat(mat));
   return true;
 }
@@ -303,15 +307,15 @@ void Visualizer::update() {
     cv::line(
         *vehicle_view, left_bottom_cv, right_bottom_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        3, cv::LINE_AA);
+        1, cv::LINE_AA);
     cv::line(
         *vehicle_view, left_mid_cv, left_top_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        3, cv::LINE_AA);
+        1, cv::LINE_AA);
     cv::line(
         *vehicle_view, right_mid_cv, right_top_cv,
         cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        3, cv::LINE_AA);
+        1, cv::LINE_AA);
     cv::putText(*vehicle_view, v->name, cv::Point2i(0, 9) + left_bottom_cv, 1,
                 0.7, cv::Scalar(10, 10, 80), 1, cv::LINE_AA, true);
 
@@ -356,7 +360,7 @@ void Visualizer::update() {
                     cv::Point2i(end_x, end_y),
                     cv::Scalar(std::get<2>(color), std::get<1>(color),
                                std::get<0>(color)),
-                    5, 8, 0,
+                    2, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               } else if (dr->route->current_step->vehicle_orientation ==
@@ -366,7 +370,7 @@ void Visualizer::update() {
                     cv::Point2i(beg_x, beg_y),
                     cv::Scalar(std::get<2>(color), std::get<1>(color),
                                std::get<0>(color)),
-                    5, 8, 0,
+                    2, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               }
@@ -400,7 +404,7 @@ void Visualizer::update() {
                     cv::Point2i(end_x, end_y),
                     cv::Scalar(std::get<2>(color), std::get<1>(color),
                                std::get<0>(color)),
-                    5, 8, 0,
+                    2, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               } else if (path->vehicle_orientation ==
@@ -410,7 +414,7 @@ void Visualizer::update() {
                     cv::Point2i(beg_x, beg_y),
                     cv::Scalar(std::get<2>(color), std::get<1>(color),
                                std::get<0>(color)),
-                    5, 8, 0,
+                    2, 8, 0,
                     arrowed_len /
                         Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
               }
