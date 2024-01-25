@@ -5,9 +5,6 @@
 #include "../allocate/order.hpp"
 #include "../allocate/resource.hpp"
 #include "../planner/planner.hpp"
-using Oper = std::tuple<
-    std::string,
-    data::order::DriverOrder::Destination::OpType>;  // 目标点和动作类型
 namespace kernel {
 namespace dispatch {
 class Dispatcher : public TCSObject {

@@ -638,6 +638,7 @@ std::pair<int, std::string> TCS::post_transport_order(
             dr->transport_order = ord;
             ord->driverorders.push_back(dr);
           } else {
+            LOG(ERROR) << "op type '" + std::string(op) + "' is not support";
             ord->state = data::order::TransportOrder::State::FAILED;
             orderpool->ended_orderpool.push_back(ord);
             break;

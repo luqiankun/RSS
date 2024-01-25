@@ -20,11 +20,19 @@
   conf.set(el::Level::Debug, el::ConfigurationType::Format,                \
            "%datetime{%d/%M} %func [%fbase:%line] %msg");                  \
   el::Loggers::reconfigureAllLoggers(conf);
+#define MY_EASYLOG_CONIFG_COMPLEX(path, fmt, size)                         \
+  auto data = get_date_fmt();                                              \
+  el::Configurations conf;                                                 \
+  conf.setGlobally(el::ConfigurationType::Format, fmt);                    \
+  conf.setGlobally(el::ConfigurationType::Filename,                        \
+                   (std::string(path) + "/tcs_" + data + ".log").c_str()); \
+  conf.setGlobally(el::ConfigurationType::MillisecondsWidth, "4");         \
+  conf.setGlobally(el ::ConfigurationType::MaxLogFileSize, size);          \
+  conf.set(el::Level::Debug, el::ConfigurationType::Format,                \
+           "%datetime{%d/%M} %func [%fbase:%line] %msg");                  \
+  el::Loggers::reconfigureAllLoggers(conf);
 #endif
 
-using Oper = std::tuple<
-    std::string,
-    data::order::DriverOrder::Destination::OpType>;  // 目标点和动作类型
 using json = nlohmann::json;
 class TCS : public std::enable_shared_from_this<TCS> {
  public:
