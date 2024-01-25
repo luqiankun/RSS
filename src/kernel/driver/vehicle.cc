@@ -19,7 +19,9 @@ void Vehicle::execute_action(
     }
     LOG(INFO) << current_order->name << " action : "
               << " ok";
-    current_command->vehicle_execute_cb(op_ret);
+    if (current_command) {
+      current_command->vehicle_execute_cb(op_ret);
+    }
   });
 }
 void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
@@ -34,7 +36,9 @@ void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
     }
     LOG(INFO) << current_order->name << " move : " << step->name.c_str()
               << " ok";
-    current_command->vehicle_execute_cb(move_ret);
+    if (current_command) {
+      current_command->vehicle_execute_cb(move_ret);
+    }
   });
 }
 
@@ -164,11 +168,20 @@ void Vehicle::command_done() {
   bool ord_shutdown{false};
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     // 订单取消
+    future_claim_resources.clear();
+    LOG(ERROR) << current_order->name << " withdrawl.";
+    current_order.reset();
     get_next_ord();
     return;
   }
+  if (current_order->dead_time < std::chrono::system_clock::now()) {
+    LOG(ERROR) << current_order->name << " timeout.";
+    current_order->state = data::order::TransportOrder::State::FAILED;
+  }
   if (current_order->state == data::order::TransportOrder::State::FAILED) {
     // 订单失败
+    future_claim_resources.clear();
+    current_order.reset();
     get_next_ord();
     return;
   }
@@ -185,6 +198,7 @@ void Vehicle::command_done() {
     current_order->end_time = std::chrono::system_clock::now();
     current_order.reset();
     current_command.reset();
+    future_claim_resources.clear();
     get_next_ord();
   } else {
     // 继续执行订单

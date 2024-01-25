@@ -63,7 +63,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             }
             auto ret = get_transport_orders(veh);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Get(R"(/transportOrders/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
@@ -71,7 +73,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             std::string ord_name = *m;
             auto ret = get_transport_order(ord_name);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Post(R"(/transportOrders/([^/]+))",
            [=](const httplib::Request &req, httplib::Response &res) {
@@ -79,7 +83,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              std::string ord_name = *m;
              auto ret = post_transport_order(ord_name, req.body);
              res.status = ret->first;
-             res.set_content(ret->second, "application/json");
+             if (!ret->second.empty()) {
+               res.set_content(ret->second, "application/json");
+             }
            });
   srv.Post(R"(/transportOrders/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
@@ -102,7 +108,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              auto ret = post_transport_order_withdrawl(ord_name, immediate,
                                                        disableVehicle);
              res.status = ret->first;
-             res.set_content(ret->second, "application/json");
+             if (!ret->second.empty()) {
+               res.set_content(ret->second, "application/json");
+             }
            });
 
   srv.Get(R"(/orderSequences)",
@@ -113,7 +121,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             }
             auto ret = get_ordersequences(veh);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Get(R"(/orderSequences/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
@@ -122,7 +132,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             veh = *m;
             auto ret = get_ordersequence(veh);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Post(R"(/orderSequences/([^/]+))",
            [=](const httplib::Request &req, httplib::Response &res) {
@@ -131,7 +143,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              veh = *m;
              auto ret = post_ordersequence(veh, req.body);
              res.status = ret->first;
-             res.set_content(ret->second, "application/json");
+             if (!ret->second.empty()) {
+               res.set_content(ret->second, "application/json");
+             }
            });
   srv.Get(R"(/vehicles)",
           [=](const httplib::Request &req, httplib::Response &res) {
@@ -141,7 +155,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             }
             auto ret = get_vehicles(state);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Get(R"(/vehicles/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
@@ -149,7 +165,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             state = *(req.matches.end() - 1);
             auto ret = get_vehicle(state);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Post(R"(/vehicles/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
@@ -177,20 +195,26 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              }
              auto ret = post_vehicle_withdrawl(name, immediate, disableVehicle);
              res.status = ret->first;
-             res.set_content(ret->second, "application/json");
+             if (!ret->second.empty()) {
+               res.set_content(ret->second, "application/json");
+             }
            });
 
   srv.Get(R"(/plantModel)",
           [=](const httplib::Request &, httplib::Response &res) {
             auto ret = get_model();
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Put(R"(/plantModel)",
           [=](const httplib::Request &req, httplib::Response &res) {
             auto ret = put_model(req.body);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Put(R"(/paths/([^/+])/locked)",
           [=](const httplib::Request &req, httplib::Response &res) {
@@ -203,7 +227,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             std::string name = *m;
             auto ret = put_path_locked(name, value);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
   srv.Put(R"(/locations/([^/+])/locked)",
           [=](const httplib::Request &req, httplib::Response &res) {
@@ -216,7 +242,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             std::string name = *m;
             auto ret = put_location_locked(name, value);
             res.status = ret->first;
-            res.set_content(ret->second, "application/json");
+            if (!ret->second.empty()) {
+              res.set_content(ret->second, "application/json");
+            }
           });
 
   srv.set_logger([](const httplib::Request &req, const httplib::Response &res) {

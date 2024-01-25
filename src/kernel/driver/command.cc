@@ -18,18 +18,17 @@ void Command::run_once() {
       }
     }
   }
-  if (order->dead_time < std::chrono::system_clock::now()) {
-    LOG(ERROR) << order->name << " timeout.";
-    order->state = data::order::TransportOrder::State::FAILED;
-    state = State::END;
-  }
-  if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
-    state = State::END;
-  }
-
   if (state == State::INIT) {
-    state = State::CLAIMING;
+    if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
+      state = State::EXECUTED;
+    } else {
+      state = State::CLAIMING;
+    }
   } else if (state == State::CLAIMING) {
+    if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
+      state = State::EXECUTED;
+      return;
+    }
     auto driver_order = order->driverorders[order->current_driver_index];
     if (driver_order->state == data::order::DriverOrder::State::PRISTINE) {
       driver_order->state = data::order::DriverOrder::State::TRAVELLING;
@@ -80,6 +79,10 @@ void Command::run_once() {
       }
     }
   } else if (state == State::CLAIMED) {
+    if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
+      state = State::EXECUTED;
+      return;
+    }
     // execute
     auto& driver_order = order->driverorders[order->current_driver_index];
     if (driver_order->state == data::order::DriverOrder::State::TRAVELLING) {
