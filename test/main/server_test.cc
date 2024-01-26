@@ -1,4 +1,6 @@
 
+#include <boost/asio.hpp>
+
 #include "../../include/component/tools/log/easylogging++.h"
 #include "../../include/main/httpsrv.hpp"
 #include "../../include/main/tcs.hpp"
@@ -6,10 +8,10 @@ INITIALIZE_EASYLOGGINGPP
 int main(int argc, const char** argv) {
   MY_EASYLOG_CONIFG("./tcs_logs")
   auto now = get_time_fmt(std::chrono::system_clock::now());
-  LOG(INFO) << "start.....\n---------------------------------------------------"
-               "--------\n"
-            << now
-            << "-----------------------------------------------------------\n";
+  LOG(INFO)
+      << "start.....\n"
+      << now
+      << "\n-----------------------------------------------------------\n";
   auto tcs = std::make_shared<TCS>();
   auto srv = std::make_shared<HTTPServer>();
   if (true) {
@@ -48,9 +50,19 @@ int main(int argc, const char** argv) {
     srv->put_location_locked.connect(std::bind(&TCS::put_location_locked, tcs,
                                                std::placeholders::_1,
                                                std::placeholders::_2));
-
-    tcs->run();
-    srv->listen();
+    std::thread th{[&] { srv->listen(); }};
+    boost::asio::io_service io;
+    boost::asio::signal_set sig(io);
+    sig.add(SIGINT);
+    sig.add(SIGTERM);
+    sig.async_wait([&](const boost::system::error_code& err, int signal) {
+      if (srv->srv.is_running()) {
+        srv->srv.stop();
+      }
+    });
+    io.run();
+    th.join();
+    LOG(INFO) << "all stop";
   } else {
     LOG(ERROR) << "init failed";
   }

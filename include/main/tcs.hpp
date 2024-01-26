@@ -95,6 +95,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
   bool init_visualizer(double = 80);
 #endif
  public:
+  bool is_run{false};
   std::shared_ptr<kernel::allocate::ResourceManager> resource;
   std::shared_ptr<kernel::schedule::Scheduler> scheduler;
   std::shared_ptr<kernel::dispatch::Dispatcher> dispatcher;

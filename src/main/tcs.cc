@@ -340,6 +340,7 @@ void TCS::stop() {
   if (resource) {
     resource.reset();
   }
+  is_run = false;
 }
 void TCS::home_order(const std::string &name,
                      std::shared_ptr<kernel::driver::Vehicle> v) {
@@ -474,6 +475,7 @@ void TCS::run() {
     visualizer->run();
   }
 #endif
+  is_run = true;
 }
 
 json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
@@ -512,6 +514,12 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
 
 std::pair<int, std::string> TCS::get_transport_orders(
     const std::string &vehicle) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   if (vehicle.empty()) {
     json res = json::array();
     for (auto &v : orderpool->orderpool) {
@@ -543,6 +551,12 @@ std::pair<int, std::string> TCS::get_transport_orders(
 
 std::pair<int, std::string> TCS::get_transport_order(
     const std::string &ord_name) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   json res = json::array();
   for (auto &ord : orderpool->orderpool) {
     if (ord->name == ord_name) {
@@ -562,6 +576,12 @@ std::pair<int, std::string> TCS::get_transport_order(
 }
 std::pair<int, std::string> TCS::post_transport_order(
     const std::string &ord_name, const std::string &body) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   for (auto &o : orderpool->orderpool) {
     if (o->name == ord_name) {
       json res = json::array();
@@ -718,6 +738,12 @@ std::pair<int, std::string> TCS::post_transport_order(
 
 std::pair<int, std::string> TCS::post_transport_order_withdrawl(
     const std::string &ord_name, bool immediate, bool) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   for (auto &o : orderpool->orderpool) {
     if (o->name == ord_name) {
       o->state = data::order::TransportOrder::State::WITHDRAWL;
@@ -765,6 +791,12 @@ json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
 }
 std::pair<int, std::string> TCS::get_ordersequences(
     const std::string &vehicle) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   if (!vehicle.empty()) {
     json res = json::array();
     for (auto &o : orderpool->orderquence) {
@@ -792,6 +824,12 @@ std::pair<int, std::string> TCS::get_ordersequences(
 
 std::pair<int, std::string> TCS::get_ordersequence(
     const std::string &sequence_name) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   for (auto &q : orderpool->orderquence) {
     if (q->name == sequence_name) {
       auto res = orderquence_to_json(q);
@@ -806,6 +844,12 @@ std::pair<int, std::string> TCS::get_ordersequence(
 
 std::pair<int, std::string> TCS::post_ordersequence(
     const std::string &sequence_name, const std::string &body) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   for (auto &s : orderpool->orderquence) {
     if (s->name == sequence_name) {
       json res = json::array();
@@ -894,6 +938,12 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
 }
 
 std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   if (state.empty()) {
     json res = json::array();
     for (auto &v : dispatcher->vehicles) {
@@ -942,6 +992,12 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
 }
 
 std::pair<int, std::string> TCS::get_vehicle(const std::string &vehicle) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
       auto res = vehicle_to_json(v);
@@ -956,6 +1012,12 @@ std::pair<int, std::string> TCS::get_vehicle(const std::string &vehicle) {
 
 std::pair<int, std::string> TCS::post_vehicle_withdrawl(
     const std::string &vehicle, bool, bool) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
       for (auto &o : v->orders) {
@@ -970,6 +1032,12 @@ std::pair<int, std::string> TCS::post_vehicle_withdrawl(
   return std::pair<int, std::string>(404, res.dump());
 }
 std::pair<int, std::string> TCS::get_model() {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   json res;
   res["name"] = resource->model_name;
   // point
@@ -1239,6 +1307,12 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
 
 std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
                                                  bool new_value) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   for (auto &x : resource->paths) {
     if (x->name == path_name) {
       x->locked = new_value;
@@ -1261,6 +1335,12 @@ std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
 
 std::pair<int, std::string> TCS::put_location_locked(
     const std::string &loc_name, bool new_value) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
   for (auto &x : resource->locations) {
     if (x->name == loc_name) {
       x->locked = new_value;

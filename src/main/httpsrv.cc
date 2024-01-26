@@ -265,4 +265,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
   });
 }
 
-void HTTPServer::listen() { srv.listen(ip, port); }
+void HTTPServer::listen() {
+  LOG(INFO) << "listen " << ip << ":" << port;
+  srv.listen(ip, port);
+}

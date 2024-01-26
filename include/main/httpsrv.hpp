@@ -11,6 +11,12 @@ class HTTPServer {
  public:
   HTTPServer(const std::string& ip = "0.0.0.0", int port = 8080);
   void listen();
+  ~HTTPServer() {
+    if (srv.is_running()) {
+      srv.stop();
+      LOG(INFO) << "http server close";
+    }
+  }
 
  public:
   boost::signals2::signal<TCSRep(std::string)> get_transport_orders;
@@ -32,7 +38,7 @@ class HTTPServer {
   boost::signals2::signal<TCSRep(std::string, bool)> put_path_locked;
   boost::signals2::signal<TCSRep(std::string, bool)> put_location_locked;
 
- private:
+ public:
   std::string ip{"0.0.0.0"};
   int port{8080};
   httplib::Server srv;
