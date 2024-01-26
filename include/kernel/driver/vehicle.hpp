@@ -1,6 +1,5 @@
 #ifndef VEHICLE_HPP
 #define VEHICLE_HPP
-#define BOOST_ERROR_CODE_HEADER_ONLY
 #include <boost/asio.hpp>
 
 #include "../../../include/component/tools/log/easylogging++.h"

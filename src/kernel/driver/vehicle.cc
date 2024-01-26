@@ -59,7 +59,7 @@ void Vehicle::run() {
     boost::asio::executor_work_guard<io_service_type::executor_type> work =
         boost::asio::make_work_guard(*ctx);
 #else
-    boost::asio::io_service::work w(*ctx));
+    boost::asio::io_service::work w(*ctx);
 #endif
     try {
       ctx->run();

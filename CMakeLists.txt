@@ -7,8 +7,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(VISUALIZATION "enable visualization" OFF)
 set(BOOST_ROOT "/usr/include/boost")
 # set(BOOST_LIBRARYDIR "/usr/lib/x86_64-linux-gnu")
-find_package(Boost REQUIRED)
-
+find_package(Boost REQUIRED system thread)
+include_directories(${Boost_INCLUDE_DIRS})
+foreach(lib_name ${Boost_LIBRARIES})
+    message(STATUS ${lib_name})
+endforeach()
 
 
 #########
@@ -51,6 +54,7 @@ file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
 ########
 add_executable(test_event test/component/event/event_test.cc ${EVENT_SRC})
 add_executable(log_event test/component/tools/log/log_test.cc ${COMPONENTS_SRC} )
+target_link_libraries(log_event ${Boost_LIBRARIES})
 add_executable(xml_test test/component/tools/xml/xml_test.cc  src/component/tools/xml/pugixml.cc)
 if(VISUALIZATION)
     add_executable(server_test  test/main/server_test.cc
@@ -59,17 +63,19 @@ if(VISUALIZATION)
    ${VISUAL_SRC}
    ${MAIN_SRC}
    )
-   target_link_libraries(server_test ${OpenCV_LIBS})
+   target_link_libraries(server_test ${OpenCV_LIBS}  ${Boost_LIBRARIES})
 else()
    add_executable(server_test  test/main/server_test.cc
    ${KERNEL_SRC}
    ${COMPONENTS_SRC}
    ${MAIN_SRC}
    )
+   target_link_libraries(server_test ${Boost_LIBRARIES})
 endif()
 add_executable(http_test test/component/tools/http/http_test.cc)
+target_link_libraries(http_test ${Boost_LIBRARIES})
 add_executable(json_test test/component/tools/json/json_test.cc 
-   ${COMPONENTS_SRC}
+   ${COMPONENTS_SRC} 
 )
 
 
