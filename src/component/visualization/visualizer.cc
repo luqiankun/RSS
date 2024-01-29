@@ -209,18 +209,20 @@ void Visualizer::run() {
     is_run = true;
     th = std::thread{[&] {
       LOG(INFO) << "visualization run";
+      namedWindow("TCS_VIEW", cv::WINDOW_NORMAL);
       while (!dispose) {
-        update();
-        auto img = std::shared_ptr<cv::Mat>(new cv::Mat(map_view->clone()));
-        auto mask = std::shared_ptr<cv::Mat>(new cv::Mat);
-        cv::cvtColor(*vehicle_view, *mask, cv::COLOR_BGR2GRAY);
-        cv::threshold(*mask, *mask, 10, 255, cv::THRESH_BINARY);
-        // cv::bitwise_not(mask, mask);
+        if (!is_paused) {
+          update();
+          auto img = std::shared_ptr<cv::Mat>(new cv::Mat(map_view->clone()));
+          auto mask = std::shared_ptr<cv::Mat>(new cv::Mat);
+          cv::cvtColor(*vehicle_view, *mask, cv::COLOR_BGR2GRAY);
+          cv::threshold(*mask, *mask, 10, 255, cv::THRESH_BINARY);
+          // cv::bitwise_not(mask, mask);
 
-        cv::bitwise_not(*map_view, *img, *mask);
-        cv::add(*img, *vehicle_view, *img);
-        namedWindow("TCS_VIEW", cv::WINDOW_NORMAL);
-        cv::imshow("TCS_VIEW", *img);
+          cv::bitwise_not(*map_view, *img, *mask);
+          cv::add(*img, *vehicle_view, *img);
+          cv::imshow("TCS_VIEW", *img);
+        }
         if (cv::waitKey(200) == 27) {  // 如果用户按下 ESC 键，退出循环
           break;
         }
@@ -231,6 +233,7 @@ void Visualizer::run() {
   }
 }
 void Visualizer::update() {
+  // TODO 资源枷锁 或者设置flag 旧模型析构前停止运行，新模型加载后重新运行
   if (!tcs.lock()) {
     return;
   }

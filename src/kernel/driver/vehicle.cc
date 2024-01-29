@@ -8,7 +8,7 @@ namespace kernel {
 namespace driver {
 void Vehicle::execute_action(
     std::shared_ptr<data::order::DriverOrder::Destination> dest) {
-  strand->post([=] {
+  pool.async_run([=] {
     auto op_ret = action(dest);
     if (!op_ret) {
       // 订单失败
@@ -25,7 +25,7 @@ void Vehicle::execute_action(
   });
 }
 void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
-  strand->post([=] {
+  pool.async_run([=] {
     auto move_ret = move(step);
     if (!move_ret) {
       // 订单失败
@@ -54,34 +54,18 @@ void Vehicle::cancel_all_order() {
 }
 
 void Vehicle::run() {
-  run_th = std::thread([&] {
-#if BOOST_VERSION > 107001
-    boost::asio::executor_work_guard<io_service_type::executor_type> work =
-        boost::asio::make_work_guard(*ctx);
-#else
-    boost::asio::io_service::work w(*ctx);
-#endif
-    try {
-      ctx->run();
-    } catch (boost::system::error_code& ec) {
-      LOG(ERROR) << "client err " << ec.message() << "\n";
-    }
-    // LOG(INFO) << name << " stop";
-  });
   update_th = std::thread([&] {
-    while (!ctx->stopped()) {
+    while (pool.is_running()) {
       update();
       std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
   });
 }
 void Vehicle::close() {
-  if (!ctx->stopped()) {
-    ctx->stop();
-  }
-  if (run_th.joinable()) {
-    run_th.join();
-  }
+  pool.stop();
+  // if (run_th.joinable()) {
+  //   run_th.join();
+  // }
   if (update_th.joinable()) {
     update_th.join();
   }

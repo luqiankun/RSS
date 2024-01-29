@@ -1,7 +1,6 @@
 #ifndef HTTPSERVER_HPP
 #define HTTPSERVER_HPP
-#include <boost/signals2.hpp>
-#include <eigen3/Eigen/Eigen>
+#include <Eigen/Eigen>
 
 #include "../component/tools/http/httplib.h"
 #include "../component/tools/json/json.hpp"
@@ -19,24 +18,21 @@ class HTTPServer {
   }
 
  public:
-  boost::signals2::signal<TCSRep(std::string)> get_transport_orders;
-  boost::signals2::signal<TCSRep(std::string)> get_transport_order;
-  boost::signals2::signal<TCSRep(std::string, std::string)>
-      post_transport_order;
-  boost::signals2::signal<TCSRep(std::string, bool, bool)>
-      post_transport_order_withdrawl;
-  boost::signals2::signal<TCSRep(std::string)> get_ordersequences;
-  boost::signals2::signal<TCSRep(std::string)> get_ordersequence;
-  boost::signals2::signal<TCSRep(std::string, std::string)> post_ordersequence;
-  boost::signals2::signal<TCSRep(std::string)> get_vehicles;
-  boost::signals2::signal<TCSRep(std::string)> get_vehicle;
-  boost::signals2::signal<TCSRep(std::string, bool, bool)>
-      post_vehicle_withdrawl;
-  boost::signals2::signal<TCSRep()> get_model;
-  boost::signals2::signal<TCSRep(std::string)> put_model;
-  boost::signals2::signal<TCSRep(std::string)> put_model_xml;
-  boost::signals2::signal<TCSRep(std::string, bool)> put_path_locked;
-  boost::signals2::signal<TCSRep(std::string, bool)> put_location_locked;
+  std::function<TCSRep(std::string)> get_transport_orders;
+  std::function<TCSRep(std::string)> get_transport_order;
+  std::function<TCSRep(std::string, std::string)> post_transport_order;
+  std::function<TCSRep(std::string, bool, bool)> post_transport_order_withdrawl;
+  std::function<TCSRep(std::string)> get_ordersequences;
+  std::function<TCSRep(std::string)> get_ordersequence;
+  std::function<TCSRep(std::string, std::string)> post_ordersequence;
+  std::function<TCSRep(std::string)> get_vehicles;
+  std::function<TCSRep(std::string)> get_vehicle;
+  std::function<TCSRep(std::string, bool, bool)> post_vehicle_withdrawl;
+  std::function<TCSRep()> get_model;
+  std::function<TCSRep(std::string)> put_model;
+  std::function<TCSRep(std::string)> put_model_xml;
+  std::function<TCSRep(std::string, bool)> put_path_locked;
+  std::function<TCSRep(std::string, bool)> put_location_locked;
 
  public:
   std::string ip{"0.0.0.0"};

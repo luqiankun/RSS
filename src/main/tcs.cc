@@ -3,6 +3,11 @@
 #include "../../include/kernel/driver/vehicle.hpp"
 
 std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
+#ifdef VISUAL
+  if (visualizer) {
+    visualizer->paused();
+  }
+#endif
   stop();
   init_orderpool();
   init_planner();
@@ -278,13 +283,12 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
     init_planner();
     scheduler->resource = resource;
     // connect signals
-    dispatcher->find_res.connect(
-        std::bind(&kernel::allocate::ResourceManager::find, resource,
-                  std::placeholders::_1));
-    dispatcher->go_home.connect(std::bind(
-        &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2));
-    dispatcher->get_next_ord.connect(
-        std::bind(&kernel::allocate::OrderPool::pop, orderpool));
+    dispatcher->find_res = std::bind(&kernel::allocate::ResourceManager::find,
+                                     resource, std::placeholders::_1);
+    dispatcher->go_home = std::bind(
+        &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2);
+    dispatcher->get_next_ord =
+        std::bind(&kernel::allocate::OrderPool::pop, orderpool);
     for (auto &v : dispatcher->vehicles) {
       v->planner = planner;
       v->scheduler = scheduler;
@@ -296,6 +300,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       init_visualizer();
     } else {
       visualizer->init(visualizer->resolution, shared_from_this());
+      visualizer->restart();
     }
 #endif
     run();
@@ -428,13 +433,12 @@ bool TCS::init_all(const std::string &xml_path, double r) {
   //
   scheduler->resource = resource;
   // connect signals
-  dispatcher->find_res.connect(
-      std::bind(&kernel::allocate::ResourceManager::find, resource,
-                std::placeholders::_1));
-  dispatcher->go_home.connect(std::bind(
-      &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2));
-  dispatcher->get_next_ord.connect(
-      std::bind(&kernel::allocate::OrderPool::pop, orderpool));
+  dispatcher->find_res = std::bind(&kernel::allocate::ResourceManager::find,
+                                   resource, std::placeholders::_1);
+  dispatcher->go_home = std::bind(&TCS::home_order, this, std::placeholders::_1,
+                                  std::placeholders::_2);
+  dispatcher->get_next_ord =
+      std::bind(&kernel::allocate::OrderPool::pop, orderpool);
   for (auto &v : dispatcher->vehicles) {
     v->planner = planner;
     v->scheduler = scheduler;
@@ -1131,6 +1135,11 @@ std::pair<int, std::string> TCS::get_model() {
   return std::pair<int, std::string>(200, res.dump());
 }
 std::pair<int, std::string> TCS::put_model(const std::string &body) {
+#ifdef VISUAL
+  if (visualizer) {
+    visualizer->paused();
+  }
+#endif
   stop();
   init_orderpool();
   init_scheduler();
@@ -1262,13 +1271,12 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     init_planner();
     scheduler->resource = resource;
     // connect signals
-    dispatcher->find_res.connect(
-        std::bind(&kernel::allocate::ResourceManager::find, resource,
-                  std::placeholders::_1));
-    dispatcher->go_home.connect(std::bind(
-        &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2));
-    dispatcher->get_next_ord.connect(
-        std::bind(&kernel::allocate::OrderPool::pop, orderpool));
+    dispatcher->find_res = std::bind(&kernel::allocate::ResourceManager::find,
+                                     resource, std::placeholders::_1);
+    dispatcher->go_home = std::bind(
+        &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2);
+    dispatcher->get_next_ord =
+        std::bind(&kernel::allocate::OrderPool::pop, orderpool);
     for (auto &v : dispatcher->vehicles) {
       v->planner = planner;
       v->scheduler = scheduler;
@@ -1280,6 +1288,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       init_visualizer();
     } else {
       visualizer->init(visualizer->resolution, shared_from_this());
+      visualizer->restart();
     }
 #endif
     run();

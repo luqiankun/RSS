@@ -8,10 +8,9 @@ namespace kernel {
 
 namespace planner {
 
-#pragma once
 class cmp {
  public:
-  //小顶堆，越小优先级越高
+  // 小顶堆，越小优先级越高
   bool operator()(const VertexPtr& a, const VertexPtr& b) {
     return a->F > b->F;
   }

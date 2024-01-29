@@ -10,6 +10,8 @@ class Visualizer {
   void run();
   void update();
   void stop() { dispose = true; }
+  void paused() { is_paused = true; }
+  void restart() { is_paused = false; }
   ~Visualizer() {
     stop();
     if (th.joinable()) {
@@ -28,6 +30,7 @@ class Visualizer {
   std::thread th;
   bool dispose{false};
   bool is_run{false};
+  bool is_paused{false};
 };
 }  // namespace visual
 

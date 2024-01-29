@@ -7,8 +7,8 @@
 namespace kernel {
 namespace schedule {
 void Scheduler::run() {
+  LOG(INFO) << this->name << " run....";
   schedule_th = std::thread([&] {
-    LOG(INFO) << this->name << " run....";
     while (!dispose) {
       std::unique_lock<std::mutex> lock(mut);
       con_var.wait(lock, [&] { return !commands.empty() || dispose; });
@@ -54,10 +54,10 @@ std::shared_ptr<driver::Command> Scheduler::new_command(
   cmd->vehicle = v;
   cmd->order = v->current_order;
   cmd->scheduler = shared_from_this();
-  cmd->move.connect(
-      std::bind(&driver::Vehicle::execute_move, v, std::placeholders::_1));
-  cmd->action.connect(
-      std::bind(&driver::Vehicle::execute_action, v, std::placeholders::_1));
+  cmd->move =
+      std::bind(&driver::Vehicle::execute_move, v, std::placeholders::_1);
+  cmd->action =
+      std::bind(&driver::Vehicle::execute_action, v, std::placeholders::_1);
   return cmd;
 }
 }  // namespace schedule

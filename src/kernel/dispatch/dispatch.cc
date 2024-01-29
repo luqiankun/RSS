@@ -36,7 +36,7 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
                       ->driverorders.back()
                       ->destination->destination.lock();
       auto dest_check = find_res(dest->name);
-      if (dest_check->first == allocate::ResourceManager::ResType::Point) {
+      if (dest_check.first == allocate::ResourceManager::ResType::Point) {
         auto p = std::dynamic_pointer_cast<data::model::Point>(dest);
         v_pos = p->position;
       } else {
@@ -162,7 +162,7 @@ void Dispatcher::idle_detect() {
 }
 
 void Dispatcher::dispatch_once() {
-  auto current = *get_next_ord();
+  auto current = get_next_ord();
   if (!current) {
     return;
   } else {
@@ -191,13 +191,13 @@ void Dispatcher::dispatch_once() {
                           ->destination->destination.lock();
           auto dest_check = find_res(dest->name);
           std::shared_ptr<data::model::Point> start;
-          if (dest_check->first == allocate::ResourceManager::ResType::Point) {
+          if (dest_check.first == allocate::ResourceManager::ResType::Point) {
             start = std::dynamic_pointer_cast<data::model::Point>(
-                dest_check->second);
-          } else if (dest_check->first ==
+                dest_check.second);
+          } else if (dest_check.first ==
                      allocate::ResourceManager::ResType::Location) {
             start = std::dynamic_pointer_cast<data::model::Location>(
-                        dest_check->second)
+                        dest_check.second)
                         ->link.lock();
           }
           auto v = select_vehicle(start);

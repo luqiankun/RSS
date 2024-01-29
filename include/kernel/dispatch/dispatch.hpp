@@ -1,6 +1,5 @@
 #ifndef DISPATCH_HPP
 #define DISPATCH_HPP
-#include <boost/signals2.hpp>
 
 #include "../allocate/order.hpp"
 #include "../allocate/resource.hpp"
@@ -31,15 +30,12 @@ class Dispatcher : public TCSObject {
   bool auto_select{true};  // 没有指定车辆时自动选择
   std::vector<std::shared_ptr<driver::Vehicle>> vehicles;
   /// signals
-  boost::signals2::signal<std::pair<allocate::ResourceManager::ResType,
-                                    std::shared_ptr<TCSResource>>(
-      const std::string& name)>
+  std::function<std::pair<allocate::ResourceManager::ResType,
+                          std::shared_ptr<TCSResource>>(const std::string&)>
       find_res;
-  boost::signals2::signal<void(const std::string&,
-                               std::shared_ptr<driver::Vehicle>)>
+  std::function<void(const std::string&, std::shared_ptr<driver::Vehicle>)>
       go_home;
-  boost::signals2::signal<std::shared_ptr<data::order::TransportOrder>()>
-      get_next_ord;
+  std::function<std::shared_ptr<data::order::TransportOrder>()> get_next_ord;
 };
 }  // namespace dispatch
 }  // namespace kernel

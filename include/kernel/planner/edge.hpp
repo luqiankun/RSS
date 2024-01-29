@@ -1,6 +1,5 @@
 #ifndef EDGE_HPP
 #define EDGE_HPP
-#pragma once
 #include "../../component/data/model/path.hpp"
 #include "./vertex.hpp"
 namespace kernel {

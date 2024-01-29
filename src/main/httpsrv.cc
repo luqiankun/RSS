@@ -62,9 +62,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               veh = req.get_param_value("transportOrders");
             }
             auto ret = get_transport_orders(veh);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
   srv.Get(R"(/transportOrders/([^/]+))",
@@ -72,9 +72,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             auto m = req.matches.end() - 1;
             std::string ord_name = *m;
             auto ret = get_transport_order(ord_name);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
   srv.Post(R"(/transportOrders/([^/]+))",
@@ -82,9 +82,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              auto m = req.matches.end() - 1;
              std::string ord_name = *m;
              auto ret = post_transport_order(ord_name, req.body);
-             res.status = ret->first;
-             if (!ret->second.empty()) {
-               res.set_content(ret->second, "application/json");
+             res.status = ret.first;
+             if (!ret.second.empty()) {
+               res.set_content(ret.second, "application/json");
              }
            });
   srv.Post(R"(/transportOrders/([^/]+)/withdrawal)",
@@ -107,9 +107,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              }
              auto ret = post_transport_order_withdrawl(ord_name, immediate,
                                                        disableVehicle);
-             res.status = ret->first;
-             if (!ret->second.empty()) {
-               res.set_content(ret->second, "application/json");
+             res.status = ret.first;
+             if (!ret.second.empty()) {
+               res.set_content(ret.second, "application/json");
              }
            });
 
@@ -120,9 +120,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               veh = req.get_param_value("intendedVehicle");
             }
             auto ret = get_ordersequences(veh);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
   srv.Get(R"(/orderSequences/([^/]+))",
@@ -131,9 +131,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             auto m = req.matches.end() - 1;
             veh = *m;
             auto ret = get_ordersequence(veh);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
   srv.Post(R"(/orderSequences/([^/]+))",
@@ -142,9 +142,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              auto m = req.matches.end() - 1;
              veh = *m;
              auto ret = post_ordersequence(veh, req.body);
-             res.status = ret->first;
-             if (!ret->second.empty()) {
-               res.set_content(ret->second, "application/json");
+             res.status = ret.first;
+             if (!ret.second.empty()) {
+               res.set_content(ret.second, "application/json");
              }
            });
   srv.Get(R"(/vehicles)",
@@ -154,9 +154,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               state = req.get_param_value("procState");
             }
             auto ret = get_vehicles(state);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
   srv.Get(R"(/vehicles/([^/]+))",
@@ -164,9 +164,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             std::string state{""};
             state = *(req.matches.end() - 1);
             auto ret = get_vehicle(state);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
   srv.Post(R"(/vehicles/([^/]+)/withdrawal)",
@@ -194,18 +194,18 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
                }
              }
              auto ret = post_vehicle_withdrawl(name, immediate, disableVehicle);
-             res.status = ret->first;
-             if (!ret->second.empty()) {
-               res.set_content(ret->second, "application/json");
+             res.status = ret.first;
+             if (!ret.second.empty()) {
+               res.set_content(ret.second, "application/json");
              }
            });
 
   srv.Get(R"(/plantModel)",
           [=](const httplib::Request &, httplib::Response &res) {
             auto ret = get_model();
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
   srv.Put(R"(/plantModel)",
@@ -216,15 +216,15 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             }
             if (use_xml) {
               auto ret = put_model_xml(req.body);
-              res.status = ret->first;
-              if (!ret->second.empty()) {
-                res.set_content(ret->second, "application/json");
+              res.status = ret.first;
+              if (!ret.second.empty()) {
+                res.set_content(ret.second, "application/json");
               }
             } else {
               auto ret = put_model(req.body);
-              res.status = ret->first;
-              if (!ret->second.empty()) {
-                res.set_content(ret->second, "application/json");
+              res.status = ret.first;
+              if (!ret.second.empty()) {
+                res.set_content(ret.second, "application/json");
               }
             }
           });
@@ -238,9 +238,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             auto m = req.matches.end() - 1;
             std::string name = *m;
             auto ret = put_path_locked(name, value);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
   srv.Put(R"(/locations/([^/]+)/locked)",
@@ -253,9 +253,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             auto m = req.matches.end() - 1;
             std::string name = *m;
             auto ret = put_location_locked(name, value);
-            res.status = ret->first;
-            if (!ret->second.empty()) {
-              res.set_content(ret->second, "application/json");
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
             }
           });
 

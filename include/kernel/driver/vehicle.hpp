@@ -1,19 +1,13 @@
 #ifndef VEHICLE_HPP
 #define VEHICLE_HPP
-#include <boost/asio.hpp>
-
 #include "../../../include/component/tools/log/easylogging++.h"
+#include "../../../include/component/util/taskpool.hpp"
 #include "../../component/data/order/orderquence.hpp"
 #include "../../component/tcsobject.hpp"
 #include "../allocate/order.hpp"
 #include "../planner/planner.hpp"
 #include "../schedule/schedule.hpp"
 
-#if BOOST_VERSION >= 107001
-using io_service_type = boost::asio::io_context;
-#else
-using io_service_type = boost::asio::io_service;
-#endif
 namespace kernel {
 namespace dispatch {
 class Dispatcher;
@@ -22,11 +16,7 @@ namespace driver {
 class Vehicle : public schedule::Client,
                 public std::enable_shared_from_this<Vehicle> {
  public:
-  Vehicle(const std::string& n) : schedule::Client(n) {
-    ctx = std::make_shared<io_service_type>();
-    auto* st = new io_service_type::strand(*ctx);
-    strand = std::shared_ptr<io_service_type::strand>(st);
-  }
+  Vehicle(const std::string& n) : schedule::Client(n) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
   enum class ProcState { IDLE, AWAITING_ORDER, PROCESSING_ORDER };
   std::string get_state();
@@ -81,8 +71,7 @@ class Vehicle : public schedule::Client,
   Eigen::Vector3i position;
   float angle{0};
   Eigen::Vector3i layout;
-  std::shared_ptr<io_service_type> ctx;
-  std::shared_ptr<io_service_type::strand> strand;
+  fa::taskpool_t pool{1};
   std::chrono::system_clock::time_point idle_time;
 };
 class SimVehicle : public Vehicle {

@@ -1,6 +1,5 @@
 #ifndef MOVECOMMAND_HPP
 #define MOVECOMMAND_HPP
-#include <boost/signals2.hpp>
 
 #include "../../component/data/order/transportorder.hpp"
 namespace kernel {
@@ -38,8 +37,8 @@ class Command : public TCSObject {
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<driver::Vehicle> vehicle;
   std::shared_ptr<data::order::TransportOrder> order;
-  boost::signals2::signal<void(const std::shared_ptr<data::order::Step>)> move;
-  boost::signals2::signal<void(
+  std::function<void(const std::shared_ptr<data::order::Step>)> move;
+  std::function<void(
       const std::shared_ptr<data::order::DriverOrder::Destination>)>
       action;
 };
