@@ -7,29 +7,37 @@
 #ifdef VISUAL
 #include "../component/visualization/visualizer.hpp"
 #endif
+
+inline std::string get_log_path(const std::string& path) {
+  auto data = get_date_fmt();
+#ifdef _WIN32
+  return (std::string(path) + "\\tcs_" + data + ".log");
+#else
+  return (std::string(path) + "/tcs_" + data + ".log");
+#endif
+}
+
 #ifndef MY_EASYLOG_CONIFG  //(path) 按天滚动 最大10MB
-#define MY_EASYLOG_CONIFG(path)                                            \
-  auto data = get_date_fmt();                                              \
-  el::Configurations conf;                                                 \
-  conf.setGlobally(el::ConfigurationType::Format,                          \
-                   "[%level] %datetime %fbase:%line] %msg");               \
-  conf.setGlobally(el::ConfigurationType::Filename,                        \
-                   (std::string(path) + "/tcs_" + data + ".log").c_str()); \
-  conf.setGlobally(el::ConfigurationType::MillisecondsWidth, "4");         \
-  conf.setGlobally(el ::ConfigurationType::MaxLogFileSize, "10485760");    \
-  conf.set(el::Level::Debug, el::ConfigurationType::Format,                \
-           "%datetime{%d/%M} %func [%fbase:%line] %msg");                  \
+#define MY_EASYLOG_CONIFG(path)                                         \
+  el::Configurations conf;                                              \
+  conf.setGlobally(el::ConfigurationType::Format,                       \
+                   "[%level] %datetime %fbase:%line] %msg");            \
+  conf.setGlobally(el::ConfigurationType::Filename,                     \
+                   get_log_path(path).c_str());                         \
+  conf.setGlobally(el::ConfigurationType::MillisecondsWidth, "4");      \
+  conf.setGlobally(el ::ConfigurationType::MaxLogFileSize, "10485760"); \
+  conf.set(el::Level::Debug, el::ConfigurationType::Format,             \
+           "%datetime{%d/%M} %func [%fbase:%line] %msg");               \
   el::Loggers::reconfigureAllLoggers(conf);
-#define MY_EASYLOG_CONIFG_COMPLEX(path, fmt, size)                         \
-  auto data = get_date_fmt();                                              \
-  el::Configurations conf;                                                 \
-  conf.setGlobally(el::ConfigurationType::Format, fmt);                    \
-  conf.setGlobally(el::ConfigurationType::Filename,                        \
-                   (std::string(path) + "/tcs_" + data + ".log").c_str()); \
-  conf.setGlobally(el::ConfigurationType::MillisecondsWidth, "4");         \
-  conf.setGlobally(el ::ConfigurationType::MaxLogFileSize, size);          \
-  conf.set(el::Level::Debug, el::ConfigurationType::Format,                \
-           "%datetime{%d/%M} %func [%fbase:%line] %msg");                  \
+#define MY_EASYLOG_CONIFG_COMPLEX(path, fmt, size)                 \
+  el::Configurations conf;                                         \
+  conf.setGlobally(el::ConfigurationType::Format, fmt);            \
+  conf.setGlobally(el::ConfigurationType::Filename,                \
+                   get_log_path(path).c_str());                    \
+  conf.setGlobally(el::ConfigurationType::MillisecondsWidth, "4"); \
+  conf.setGlobally(el ::ConfigurationType::MaxLogFileSize, size);  \
+  conf.set(el::Level::Debug, el::ConfigurationType::Format,        \
+           "%datetime{%d/%M} %func [%fbase:%line] %msg");          \
   el::Loggers::reconfigureAllLoggers(conf);
 #endif
 

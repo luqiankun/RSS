@@ -8,7 +8,11 @@
 #include "../../../include/component/util/timer.hpp"
 namespace kernel {
 namespace planner {
-
+#if defined(_MSC_VER)
+// 防止包含window.h中的宏定义冲突
+#undef max
+#undef min
+#endif
 void Solver::solver(const VertexPtr& begin) {
   cpu_timer t("solver paths");
   this->begin_node = begin;

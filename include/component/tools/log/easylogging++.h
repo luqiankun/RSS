@@ -31,6 +31,8 @@
 // Visual C++
 #if defined(_MSC_VER)
 #define ELPP_COMPILER_MSVC 1
+#define WIN32_LEAN_AND_MEAN
+#define ELPP_WINSOCK2
 #else
 #define ELPP_COMPILER_MSVC 0
 #endif

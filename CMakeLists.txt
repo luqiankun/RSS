@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(TCS)
-set(CMAKE_BUILD_TYPE "Debug")
-# set(CMAKE_BUILD_TYPE "Release")
+# set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(VISUALIZATION "enable visualization" OFF)
@@ -46,6 +46,8 @@ file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
 ########
 ##test##
 ########
+
+## 版本低的gcc 可能需要链接pthread
 add_executable(test_event test/component/event/event_test.cc ${EVENT_SRC})
 add_executable(log_event test/component/tools/log/log_test.cc ${COMPONENTS_SRC} )
 target_link_libraries(log_event)

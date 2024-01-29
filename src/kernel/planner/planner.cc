@@ -4,6 +4,10 @@
 #include "../../../include/kernel/allocate/resource.hpp"
 namespace kernel {
 namespace planner {
+#if defined(_MSC_VER)
+#undef max
+#undef min
+#endif
 Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
   cpu_timer t("generate map");
   // std::cout << "begining generate map\n";
