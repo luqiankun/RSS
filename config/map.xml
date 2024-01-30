@@ -955,58 +955,6 @@
         length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="Point-0091 --- Point-0005" sourcePoint="Point-0091" destinationPoint="Point-0005"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0010 --- Point-0014" sourcePoint="Point-0010" destinationPoint="Point-0014"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0014 --- Point-0018" sourcePoint="Point-0014" destinationPoint="Point-0018"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0018 --- Point-0025" sourcePoint="Point-0018" destinationPoint="Point-0025"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0025 --- Point-0028" sourcePoint="Point-0025" destinationPoint="Point-0028"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0009 --- Point-0013" sourcePoint="Point-0009" destinationPoint="Point-0013"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0013 --- Point-0019" sourcePoint="Point-0013" destinationPoint="Point-0019"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0019 --- Point-0024" sourcePoint="Point-0019" destinationPoint="Point-0024"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0024 --- Point-0029" sourcePoint="Point-0024" destinationPoint="Point-0029"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0023 --- Point-0030" sourcePoint="Point-0023" destinationPoint="Point-0030"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0008 --- Point-0012" sourcePoint="Point-0008" destinationPoint="Point-0012"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0012 --- Point-0020" sourcePoint="Point-0012" destinationPoint="Point-0020"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
-    <path name="Point-0020 --- Point-0023" sourcePoint="Point-0020" destinationPoint="Point-0023"
-        length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-    </path>
     <vehicle name="Vehicle-0001" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
         maxReverseVelocity="1000">

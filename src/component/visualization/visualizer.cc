@@ -16,8 +16,8 @@ std::tuple<int, int, int> hexToRgb(const std::string &hexColor) {
   return std::make_tuple(r, g, b);
 }
 namespace visual {
-bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
-  this->resolution = resolution;
+bool Visualizer::init(double res, std::shared_ptr<TCS> tcs) {
+  this->resolution = res;
   this->tcs = tcs;
   int min_x = std::numeric_limits<int>::max();
   int max_x = std::numeric_limits<int>::min();
@@ -55,6 +55,12 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
       Eigen::Vector4i(min_x - (max_x - min_x) / 8, max_x + (max_x - min_x) / 8,
                       min_y - (max_y - min_y) / 8, max_y + (max_y - min_y) / 8);
   LOG(INFO) << "mat_limit" << mat_limit;
+
+  if (this->resolution <= 0) {
+    this->resolution =
+        (mat_limit.y() - mat_limit.x()) * 1.0 / 1440;  // 自动设置分辨率
+  }
+  LOG(INFO) << "resolution : " << resolution << " m/pix";
   auto width =
       static_cast<uint32_t>((mat_limit.y() - mat_limit.x()) / resolution);
   auto height =
@@ -91,29 +97,21 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
         static_cast<uint32_t>(
             (x->destination_point.lock()->layout.position.y() - mat_limit.z()) /
             resolution);
-    double arrowed_len = 7;
     Eigen::Vector2f line;
     line.x() = static_cast<double>(end_layout_x) - static_cast<double>(be_x);
     line.y() = static_cast<double>(end_layout_y) - static_cast<double>(be_y);
     Eigen::Vector2f norm_line = line.normalized() * (line.norm() - 6);
-    double tip = arrowed_len / line.norm();
     cv::Scalar color = cv::Scalar(9, 9, 9);
     int thickness = 1;
     if (x->locked) {
       color = cv::Scalar(255, 255, 255);
       thickness = 3;
     }
-    cv::arrowedLine(mat,
-                    cv::Point2i(be_x + line.normalized().x() * 6,
-                                be_y + line.normalized().y() * 6),
-                    cv::Point2i(be_x + norm_line.x(), be_y + norm_line.y()),
-                    color, thickness, cv::LINE_AA, 0, tip);
+    arrow_line(mat, cv::Point2i(be_x, be_y),
+               cv::Point2i(be_x + line.x(), be_y + line.y()), color, thickness);
     if (x->max_reverse_vel > 0) {
-      cv::arrowedLine(mat,
-                      cv::Point2i(be_x + norm_line.x(), be_y + norm_line.y()),
-                      cv::Point2i(be_x + line.normalized().x() * 6,
-                                  be_y + line.normalized().y() * 6),
-                      color, thickness, cv::LINE_AA, 0, tip);
+      arrow_line(mat, cv::Point2i(be_x + line.x(), be_y + line.y()),
+                 cv::Point2i(be_x, be_y), color, thickness);
     }
   }
 
@@ -133,7 +131,7 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
     cv::putText(mat, x->name, cv::Point2i(p_x - 30, p_y - 22),
                 cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
                 cv::Scalar(90, 90, 90), 1, cv::LINE_AA);
-    cv::rectangle(mat, cv::Rect(p_x - 14, p_y - 10, 28, 20), color, thickness,
+    cv::rectangle(mat, cv::Rect(p_x - 14, p_y - 10, 24, 20), color, thickness,
                   cv::LINE_AA, 0);
     cv::circle(mat, cv::Point2i(p_x, p_y), 3, cv::Scalar(70, 70, 70), 1,
                cv::LINE_AA);
@@ -148,17 +146,17 @@ bool Visualizer::init(double resolution, std::shared_ptr<TCS> tcs) {
       int step_x = (static_cast<int>(link_x) - static_cast<int>(p_x)) / 8;
       int step_y = (static_cast<int>(link_y) - static_cast<int>(p_y)) / 8;
       cv::line(mat, cv::Point2i(p_x, p_y),
-               cv::Point2i(p_x + step_x, p_y + step_y), cv::Scalar(10, 40, 230),
+               cv::Point2i(p_x + step_x, p_y + step_y), cv::Scalar(10, 40, 180),
                1, cv::LINE_AA, 0);
       cv::line(mat, cv::Point2i(p_x + 2 * step_x, p_y + 2 * step_y),
                cv::Point2i(p_x + 3 * step_x, p_y + 3 * step_y),
-               cv::Scalar(10, 40, 230), 1, cv::LINE_AA, 0);
+               cv::Scalar(10, 40, 180), 1, cv::LINE_AA, 0);
       cv::line(mat, cv::Point2i(p_x + 4 * step_x, p_y + 4 * step_y),
                cv::Point2i(p_x + 5 * step_x, p_y + 5 * step_y),
-               cv::Scalar(10, 40, 230), 1, cv::LINE_AA, 0);
+               cv::Scalar(10, 40, 180), 1, cv::LINE_AA, 0);
       cv::line(mat, cv::Point2i(p_x + 6 * step_x, p_y + 6 * step_y),
                cv::Point2i(p_x + 7 * step_x, p_y + 7 * step_y),
-               cv::Scalar(10, 40, 230), 1, cv::LINE_AA, 0);
+               cv::Scalar(10, 40, 180), 1, cv::LINE_AA, 0);
     }
   }
   // axis label
@@ -355,27 +353,20 @@ void Visualizer::update() {
                          cv::Scalar(std::get<2>(color), std::get<1>(color),
                                     std::get<0>(color)),
                          -1, cv::LINE_AA);
-              double arrowed_len = 12;
               if (dr->route->current_step->vehicle_orientation ==
                   data::order::Step::Orientation::FORWARD) {
-                cv::arrowedLine(
-                    *vehicle_view, cv::Point2i(beg_x, beg_y),
-                    cv::Point2i(end_x, end_y),
-                    cv::Scalar(std::get<2>(color), std::get<1>(color),
-                               std::get<0>(color)),
-                    2, 8, 0,
-                    arrowed_len /
-                        Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
+                arrow_line(*vehicle_view, cv::Point2i(beg_x, beg_y),
+                           cv::Point2i(end_x, end_y),
+                           cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                      std::get<0>(color)),
+                           2);
               } else if (dr->route->current_step->vehicle_orientation ==
                          data::order::Step::Orientation::BACKWARD) {
-                cv::arrowedLine(
-                    *vehicle_view, cv::Point2i(end_x, end_y),
-                    cv::Point2i(beg_x, beg_y),
-                    cv::Scalar(std::get<2>(color), std::get<1>(color),
-                               std::get<0>(color)),
-                    2, 8, 0,
-                    arrowed_len /
-                        Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
+                arrow_line(*vehicle_view, cv::Point2i(end_x, end_y),
+                           cv::Point2i(beg_x, beg_y),
+                           cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                      std::get<0>(color)),
+                           2);
               }
             }
 
@@ -399,27 +390,20 @@ void Visualizer::update() {
                          cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
               cv::circle(*vehicle_view, cv::Point2i(end_x, end_y), 3,
                          cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
-              double arrowed_len = 10;
               if (path->vehicle_orientation ==
                   data::order::Step::Orientation::FORWARD) {
-                cv::arrowedLine(
-                    *vehicle_view, cv::Point2i(beg_x, beg_y),
-                    cv::Point2i(end_x, end_y),
-                    cv::Scalar(std::get<2>(color), std::get<1>(color),
-                               std::get<0>(color)),
-                    2, 8, 0,
-                    arrowed_len /
-                        Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
+                arrow_line(*vehicle_view, cv::Point2i(beg_x, beg_y),
+                           cv::Point2i(end_x, end_y),
+                           cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                      std::get<0>(color)),
+                           2);
               } else if (path->vehicle_orientation ==
                          data::order::Step::Orientation::BACKWARD) {
-                cv::arrowedLine(
-                    *vehicle_view, cv::Point2i(end_x, end_y),
-                    cv::Point2i(beg_x, beg_y),
-                    cv::Scalar(std::get<2>(color), std::get<1>(color),
-                               std::get<0>(color)),
-                    2, 8, 0,
-                    arrowed_len /
-                        Eigen::Vector2i(beg_x - end_x, beg_y - end_y).norm());
+                arrow_line(*vehicle_view, cv::Point2i(end_x, end_y),
+                           cv::Point2i(beg_x, beg_y),
+                           cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                      std::get<0>(color)),
+                           2);
               }
             }
             // location link_point
@@ -464,5 +448,28 @@ void Visualizer::update() {
       }
     }
   }
+}
+
+void Visualizer::arrow_line(cv::Mat mat, cv::Point2i start, cv::Point2i end,
+                            cv::Scalar color, int thickness) {
+  Eigen::Vector2f line(end.x - start.x, end.y - start.y);
+  line = line.normalized() * (line.norm() - 14);
+  Eigen::Vector2f d = line - line.normalized() * 8;
+  Eigen::Vector2f horz_a(-d.y() / 2, d.x() / 2);
+  Eigen::Vector2f horz_b(d.y() / 2, -d.x() / 2);
+  Eigen::Vector2f a = d + horz_a.normalized() * 3;
+  Eigen::Vector2f b = d + horz_b.normalized() * 3;
+  cv::Point2i start_ = start + cv::Point2i((line.normalized() * 7).x(),
+                                           (line.normalized() * 7).y());
+  cv::Point2i end_ = start_ + cv::Point2i(line.x(), line.y());
+  cv::Point2i a_ = start_ + cv::Point2i(a.x(), a.y());
+  cv::Point2i b_ = start_ + cv::Point2i(b.x(), b.y());
+  cv::line(mat, start_, end_, color, thickness, cv::LINE_AA);
+  std::vector<cv::Point2i> poly;
+  poly.push_back(end_);
+  poly.push_back(a_);
+  poly.push_back(b_);
+  cv::polylines(mat, poly, true, color, thickness, cv::LINE_AA);
+  cv::fillPoly(mat, poly, color, cv::LINE_AA);
 }
 }  // namespace visual

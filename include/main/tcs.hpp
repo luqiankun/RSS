@@ -78,7 +78,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
   std::pair<int, std::string> put_model_xml(const std::string& body);
 
  public:
-  bool init_all(const std::string& xml_path, double r = 30);
+  bool init_all(const std::string& xml_path, double r = 0);
   bool init_dispatcher();
   bool init_scheduler();
   bool init_orderpool();
@@ -100,7 +100,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
  public:
 #ifdef VISUAL
   std::shared_ptr<visual::Visualizer> visualizer;
-  bool init_visualizer(double = 80);
+  bool init_visualizer(double = -1);
 #endif
  public:
   bool is_run{false};

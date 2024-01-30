@@ -5,6 +5,10 @@
 class TCS;
 namespace visual {
 class Visualizer {
+ private:
+  void arrow_line(cv::Mat, cv::Point2i start, cv::Point2i end, cv::Scalar color,
+                  int thickness);
+
  public:
   bool init(double resolution, std::shared_ptr<TCS>);
   void run();

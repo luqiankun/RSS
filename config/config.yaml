@@ -9,3 +9,5 @@ tcs:
   auto_init:
     enable: false
     xml_path: "map.xml"
+  visualization:
+    resolution: 50
