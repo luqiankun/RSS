@@ -149,8 +149,10 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
     return res;
   }
   if (st == ed) {
-    LOG(ERROR) << "The starting point and"
-                  "the ending point are the same\n ";
+    LOG(WARNING) << "The starting point and"
+                    "the ending point are the same\n ";
+    res.emplace_back(
+        std::vector<std::shared_ptr<data::model::Point>>{st->equal_point});
     return res;
   }
   {

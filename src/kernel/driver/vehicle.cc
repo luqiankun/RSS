@@ -127,7 +127,9 @@ void Vehicle::get_next_ord() {
       state = State::IDLE;
       break;
     } else {
+      LOG(INFO) << "_______________";
       current_order = orders.front();
+      orders.pop_front();
       // TODO  solver
       if (current_order->state !=
           data::order::TransportOrder::State::BEING_PROCESSED) {
@@ -136,7 +138,6 @@ void Vehicle::get_next_ord() {
       }
       // route
       plan_route();
-      orders.pop_front();
       if (current_order->state ==
           data::order::TransportOrder::State::UNROUTABLE) {
         current_order.reset();
@@ -154,6 +155,7 @@ void Vehicle::get_next_ord() {
     proc_state = ProcState::AWAITING_ORDER;
     state = State::IDLE;
     idle_time = std::chrono::system_clock::now();
+    LOG(INFO) << "now is idle " << get_time_fmt(idle_time);
   }
 }
 
@@ -244,15 +246,21 @@ std::string Vehicle::get_proc_state() {
 void Vehicle::next_command() {
   if (!current_order) {
     if (orders.empty()) {
-      return;
     } else {
       current_order = orders.front();
       // TODO  solver
-      plan_route();
       orders.pop_front();
+      plan_route();
     }
   }
   if (!current_order) {
+    get_next_ord();
+    return;
+  }
+  if (current_order->state !=
+      data::order::TransportOrder::State::BEING_PROCESSED) {
+    current_order.reset();
+    get_next_ord();
     return;
   }
   current_command = scheduler.lock()->new_command(shared_from_this());
@@ -267,11 +275,11 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
     orders.push_back(order);
   } else if (state == State::IDLE) {
     // TODO
+    state = State::EXECUTING;
+    proc_state = ProcState::PROCESSING_ORDER;
     current_order.reset();
     orders.push_back(order);
     next_command();
-    state = State::EXECUTING;
-    proc_state = ProcState::PROCESSING_ORDER;
   } else if (state == State::EXECUTING) {
     orders.push_back(order);
   } else if (state == State::CHARGING) {

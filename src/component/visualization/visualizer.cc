@@ -60,7 +60,7 @@ bool Visualizer::init(double res, std::shared_ptr<TCS> tcs) {
     this->resolution =
         (mat_limit.y() - mat_limit.x()) * 1.0 / 1440;  // 自动设置分辨率
   }
-  LOG(INFO) << "resolution : " << resolution << " m/pix";
+  LOG(INFO) << "resolution : " << resolution << " mm/pix";
   auto width =
       static_cast<uint32_t>((mat_limit.y() - mat_limit.x()) / resolution);
   auto height =
@@ -75,8 +75,8 @@ bool Visualizer::init(double res, std::shared_ptr<TCS> tcs) {
                        (x->layout.position.y() - mat_limit.z()) / resolution);
     // LOG(INFO) << p_x << " " << p_y;
     cv::putText(mat, x->name, cv::Point2i(p_x + 5, p_y + 20),
-                cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
-                cv::Scalar(90, 90, 90), 1, cv::LINE_AA);
+                cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(90, 90, 90), 1,
+                cv::LINE_8);
     cv::circle(mat, cv::Point2i(p_x, p_y), 4, cv::Scalar(0, 0, 0), 1,
                cv::LINE_AA);
   }
@@ -107,11 +107,12 @@ bool Visualizer::init(double res, std::shared_ptr<TCS> tcs) {
       color = cv::Scalar(255, 255, 255);
       thickness = 3;
     }
-    arrow_line(mat, cv::Point2i(be_x, be_y),
-               cv::Point2i(be_x + line.x(), be_y + line.y()), color, thickness);
     if (x->max_reverse_vel > 0) {
       arrow_line(mat, cv::Point2i(be_x + line.x(), be_y + line.y()),
-                 cv::Point2i(be_x, be_y), color, thickness);
+                 cv::Point2i(be_x, be_y), color, thickness, false);
+    } else {
+      arrow_line(mat, cv::Point2i(be_x + line.x(), be_y + line.y()),
+                 cv::Point2i(be_x, be_y), color, thickness, true);
     }
   }
 
@@ -129,10 +130,10 @@ bool Visualizer::init(double res, std::shared_ptr<TCS> tcs) {
       thickness = -1;
     }
     cv::putText(mat, x->name, cv::Point2i(p_x - 30, p_y - 22),
-                cv::HersheyFonts::FONT_HERSHEY_DUPLEX, 0.3,
-                cv::Scalar(90, 90, 90), 1, cv::LINE_AA);
+                cv::FONT_HERSHEY_SIMPLEX, 0.2, cv::Scalar(90, 90, 90), 1,
+                cv::LINE_8);
     cv::rectangle(mat, cv::Rect(p_x - 14, p_y - 10, 24, 20), color, thickness,
-                  cv::LINE_AA, 0);
+                  cv::LINE_8, 0);
     cv::circle(mat, cv::Point2i(p_x, p_y), 3, cv::Scalar(70, 70, 70), 1,
                cv::LINE_AA);
 
@@ -143,61 +144,10 @@ bool Visualizer::init(double res, std::shared_ptr<TCS> tcs) {
           mat.rows - static_cast<uint32_t>(
                          (x->link.lock()->layout.position.y() - mat_limit.z()) /
                          resolution);
-      int step_x = (static_cast<int>(link_x) - static_cast<int>(p_x)) / 8;
-      int step_y = (static_cast<int>(link_y) - static_cast<int>(p_y)) / 8;
-      cv::line(mat, cv::Point2i(p_x, p_y),
-               cv::Point2i(p_x + step_x, p_y + step_y), cv::Scalar(10, 40, 180),
-               1, cv::LINE_AA, 0);
-      cv::line(mat, cv::Point2i(p_x + 2 * step_x, p_y + 2 * step_y),
-               cv::Point2i(p_x + 3 * step_x, p_y + 3 * step_y),
-               cv::Scalar(10, 40, 180), 1, cv::LINE_AA, 0);
-      cv::line(mat, cv::Point2i(p_x + 4 * step_x, p_y + 4 * step_y),
-               cv::Point2i(p_x + 5 * step_x, p_y + 5 * step_y),
-               cv::Scalar(10, 40, 180), 1, cv::LINE_AA, 0);
-      cv::line(mat, cv::Point2i(p_x + 6 * step_x, p_y + 6 * step_y),
-               cv::Point2i(p_x + 7 * step_x, p_y + 7 * step_y),
-               cv::Scalar(10, 40, 180), 1, cv::LINE_AA, 0);
+      dashed_line(mat, cv::Point2i(link_x, link_y), cv::Point2i(p_x, p_y),
+                  cv::Scalar(30, 10, 201), 1, 5);
     }
   }
-  // axis label
-  // {
-  //   int label_x = 30;
-  //   int label_y = mat.rows - 30;
-  //   int len_x = mat.cols - 30 - 50;
-  //   int len_y = mat.rows - 30 - 50;
-  //   cv::circle(mat, cv::Point2i(label_x, label_y), 5, cv::Scalar(0, 0, 255),
-  //   1,
-  //              cv::LINE_AA, 0);
-  //   cv::arrowedLine(mat, cv::Point2i(label_x, label_y),
-  //                   cv::Point2i(label_x, label_y - len_y),
-  //                   cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0, 0.01);
-  //   cv::arrowedLine(mat, cv::Point2i(label_x, label_y),
-  //                   cv::Point2i(label_x + len_x, label_y),
-  //                   cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0, 0.01);
-  //   int step = 50;
-  //   for (int i = 0; i < mat.cols / step; i++) {
-  //     int label_real_x =
-  //         static_cast<int>((label_x + step * i) * resolution) +
-  //         mat_limit.x();
-  //     cv::line(mat, cv::Point2i(label_x + step * i, label_y),
-  //              cv::Point2i(label_x + step * i, label_y - 5),
-  //              cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
-  //     cv::putText(mat, std::to_string(label_real_x),
-  //                 cv::Point2i(label_x + step * i - 9, label_y + 13), 1, 0.2,
-  //                 cv::Scalar(10, 10, 80), 1, cv::LINE_AA);
-  //   }
-  //   for (int i = 0; i < mat.rows / step; i++) {
-  //     int label_real_y =
-  //         static_cast<int>((mat.rows - (label_y - step * i)) * resolution) +
-  //         mat_limit.z();
-  //     cv::putText(mat, std::to_string(label_real_y),
-  //                 cv::Point2i(label_x + 5, label_y - step * i - 5), 1, 0.2,
-  //                 cv::Scalar(10, 10, 80), true, cv::LINE_AA);
-  //     cv::line(mat, cv::Point2i(label_x, label_y - step * i),
-  //              cv::Point2i(label_x + 5, label_y - step * i),
-  //              cv::Scalar(10, 40, 80), 1, cv::LINE_AA, 0);
-  //   }
-  // }
   map_view = std::shared_ptr<cv::Mat>(new cv::Mat(mat));
   return true;
 }
@@ -214,7 +164,7 @@ void Visualizer::run() {
           auto img = std::shared_ptr<cv::Mat>(new cv::Mat(map_view->clone()));
           auto mask = std::shared_ptr<cv::Mat>(new cv::Mat);
           cv::cvtColor(*vehicle_view, *mask, cv::COLOR_BGR2GRAY);
-          cv::threshold(*mask, *mask, 10, 255, cv::THRESH_BINARY);
+          cv::threshold(*mask, *mask, 1, 255, cv::THRESH_BINARY);
           // cv::bitwise_not(mask, mask);
 
           cv::bitwise_not(*map_view, *img, *mask);
@@ -245,204 +195,330 @@ void Visualizer::update() {
     return;
   }
   for (auto &v : tcs.lock()->dispatcher->vehicles) {
-    // 自身坐标系
-    Eigen::Vector3i left_bottom = Eigen::Vector3i::Ones();
-    Eigen::Vector3i right_bottom = Eigen::Vector3i::Ones();
-    Eigen::Vector3i left_mid = Eigen::Vector3i::Ones();
-    Eigen::Vector3i right_mid = Eigen::Vector3i::Ones();
-    Eigen::Vector3i left_top = Eigen::Vector3i::Ones();
-    Eigen::Vector3i right_top = Eigen::Vector3i::Ones();
-    left_bottom.x() = 0 - v->length;
-    left_bottom.y() = 0 - v->width;
-    right_bottom.x() = v->length;
-    right_bottom.y() = -v->width;
-    left_mid.x() = 0 - 2 * v->length / 3;
-    left_mid.y() = 0 - v->width;
-    right_mid.x() = 2 * v->length / 3;
-    right_mid.y() = 0 - v->width;
-    left_top.x() = 0 - 2 * v->length / 3;
-    left_top.y() = v->width;
-    right_top.x() = 2 * v->length / 3;
-    right_top.y() = v->width;
+    paint_step(*vehicle_view, v);
+    paint_vehicle(*vehicle_view, v);
+  }
+}
 
-    // transport
-    Eigen::Matrix<int, 3, 3> T;
-    T << cos(v->angle), -sin(v->angle), v->position.x(), sin(v->angle),
-        cos(v->angle), v->position.y(), 0, 0, 1;
-    // map
-    Eigen::Vector3i left_bottom_ = T * left_bottom;
-    Eigen::Vector3i right_bottom_ = T * right_bottom;
-    Eigen::Vector3i left_mid_ = T * left_mid;
-    Eigen::Vector3i right_mid_ = T * right_mid;
-    Eigen::Vector3i left_top_ = T * left_top;
-    Eigen::Vector3i right_top_ = T * right_top;
-    cv::Point2i left_bottom_cv(
-        static_cast<uint32_t>((left_bottom_.x() - mat_limit.x()) / resolution),
-        vehicle_view->rows -
-            static_cast<uint32_t>((left_bottom_.y() - mat_limit.z()) /
-                                  resolution));
-    cv::Point2i right_bottom_cv(
-        static_cast<uint32_t>((right_bottom_.x() - mat_limit.x()) / resolution),
-        vehicle_view->rows -
-            static_cast<uint32_t>((right_bottom_.y() - mat_limit.z()) /
-                                  resolution));
-    cv::Point2i left_mid_cv(
-        static_cast<uint32_t>((left_mid_.x() - mat_limit.x()) / resolution),
-        vehicle_view->rows - static_cast<uint32_t>(
-                                 (left_mid_.y() - mat_limit.z()) / resolution));
-    cv::Point2i right_mid_cv(
-        static_cast<uint32_t>((right_mid_.x() - mat_limit.x()) / resolution),
-        vehicle_view->rows -
-            static_cast<uint32_t>((right_mid_.y() - mat_limit.z()) /
-                                  resolution));
-    cv::Point2i left_top_cv(
-        static_cast<uint32_t>((left_top_.x() - mat_limit.x()) / resolution),
-        vehicle_view->rows - static_cast<uint32_t>(
-                                 (left_top_.y() - mat_limit.z()) / resolution));
-    cv::Point2i right_top_cv(
-        static_cast<uint32_t>((right_top_.x() - mat_limit.x()) / resolution),
-        vehicle_view->rows -
-            static_cast<uint32_t>((right_top_.y() - mat_limit.z()) /
-                                  resolution));
-    auto color = hexToRgb(v->color);
+void Visualizer::arrow_line(cv::Mat mat, cv::Point2i start, cv::Point2i end,
+                            cv::Scalar color, int thickness, bool single) {
+  {
+    Eigen::Vector2f line(end.x - start.x, end.y - start.y);
+    int len_v = 3;
+    int len = 8;
+    line = line.normalized() * (line.norm() - 14);
+    Eigen::Vector2f d = line - line.normalized() * len;
+    Eigen::Vector2f horz_a(-d.y() / 2, d.x() / 2);
+    Eigen::Vector2f horz_b(d.y() / 2, -d.x() / 2);
+    Eigen::Vector2f a = d + horz_a.normalized() * len_v;
+    Eigen::Vector2f b = d + horz_b.normalized() * len_v;
+    cv::Point2i start_ = start + cv::Point2i((line.normalized() * 7).x(),
+                                             (line.normalized() * 7).y());
+    cv::Point2i end_ = start_ + cv::Point2i(line.x(), line.y());
+    cv::Point2i a_ = start_ + cv::Point2i(a.x(), a.y());
+    cv::Point2i b_ = start_ + cv::Point2i(b.x(), b.y());
+    cv::line(mat, start_, end_, color, thickness, cv::LINE_4);
+    std::vector<cv::Point2i> poly;
+    poly.push_back(end_);
+    poly.push_back(a_);
+    poly.push_back(b_);
+    cv::polylines(mat, poly, true, color, thickness, cv::LINE_8);
+    cv::fillPoly(mat, poly, color, cv::LINE_8);
+  }
+  if (!single) {
+    Eigen::Vector2f line(start.x - end.x, start.y - end.y);
+    int len_v = 3;
+    int len = 8;
+    line = line.normalized() * (line.norm() - 14);
+    Eigen::Vector2f d = line - line.normalized() * len;
+    Eigen::Vector2f horz_a(-d.y() / 2, d.x() / 2);
+    Eigen::Vector2f horz_b(d.y() / 2, -d.x() / 2);
+    Eigen::Vector2f a = d + horz_a.normalized() * len_v;
+    Eigen::Vector2f b = d + horz_b.normalized() * len_v;
+    cv::Point2i start_ = end + cv::Point2i((line.normalized() * 7).x(),
+                                           (line.normalized() * 7).y());
+    cv::Point2i end_ = start_ + cv::Point2i(line.x(), line.y());
+    cv::Point2i a_ = start_ + cv::Point2i(a.x(), a.y());
+    cv::Point2i b_ = start_ + cv::Point2i(b.x(), b.y());
+    std::vector<cv::Point2i> poly;
+    poly.push_back(end_);
+    poly.push_back(a_);
+    poly.push_back(b_);
+    cv::polylines(mat, poly, true, color, thickness, cv::LINE_8);
+    cv::fillPoly(mat, poly, color, cv::LINE_8);
+  }
+}
+
+void Visualizer::arrow_dashed_line(cv::Mat mat, cv::Point2i start,
+                                   cv::Point2i end, cv::Scalar color,
+                                   int thickness, bool forward) {
+  if (forward) {
+    Eigen::Vector2f line(end.x - start.x, end.y - start.y);
+    int len_v = 3 + (thickness - 1) * 3;
+    int len = 8 + (thickness - 1) * 3;
+    line = line.normalized() * (line.norm() - 14);
+    Eigen::Vector2f d = line - line.normalized() * len;
+    Eigen::Vector2f horz_a(-d.y() / 2, d.x() / 2);
+    Eigen::Vector2f horz_b(d.y() / 2, -d.x() / 2);
+    Eigen::Vector2f a = d + horz_a.normalized() * len_v;
+    Eigen::Vector2f b = d + horz_b.normalized() * len_v;
+    cv::Point2i start_ = start + cv::Point2i((line.normalized() * 7).x(),
+                                             (line.normalized() * 7).y());
+    cv::Point2i end_ = start_ + cv::Point2i(line.x(), line.y());
+    cv::Point2i a_ = start_ + cv::Point2i(a.x(), a.y());
+    cv::Point2i b_ = start_ + cv::Point2i(b.x(), b.y());
+    dashed_line(mat, start_, end_, color, thickness, line.norm() / 20);
+    std::vector<cv::Point2i> poly;
+    poly.push_back(end_);
+    poly.push_back(a_);
+    poly.push_back(b_);
+    cv::polylines(mat, poly, true, color, 1, cv::LINE_8);
+    cv::fillPoly(mat, poly, color, cv::LINE_8);
+  } else {
+    Eigen::Vector2f line(start.x - end.x, start.y - end.y);
+    int len_v = 3 + (thickness - 1) * 3;
+    int len = 8 + (thickness - 1) * 3;
+    line = line.normalized() * (line.norm() - 14);
+    Eigen::Vector2f d = line - line.normalized() * len;
+    Eigen::Vector2f horz_a(-d.y() / 2, d.x() / 2);
+    Eigen::Vector2f horz_b(d.y() / 2, -d.x() / 2);
+    Eigen::Vector2f a = d + horz_a.normalized() * len_v;
+    Eigen::Vector2f b = d + horz_b.normalized() * len_v;
+    cv::Point2i start_ = end + cv::Point2i((line.normalized() * 7).x(),
+                                           (line.normalized() * 7).y());
+    cv::Point2i end_ = start_ + cv::Point2i(line.x(), line.y());
+    cv::Point2i a_ = start_ + cv::Point2i(a.x(), a.y());
+    cv::Point2i b_ = start_ + cv::Point2i(b.x(), b.y());
+    dashed_line(mat, end_, start_, color, thickness, line.norm() / 20);
+    std::vector<cv::Point2i> poly;
+    poly.push_back(end_);
+    poly.push_back(a_);
+    poly.push_back(b_);
+    cv::polylines(mat, poly, true, color, thickness, cv::LINE_8);
+    cv::fillPoly(mat, poly, color, cv::LINE_8);
+  }
+}
+
+void Visualizer::dashed_line(cv::Mat mat, cv::Point2i start, cv::Point2i end,
+                             cv::Scalar color, int thickness, int num) {
+  cv::line(mat, start, end, cv::Scalar(255, 255, 255), thickness, cv::LINE_AA,
+           0);
+  double step_x = (end.x - start.x) * 1.0 / num / 2;
+  double step_y = (end.y - start.y) * 1.0 / num / 2;
+  for (int i = 2; i < num * 2 + 0; i = i + 2) {
     cv::line(
-        *vehicle_view, left_bottom_cv, right_bottom_cv,
-        cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        1, cv::LINE_AA);
+        mat, cv::Point2i(start.x + i * step_x, start.y + i * step_y),
+        cv::Point2i(start.x + (i + 1) * step_x, start.y + (i + 1) * step_y),
+        color, thickness, cv::LINE_8, 0);
     cv::line(
-        *vehicle_view, left_mid_cv, left_top_cv,
-        cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        1, cv::LINE_AA);
-    cv::line(
-        *vehicle_view, right_mid_cv, right_top_cv,
-        cv::Scalar(std::get<2>(color), std::get<1>(color), std::get<0>(color)),
-        1, cv::LINE_AA);
-    cv::putText(*vehicle_view, v->name, cv::Point2i(0, 9) + left_bottom_cv, 1,
-                0.7, cv::Scalar(10, 10, 80), 1, cv::LINE_AA, true);
+        mat,
+        cv::Point2i(start.x + (i + 1) * step_x, start.y + (i + 1) * step_y),
+        cv::Point2i(start.x + (i)*step_x, start.y + (i)*step_y), color,
+        thickness, cv::LINE_8, 0);
+  }
+}
 
-    //
-    // 路线
-    if (v->current_order) {
-      if (v->current_order->state ==
-          data::order::TransportOrder::State::BEING_PROCESSED) {
-        for (auto &dr : v->current_order->driverorders) {
-          if (dr->state == data::order::DriverOrder::State::TRAVELLING ||
-              dr->state == data::order::DriverOrder::State::OPERATING) {
-            // current_step
-            if (dr->route->current_step) {
-              auto beg = dr->route->current_step->path->source_point.lock();
-              auto end =
-                  dr->route->current_step->path->destination_point.lock();
-              auto beg_x = static_cast<uint32_t>(
-                  (beg->position.x() - mat_limit.x()) / resolution);
-              auto beg_y =
-                  vehicle_view->rows -
-                  static_cast<uint32_t>((beg->position.y() - mat_limit.z()) /
-                                        resolution);
-              auto end_x = static_cast<uint32_t>(
-                  (end->position.x() - mat_limit.x()) / resolution);
-              auto end_y =
-                  vehicle_view->rows -
-                  static_cast<uint32_t>((end->position.y() - mat_limit.z()) /
-                                        resolution);
-              cv::circle(*vehicle_view, cv::Point2i(beg_x, beg_y), 5,
-                         cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                    std::get<0>(color)),
-                         -1, cv::LINE_AA);
-              cv::circle(*vehicle_view, cv::Point2i(end_x, end_y), 5,
-                         cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                    std::get<0>(color)),
-                         -1, cv::LINE_AA);
-              if (dr->route->current_step->vehicle_orientation ==
-                  data::order::Step::Orientation::FORWARD) {
-                arrow_line(*vehicle_view, cv::Point2i(beg_x, beg_y),
-                           cv::Point2i(end_x, end_y),
-                           cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                      std::get<0>(color)),
-                           2);
-              } else if (dr->route->current_step->vehicle_orientation ==
-                         data::order::Step::Orientation::BACKWARD) {
-                arrow_line(*vehicle_view, cv::Point2i(end_x, end_y),
-                           cv::Point2i(beg_x, beg_y),
-                           cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                      std::get<0>(color)),
-                           2);
-              }
+void Visualizer::paint_vehicle(cv::Mat mat,
+                               std::shared_ptr<kernel::driver::Vehicle> v) {
+  auto rgb = hexToRgb(v->color);
+  auto color = cv::Scalar(std::get<2>(rgb), std::get<1>(rgb), std::get<0>(rgb));
+  int len = v->length;
+  if (len < mat.cols * resolution / 40) {
+    len = mat.cols * resolution / 40;
+  }
+  Eigen::Vector3i A(-0.21 * len, 0.26 * len, 1);
+  Eigen::Vector3i B(0.09 * len, 0.26 * len, 1);
+  Eigen::Vector3i C(0.47 * len, 0.015 * len, 1);
+  Eigen::Vector3i D(0.54 * len, -0.235 * len, 1);
+  Eigen::Vector3i E(-0.457 * len, -0.235 * len, 1);
+  Eigen::Vector3i F(-0.458 * len, 0.015 * len, 1);
+  Eigen::Vector3i G(0.292 * len, 0.015 * len, 1);
+  Eigen::Vector3i H(-0.3 * len, 0.028 * len, 1);
+  Eigen::Vector3i I(-0.21 * len, -0.235 * len, 1);
+  Eigen::Vector3i J(0.29 * len, -0.23 * len, 1);
+  // transport
+  Eigen::Matrix<int, 3, 3> T;
+  T << cos(v->angle), -sin(v->angle), v->position.x(), sin(v->angle),
+      cos(v->angle), v->position.y(), 0, 0, 1;
+  A = T * A;
+  B = T * B;
+  C = T * C;
+  D = T * D;
+  E = T * E;
+  F = T * F;
+  G = T * G;
+  H = T * H;
+  I = T * I;
+  J = T * J;
+  //
+  double radius = 0.1 * len / resolution;
+  //
+  cv::Point2i A_(
+      static_cast<uint32_t>((A.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((A.y() - mat_limit.z()) / resolution));
+  cv::Point2i B_(
+      static_cast<uint32_t>((B.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((B.y() - mat_limit.z()) / resolution));
+  cv::Point2i C_(
+      static_cast<uint32_t>((C.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((C.y() - mat_limit.z()) / resolution));
+  cv::Point2i D_(
+      static_cast<uint32_t>((D.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((D.y() - mat_limit.z()) / resolution));
+  cv::Point2i E_(
+      static_cast<uint32_t>((E.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((E.y() - mat_limit.z()) / resolution));
+  cv::Point2i F_(
+      static_cast<uint32_t>((F.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((F.y() - mat_limit.z()) / resolution));
+  cv::Point2i G_(
+      static_cast<uint32_t>((G.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((G.y() - mat_limit.z()) / resolution));
+  cv::Point2i H_(
+      static_cast<uint32_t>((H.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((H.y() - mat_limit.z()) / resolution));
+  cv::Point2i I_(
+      static_cast<uint32_t>((I.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((I.y() - mat_limit.z()) / resolution));
+  cv::Point2i J_(
+      static_cast<uint32_t>((J.x() - mat_limit.x()) / resolution),
+      mat.rows - static_cast<uint32_t>((J.y() - mat_limit.z()) / resolution));
+  //
+  std::vector<cv::Point2i> poly{A_, B_, G_, C_, D_, E_, F_, H_};
+
+  cv::polylines(mat, poly, true, color, 1, cv::LINE_8);
+  cv::fillPoly(mat, poly, color, cv::LINE_8);
+
+  //
+  cv::circle(mat, I_, radius, color, -1, cv::LINE_AA);
+  cv::circle(mat, J_, radius, color, -1, cv::LINE_AA);
+  cv::putText(mat, v->name, cv::Point2i(-5, 12) + I_, cv::FONT_HERSHEY_SIMPLEX,
+              0.7, color, 1, cv::LINE_8);
+}
+
+void Visualizer::paint_step(cv::Mat mat,
+                            std::shared_ptr<kernel::driver::Vehicle> v) {
+  auto color = hexToRgb(v->color);
+  // 路线
+  if (v->current_order) {
+    if (v->current_order->state ==
+        data::order::TransportOrder::State::BEING_PROCESSED) {
+      for (auto &dr : v->current_order->driverorders) {
+        if (dr->state == data::order::DriverOrder::State::TRAVELLING ||
+            dr->state == data::order::DriverOrder::State::OPERATING) {
+          // current_step
+          if (dr->route->current_step) {
+            auto beg = dr->route->current_step->path->source_point.lock();
+            auto end = dr->route->current_step->path->destination_point.lock();
+            auto beg_x = static_cast<uint32_t>(
+                (beg->layout.position.x() - mat_limit.x()) / resolution);
+            auto beg_y =
+                mat.rows -
+                static_cast<uint32_t>(
+                    (beg->layout.position.y() - mat_limit.z()) / resolution);
+            auto end_x = static_cast<uint32_t>(
+                (end->layout.position.x() - mat_limit.x()) / resolution);
+            auto end_y =
+                mat.rows -
+                static_cast<uint32_t>(
+                    (end->layout.position.y() - mat_limit.z()) / resolution);
+            cv::circle(mat, cv::Point2i(beg_x, beg_y), 5,
+                       cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                  std::get<0>(color)),
+                       -1, cv::LINE_AA);
+            cv::circle(mat, cv::Point2i(end_x, end_y), 5,
+                       cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                  std::get<0>(color)),
+                       -1, cv::LINE_AA);
+            if (dr->route->current_step->vehicle_orientation ==
+                data::order::Step::Orientation::FORWARD) {
+              arrow_dashed_line(
+                  mat, cv::Point2i(beg_x, beg_y), cv::Point2i(end_x, end_y),
+                  cv::Scalar(std::get<2>(color), std::get<1>(color),
+                             std::get<0>(color)),
+                  3, true);
+            } else if (dr->route->current_step->vehicle_orientation ==
+                       data::order::Step::Orientation::BACKWARD) {
+              arrow_dashed_line(
+                  mat, cv::Point2i(end_x, end_y), cv::Point2i(beg_x, beg_y),
+                  cv::Scalar(std::get<2>(color), std::get<1>(color),
+                             std::get<0>(color)),
+                  3, false);
             }
+          }
 
-            // step
-            for (auto &path : dr->route->steps) {
-              auto beg = path->path->source_point.lock();
-              auto end = path->path->destination_point.lock();
-              auto beg_x = static_cast<uint32_t>(
-                  (beg->position.x() - mat_limit.x()) / resolution);
-              auto beg_y =
-                  vehicle_view->rows -
-                  static_cast<uint32_t>((beg->position.y() - mat_limit.z()) /
-                                        resolution);
-              auto end_x = static_cast<uint32_t>(
-                  (end->position.x() - mat_limit.x()) / resolution);
-              auto end_y =
-                  vehicle_view->rows -
-                  static_cast<uint32_t>((end->position.y() - mat_limit.z()) /
-                                        resolution);
-              cv::circle(*vehicle_view, cv::Point2i(beg_x, beg_y), 3,
-                         cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
-              cv::circle(*vehicle_view, cv::Point2i(end_x, end_y), 3,
-                         cv::Scalar(0, 0, 139), -1, cv::LINE_AA);
-              if (path->vehicle_orientation ==
-                  data::order::Step::Orientation::FORWARD) {
-                arrow_line(*vehicle_view, cv::Point2i(beg_x, beg_y),
-                           cv::Point2i(end_x, end_y),
-                           cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                      std::get<0>(color)),
-                           2);
-              } else if (path->vehicle_orientation ==
-                         data::order::Step::Orientation::BACKWARD) {
-                arrow_line(*vehicle_view, cv::Point2i(end_x, end_y),
-                           cv::Point2i(beg_x, beg_y),
-                           cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                      std::get<0>(color)),
-                           2);
-              }
+          // step
+          for (auto &path : dr->route->steps) {
+            auto beg = path->path->source_point.lock();
+            auto end = path->path->destination_point.lock();
+            auto beg_x = static_cast<uint32_t>(
+                (beg->layout.position.x() - mat_limit.x()) / resolution);
+            auto beg_y =
+                mat.rows -
+                static_cast<uint32_t>(
+                    (beg->layout.position.y() - mat_limit.z()) / resolution);
+            auto end_x = static_cast<uint32_t>(
+                (end->layout.position.x() - mat_limit.x()) / resolution);
+            auto end_y =
+                mat.rows -
+                static_cast<uint32_t>(
+                    (end->layout.position.y() - mat_limit.z()) / resolution);
+            cv::circle(mat, cv::Point2i(beg_x, beg_y), 2, cv::Scalar(0, 0, 139),
+                       -1, cv::LINE_AA);
+            cv::circle(mat, cv::Point2i(end_x, end_y), 2, cv::Scalar(0, 0, 139),
+                       -1, cv::LINE_AA);
+            if (path->vehicle_orientation ==
+                data::order::Step::Orientation::FORWARD) {
+              arrow_dashed_line(
+                  mat, cv::Point2i(beg_x, beg_y), cv::Point2i(end_x, end_y),
+                  cv::Scalar(std::get<2>(color), std::get<1>(color),
+                             std::get<0>(color)),
+                  3, true);
+            } else if (path->vehicle_orientation ==
+                       data::order::Step::Orientation::BACKWARD) {
+              arrow_dashed_line(
+                  mat, cv::Point2i(end_x, end_y), cv::Point2i(beg_x, beg_y),
+                  cv::Scalar(std::get<2>(color), std::get<1>(color),
+                             std::get<0>(color)),
+                  3, false);
             }
-            // location link_point
-            if (dr->destination->operation ==
-                data::order::DriverOrder::Destination::OpType::NOP) {
-              // TODO
-            } else if (dr->destination->operation ==
-                       data::order::DriverOrder::Destination::OpType::LOAD) {
-              // TODO
-              auto loction = std::dynamic_pointer_cast<data::model::Location>(
-                  dr->destination->destination.lock());
-              auto p_x = static_cast<uint32_t>(
-                  (loction->position.x() - mat_limit.x()) / resolution);
+          }
+          // location link_point
+          if (dr->destination->operation ==
+              data::order::DriverOrder::Destination::OpType::NOP) {
+            // TODO
+          } else if (dr->destination->operation ==
+                     data::order::DriverOrder::Destination::OpType::LOAD) {
+            // TODO
+            auto loction = std::dynamic_pointer_cast<data::model::Location>(
+                dr->destination->destination.lock());
+            auto p_x = static_cast<uint32_t>(
+                (loction->layout.position.x() - mat_limit.x()) / resolution);
 
-              auto p_y =
-                  vehicle_view->rows -
-                  static_cast<uint32_t>(
-                      (loction->position.y() - mat_limit.z()) / resolution);
-              cv::rectangle(*vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                       std::get<0>(color)),
-                            4, cv::LINE_AA, 0);
-            } else if (dr->destination->operation ==
-                       data::order::DriverOrder::Destination::OpType::UNLOAD) {
-              // TODO
-              auto loction = std::dynamic_pointer_cast<data::model::Location>(
-                  dr->destination->destination.lock());
-              auto p_x = static_cast<uint32_t>(
-                  (loction->position.x() - mat_limit.x()) / resolution);
+            auto p_y =
+                mat.rows - static_cast<uint32_t>(
+                               (loction->layout.position.y() - mat_limit.z()) /
+                               resolution);
+            cv::rectangle(mat, cv::Rect(p_x - 13, p_y - 11, 26, 22),
+                          cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                     std::get<0>(color)),
+                          3, cv::LINE_8, 0);
+          } else if (dr->destination->operation ==
+                     data::order::DriverOrder::Destination::OpType::UNLOAD) {
+            // TODO
+            auto loction = std::dynamic_pointer_cast<data::model::Location>(
+                dr->destination->destination.lock());
+            auto p_x = static_cast<uint32_t>(
+                (loction->layout.position.x() - mat_limit.x()) / resolution);
 
-              auto p_y =
-                  vehicle_view->rows -
-                  static_cast<uint32_t>(
-                      (loction->position.y() - mat_limit.z()) / resolution);
-              cv::rectangle(*vehicle_view, cv::Rect(p_x - 12, p_y - 10, 24, 20),
-                            cv::Scalar(std::get<2>(color), std::get<1>(color),
-                                       std::get<0>(color)),
-                            4, cv::LINE_AA, 0);
-            }
+            auto p_y =
+                mat.rows - static_cast<uint32_t>(
+                               (loction->layout.position.y() - mat_limit.z()) /
+                               resolution);
+            cv::rectangle(mat, cv::Rect(p_x - 12, p_y - 10, 24, 20),
+                          cv::Scalar(std::get<2>(color), std::get<1>(color),
+                                     std::get<0>(color)),
+                          2, cv::LINE_8, 0);
           }
         }
       }
@@ -450,26 +526,4 @@ void Visualizer::update() {
   }
 }
 
-void Visualizer::arrow_line(cv::Mat mat, cv::Point2i start, cv::Point2i end,
-                            cv::Scalar color, int thickness) {
-  Eigen::Vector2f line(end.x - start.x, end.y - start.y);
-  line = line.normalized() * (line.norm() - 14);
-  Eigen::Vector2f d = line - line.normalized() * 8;
-  Eigen::Vector2f horz_a(-d.y() / 2, d.x() / 2);
-  Eigen::Vector2f horz_b(d.y() / 2, -d.x() / 2);
-  Eigen::Vector2f a = d + horz_a.normalized() * 3;
-  Eigen::Vector2f b = d + horz_b.normalized() * 3;
-  cv::Point2i start_ = start + cv::Point2i((line.normalized() * 7).x(),
-                                           (line.normalized() * 7).y());
-  cv::Point2i end_ = start_ + cv::Point2i(line.x(), line.y());
-  cv::Point2i a_ = start_ + cv::Point2i(a.x(), a.y());
-  cv::Point2i b_ = start_ + cv::Point2i(b.x(), b.y());
-  cv::line(mat, start_, end_, color, thickness, cv::LINE_AA);
-  std::vector<cv::Point2i> poly;
-  poly.push_back(end_);
-  poly.push_back(a_);
-  poly.push_back(b_);
-  cv::polylines(mat, poly, true, color, thickness, cv::LINE_AA);
-  cv::fillPoly(mat, poly, color, cv::LINE_AA);
-}
 }  // namespace visual

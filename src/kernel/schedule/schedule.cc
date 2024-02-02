@@ -44,6 +44,7 @@ std::shared_ptr<driver::Command> Scheduler::new_command(
   }
   if (v->current_order->state !=
       data::order::TransportOrder::State::BEING_PROCESSED) {
+    LOG(ERROR) << "this order can not be processing";
     return nullptr;
   }
   std::string cmd_name{

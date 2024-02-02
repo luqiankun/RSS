@@ -3,11 +3,22 @@
 #include "../tcsobject.hpp"
 #include "opencv2/opencv.hpp"
 class TCS;
+namespace kernel {
+namespace driver {
+class Vehicle;
+}
+}  // namespace kernel
 namespace visual {
 class Visualizer {
  private:
   void arrow_line(cv::Mat, cv::Point2i start, cv::Point2i end, cv::Scalar color,
-                  int thickness);
+                  int thickness, bool single = true);
+  void arrow_dashed_line(cv::Mat, cv::Point2i start, cv::Point2i end,
+                         cv::Scalar color, int thickness, bool forward);
+  void dashed_line(cv::Mat, cv::Point2i start, cv::Point2i end,
+                   cv::Scalar color, int thickness, int num);
+  void paint_vehicle(cv::Mat, std::shared_ptr<kernel::driver::Vehicle>);
+  void paint_step(cv::Mat, std::shared_ptr<kernel::driver::Vehicle>);
 
  public:
   bool init(double resolution, std::shared_ptr<TCS>);
