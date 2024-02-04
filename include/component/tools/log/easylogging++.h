@@ -412,7 +412,7 @@
 #include <windows.h>
 #if defined(WIN32_LEAN_AND_MEAN)
 #if defined(ELPP_WINSOCK2)
-// #include <winsock2.h> //禁用tcp 防止和httplib 产出重定义冲突
+#include <winsock2.h>
 #else
 // #include <winsock.h>
 #endif  // defined(ELPP_WINSOCK2)

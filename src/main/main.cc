@@ -1,4 +1,4 @@
-#include <csignal>
+﻿#include <csignal>
 
 #include "../../include/component/tools/log/easylogging++.h"
 #include "../../include/component/tools/yaml/yaml.hpp"
@@ -13,7 +13,7 @@ std::mutex mut;
 void signalHandler(int) { con.notify_one(); }
 
 // log value
-std::string log_enable{"false"};
+std::string log_enable{"true"};
 std::string log_to_file{"false"};
 std::string log_to_stdout{"true"};
 std::string log_path{"logs"};
@@ -72,7 +72,7 @@ void read_params(std::string path) {
     if (!root["tcs"]["visualization"]["resolution"].IsNone()) {
       resolution = root["tcs"]["visualization"]["resolution"].As<int>();
     }
-    CLOG(ERROR, "tcs") << "read param success\n";
+    CLOG(INFO, "tcs") << "read param success";
   } catch (Yaml::Exception& ec) {
     CLOG(ERROR, "tcs") << "load param from <" << path << "> failed :"
                        << " " << ec.Message() << ", will use deafult params.";
@@ -180,6 +180,8 @@ int main(int argc, char** argv) {
       tcs->res = resolution;
 #endif
       tcs->put_model_xml(body.str());
+    } else {
+      CLOG(ERROR, "tcs") << "parse xml failed: " << ret.description();
     }
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(100));

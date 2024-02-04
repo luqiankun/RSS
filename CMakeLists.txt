@@ -1,7 +1,11 @@
-cmake_minimum_required(VERSION 3.10)
+﻿cmake_minimum_required(VERSION 3.10)
 project(TCS)
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release"
-"MinSizeRel" "RelWithDebInfo")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release
+    MinSizeRel RelWithDebInfo)
+endif()
+message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 # set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 # set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 set(CMAKE_CXX_STANDARD 17)
