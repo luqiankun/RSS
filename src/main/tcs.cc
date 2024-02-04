@@ -81,7 +81,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->points.push_back(p);
         point = point.next_sibling();
       }
-      LOG(INFO) << "init point size " << resource->points.size();
+      CLOG(INFO, "tcs") << "init point size " << resource->points.size();
     }
 
     {  // path
@@ -129,7 +129,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->paths.push_back(p);
         path = path.next_sibling();
       }
-      LOG(INFO) << "init path size " << resource->paths.size();
+      CLOG(INFO, "tcs") << "init path size " << resource->paths.size();
     }
 
     {  // location
@@ -226,7 +226,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->locations.push_back(loc);
         location = location.next_sibling();
       }
-      LOG(INFO) << "init location size " << resource->locations.size();
+      CLOG(INFO, "tcs") << "init location size " << resource->locations.size();
     }
 
     //
@@ -276,10 +276,10 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         ///////////////////////
         vehicle = vehicle.next_sibling();
       }
-      LOG(INFO) << "init vehicle size " << dispatcher->vehicles.size();
+      CLOG(INFO, "tcs") << "init vehicle size " << dispatcher->vehicles.size();
     }
     ///
-    LOG(INFO) << "init resource ok";
+    CLOG(INFO, "tcs") << "init resource ok";
     init_planner();
     scheduler->resource = resource;
     // connect signals
@@ -297,7 +297,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
     }
 #ifdef VISUAL
     if (!visualizer) {
-      init_visualizer();
+      init_visualizer(res);
     } else {
       visualizer->init(visualizer->resolution, shared_from_this());
       visualizer->restart();
@@ -356,7 +356,8 @@ void TCS::home_order(const std::string &name,
   ord->create_time = time;
   ord->dead_time = time + std::chrono::minutes(60);
   ord->state = data::order::TransportOrder::State::RAW;
-  LOG(INFO) << "new ord " << ord->name << " name_hash " << ord->name_hash;
+  CLOG(INFO, "tcs") << "new ord " << ord->name << " name_hash "
+                    << ord->name_hash;
   auto destination = orderpool->res_to_destination(
       v->init_point, data::order::DriverOrder::Destination::OpType::MOVE);
   auto dr = std::make_shared<data::order::DriverOrder>("driverorder_" +
@@ -375,23 +376,23 @@ TCS::~TCS() {
     visualizer.reset();
   }
 #endif
-  LOG(INFO) << "TCS  stop";
+  CLOG(INFO, "tcs") << "TCS  stop";
   stop();
 }
 
 bool TCS::init_dispatcher() {
   dispatcher = std::make_shared<kernel::dispatch::Dispatcher>("Dispatcher");
-  LOG(INFO) << "init dispatcher ok";
+  CLOG(INFO, "tcs") << "init dispatcher ok";
   return true;
 }
 bool TCS::init_orderpool() {
   orderpool = std::make_shared<kernel::allocate::OrderPool>("OrderPool");
-  LOG(INFO) << "init orderpool ok";
+  CLOG(INFO, "tcs") << "init orderpool ok";
   return true;
 }
 bool TCS::init_scheduler() {
   this->scheduler = std::make_shared<kernel::schedule::Scheduler>("Scheduler");
-  LOG(INFO) << "init scheduler ok";
+  CLOG(INFO, "tcs") << "init scheduler ok";
   return true;
 }
 bool TCS::init_planner() {
@@ -399,7 +400,7 @@ bool TCS::init_planner() {
     return false;
   }
   this->planner = std::make_shared<kernel::planner::Planner>(this->resource);
-  LOG(INFO) << "init planner ok";
+  CLOG(INFO, "tcs") << "init planner ok";
   return true;
 }
 #ifdef VISUAL
@@ -407,48 +408,11 @@ bool TCS::init_visualizer(double resolution) {
   visualizer = std::make_shared<visual::Visualizer>();
   auto ret = visualizer->init(resolution, shared_from_this());
   if (ret) {
-    LOG(INFO) << "init visualizer ok";
+    CLOG(INFO, "tcs") << "init visualizer ok";
   }
   return ret;
 }
 #endif
-bool TCS::init_all(const std::string &xml_path, double r) {
-  if (!init_orderpool()) {
-    return false;
-  }
-  if (!init_scheduler()) {
-    return false;
-  }
-  if (!init_dispatcher()) {
-    return false;
-  }
-  if (!init_planner()) {
-    return false;
-  }
-#ifdef VISUAL
-  if (!init_visualizer(r)) {
-    return false;
-  }
-#endif
-  //
-  scheduler->resource = resource;
-  // connect signals
-  dispatcher->find_res = std::bind(&kernel::allocate::ResourceManager::find,
-                                   resource, std::placeholders::_1);
-  dispatcher->go_home = std::bind(&TCS::home_order, this, std::placeholders::_1,
-                                  std::placeholders::_2);
-  dispatcher->get_next_ord =
-      std::bind(&kernel::allocate::OrderPool::pop, orderpool);
-  for (auto &v : dispatcher->vehicles) {
-    v->planner = planner;
-    v->scheduler = scheduler;
-    v->orderpool = orderpool;
-    v->resource = resource;
-  }
-
-  return true;
-}
-
 void TCS::cancel_all_order() { orderpool->cancel_all_order(); }
 
 void TCS::cancel_order(const std::string &order_name) {
@@ -1267,7 +1231,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     // for (auto &v : model["blocks"]) {
     // }
     //
-    LOG(INFO) << "init resource ok";
+    CLOG(INFO, "tcs") << "init resource ok";
     init_planner();
     scheduler->resource = resource;
     // connect signals
@@ -1285,7 +1249,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     }
 #ifdef VISUAL
     if (!visualizer) {
-      init_visualizer();
+      init_visualizer(res);
     } else {
       visualizer->init(visualizer->resolution, shared_from_this());
       visualizer->restart();

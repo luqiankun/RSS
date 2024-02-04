@@ -15,7 +15,7 @@ class OrderPool : public TCSObject {
   void cancel_all_order();
   void cancel_order(size_t order_uuid);
   std::shared_ptr<data::order::TransportOrder> pop();
-  ~OrderPool() { LOG(INFO) << name << " close"; }
+  ~OrderPool() { CLOG(INFO, "allocate") << name << " close"; }
   void update_quence();
 
  public:

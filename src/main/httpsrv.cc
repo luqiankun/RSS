@@ -261,11 +261,11 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
 
   srv.set_logger([](const httplib::Request &req, const httplib::Response &res) {
     // printf("%s", log(req, res).c_str());
-    LOG(INFO) << "http req and rep\n" << log(req, res);
+    CLOG(INFO, "http") << "http req and rep\n" << log(req, res);
   });
 }
 
 void HTTPServer::listen() {
-  LOG(INFO) << "listen " << ip << ":" << port;
+  CLOG(INFO, "http") << "listen " << ip << ":" << port;
   srv.listen(ip, port);
 }

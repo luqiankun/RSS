@@ -32,8 +32,8 @@ class Visualizer {
     if (th.joinable()) {
       th.join();
     }
-    LOG(INFO) << "visual"
-              << " close";
+    CLOG(INFO, "visual") << "visual"
+                         << " close";
   }
 
  public:

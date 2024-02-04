@@ -28,7 +28,7 @@ class Scheduler : public TCSObject,
     if (schedule_th.joinable()) {
       schedule_th.join();
     }
-    LOG(INFO) << name << " close";
+    CLOG(INFO, "schedule") << name << " close";
   }
 
  public:

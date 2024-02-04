@@ -52,9 +52,10 @@ class TransportOrder : public TCSObject {
   }
   ~TransportOrder() {
     if (state == State::BEING_PROCESSED) {
-      LOG(INFO) << "order: " << name << " not finished, now will be drop";
+      CLOG(INFO, "order") << "order: " << name
+                          << " not finished, now will be drop";
     } else {
-      LOG(INFO) << name << " drop";
+      CLOG(INFO, "order") << name << " drop";
     }
   }
 

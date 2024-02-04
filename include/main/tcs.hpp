@@ -16,34 +16,10 @@ inline std::string get_log_path(const std::string& path) {
   return (std::string(path) + "/tcs_" + data + ".log");
 #endif
 }
-
-#ifndef MY_EASYLOG_CONIFG  //(path) 按天滚动 最大10MB
-#define MY_EASYLOG_CONIFG(path)                                         \
-  el::Configurations conf;                                              \
-  conf.setGlobally(el::ConfigurationType::Format,                       \
-                   "[%level] %datetime %fbase:%line] %msg");            \
-  conf.setGlobally(el::ConfigurationType::Filename,                     \
-                   get_log_path(path).c_str());                         \
-  conf.setGlobally(el::ConfigurationType::MillisecondsWidth, "4");      \
-  conf.setGlobally(el ::ConfigurationType::MaxLogFileSize, "10485760"); \
-  conf.set(el::Level::Debug, el::ConfigurationType::Format,             \
-           "%datetime{%d/%M} %func [%fbase:%line] %msg");               \
-  el::Loggers::reconfigureAllLoggers(conf);
-#define MY_EASYLOG_CONIFG_COMPLEX(path, fmt, size)                 \
-  el::Configurations conf;                                         \
-  conf.setGlobally(el::ConfigurationType::Format, fmt);            \
-  conf.setGlobally(el::ConfigurationType::Filename,                \
-                   get_log_path(path).c_str());                    \
-  conf.setGlobally(el::ConfigurationType::MillisecondsWidth, "4"); \
-  conf.setGlobally(el ::ConfigurationType::MaxLogFileSize, size);  \
-  conf.set(el::Level::Debug, el::ConfigurationType::Format,        \
-           "%datetime{%d/%M} %func [%fbase:%line] %msg");          \
-  el::Loggers::reconfigureAllLoggers(conf);
-#endif
-
 using json = nlohmann::json;
 class TCS : public std::enable_shared_from_this<TCS> {
  public:
+  // init
   // http interface
 
   // transportorder
@@ -78,7 +54,6 @@ class TCS : public std::enable_shared_from_this<TCS> {
   std::pair<int, std::string> put_model_xml(const std::string& body);
 
  public:
-  bool init_all(const std::string& xml_path, double r = 0);
   bool init_dispatcher();
   bool init_scheduler();
   bool init_orderpool();
@@ -99,6 +74,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
 
  public:
 #ifdef VISUAL
+  int res{-1};
   std::shared_ptr<visual::Visualizer> visualizer;
   bool init_visualizer(double = -1);
 #endif

@@ -13,7 +13,7 @@ class HTTPServer {
   ~HTTPServer() {
     if (srv.is_running()) {
       srv.stop();
-      LOG(INFO) << "http server close";
+      CLOG(INFO, "http") << "http server close";
     }
   }
 

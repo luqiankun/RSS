@@ -157,13 +157,13 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
   }
   {
     if (st == cur_begin) {
-      LOG(INFO) << "already sovled\n";
+      CLOG(INFO, "planner") << "already sovled\n";
     } else {
       solver->solver(st);
       cur_begin = st;
     }
     auto paths = solver->get_paths(ed);
-    LOG(INFO) << "find " << paths.size() << " s paths\n";
+    CLOG(INFO, "planner") << "find " << paths.size() << " s paths\n";
     if (paths.empty()) {
     } else {
       // 按转弯数量排序
@@ -190,7 +190,7 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
           ss << "this path is not open";
         }
         ss << " - - - - - - - - - - - - - - - - - \n";
-        LOG(INFO) << ss.str();
+        CLOG(INFO, "planner") << ss.str();
       }
     }
   }

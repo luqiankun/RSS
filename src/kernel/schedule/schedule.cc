@@ -7,7 +7,7 @@
 namespace kernel {
 namespace schedule {
 void Scheduler::run() {
-  LOG(INFO) << this->name << " run....";
+  CLOG(INFO, "schedule") << this->name << " run....";
   schedule_th = std::thread([&] {
     while (!dispose) {
       std::unique_lock<std::mutex> lock(mut);
@@ -30,7 +30,7 @@ void Scheduler::run() {
 
 void Scheduler::add_command(std::shared_ptr<driver::Command> cmd) {
   if (cmd) {
-    LOG(INFO) << "add new cmd " << cmd->name;
+    CLOG(INFO, "schedule") << "add new cmd " << cmd->name;
     commands.push_back(cmd);
     con_var.notify_one();
   }
@@ -39,12 +39,12 @@ std::shared_ptr<driver::Command> Scheduler::new_command(
     std::shared_ptr<driver::Vehicle> v) {
   // TODO
   if (!v->current_order) {
-    LOG(WARNING) << "no ord there";
+    CLOG(WARNING, "schedule") << "no ord there";
     return nullptr;
   }
   if (v->current_order->state !=
       data::order::TransportOrder::State::BEING_PROCESSED) {
-    LOG(ERROR) << "this order can not be processing";
+    CLOG(ERROR, "schedule") << "this order can not be processing";
     return nullptr;
   }
   std::string cmd_name{

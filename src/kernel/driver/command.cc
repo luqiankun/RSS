@@ -119,7 +119,7 @@ void Command::run_once() {
     }
     if (scheduler.lock()->resource.lock()->unclaim(temp, vehicle.lock())) {
       state = State::END;
-      LOG(INFO) << ss.str();
+      CLOG(INFO, "driver") << ss.str();
     }
   } else if (state == State::END) {
     vehicle.lock()->command_done();

@@ -54,26 +54,26 @@ bool Visualizer::init(double res, std::shared_ptr<TCS> tcs) {
   mat_limit =
       Eigen::Vector4i(min_x - (max_x - min_x) / 8, max_x + (max_x - min_x) / 8,
                       min_y - (max_y - min_y) / 8, max_y + (max_y - min_y) / 8);
-  LOG(INFO) << "mat_limit" << mat_limit;
+  CLOG(INFO, "visual") << "mat_limit" << mat_limit;
 
   if (this->resolution <= 0) {
     this->resolution =
         (mat_limit.y() - mat_limit.x()) * 1.0 / 1440;  // 自动设置分辨率
   }
-  LOG(INFO) << "resolution : " << resolution << " mm/pix";
+  CLOG(INFO, "visual") << "resolution : " << resolution << " mm/pix";
   auto width =
       static_cast<uint32_t>((mat_limit.y() - mat_limit.x()) / resolution);
   auto height =
       static_cast<uint32_t>((mat_limit.w() - mat_limit.z()) / resolution);
   cv::Mat mat = cv::Mat(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
-  LOG(INFO) << "image size " << mat.size;
+  CLOG(INFO, "visual") << "image size " << mat.size;
   for (auto &x : tcs->resource->points) {
     auto p_x = static_cast<uint32_t>((x->layout.position.x() - mat_limit.x()) /
                                      resolution);
     auto p_y =
         mat.rows - static_cast<uint32_t>(
                        (x->layout.position.y() - mat_limit.z()) / resolution);
-    // LOG(INFO) << p_x << " " << p_y;
+    // CLOG(INFO,"visual") << p_x << " " << p_y;
     cv::putText(mat, x->name, cv::Point2i(p_x + 5, p_y + 20),
                 cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(90, 90, 90), 1,
                 cv::LINE_8);
@@ -156,7 +156,7 @@ void Visualizer::run() {
   if (!is_run) {
     is_run = true;
     th = std::thread{[&] {
-      LOG(INFO) << "visualization run";
+      CLOG(INFO, "visual") << "visualization run";
       namedWindow("TCS_VIEW", cv::WINDOW_NORMAL);
       while (!dispose) {
         if (!is_paused) {

@@ -13,7 +13,7 @@ class ResourceManager : public TCSObject {
  public:
   using TCSObject::TCSObject;
   enum class ResType { Point = 0, Location = 1, Err = 2 };
-  ~ResourceManager() { LOG(INFO) << name << " close"; }
+  ~ResourceManager() { CLOG(INFO, "allocate") << name << " close"; }
   bool allocate(const std::vector<std::shared_ptr<TCSResource>>&,
                 const std::shared_ptr<schedule::Client>&);
   bool claim(std::vector<std::shared_ptr<TCSResource>>,

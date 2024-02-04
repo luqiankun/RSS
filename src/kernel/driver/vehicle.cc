@@ -17,8 +17,8 @@ void Vehicle::execute_action(
       current_order->state = data::order::TransportOrder::State::FAILED;
       current_order->end_time = std::chrono::system_clock::now();
     }
-    LOG(INFO) << current_order->name << " action : "
-              << " ok";
+    CLOG(INFO, "driver") << current_order->name << " action : "
+                         << " ok";
     if (current_command) {
       current_command->vehicle_execute_cb(op_ret);
     }
@@ -34,8 +34,8 @@ void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
       current_order->state = data::order::TransportOrder::State::FAILED;
       current_order->end_time = std::chrono::system_clock::now();
     }
-    LOG(INFO) << current_order->name << " move : " << step->name.c_str()
-              << " ok";
+    CLOG(INFO, "driver") << current_order->name
+                         << " move : " << step->name.c_str() << " ok";
     if (current_command) {
       current_command->vehicle_execute_cb(move_ret);
     }
@@ -73,7 +73,7 @@ void Vehicle::close() {
 }
 Vehicle::~Vehicle() {
   close();
-  LOG(INFO) << name << " close";
+  CLOG(INFO, "driver") << name << " close";
 }
 
 void Vehicle::plan_route() {
@@ -100,12 +100,12 @@ void Vehicle::plan_route() {
     }
     if (!end_planner) {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
-      LOG(WARNING) << current_order->name << " can not find obj";
+      CLOG(WARNING, "driver") << current_order->name << " can not find obj";
     }
     auto path = planner.lock()->find_paths(start_planner, end_planner);
     if (path.empty()) {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
-      LOG(WARNING) << current_order->name << " can not routable";
+      CLOG(WARNING, "driver") << current_order->name << " can not routable";
     } else {
       auto driverorder = orderpool.lock()->route_to_driverorder(
           resource.lock()->paths_to_route(path.front()), destination);
@@ -127,7 +127,7 @@ void Vehicle::get_next_ord() {
       state = State::IDLE;
       break;
     } else {
-      LOG(INFO) << "_______________";
+      CLOG(INFO, "driver") << "_______________";
       current_order = orders.front();
       orders.pop_front();
       // TODO  solver
@@ -155,7 +155,7 @@ void Vehicle::get_next_ord() {
     proc_state = ProcState::AWAITING_ORDER;
     state = State::IDLE;
     idle_time = std::chrono::system_clock::now();
-    LOG(INFO) << "now is idle " << get_time_fmt(idle_time);
+    CLOG(INFO, "driver") << "now is idle " << get_time_fmt(idle_time);
   }
 }
 
@@ -164,13 +164,13 @@ void Vehicle::command_done() {
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     // 订单取消
     future_claim_resources.clear();
-    LOG(ERROR) << current_order->name << " withdrawl.";
+    CLOG(ERROR, "driver") << current_order->name << " withdrawl.";
     current_order.reset();
     get_next_ord();
     return;
   }
   if (current_order->dead_time < std::chrono::system_clock::now()) {
-    LOG(ERROR) << current_order->name << " timeout.";
+    CLOG(ERROR, "driver") << current_order->name << " timeout.";
     current_order->state = data::order::TransportOrder::State::FAILED;
   }
   if (current_order->state == data::order::TransportOrder::State::FAILED) {
@@ -189,7 +189,7 @@ void Vehicle::command_done() {
   if (current_order->driverorders.size() <=
       current_order->current_driver_index) {
     current_order->state = data::order::TransportOrder::State::FINISHED;
-    LOG(INFO) << current_order->name << " finished";
+    CLOG(INFO, "driver") << current_order->name << " finished";
     current_order->end_time = std::chrono::system_clock::now();
     current_order.reset();
     current_command.reset();
@@ -268,7 +268,7 @@ void Vehicle::next_command() {
   scheduler.lock()->add_command(current_command);
 }
 void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
-  LOG(INFO) << name << " receive new order " << order->name;
+  CLOG(INFO, "driver") << name << " receive new order " << order->name;
   if (state == State::ERROR) {  // TODO
   } else if (state == State::UNAVAILABLE) {
     // TODO
@@ -309,14 +309,14 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     current_point = t->link.lock();
-    LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
-              << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
+                         << position.y() << ")";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position.x() = t->link.lock()->position.x();
     position.y() = t->link.lock()->position.y();
     current_point = t->link.lock();
-    LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
-              << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
+                         << position.y() << ")";
     return true;
   } else if (dest->operation ==
              data::order::DriverOrder::Destination::OpType::UNLOAD) {
@@ -326,14 +326,14 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     current_point = t->link.lock();
-    LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
-              << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
+                         << position.y() << ")";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position.x() = t->link.lock()->position.x();
     position.y() = t->link.lock()->position.y();
     current_point = t->link.lock();
-    LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
-              << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
+                         << position.y() << ")";
     return true;
   } else if (dest->operation ==
              data::order::DriverOrder::Destination::OpType::NOP) {
@@ -363,8 +363,8 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
     position.x() = end->position.x();
     position.y() = end->position.y();
     current_point = end;
-    LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
-              << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
+                         << position.y() << ")";
     return true;
   } else if (step->vehicle_orientation ==
              data::order::Step::Orientation::BACKWARD) {
@@ -382,8 +382,8 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
     position.x() = end->position.x();
     position.y() = end->position.y();
     current_point = end;
-    LOG(INFO) << name << " now at (" << position.x() << " , " << position.y()
-              << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
+                         << position.y() << ")";
     return true;
   } else {
     return false;
