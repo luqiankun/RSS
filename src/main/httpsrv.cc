@@ -54,6 +54,9 @@ std::string log(const httplib::Request &req, const httplib::Response &res) {
 HTTPServer::HTTPServer(const std::string &ip, int port) {
   this->ip = ip;
   this->port = port;
+  srv.set_default_headers({{"Access-Control-Allow-Origin", "null"},
+                           {"Access-Control-Allow-Credentials", "true"},
+                           {"Allow", "GET, POST, HEAD, OPTIONS"}});
   srv.Get("/transportOrders",
           [=](const httplib::Request &req, httplib::Response &res) {
             //
