@@ -4,9 +4,6 @@
 #include "../component/tools/xml/pugixml.hpp"
 #include "../kernel/dispatch/dispatch.hpp"
 #include "../kernel/schedule/schedule.hpp"
-#ifdef VISUAL
-#include "../component/visualization/visualizer.hpp"
-#endif
 
 inline std::string get_log_path(const std::string& path) {
   auto data = get_date_fmt();
@@ -52,6 +49,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
   std::pair<int, std::string> put_location_locked(const std::string& loc_name,
                                                   bool new_value);
   std::pair<int, std::string> put_model_xml(const std::string& body);
+  std::pair<int, std::string> get_view();
 
  public:
   bool init_dispatcher();
@@ -68,16 +66,10 @@ class TCS : public std::enable_shared_from_this<TCS> {
   void add_vehicle(const std::string& type, const std::string& name);  // TODO
   void paused_vehicle(const std::string& name);
   void recovery_vehicle(const std::string& name);
-
+  std::string get_vehicles_step();
   void stop();
   ~TCS();
 
- public:
-#ifdef VISUAL
-  int res{-1};
-  std::shared_ptr<visual::Visualizer> visualizer;
-  bool init_visualizer(double = -1);
-#endif
  public:
   bool is_run{false};
   std::shared_ptr<kernel::allocate::ResourceManager> resource;

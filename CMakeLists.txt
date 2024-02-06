@@ -10,7 +10,6 @@ message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 # set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-option(VISUALIZATION "Enable visualization" OFF)
 option(TEST "Build test " OFF)
 if(DEFINED TEST)
     message(STATUS  "Build test: " ${TEST})
@@ -20,20 +19,6 @@ include_directories(${Eigen_DIR})
 #########
 #visual##
 #########
-if(DEFINED VISUALIZATION)
-    message(STATUS  "Visualization: " ${VISUALIZATION})
-endif()
-if(VISUALIZATION)
-    find_package(OpenCV REQUIRED)
-    if(${OpenCV_FOUND})
-    message(STATUS  "OpenCV: Found " "Version " ${OpenCV_VERSION})
-    else()
-    message(FATAL_ERROR "Can not found OpenCV")
-    endif()
-    include_directories(${OpenCV_INCLUDE_DIRS})
-    add_definitions(-DVISUAL)
-    file(GLOB_RECURSE VISUAL_SRC src/component/visualization/*.cc )
-endif()
 
 ##
 file(GLOB_RECURSE EVENT_SRC src/component/data/*.cc
@@ -52,21 +37,11 @@ file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
 #########
 
 ## 版本低的gcc 可能需要链接pthread
-if(VISUALIZATION)
-    add_executable(tcs
-    ${KERNEL_SRC}
-    ${COMPONENTS_SRC}
-    ${VISUAL_SRC}
-    ${MAIN_SRC}
-    )
-    target_link_libraries(tcs ${OpenCV_LIBS})
-    else()
-    add_executable(tcs
-    ${KERNEL_SRC}
-    ${COMPONENTS_SRC}
-    ${MAIN_SRC}
-    )
-endif()
+add_executable(tcs
+${KERNEL_SRC}
+${COMPONENTS_SRC}
+${MAIN_SRC}
+)
 
 #########
 #install#

@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCS_view</title>
+    <script type="application/javascript">
+        class Point {
+            constructor(name, x, y) {
+                this.name = name;
+                this.x = x;
+                this.y = y;
+            }
+        }
+        class Path {
+            constructor(name, start, end) {
+                this.name = name;
+                this.start = start;
+                this.end = end;
+                this.locked = false;
+            }
+        }
+        class Location {
+            constructor(name, x, y, link) {
+                this.name = name;
+                this.x = x;
+                this.y = y;
+                this.link = link;
+                this.locked = false;
+            }
+        }
+        class Vehicle {
+            constructor(name, x, y) {
+                this.name = name;
+                this.x = x;
+                this.y = y;
+                this.color = "#891111";
+                this.step = [];
+                this.destination = {};
+            }
+        }
+        var points = [];
+        var paths = [];
+        var locations = [];
+        var vehicles = []
+        var xmin = 21988;
+        var xman = 128112;
+        var ymin = -115256;
+        var yman = -37194;
+        var resolution = 50;
+        function get_img_limit() {
+            var x_min = 9999999;
+            var x_max = -9999999;
+            var y_min = 9999999;
+            var y_max = -9999999;
+            for (var x of points) {
+                if (x.x < x_min) {
+                    x_min = x.x;
+                }
+                if (x.x > x_max) {
+                    x_max = x.x;
+                }
+                if (x.y < y_min) {
+                    y_min = x.y;
+                }
+                if (x.y > y_max) {
+                    y_max = x.y;
+                }
+            }
+            for (var x of locations) {
+                if (x.x < x_min) {
+                    x_min = x.x;
+                }
+                if (x.x > x_max) {
+                    x_max = x.x;
+                }
+                if (x.y < y_min) {
+                    y_min = x.y;
+                }
+                if (x.y > y_max) {
+                    y_max = x.y;
+                }
+            }
+            xmin = x_min - 5000;
+            xman = x_max + 5000;
+            ymin = y_min - 5000;
+            yman = y_max + 5000;
+        }
+        function get_point(name) {
+            for (var x of points) {
+                if (x.name == name) {
+                    return x;
+                }
+            }
+            return null
+        }
+        function get_location(name) {
+            for (var x of locations) {
+                if (x.name == name) {
+                    return x;
+                }
+            }
+            return null
+        }
+        var model_has = false;
+        function get_model() {
+            var Http = new XMLHttpRequest();
+            var res = document.getElementById('resolution');
+            resolution = parseFloat(res.value);
+            var ip = document.getElementById("ip_btn").value;
+            Http.open('GET', 'http://' + ip + '/plantModel', true);
+            Http.withCredentials = true;
+            Http.onload = function () {
+                if (Http.readyState == 4 && Http.status == 200) {
+                    points = [];
+                    paths = [];
+                    locations = []
+                    var model = JSON.parse(Http.responseText);
+                    // console.log(model);
+                    for (var point of model["points"]) {
+                        var x = point["layout"]["position"]["x"];
+                        var y = point["layout"]["position"]["y"];
+                        var name = point["name"];
+                        var p = new Point(name, x, y);
+                        points.push(p);
+                    }
+                    for (var path of model["paths"]) {
+                        var end = path["destPointName"];
+                        var start = path["srcPointName"]
+                        var locked = path["locked"];
+                        var name = path["name"];
+                        var p = new Path(name, start, end);
+                        p.locked = locked;
+                        paths.push(p);
+                    }
+                    for (var loc of model["locations"]) {
+                        var x = loc["layout"]["position"]["x"];
+                        var y = loc["layout"]["position"]["y"];
+                        var name = loc["name"];
+                        var locked = loc["locked"];
+                        var link = loc["links"][0];
+                        var p = new Location(name, x, y, link);
+                        p.locked = locked;
+                        locations.push(p);
+                    }
+                    get_img_limit();
+                    model_has = true
+                }
+            }
+            Http.onerror = function (e) {
+                // console.log(e);
+            }
+            // Http.onloadstart = function () {
+            //     console.log("start request")
+            // }
+            // Http.onloadend = function () {
+            //     console.log("request end")
+            // }
+            // Http.onabort = function () {
+            //     console.log("request failed")
+            // }
+            Http.send();
+        }
+        function get_view() {
+            var res = document.getElementById('resolution');
+            resolution = parseFloat(res.value);
+            var Http = new XMLHttpRequest();
+            var ip = document.getElementById("ip_btn").value;
+            Http.open('GET', 'http://' + ip + '/getView', true);
+            Http.withCredentials = true;
+            Http.onload = function () {
+                if (Http.readyState == 4 && Http.status == 200) {
+                    vehicles = [];
+                    var model = JSON.parse(Http.responseText);
+                    for (var v of model) {
+                        // console.log(x = v["position"]);
+                        var veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"]);
+                        veh.color = v["color"];
+                        // console.log(v["step"]);
+                        veh.step = v["step"];
+                        veh.destination = v["destination"]
+                        vehicles.push(veh);
+                    }
+                }
+            }
+            Http.onerror = function (e) {
+                // console.log(e);
+            }
+            // Http.onloadstart = function () {
+            //     console.log("start request")
+            // }
+            // Http.onloadend = function () {
+            //     console.log("request end")
+            // }
+            // Http.onabort = function () {
+            //     console.log("request failed")
+            // }
+            Http.send();
+        }
+        function input_change(event) {
+            // console.log("---------------")
+            model_has = false;
+            var timer = setInterval(function () {
+                get_model()
+                if (model_has) {
+                    clearInterval(timer)
+                }
+            }, 200);
+            var map_has = false;
+            var timer2 = setInterval(function () {
+                if (map_has) {
+                    clearInterval(timer2);
+                }
+                var canvas = document.getElementById("map");
+                canvas.width = (xman - xmin) / resolution
+                canvas.height = (yman - ymin) / resolution
+                if (canvas.getContext) {
+                    var ctx = canvas.getContext("2d");
+                    // console.log(canvas.width + " " + canvas.height + " " + points.length)
+                    ctx.beginPath()
+                    ctx.fillStyle = "rgb(10,10,10)";
+                    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+                    for (var point of points) {
+                        var x = (point.x - xmin) / resolution;
+                        var y = canvas.height - (point.y - ymin) / resolution;
+                        var radius = 8 * (50 / resolution);
+                        ctx.beginPath()
+                        ctx.fillStyle = "rgb(0,0,0)";
+                        ctx.strokeStyle = 'black'
+                        ctx.moveTo(x + radius, y);
+                        ctx.lineWidth = 3 * (50 / resolution);
+                        if (ctx.lineWidth < 1) {
+                            ctx.lineWidth = 1;
+                        }
+                        ctx.arc(x, y, radius, 0, 2 * Math.PI, true)
+                        ctx.stroke()
+                        var font_size = (13 * (50 / resolution)).toFixed(0);
+                        // console.log(resolution, font_size)
+                        if (font_size < 1) {
+                            font_size = 1;
+                        }
+                        ctx.font = font_size.toString() + 'px Arial';
+                        ctx.fillStyle = "black";
+                        ctx.textBaseline = "top";
+                        ctx.fillText(point.name, x + 10, y + 23, point.name.length * font_size);
+                    }
+                    for (var x of paths) {
+                        if (x.locked) {
+                            return
+                        }
+                        var start = get_point(x.start);
+                        var end = get_point(x.end);
+                        // console.log(x["name"], start["name"], end["name"]);
+                        var start_x = (start.x - xmin) / resolution;
+                        var start_y = canvas.height - (start.y - ymin) / resolution;
+                        var end_x = (end.x - xmin) / resolution;
+                        var end_y = canvas.height - (end.y - ymin) / resolution;
+                        // console.log(start_x, start_y, end_x, end_y);
+
+                        var len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
+                        // console.log(len);
+                        var norm_x = (end_x - start_x) / len;
+                        var norm_y = (end_y - start_y) / len;
+                        start_x = start_x + norm_x * 15;
+                        start_y = start_y + norm_y * 15;
+                        end_x = end_x - norm_x * 15;
+                        end_y = end_y - norm_y * 15;
+                        drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), 'orange');
+                        drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), 'orange');
+                    }
+                    for (var loc of locations) {
+                        var start_x = (loc.x - xmin) / resolution;
+                        var start_y = canvas.height - (loc.y - ymin) / resolution;
+                        var link = get_point(loc.link);
+                        var link_x = (link.x - xmin) / resolution;
+                        var link_y = canvas.height - (link.y - ymin) / resolution;
+                        ctx.beginPath()
+                        ctx.lineWidth = 1 * (50 / resolution);
+                        if (ctx.lineWidth < 1) {
+                            ctx.lineWidth = 1;
+                        }
+                        ctx.strokeStyle = '#233bc2'
+                        var radius = 5 * (50 / resolution);
+                        ctx.moveTo(start_x + radius, start_y);
+                        ctx.arc(start_x, start_y, radius, 0, 2 * Math.PI, true)
+                        ctx.stroke()
+                        ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
+                        var len = Math.sqrt((link_x - start_x) * (link_x - start_x) + (link_y - start_y) * (link_y - start_y));
+                        var norm_x = (link_x - start_x) / len;
+                        var norm_y = (link_y - start_y) / len;
+                        start_x = start_x + norm_x * 10 * (50 / resolution);
+                        start_y = start_y + norm_y * 10 * (50 / resolution);
+                        link_x = link_x - norm_x * 10 * (50 / resolution);
+                        link_y = link_y - norm_y * 10 * (50 / resolution);
+                        ctx.beginPath()
+                        ctx.strokeStyle = '#909090'
+                        ctx.moveTo(start_x, start_y);
+                        ctx.lineTo(link_x, link_y)
+                        ctx.stroke()
+                        var font_size = (13 * (50 / resolution)).toFixed(0);
+                        ctx.font = font_size.toString() + 'px Arial';
+                        ctx.fillStyle = "black";
+                        ctx.textBaseline = "top";
+                        ctx.fillText(loc.name, start_x - 35, start_y - 43, loc.name.length * font_size);
+                    }
+                    map_has = true;
+                }
+            }, 500);
+        }
+        function drawArrowhead(ctx, x1, y1, x2, y2, size, color) {
+            var l = 10 * (50 / resolution); // 
+            var a = Math.atan2((y2 - y1), (x2 - x1));
+            var x3 = x2 - l * Math.cos(a + 30 * Math.PI / 180); // θ=30
+            var y3 = y2 - l * Math.sin(a + 30 * Math.PI / 180);
+            var x4 = x2 - l * Math.cos(a - 30 * Math.PI / 180);
+            var y4 = y2 - l * Math.sin(a - 30 * Math.PI / 180);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.moveTo(x3, y3);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x4, y4);
+            ctx.lineWidth = size;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+        }
+        function start() {
+            var timer = setInterval(function () {
+                get_model()
+                if (model_has) {
+                    clearInterval(timer)
+                }
+            }, 200);
+            var map_has = false;
+            var timer2 = setInterval(function () {
+                if (map_has) {
+                    clearInterval(timer2);
+                }
+                var canvas = document.getElementById("map");
+                canvas.width = (xman - xmin) / resolution
+                canvas.height = (yman - ymin) / resolution
+                if (canvas.getContext) {
+                    var ctx = canvas.getContext("2d");
+                    // console.log(canvas.width + " " + canvas.height + " " + points.length)
+                    ctx.beginPath()
+                    ctx.fillStyle = "rgb(10,10,10)";
+                    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+                    for (var point of points) {
+                        var x = (point.x - xmin) / resolution;
+                        var y = canvas.height - (point.y - ymin) / resolution;
+                        var radius = 8 * (50 / resolution);
+                        ctx.beginPath()
+                        ctx.fillStyle = "rgb(0,0,0)";
+                        ctx.strokeStyle = 'black'
+                        ctx.moveTo(x + radius, y);
+                        ctx.lineWidth = 3 * (50 / resolution);
+                        if (ctx.lineWidth < 1) {
+                            ctx.lineWidth = 1;
+                        }
+                        ctx.arc(x, y, radius, 0, 2 * Math.PI, true)
+                        ctx.stroke()
+                        var font_size = (13 * (50 / resolution)).toFixed(0);
+                        if (font_size < 1) {
+                            font_size = 1;
+                        }
+                        ctx.font = font_size.toString() + 'px Arial';
+                        ctx.fillStyle = "black";
+                        ctx.textBaseline = "top";
+                        ctx.fillText(point.name, x + 10, y + 23, point.name.length * font_size);
+                    }
+                    for (var x of paths) {
+                        if (x.locked) {
+                            return
+                        }
+                        var start = get_point(x.start);
+                        var end = get_point(x.end);
+                        // console.log(x["name"], start["name"], end["name"]);
+                        var start_x = (start.x - xmin) / resolution;
+                        var start_y = canvas.height - (start.y - ymin) / resolution;
+                        var end_x = (end.x - xmin) / resolution;
+                        var end_y = canvas.height - (end.y - ymin) / resolution;
+                        // console.log(start_x, start_y, end_x, end_y);
+
+                        var len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
+                        // console.log(len);
+                        var norm_x = (end_x - start_x) / len;
+                        var norm_y = (end_y - start_y) / len;
+                        start_x = start_x + norm_x * 15;
+                        start_y = start_y + norm_y * 15;
+                        end_x = end_x - norm_x * 15;
+                        end_y = end_y - norm_y * 15;
+                        drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), 'orange');
+                        drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), 'orange');
+                    }
+                    for (var loc of locations) {
+                        var start_x = (loc.x - xmin) / resolution;
+                        var start_y = canvas.height - (loc.y - ymin) / resolution;
+                        var link = get_point(loc.link);
+                        var link_x = (link.x - xmin) / resolution;
+                        var link_y = canvas.height - (link.y - ymin) / resolution;
+                        ctx.beginPath()
+                        ctx.lineWidth = 1 * (50 / resolution);
+                        if (ctx.lineWidth < 1) {
+                            ctx.lineWidth = 1;
+                        }
+                        var radius = 5 * (50 / resolution)
+                        ctx.strokeStyle = '#233bc2'
+                        ctx.moveTo(start_x + radius, start_y);
+                        ctx.arc(start_x, start_y, radius, 0, 2 * Math.PI, true)
+                        ctx.stroke()
+                        ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
+                        var len = Math.sqrt((link_x - start_x) * (link_x - start_x) + (link_y - start_y) * (link_y - start_y));
+                        var norm_x = (link_x - start_x) / len;
+                        var norm_y = (link_y - start_y) / len;
+                        start_x = start_x + norm_x * 10 * (50 / resolution);
+                        start_y = start_y + norm_y * 10 * (50 / resolution);
+                        link_x = link_x - norm_x * 10 * (50 / resolution);
+                        link_y = link_y - norm_y * 10 * (50 / resolution);
+                        ctx.beginPath()
+                        ctx.strokeStyle = '#909090'
+                        ctx.moveTo(start_x, start_y);
+                        ctx.lineTo(link_x, link_y)
+                        ctx.stroke()
+                        var font_size = (13 * (50 / resolution)).toFixed(0);
+                        ctx.font = font_size.toString() + 'px Arial';
+                        ctx.fillStyle = "black";
+                        ctx.textBaseline = "top";
+                        ctx.fillText(loc.name, start_x - 35, start_y - 43, loc.name.length * font_size);
+                    }
+                    map_has = true;
+                }
+            }, 500);
+
+            var timer3 = setInterval(function () {
+                get_view();
+                var canvas = document.getElementById("Vehicle");
+                canvas.width = (xman - xmin) / resolution
+                canvas.height = (yman - ymin) / resolution
+                if (canvas.getContext) {
+                    var ctx = canvas.getContext("2d");
+
+                    // console.log(canvas.width, canvas.height)
+                    for (var v of vehicles) {
+                        // console.log(v);
+                        var x = (v.x - xmin) / resolution;
+                        var y = canvas.height - (v.y - ymin) / resolution;
+                        ctx.beginPath()
+                        ctx.fillStyle = v.color;
+                        ctx.strokeStyle = v.color
+                        var font_size = (20 * (50 / resolution)).toFixed(0);
+                        if (font_size < 1) {
+                            font_size = 1;
+                        }
+                        ctx.font = font_size.toString() + 'px Arial';
+                        ctx.textBaseline = "top";
+                        ctx.fillText(v.name, x, y, v.name.length * font_size);
+                        for (var step of v.step) {
+                            var start = get_point(step["src"]);
+                            var end = get_point(step["dest"]);
+                            var ori = step["orientation"];
+                            var start_x = (start.x - xmin) / resolution;
+                            var start_y = canvas.height - (start.y - ymin) / resolution;
+                            var end_x = (end.x - xmin) / resolution;
+                            var end_y = canvas.height - (end.y - ymin) / resolution;
+                            var len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
+                            // console.log(len);
+                            var norm_x = (end_x - start_x) / len;
+                            var norm_y = (end_y - start_y) / len;
+                            start_x = start_x + norm_x * 15;
+                            start_y = start_y + norm_y * 15;
+                            end_x = end_x - norm_x * 15;
+                            end_y = end_y - norm_y * 15;
+                            if (ori == "FORWARD") { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color); }
+                            else if (ori == "BACKWARD") { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color); }
+                        }
+                        // console.log(v.destination);
+                        if (v.destination != undefined) {
+                            var loc = get_location(v.destination["dest"]);
+                            var start_x = (loc.x - xmin) / resolution;
+                            var start_y = canvas.height - (loc.y - ymin) / resolution;
+                            var link = get_point(loc.link);
+                            var link_x = (link.x - xmin) / resolution;
+                            var link_y = canvas.height - (link.y - ymin) / resolution;
+                            ctx.beginPath()
+                            ctx.lineWidth = 4 * (50 / resolution);
+                            if (ctx.lineWidth < 1) {
+                                ctx.lineWidth = 1;
+                            }
+                            ctx.strokeStyle = '#ff0000'
+                            ctx.moveTo(start_x + 5, start_y);
+                            ctx.arc(start_x, start_y, 5, 0, 2 * Math.PI, true)
+                            ctx.stroke()
+                            ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
+                            var len = Math.sqrt((link_x - start_x) * (link_x - start_x) + (link_y - start_y) * (link_y - start_y));
+                            var norm_x = (link_x - start_x) / len;
+                            var norm_y = (link_y - start_y) / len;
+                            start_x = start_x + norm_x * 10 * (50 / resolution);
+                            start_y = start_y + norm_y * 10 * (50 / resolution);
+                            link_x = link_x - norm_x * 10 * (50 / resolution);
+                            link_y = link_y - norm_y * 10 * (50 / resolution);
+                            ctx.beginPath()
+                            ctx.strokeStyle = '#909090'
+                            ctx.moveTo(start_x, start_y);
+                            ctx.lineTo(link_x, link_y)
+                            ctx.stroke()
+                        }
+                    }
+                }
+            }, 500)
+        }
+    </script>
+</head>
+
+
+<body onload="start();">
+    <div>
+        <label for="ip_btn">服务器地址</label>
+        <input type="text" id="ip_btn" value="127.0.0.1:8080" placeholder="ip:port">
+        <h1></h1>
+    </div>
+    <div>
+        <label for="resolution">显示分辨率</label>
+        <input type="text" id="resolution" value="50" oninput="input_change(event)"
+            onporpertychange="input_change(event)" placeholder="50">
+        <h1></h1>
+
+    </div>
+    <div>
+        <canvas id="map" width="2122" height="1561">
+        </canvas>
+        <canvas id="Vehicle" width="2122" height="1561">
+        </canvas>
+    </div>
+
+</body>
+<style>
+    body {
+        background: #ffffff;
+    }
+
+    label {
+        color: rgb(27, 148, 255);
+    }
+
+    #ip_btn,
+    #resolution {
+        padding: 10px;
+        border-style: solid;
+        border-color: rgb(156, 205, 237);
+        border-left-width: 1px;
+        border-top-width: 1px;
+        border-right-width: 1px;
+        border-bottom-width: 1px;
+        /* border-radius: 3px; */
+        background-color: #ececec;
+    }
+
+    #ip_btn:hover,
+    #resolution:hover {
+        padding: 10px;
+        border-style: solid;
+        border-color: rgb(27, 148, 255);
+        border-left-width: 10px;
+        border-top-width: 1px;
+        border-right-width: 1px;
+        border-bottom-width: 1px;
+        /* border-radius: 3px; */
+        background-color: #ececec;
+    }
+
+    #map {
+        position: absolute;
+        left: 0px;
+        top: 90px;
+        margin: 20px;
+        background: #ffffff;
+        border: thin solid #1b7cdd;
+    }
+
+    #Vehicle {
+        position: absolute;
+        left: 0px;
+        top: 90px;
+        margin: 20px;
+        border: thin solid #1b7cdd;
+    }
+</style>
+
+</html>

@@ -3,11 +3,6 @@
 #include "../../include/kernel/driver/vehicle.hpp"
 
 std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
-#ifdef VISUAL
-  if (visualizer) {
-    visualizer->paused();
-  }
-#endif
   stop();
   init_orderpool();
   init_planner();
@@ -295,14 +290,6 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       v->orderpool = orderpool;
       v->resource = resource;
     }
-#ifdef VISUAL
-    if (!visualizer) {
-      init_visualizer(res);
-    } else {
-      visualizer->init(visualizer->resolution, shared_from_this());
-      visualizer->restart();
-    }
-#endif
     run();
     return std::pair<int, std::string>(200, "");
   } catch (pugi::xpath_exception ec) {
@@ -370,12 +357,6 @@ void TCS::home_order(const std::string &name,
 }
 
 TCS::~TCS() {
-#ifdef VISUAL
-  if (visualizer) {
-    visualizer->stop();
-    visualizer.reset();
-  }
-#endif
   CLOG(INFO, "tcs") << "TCS  stop";
   stop();
 }
@@ -403,16 +384,6 @@ bool TCS::init_planner() {
   CLOG(INFO, "tcs") << "init planner ok";
   return true;
 }
-#ifdef VISUAL
-bool TCS::init_visualizer(double resolution) {
-  visualizer = std::make_shared<visual::Visualizer>();
-  auto ret = visualizer->init(resolution, shared_from_this());
-  if (ret) {
-    CLOG(INFO, "tcs") << "init visualizer ok";
-  }
-  return ret;
-}
-#endif
 void TCS::cancel_all_order() { orderpool->cancel_all_order(); }
 
 void TCS::cancel_order(const std::string &order_name) {
@@ -438,11 +409,6 @@ void TCS::run() {
   if (scheduler) {
     scheduler->run();
   }
-#ifdef VISUAL
-  if (visualizer) {
-    visualizer->run();
-  }
-#endif
   is_run = true;
 }
 
@@ -1099,11 +1065,6 @@ std::pair<int, std::string> TCS::get_model() {
   return std::pair<int, std::string>(200, res.dump());
 }
 std::pair<int, std::string> TCS::put_model(const std::string &body) {
-#ifdef VISUAL
-  if (visualizer) {
-    visualizer->paused();
-  }
-#endif
   stop();
   init_orderpool();
   init_scheduler();
@@ -1247,14 +1208,6 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       v->orderpool = orderpool;
       v->resource = resource;
     }
-#ifdef VISUAL
-    if (!visualizer) {
-      init_visualizer(res);
-    } else {
-      visualizer->init(visualizer->resolution, shared_from_this());
-      visualizer->restart();
-    }
-#endif
     run();
     return std::pair<int, std::string>(200, "");
   } catch (json::parse_error ec) {
@@ -1278,6 +1231,96 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
   }
 }
 
+std::pair<int, std::string> TCS::get_view() {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
+  auto r = get_vehicles_step();
+  return std::pair<int, std::string>(200, r);
+}
+
+std::string TCS::get_vehicles_step() {
+  using json = nlohmann::json;
+  json value = json::array();
+  for (auto &v : dispatcher->vehicles) {
+    json veh;
+    veh["name"] = v->name;
+    veh["color"] = v->color;
+    veh["step"] = json::array();
+    veh["position"]["x"] = v->position.x();
+    veh["position"]["y"] = v->position.y();
+    if (v->current_order) {
+      if (v->current_order->state ==
+          data::order::TransportOrder::State::BEING_PROCESSED) {
+        for (auto &dr : v->current_order->driverorders) {
+          if (dr->state == data::order::DriverOrder::State::TRAVELLING ||
+              dr->state == data::order::DriverOrder::State::OPERATING) {
+            // current
+            if (dr->route->current_step) {
+              auto beg = dr->route->current_step->path->source_point.lock();
+              auto end =
+                  dr->route->current_step->path->destination_point.lock();
+              json step;
+              step["src"] = beg->name;
+              step["dest"] = end->name;
+              if (dr->route->current_step->vehicle_orientation ==
+                  data::order::Step::Orientation::FORWARD) {
+                step["orientation"] = "FORWARD";
+              } else if (dr->route->current_step->vehicle_orientation ==
+                         data::order::Step::Orientation::BACKWARD) {
+                step["orientation"] = "BACKWARD";
+              } else {
+                step["orientation"] = "UNDEFINED";
+              }
+              veh["step"].push_back(step);
+            }
+            // other
+            for (auto &path : dr->route->steps) {
+              auto beg = path->path->source_point.lock();
+              auto end = path->path->destination_point.lock();
+              json step;
+              step["src"] = beg->name;
+              step["dest"] = end->name;
+              if (path->vehicle_orientation ==
+                  data::order::Step::Orientation::FORWARD) {
+                step["orientation"] = "FORWARD";
+              } else if (path->vehicle_orientation ==
+                         data::order::Step::Orientation::BACKWARD) {
+                step["orientation"] = "BACKWARD";
+              } else {
+                step["orientation"] = "UNDEFINED";
+              }
+              veh["step"].push_back(step);
+            }
+            // location
+            if (dr->destination->operation ==
+                data::order::DriverOrder::Destination::OpType::NOP) {
+              // TODO
+            } else if (dr->destination->operation ==
+                       data::order::DriverOrder::Destination::OpType::LOAD) {
+              veh["destination"]["op"] = "LOAD";
+              auto loction = std::dynamic_pointer_cast<data::model::Location>(
+                  dr->destination->destination.lock());
+              veh["destination"]["dest"] = loction->name;
+            } else if (dr->destination->operation ==
+                       data::order::DriverOrder::Destination::OpType::UNLOAD) {
+              veh["destination"]["op"] = "UNLOAD";
+              auto loction = std::dynamic_pointer_cast<data::model::Location>(
+                  dr->destination->destination.lock());
+              veh["destination"]["dest"] = loction->name;
+            }
+          }
+        }
+      }
+    }
+    value.push_back(veh);
+  }
+  return value.dump();
+}
+
 std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
                                                  bool new_value) {
   if (!is_run) {
@@ -1294,9 +1337,6 @@ std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
       } else {
         planner->reset_edge(x->name);
       }
-#ifdef VISUAL
-      visualizer->init(visualizer->resolution, shared_from_this());
-#endif
       return std::pair<int, std::string>(200, "");
     }
   }
@@ -1317,9 +1357,6 @@ std::pair<int, std::string> TCS::put_location_locked(
   for (auto &x : resource->locations) {
     if (x->name == loc_name) {
       x->locked = new_value;
-#ifdef VISUAL
-      visualizer->init(visualizer->resolution, shared_from_this());
-#endif
       return std::pair<int, std::string>(200, "");
     }
   }

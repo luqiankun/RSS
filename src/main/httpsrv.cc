@@ -261,7 +261,13 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-
+  srv.Get("/getView", [=](const httplib::Request &req, httplib::Response &res) {
+    auto ret = get_view();
+    res.status = ret.first;
+    if (!ret.second.empty()) {
+      res.set_content(ret.second, "application/json");
+    }
+  });
   srv.set_logger([](const httplib::Request &req, const httplib::Response &res) {
     // printf("%s", log(req, res).c_str());
     CLOG(INFO, "http") << "http req and rep\n" << log(req, res);

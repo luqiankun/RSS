@@ -33,6 +33,7 @@ class HTTPServer {
   std::function<TCSRep(std::string)> put_model_xml;
   std::function<TCSRep(std::string, bool)> put_path_locked;
   std::function<TCSRep(std::string, bool)> put_location_locked;
+  std::function<TCSRep()> get_view;
 
  public:
   std::string ip{"0.0.0.0"};

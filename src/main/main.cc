@@ -152,6 +152,7 @@ int main(int argc, char** argv) {
     srv->put_location_locked =
         std::bind(&TCS::put_location_locked, tcs, std::placeholders::_1,
                   std::placeholders::_2);
+    srv->get_view = std::bind(&TCS::get_view, tcs);
   }
   std::thread th{[&] { srv->listen(); }};
   signal(SIGINT, signalHandler);
