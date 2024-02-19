@@ -53,9 +53,9 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
   }
   // std::cout << "generate " << edges.size() << " edge\n";
   for (auto &x : manager->locations) {
-    auto console = std::make_shared<Console>(
-        Eigen::Vector2i(x->position.x(), x->position.y()), x->layout.position,
-        x->name);
+    auto console =
+        std::make_shared<Console>(data::Vector2i(x->position.x, x->position.y),
+                                  x->layout.position, x->name);
     VertexPtr link;
     for (auto &v : vertexs) {
       if (v->equal_point == x->link.lock()) {
@@ -108,13 +108,12 @@ uint32_t Planner::calculate_turns(const std::vector<VertexPtr> &path,
   if (path.empty()) {
     return 0;
   }
-  std::vector<Eigen::Vector2f> edge_vec;
+  std::vector<data::Vector2f> edge_vec;
   for (auto it = path.begin(); it != path.end() - 1; it++) {
     auto from = *it;
     auto to = *(it + 1);
-    edge_vec.emplace_back(
-        Eigen::Vector2f(to->location.x() - from->location.x(),
-                        to->location.y() - from->location.y()));
+    edge_vec.emplace_back(data::Vector2f(to->location.x - from->location.x,
+                                         to->location.y - from->location.y));
   }
   if (edge_vec.size() < 2) {
     return 0;

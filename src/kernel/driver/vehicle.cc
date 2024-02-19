@@ -297,8 +297,8 @@ bool SimVehicle::action(
   if (dest->operation == data::order::DriverOrder::Destination::OpType::MOVE) {
     auto t =
         std::dynamic_pointer_cast<data::model::Point>(dest->destination.lock());
-    position.x() = t->position.x();
-    position.y() = t->position.y();
+    position.x = t->position.x;
+    position.y = t->position.y;
     current_point = t;
     return true;
   } else if (dest->operation ==
@@ -309,14 +309,14 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     current_point = t->link.lock();
-    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
-                         << position.y() << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
+                         << position.y << ")";
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    position.x() = t->link.lock()->position.x();
-    position.y() = t->link.lock()->position.y();
+    position.x = t->link.lock()->position.x;
+    position.y = t->link.lock()->position.y;
     current_point = t->link.lock();
-    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
-                         << position.y() << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
+                         << position.y << ")";
     return true;
   } else if (dest->operation ==
              data::order::DriverOrder::Destination::OpType::UNLOAD) {
@@ -326,14 +326,14 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     current_point = t->link.lock();
-    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
-                         << position.y() << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
+                         << position.y << ")";
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    position.x() = t->link.lock()->position.x();
-    position.y() = t->link.lock()->position.y();
+    position.x = t->link.lock()->position.x;
+    position.y = t->link.lock()->position.y;
     current_point = t->link.lock();
-    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
-                         << position.y() << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
+                         << position.y << ")";
     return true;
   } else if (dest->operation ==
              data::order::DriverOrder::Destination::OpType::NOP) {
@@ -353,18 +353,18 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(step->wait_time / rate));
     size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-    int x_len = end->position.x() - position.x();
-    int y_len = end->position.y() - position.y();
+    int x_len = end->position.x - position.x;
+    int y_len = end->position.y - position.y;
     for (int i = 0; i < 10; i++) {
-      position.x() += x_len / 10;
-      position.y() += y_len / 10;
+      position.x += x_len / 10;
+      position.y += y_len / 10;
       std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
     }
-    position.x() = end->position.x();
-    position.y() = end->position.y();
+    position.x = end->position.x;
+    position.y = end->position.y;
     current_point = end;
-    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
-                         << position.y() << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
+                         << position.y << ")";
     return true;
   } else if (step->vehicle_orientation ==
              data::order::Step::Orientation::BACKWARD) {
@@ -372,18 +372,18 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
     size_t t = step->path->length * 1000 / max_vel / rate;  // ms
     std::this_thread::sleep_for(
         std::chrono::milliseconds(step->wait_time / rate));
-    int x_len = end->position.x() - position.x();
-    int y_len = end->position.y() - position.y();
+    int x_len = end->position.x - position.x;
+    int y_len = end->position.y - position.y;
     for (int i = 0; i < 10; i++) {
-      position.x() += x_len / 10;
-      position.y() += y_len / 10;
+      position.x += x_len / 10;
+      position.y += y_len / 10;
       std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
     }
-    position.x() = end->position.x();
-    position.y() = end->position.y();
+    position.x = end->position.x;
+    position.y = end->position.y;
     current_point = end;
-    CLOG(INFO, "driver") << name << " now at (" << position.x() << " , "
-                         << position.y() << ")";
+    CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
+                         << position.y << ")";
     return true;
   } else {
     return false;

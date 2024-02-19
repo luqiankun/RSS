@@ -67,8 +67,8 @@ class Location : public TCSResource {
     RECHARGE_ALT_2
   };
   struct Layout {
-    Eigen::Vector2i position{0, 0};
-    Eigen::Vector2i label_offset{0, 0};
+    data::Vector2i position{0, 0};
+    data::Vector2i label_offset{0, 0};
     int layer_id;
   };
   struct LocationTypeLayout {
@@ -144,7 +144,7 @@ class Location : public TCSResource {
   }
 
   using TCSResource::TCSResource;
-  Eigen::Vector3i position{0, 0, 0};
+  Vector3i position{0, 0, 0};
   Layout layout;
   bool locked{false};
   std::weak_ptr<Point> link;

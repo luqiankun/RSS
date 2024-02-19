@@ -1,6 +1,7 @@
 #ifndef POINT_HPP
 #define POINT_HPP
 #include "../../tcsresource.hpp"
+#include "../vec.hpp"
 namespace data {
 namespace model {
 class Path;
@@ -9,8 +10,8 @@ class Point : public TCSResource {
  public:
   using TCSResource::TCSResource;
   struct Layout {
-    Eigen::Vector2i position{0, 0};
-    Eigen::Vector2i label_offset{0, 0};
+    Vector2i position{0, 0};
+    Vector2i label_offset{0, 0};
     int layer_id{0};
   };
   enum class Type {
@@ -53,7 +54,7 @@ class Point : public TCSResource {
   }
 
  public:
-  Eigen::Vector3i position{0, 0, 0};  // x y
+  data::Vector3i position{0, 0, 0};  // x y
   Layout layout;
   Type type{Type::UNKNOWN};
   int client_angle{0};

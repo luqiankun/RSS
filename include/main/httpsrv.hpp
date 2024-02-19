@@ -1,7 +1,5 @@
 #ifndef HTTPSERVER_HPP
 #define HTTPSERVER_HPP
-#include <Eigen/Eigen>  //先包含eigen否则eigen 和cpp-httplib 有冲突（eigen自身bug）
-
 #include "../component/tools/http/httplib.h"
 #include "../component/tools/json/json.hpp"
 #include "../component/util/timer.hpp"

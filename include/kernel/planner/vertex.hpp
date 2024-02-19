@@ -14,12 +14,12 @@ enum class AType {
   ATYPE_UNKNOWN,
   ATYPE_CLOSED,
   ATYPE_OPENED,
-  ATYPE_BARRIER  //障碍
+  ATYPE_BARRIER  // 障碍
 };
 class Vertex : public ::std::enable_shared_from_this<Vertex> {
  public:
-  Eigen::Vector2i location;
-  Eigen::Vector2i layout;
+  data::Vector2i location;
+  data::Vector2i layout;
   AType type{AType::ATYPE_UNKNOWN};
   std::vector<VertexWeakPtr> next_node;
   std::vector<EdgePtr> next_edge;
@@ -33,7 +33,7 @@ class Vertex : public ::std::enable_shared_from_this<Vertex> {
  public:
   Vertex() = delete;
   explicit Vertex(const std::shared_ptr<data::model::Point> &);
-  bool operator==(const Vertex &node);
+  bool operator==(Vertex node);
   std::optional<float> operator[](const VertexPtr &node);
   float get_h_vlaue(const VertexPtr &node);
   std::optional<float> get_g_value();
@@ -42,7 +42,7 @@ class Vertex : public ::std::enable_shared_from_this<Vertex> {
   ;
   std::string get_info() {
     std::stringstream os;
-    os << "{\"x\": " << this->location.x() << " ,\"y\": " << this->location.y()
+    os << "{\"x\": " << this->location.x << " ,\"y\": " << this->location.y
        << " ,\"name\": " << this->name << "}";
     return os.str();
   }

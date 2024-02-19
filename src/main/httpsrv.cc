@@ -270,7 +270,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
   });
   srv.set_logger([](const httplib::Request &req, const httplib::Response &res) {
     // printf("%s", log(req, res).c_str());
-    CLOG(INFO, "http") << "http req and rep\n" << log(req, res);
+    CLOG(INFO, "http") << req.method << ": " << req.path
+                       << "  Res Code: " << res.status;
+    // CLOG(INFO, "http") << "http req and rep\n" << log(req, res);
   });
 }
 

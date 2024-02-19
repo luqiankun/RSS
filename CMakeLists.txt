@@ -14,11 +14,7 @@ option(TEST "Build test " OFF)
 if(DEFINED TEST)
     message(STATUS  "Build test: " ${TEST})
 endif()
-set(Eigen_DIR "/usr/include/eigen3" CACHE STRING "eigen3 path" )
-include_directories(${Eigen_DIR})
-#########
-#visual##
-#########
+
 
 ##
 file(GLOB_RECURSE EVENT_SRC src/component/data/*.cc
@@ -36,12 +32,14 @@ file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
 #execute#
 #########
 
-## 版本低的gcc 可能需要链接pthread
 add_executable(tcs
 ${KERNEL_SRC}
 ${COMPONENTS_SRC}
 ${MAIN_SRC}
 )
+
+## 版本低的gcc 可能需要链接pthread
+# target_link_libraries(tcs pthread)
 
 #########
 #install#

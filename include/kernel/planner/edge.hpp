@@ -32,21 +32,21 @@ class Edge : public std::enable_shared_from_this<Edge> {
 class Console {
  public:
   Console() = delete;
-  Console(Eigen::Vector2i pos, const std::string& n);
-  Console(Eigen::Vector2i pos, Eigen::Vector2i layout, const std::string& n);
+  Console(data::Vector2i pos, const std::string& n);
+  Console(data::Vector2i pos, data::Vector2i layout, const std::string& n);
   ~Console() = default;
   void set_link_node(const VertexPtr& n) { link = n; }
   std::string get_info() {
     std::stringstream os;
-    os << "{\"x\": " << this->location.x() << " ,\"y\": " << this->location.y()
+    os << "{\"x\": " << this->location.x << " ,\"y\": " << this->location.y
        << " ,\"name\": " << this->name << "}";
     return os.str();
   }
 
  public:
   std::string name;
-  Eigen::Vector2i location;
-  Eigen::Vector2i layout;
+  data::Vector2i location;
+  data::Vector2i layout;
   VertexPtr link{nullptr};
   bool locked{false};
 };

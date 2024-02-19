@@ -1,18 +1,16 @@
-#windows下注意该文件编码格式要为GBK格式
+#windows下注意该文件编码格式要为GBK格式,否则可以读取失败
+log:
+  path: "logs"
+  fmt: "[%level|%logger|%datetime{%y%M%d-%H:%m:%s.%g}] %msg" #log format
+  # fmt: "[%level] [%logger] %datetime %fbase:%line] %msg" #log format
+  size: "10485760" # 10MB
+  enable: true
+  to_file: true
+  to_stdout: true
 httpserver:
   ip: "0.0.0.0" # 默认所有ip都可连接
   port: 8080
 tcs:
-  log:
-    path: "logs"
-    fmt: "[%level|%logger|%datetime{%y%M%d-%H:%m:%s.%g}] %msg" #log format
-    # fmt: "[%level] [%logger] %datetime %fbase:%line] %msg" #log format
-    size: "10485760" # 10MB
-    enable: true
-    to_file: true
-    to_stdout: true
   auto_init:
     enable: false # 启动时是否自动加载一个地图
     xml_path: "config/map.xml" #绝对目录或相对执行文件目录
-  visualization:
-    resolution: 50 #mm/pix 每个像素分辨率，设置{-1}可以自动设置

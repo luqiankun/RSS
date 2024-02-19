@@ -68,9 +68,9 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::model::Point> init_point;
   std::thread run_th;
   std::thread update_th;
-  Eigen::Vector3i position;
+  data::Vector3i position;
   float angle{0};
-  Eigen::Vector3i layout;
+  data::Vector3i layout;
   fa::taskpool_t pool{1};
   std::chrono::system_clock::time_point idle_time;
 };

@@ -20,9 +20,6 @@ std::string log_path{"logs"};
 std::string log_fmt{"[%level] %datetime %fbase:%line] %msg"};
 std::string log_size{"10485760"};
 
-// visualization value
-int resolution{-1};  // auto
-
 // auto init
 bool init_enable{false};
 std::string init_xml_path{""};
@@ -44,33 +41,29 @@ void read_params(std::string path) {
     if (!root["httpserver"]["port"].IsNone()) {
       http_port = root["httpserver"]["port"].As<int>();
     }
-    if (!root["tcs"]["log"]["enable"].IsNone()) {
-      log_enable = root["tcs"]["log"]["enable"].As<bool>() ? "true" : "false";
+    if (!root["log"]["enable"].IsNone()) {
+      log_enable = root["log"]["enable"].As<bool>() ? "true" : "false";
     }
-    if (!root["tcs"]["log"]["to_file"].IsNone()) {
-      log_to_file = root["tcs"]["log"]["to_file"].As<bool>() ? "true" : "false";
+    if (!root["log"]["to_file"].IsNone()) {
+      log_to_file = root["log"]["to_file"].As<bool>() ? "true" : "false";
     }
-    if (!root["tcs"]["log"]["to_stdout"].IsNone()) {
-      log_to_stdout =
-          root["tcs"]["log"]["to_stdout"].As<bool>() ? "true" : "false";
+    if (!root["log"]["to_stdout"].IsNone()) {
+      log_to_stdout = root["log"]["to_stdout"].As<bool>() ? "true" : "false";
     }
-    if (!root["tcs"]["log"]["path"].IsNone()) {
-      log_path = root["tcs"]["log"]["path"].As<std::string>();
+    if (!root["log"]["path"].IsNone()) {
+      log_path = root["log"]["path"].As<std::string>();
     }
-    if (!root["tcs"]["log"]["fmt"].IsNone()) {
-      log_fmt = root["tcs"]["log"]["fmt"].As<std::string>();
+    if (!root["log"]["fmt"].IsNone()) {
+      log_fmt = root["log"]["fmt"].As<std::string>();
     }
-    if (!root["tcs"]["log"]["size"].IsNone()) {
-      log_size = root["tcs"]["log"]["size"].As<std::string>();
+    if (!root["log"]["size"].IsNone()) {
+      log_size = root["log"]["size"].As<std::string>();
     }
     if (!root["tcs"]["auto_init"]["enable"].IsNone()) {
       init_enable = root["tcs"]["auto_init"]["enable"].As<bool>();
     }
     if (!root["tcs"]["auto_init"]["xml_path"].IsNone()) {
       init_xml_path = root["tcs"]["auto_init"]["xml_path"].As<std::string>();
-    }
-    if (!root["tcs"]["visualization"]["resolution"].IsNone()) {
-      resolution = root["tcs"]["visualization"]["resolution"].As<int>();
     }
     CLOG(INFO, "tcs") << "read param success";
   } catch (Yaml::Exception& ec) {
@@ -177,9 +170,6 @@ int main(int argc, char** argv) {
     if (ret.status == pugi::xml_parse_status::status_ok) {
       std::stringstream body;
       doc.save(body);
-#ifdef VISUAL
-      tcs->res = resolution;
-#endif
       tcs->put_model_xml(body.str());
     } else {
       CLOG(ERROR, "tcs") << "parse xml failed: " << ret.description();

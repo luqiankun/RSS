@@ -7,14 +7,14 @@ namespace planner {
 
 Vertex::Vertex(const std::shared_ptr<data::model::Point> &p) {
   equal_point = p;
-  location = Eigen::Vector2i(p->position.x(), p->position.y());
+  location = data::Vector2i(p->position.x, p->position.y);
   this->name = p->name;
   layout = p->layout.position;
 }
 
 void Vertex::set_type(AType type) { this->type = type; }
 
-bool Vertex::operator==(const Vertex &vertex) {
+bool Vertex::operator==(Vertex vertex) {
   if (vertex.location != this->location) {
     return false;
   }
@@ -58,8 +58,8 @@ std::optional<float> Vertex::operator[](const VertexPtr &vertex) {
 }
 float Vertex::get_h_vlaue(const VertexPtr &vertex) {
   // todo H代价算法 为0则等同迪杰斯特拉算法。广度优先
-  Eigen::Vector2f dis(this->location.x() - vertex->location.x(),
-                      this->location.y() - vertex->location.y());
+  // data::Vector2f dis(this->location.x - vertex->location.x,
+  //                    this->location.y - vertex->location.y);
   // return 1 * (abs(dis.x()) + abs(dis.y()));
   // return dis.norm();
   return 0;

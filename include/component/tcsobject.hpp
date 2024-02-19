@@ -1,6 +1,5 @@
 #ifndef TCSOBJECT_HPP
 #define TCSOBJECT_HPP
-#include <Eigen/Eigen>
 #include <condition_variable>
 #include <deque>
 #include <iostream>
