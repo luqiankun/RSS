@@ -391,8 +391,8 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
 }
 
 void SimVehicle::update() {
-  LOG_EVERY_N(200, INFO) << "simvehicle " << name
-                         << " update status from outside";
+  CLOG_EVERY_N(200, INFO, "driver")
+      << "simvehicle " << name << " update status from outside";
 }
 
 }  // namespace driver

@@ -797,8 +797,8 @@ std::pair<int, std::string> TCS::post_ordersequence(
     auto veh = req["intendedVehicle"].get<std::string>();
     for (auto &v : dispatcher->vehicles) {
       if (v->name == veh) {
-        auto new_orderquence = std::make_shared<data::order::OrderSequence>(
-            req["name"].get<std::string>());
+        auto new_orderquence =
+            std::make_shared<data::order::OrderSequence>(sequence_name);
         new_orderquence->intended_vehicle = v;
         new_orderquence->failure_fatal = req["failureFatal"].get<bool>();
         new_orderquence->complete = req["incompleteName"].get<bool>();

@@ -317,7 +317,7 @@
                 }
                 for (let x of paths) {
                     if (x.locked) {
-                        return
+                        continue
                     }
                     let start = get_point(x.start);
                     let end = get_point(x.end);
@@ -340,6 +340,9 @@
                     drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), 'orange');
                 }
                 for (let loc of locations) {
+                    if (loc.locked) {
+                        continue
+                    }
                     let start_x = (loc.x - xmin) / resolution;
                     let start_y = canvas.height - (loc.y - ymin) / resolution;
                     let link = get_point(loc.link);

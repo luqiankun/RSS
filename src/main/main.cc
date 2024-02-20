@@ -19,7 +19,7 @@ std::string log_to_stdout{"true"};
 std::string log_path{"logs"};
 std::string log_fmt{"[%level] %datetime %fbase:%line] %msg"};
 std::string log_size{"10485760"};
-
+static unsigned int idx;
 // auto init
 bool init_enable{false};
 std::string init_xml_path{""};
@@ -74,6 +74,7 @@ void read_params(std::string path) {
 
 int main(int argc, char** argv) {
   el::Loggers::getLogger("tcs");
+  el::Loggers::getLogger("timer");
   el::Loggers::getLogger("order");
   el::Loggers::getLogger("visual");
   el::Loggers::getLogger("http");
@@ -88,6 +89,7 @@ int main(int argc, char** argv) {
   }
   read_params(path);
   el ::Configurations conf;
+  el::Loggers::addFlag(el::LoggingFlag::StrictLogFileSizeCheck);
   conf.setGlobally(el ::ConfigurationType ::Format, log_fmt);
   conf.setGlobally(el ::ConfigurationType ::Filename, get_log_path(log_path));
   conf.setGlobally(el ::ConfigurationType ::ToFile, log_to_file);
@@ -98,6 +100,19 @@ int main(int argc, char** argv) {
   conf.set(el ::Level ::Debug, el ::ConfigurationType ::Format,
            "%datetime{%d/%M} %func [%fbase:%line] %msg");
   el ::Loggers ::reconfigureAllLoggers(conf);
+  el::Helpers::installPreRollOutCallback(
+      [&](const char* filename, std::size_t size) {
+        idx += 1;
+        auto dest = get_log_path(log_path) + "." + std::to_string(idx);
+        std::ifstream input(get_log_path(log_path));
+        std::ofstream output(dest);
+        if (input && output) {
+          char ch;
+          while ((ch = input.get()) != EOF) {
+            output.put(ch);
+          }
+        }
+      });
   auto tcs = std::make_shared<TCS>();
   auto srv = std::make_shared<HTTPServer>();
   {

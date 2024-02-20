@@ -19,7 +19,8 @@ class cpu_timer {
         std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     uint32_t s = dur.count() / 1000;
     uint32_t ms = dur.count() % 1000;
-    LOG(TRACE) << name << " use time: " << s << "(s) " << ms << "(ms)\n\n";
+    CLOG(INFO, "timer") << name << " use time: " << s << "(s) " << ms
+                        << "(ms)\n\n";
   }
 
  private:

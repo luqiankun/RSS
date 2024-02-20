@@ -62,7 +62,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             //
             std::string veh{""};
             if (req.has_param("intendedVehicle")) {
-              veh = req.get_param_value("transportOrders");
+              veh = req.get_param_value("intendedVehicle");
             }
             auto ret = get_transport_orders(veh);
             res.status = ret.first;
@@ -70,7 +70,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Get(R"(/transportOrders/([^/]+))",
+  srv.Get(R"(/transportOrder/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
             auto m = req.matches.end() - 1;
             std::string ord_name = *m;
