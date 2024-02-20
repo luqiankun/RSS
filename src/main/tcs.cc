@@ -954,6 +954,9 @@ std::pair<int, std::string> TCS::post_vehicle_withdrawl(
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
+      if (v->current_order) {
+        v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
+      }
       for (auto &o : v->orders) {
         o->state = data::order::TransportOrder::State::WITHDRAWL;
       }
