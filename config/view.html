@@ -61,12 +61,12 @@
                     event.preventDefault();
                     //放缩分辨率
                     if (deltaY > 0) {
-                        resolution -= 5;
+                        resolution += 5;
                         document.getElementById("resolution").setAttribute('value', resolution);
                         clicked();
 
                     } else if (deltaY < 0) {
-                        resolution += 5;
+                        resolution -= 5;
                         document.getElementById("resolution").setAttribute('value', resolution);
                         clicked();
                     }

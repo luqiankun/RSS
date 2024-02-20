@@ -1,5 +1,6 @@
 ﻿#include <csignal>
 
+#include "../../include/component/tools/fs/filesystem.hpp"
 #include "../../include/component/tools/log/easylogging++.h"
 #include "../../include/component/tools/yaml/yaml.hpp"
 #include "../../include/main/httpsrv.hpp"
@@ -19,7 +20,7 @@ std::string log_to_stdout{"true"};
 std::string log_path{"logs"};
 std::string log_fmt{"[%level] %datetime %fbase:%line] %msg"};
 std::string log_size{"10485760"};
-static unsigned int idx;
+uint32_t log_max_num{5};
 // auto init
 bool init_enable{false};
 std::string init_xml_path{""};
@@ -43,6 +44,9 @@ void read_params(std::string path) {
     }
     if (!root["log"]["enable"].IsNone()) {
       log_enable = root["log"]["enable"].As<bool>() ? "true" : "false";
+    }
+    if (!root["log"]["max_num"].IsNone()) {
+      log_max_num = root["log"]["max_num"].As<uint32_t>();
     }
     if (!root["log"]["to_file"].IsNone()) {
       log_to_file = root["log"]["to_file"].As<bool>() ? "true" : "false";
@@ -91,7 +95,8 @@ int main(int argc, char** argv) {
   el ::Configurations conf;
   el::Loggers::addFlag(el::LoggingFlag::StrictLogFileSizeCheck);
   conf.setGlobally(el ::ConfigurationType ::Format, log_fmt);
-  conf.setGlobally(el ::ConfigurationType ::Filename, get_log_path(log_path));
+  conf.setGlobally(el ::ConfigurationType ::Filename,
+                   "" + get_log_name(log_path));
   conf.setGlobally(el ::ConfigurationType ::ToFile, log_to_file);
   conf.setGlobally(el ::ConfigurationType ::Enabled, log_enable);
   conf.setGlobally(el ::ConfigurationType ::ToStandardOutput, log_to_stdout);
@@ -100,17 +105,43 @@ int main(int argc, char** argv) {
   conf.set(el ::Level ::Debug, el ::ConfigurationType ::Format,
            "%datetime{%d/%M} %func [%fbase:%line] %msg");
   el ::Loggers ::reconfigureAllLoggers(conf);
+  std::deque<std::string> logs_name;
+  {
+    try {
+      auto dir_it = ghc::filesystem::directory_iterator(log_path);
+      std::vector<ghc::filesystem::directory_entry> ns;
+      for (auto& x : dir_it) {
+        if (!x.is_directory() && x.path().filename() != "tcs_main.log") {
+          ns.push_back(x);
+        }
+      }
+      std::sort(ns.begin(), ns.end(),
+                [](ghc::filesystem::directory_entry& a,
+                   ghc::filesystem::directory_entry& b) {
+                  return a.last_write_time() < b.last_write_time();
+                });
+      for (auto& x : ns) {
+        // LOG(INFO) << x.path().filename();
+        logs_name.push_back(x.path().filename());
+      }
+      while (logs_name.size() > log_max_num) {
+        auto obj = logs_name.front();
+        logs_name.pop_front();
+        ghc::filesystem::remove(ghc::filesystem::path(log_path) / obj);
+      }
+    } catch (std::exception& ec) {
+      LOG(WARNING) << ec.what();
+    }
+  }
   el::Helpers::installPreRollOutCallback(
       [&](const char* filename, std::size_t size) {
-        idx += 1;
-        auto dest = get_log_path(log_path) + "." + std::to_string(idx);
-        std::ifstream input(get_log_path(log_path));
-        std::ofstream output(dest);
-        if (input && output) {
-          char ch;
-          while ((ch = input.get()) != EOF) {
-            output.put(ch);
-          }
+        auto dest = get_log_path(log_path);
+        logs_name.push_back(dest);
+        ghc::filesystem::copy(get_log_name(log_path), dest);
+        while (logs_name.size() > log_max_num) {
+          auto obj = logs_name.front();
+          logs_name.pop_front();
+          ghc::filesystem::remove(ghc::filesystem::path(log_path) / obj);
         }
       });
   auto tcs = std::make_shared<TCS>();

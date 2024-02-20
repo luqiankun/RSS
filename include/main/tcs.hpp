@@ -6,7 +6,15 @@
 #include "../kernel/schedule/schedule.hpp"
 
 inline std::string get_log_path(const std::string& path) {
-  auto data = get_date_fmt();
+  auto data = get_time_fmt(std::chrono::system_clock::now());
+#ifdef _WIN32
+  return (std::string(path) + "\\" + data + ".log");
+#else
+  return (std::string(path) + "/" + data + ".log");
+#endif
+}
+inline std::string get_log_name(const std::string& path) {
+  auto data = "main";
 #ifdef _WIN32
   return (std::string(path) + "\\tcs_" + data + ".log");
 #else
