@@ -16,6 +16,8 @@ class Planner {
   void set_barrier_vertex(const std::string &n_s);
   // 恢复点的初始状态
   void reset_vertex(const std::string &n_s);
+  // 设置路径方向
+  void set_path_direct(const std::string &e_s, Edge::Access access);
   // 设置边不可通行
   void set_barrier_edge(const std::string &e_s);
   // 恢复边可通行

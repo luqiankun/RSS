@@ -6,26 +6,30 @@ namespace kernel {
 namespace planner {
 class Edge : public std::enable_shared_from_this<Edge> {
  public:
+  enum class Access { Front = 0, Back = 1, Both = 2 };
   int weight;  // 权重
   VertexWeakPtr head;
   VertexWeakPtr tail;
   std::string name;
-  bool single{false};  // 单向
-  bool open{true};     // 是否可通行
+  bool open{true};  // 是否可通行
+  Access access{Access::Front};
+
  public:
   Edge(const VertexPtr& h, const VertexPtr& t, const std::string& n, int w,
-       bool s);
+       Access);
   Edge() = delete;
   bool operator==(const EdgePtr& egde);
   void set_head(const VertexPtr& node);
   void set_tail(const VertexPtr& node);
   void set_weight(int w);
+  void set_access(Access);
+  void remove_links();
+  void rebuild_links();
   std::string get_info() {
     std::stringstream os;
     os << "{\"name\": " << this->name
        << " , \"head\": " << this->head.lock()->get_info()
-       << " , \"tail\": " << this->tail.lock()->get_info()
-       << " signle: " << this->single << "}";
+       << " , \"tail\": " << this->tail.lock()->get_info() << "}";
     return os.str();
   }
 };

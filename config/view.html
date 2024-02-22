@@ -14,11 +14,13 @@
             }
         }
         class Path {
-            constructor(name, start, end) {
+            constructor(name, start, end, max_vel, max_res_vel) {
                 this.name = name;
                 this.start = start;
                 this.end = end;
                 this.locked = false;
+                this.max_vel = max_vel;
+                this.max_res_vel = max_res_vel;
             }
         }
         class Location {
@@ -170,7 +172,9 @@
                         let start = path["srcPointName"]
                         let locked = path["locked"];
                         let name = path["name"];
-                        let p = new Path(name, start, end);
+                        let max_vel = path['maxVelocity']
+                        let max_res_vel = path["maxReverseVelocity"]
+                        let p = new Path(name, start, end, max_vel, max_res_vel);
                         p.locked = locked;
                         paths.push(p);
                     }
@@ -336,8 +340,8 @@
                     start_y = start_y + norm_y * 15;
                     end_x = end_x - norm_x * 15;
                     end_y = end_y - norm_y * 15;
-                    drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), 'orange');
-                    drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), 'orange');
+                    if (x.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), 'orange'); }
+                    if (x.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), 'orange'); }
                 }
                 for (let loc of locations) {
                     if (loc.locked) {

@@ -75,7 +75,6 @@ class Path : public TCSResource {
   int max_reverse_vel{0};
   bool locked{false};
   PathLayout layout;
-  bool single{false};
 };
 }  // namespace model
 }  // namespace data

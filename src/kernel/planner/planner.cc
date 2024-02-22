@@ -23,9 +23,6 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
   for (auto &x : manager->paths) {
     bool ban{false};  // 路段是否禁止
     bool single{false};
-    if (x->single) {
-      single = true;
-    }
     if (x->locked) {
       ban = true;
     }
@@ -41,7 +38,13 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
     }
     if (be != nullptr && en != nullptr) {
       // TODO() 测试中权重写死了 应用时注意
-      auto edge = std::make_shared<Edge>(be, en, x->name, x->length, single);
+      Edge::Access access{Edge::Access::Both};
+      if (x->max_vel <= 0) {
+        access = Edge::Access::Back;
+      } else if (x->max_reverse_vel <= 0) {
+        access = Edge::Access::Front;
+      }
+      auto edge = std::make_shared<Edge>(be, en, x->name, x->length, access);
       edges.push_back(edge);
       if (ban) {
         edge->open = false;
@@ -85,6 +88,14 @@ void Planner::reset_vertex(const std::string &n_s) {
   for (auto &x : vertexs) {
     if (x->name == n_s) {
       x->set_type(AType::ATYPE_UNKNOWN);
+    }
+  }
+}
+
+void Planner::set_path_direct(const std::string &e_s, Edge::Access access) {
+  for (auto &x : edges) {
+    if (x->name == e_s) {
+      x->set_access(access);
     }
   }
 }
