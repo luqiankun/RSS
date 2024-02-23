@@ -960,6 +960,13 @@
         maxReverseVelocity="1000">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <initial_point point="L1-1"></initial_point>
         <vehicleLayout color="#FF0000" />
     </vehicle>
     <vehicle name="Vehicle-0002" length="1000" energyLevelCritical="30" energyLevelGood="90"
@@ -967,6 +974,14 @@
         maxReverseVelocity="1000">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <initial_point point="L2-1"></initial_point>
+
         <vehicleLayout color="#0000FF" />
     </vehicle>
     <vehicle name="Vehicle-0003" length="1000" energyLevelCritical="30" energyLevelGood="90"
@@ -974,6 +989,14 @@
         maxReverseVelocity="1000">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <initial_point point="L3-1"></initial_point>
+
         <vehicleLayout color="#00FFFF" />
     </vehicle>
     <vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
@@ -981,6 +1004,14 @@
         maxReverseVelocity="1000">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <initial_point point="L4-1"></initial_point>
+
         <vehicleLayout color="#FFFF00" />
     </vehicle>
     <vehicle name="Vehicle-0005" length="1000" energyLevelCritical="30" energyLevelGood="90"
@@ -988,6 +1019,14 @@
         maxReverseVelocity="1000">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <initial_point point="Point-0038"></initial_point>
+
         <vehicleLayout color="#FF00FF" />
     </vehicle>
     <vehicle name="Vehicle-0006" length="1000" energyLevelCritical="30" energyLevelGood="90"
@@ -995,6 +1034,14 @@
         maxReverseVelocity="1000">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <initial_point point="P1"></initial_point>
+
         <vehicleLayout color="#9900CC" />
     </vehicle>
     <vehicle name="Vehicle-0007" length="1000" energyLevelCritical="30" energyLevelGood="90"
@@ -1002,6 +1049,14 @@
         maxReverseVelocity="1000">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <initial_point point="P2"></initial_point>
+
         <vehicleLayout color="#FF6600" />
     </vehicle>
     <vehicle name="Vehicle-0008" length="1000" energyLevelCritical="30" energyLevelGood="90"
@@ -1009,6 +1064,13 @@
         maxReverseVelocity="1000">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <initial_point point="P3"></initial_point>
         <vehicleLayout color="#CCCCFF" />
     </vehicle>
     <locationType name="LType-0001">

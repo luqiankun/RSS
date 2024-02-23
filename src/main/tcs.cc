@@ -310,6 +310,9 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
             vehicle.attribute("energyLevelFullyRecharged").as_int();
         int energyLevelSufficientlyRecharged =
             vehicle.attribute("energyLevelSufficientlyRecharged").as_int();
+        std::string init_p_name =
+            vehicle.child("initial_point").attribute("point").as_string();
+
         ///////////////////
         /// // 使用仿真车辆
         //////////////////
@@ -324,11 +327,25 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         veh->engrgy_level_full = energyLevelFullyRecharged;
         veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
         //////////仿真 假定在第一个点
-        veh->position.x = resource->points.front()->position.x;
-        veh->position.y = resource->points.front()->position.y;
+        for (auto &point : resource->points) {
+          if (init_p_name == point->name) {
+            veh->init_point = point;
+            veh->current_point = point;
+            veh->position = point->position;
+          }
+        }
         veh->layout = veh->layout;
-        veh->current_point = resource->points.front();  // 当前点
-        veh->init_point = resource->points.front();     // 初始点
+        auto property = vehicle.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "property";
+        });
+        while (property.type() != pugi::node_null) {
+          if (std::string(property.name()) != "property") {
+            break;
+          }
+          veh->properties[property.attribute("name").as_string()] =
+              property.attribute("value").as_string();
+          property = property.next_sibling();
+        }
         ///////////////////////////
         dispatcher->vehicles.push_back(veh);
         ///////////////////////
