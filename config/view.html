@@ -42,10 +42,23 @@
                 this.destination = {};
             }
         }
+        class Block {
+            constructor(obj) {
+                this.name = obj["name"];
+                this.color = obj["blockLayout"]["color"];
+                this.member = [];
+                for (let x of obj['member']) {
+                    let v = {};
+                    v['name'] = x["name"];
+                    this.member.push(v);
+                }
+            }
+        }
         let points = [];
         let paths = [];
         let locations = [];
-        let vehicles = []
+        let vehicles = [];
+        let blocks = [];
         let xmin = 0;
         let xman = 400;
         let ymin = 0;
@@ -114,6 +127,25 @@
             ymin = y_min - 5000;
             yman = y_max + 5000;
         }
+
+        function get_block_path(name) {
+            for (let x of paths) {
+                if (name == x.name) {
+                    return x;
+                }
+            }
+            return null;
+        }
+
+        function get_block_point(name) {
+            for (let x of points) {
+                if (name == x.name) {
+                    return x;
+                }
+            }
+            return null;
+        }
+
         function get_point(name) {
             for (let x of points) {
                 if (x.name == name) {
@@ -187,6 +219,10 @@
                         let p = new Location(name, x, y, link);
                         p.locked = locked;
                         locations.push(p);
+                    }
+                    for (let block of model["blocks"]) {
+                        let b = new Block(block);
+                        blocks.push(b);
                     }
                     get_img_limit();
                     // console.log('-------------', model_has)
@@ -343,6 +379,64 @@
                     if (x.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), 'orange'); }
                     if (x.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), 'orange'); }
                 }
+
+                for (let x_ of blocks) {
+                    for (let p of x_['member']) {
+                        let point = get_block_point(p['name']);
+                        if (point != null) {
+                            let x = (point.x - xmin) / resolution;
+                            let y = canvas.height - (point.y - ymin) / resolution;
+                            let radius = 8 * (50 / resolution);
+                            ctx.beginPath()
+                            ctx.fillStyle = x_.color;
+                            ctx.strokeStyle = x_.color;
+                            ctx.moveTo(x + radius, y);
+                            ctx.lineWidth = 3 * (50 / resolution);
+                            if (ctx.lineWidth < 1) {
+                                ctx.lineWidth = 1;
+                            }
+                            ctx.arc(x, y, radius, 0, 2 * Math.PI, true)
+                            ctx.fill();
+                            let font_size = (13 * (50 / resolution)).toFixed(0);
+                            if (font_size < 1) {
+                                font_size = 1;
+                            }
+                            ctx.font = font_size.toString() + 'px Arial';
+                            ctx.fillStyle = x_.color;
+                            ctx.textBaseline = "top";
+                            ctx.fillText(point.name, x + 10, y + 23, point.name.length * font_size);
+                        }
+                        path = get_block_path(p['name']);
+                        if (path != null) {
+                            if (path.locked) {
+                                continue
+                            }
+                            let start = get_point(path.start);
+                            let end = get_point(path.end);
+                            // console.log(x["name"], start["name"], end["name"]);
+                            let start_x = (start.x - xmin) / resolution;
+                            let start_y = canvas.height - (start.y - ymin) / resolution;
+                            let end_x = (end.x - xmin) / resolution;
+                            let end_y = canvas.height - (end.y - ymin) / resolution;
+                            // console.log(start_x, start_y, end_x, end_y);
+
+                            let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
+                            // console.log(len);
+                            let norm_x = (end_x - start_x) / len;
+                            let norm_y = (end_y - start_y) / len;
+                            start_x = start_x + norm_x * 15;
+                            start_y = start_y + norm_y * 15;
+                            end_x = end_x - norm_x * 15;
+                            end_y = end_y - norm_y * 15;
+                            if (path.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), x_.color); }
+                            if (path.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), x_.color); }
+
+                        }
+                    }
+
+
+                }
+
                 for (let loc of locations) {
                     if (loc.locked) {
                         continue

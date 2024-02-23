@@ -9,18 +9,23 @@ namespace planner {
 #undef min
 #endif
 Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
+  this->res = manager;
+  rebuild();
+}
+
+void Planner::rebuild() {
   cpu_timer t("generate map");
   // std::cout << "begining generate map\n";
   solver = std::make_unique<Solver>();
   vertexs.clear();
   consoles.clear();
   edges.clear();
-  for (auto &x : manager->points) {
+  for (auto &x : res.lock()->points) {
     auto vertex = std::make_shared<Vertex>(x);
     vertexs.push_back(vertex);
   }
   // std::cout << "generate " << vertexs.size() << " vertex\n";
-  for (auto &x : manager->paths) {
+  for (auto &x : res.lock()->paths) {
     bool ban{false};  // 路段是否禁止
     bool single{false};
     if (x->locked) {
@@ -55,7 +60,7 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
     }
   }
   // std::cout << "generate " << edges.size() << " edge\n";
-  for (auto &x : manager->locations) {
+  for (auto &x : res.lock()->locations) {
     auto console =
         std::make_shared<Console>(data::Vector2i(x->position.x, x->position.y),
                                   x->layout.position, x->name);
@@ -76,6 +81,7 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
   //
   // std::cout << "generate map ok\n\n";
 }
+
 void Planner::set_barrier_vertex(const std::string &n_s) {
   for (auto &x : vertexs) {
     if (x->name == n_s) {

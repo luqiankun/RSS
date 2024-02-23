@@ -6,12 +6,14 @@
 namespace kernel {
 namespace allocate {
 class ResourceManager;
-}
+class RuleBase;
+}  // namespace allocate
 namespace planner {
 class Planner {
  public:
   Planner() = delete;
   explicit Planner(const std::shared_ptr<allocate::ResourceManager> &);
+  void rebuild();
   // 设置障碍点
   void set_barrier_vertex(const std::string &n_s);
   // 恢复点的初始状态
@@ -31,6 +33,7 @@ class Planner {
       const std::shared_ptr<data::model::Point> &);
 
  public:
+  std::weak_ptr<allocate::ResourceManager> res;
   std::vector<VertexPtr> vertexs;    // 顶点
   std::vector<EdgePtr> edges;        // 边
   std::vector<ConsolePtr> consoles;  // 工作台

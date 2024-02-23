@@ -4,6 +4,7 @@
 #include "../../component/data/model/path.hpp"
 #include "../../component/data/order/orderquence.hpp"
 #include "../../component/util/timer.hpp"
+#include "../rule/rule.hpp"
 namespace kernel {
 namespace schedule {
 class Client;
@@ -33,6 +34,9 @@ class ResourceManager : public TCSObject {
   std::vector<std::shared_ptr<data::model::Path>> paths;
   std::vector<std::shared_ptr<data::model::Point>> points;
   std::vector<std::shared_ptr<data::model::Location>> locations;
+
+ public:
+  std::vector<std::shared_ptr<RuleBase>> rules;
 };
 }  // namespace allocate
 }  // namespace kernel

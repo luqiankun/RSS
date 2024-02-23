@@ -17,13 +17,8 @@ endif()
 
 
 ##
-file(GLOB_RECURSE EVENT_SRC src/component/data/*.cc
- src/component/event/*.cc
-)
 file(GLOB_RECURSE COMPONENTS_SRC 
- src/component/data/*.cc
  src/component/tools/*.cc
- src/component/http/*.cc
 )
 file(GLOB_RECURSE KERNEL_SRC src/kernel/*.cc )
 file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
@@ -55,6 +50,9 @@ install(DIRECTORY config DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
 ########
 
 if(TEST)
+    file(GLOB_RECURSE EVENT_SRC src/component/data/*.cc
+    src/component/event/*.cc
+    )
     add_executable(test_event test/component/event/event_test.cc ${EVENT_SRC})
     add_executable(log_event test/component/tools/log/log_test.cc ${COMPONENTS_SRC} )
     target_link_libraries(log_event)

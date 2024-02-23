@@ -1711,7 +1711,10 @@
     <block name="Block-0009" type="SINGLE_VEHICLE_ONLY">
         <blockLayout color="#9999FF" />
     </block>
-    <block name="Block-0010" type="SINGLE_VEHICLE_ONLY">
+    <block name="Block-0010" type="SAME_DIRECTION_ONLY">
+        <member name="Point-0002 --- Point-0011"></member>
+        <member name="Point-0002 --- Point-0043"></member>
+        <direct value="FRONT"></direct>
         <blockLayout color="#003399" />
     </block>
     <block name="Block-0011" type="SINGLE_VEHICLE_ONLY">

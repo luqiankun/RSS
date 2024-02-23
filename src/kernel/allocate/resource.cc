@@ -91,6 +91,11 @@ bool ResourceManager::allocate(
 
 bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
                             std::shared_ptr<schedule::Client> client) {
+  for (auto& r : rules) {
+    if (!r->pass(client)) {
+      return false;
+    }
+  }
   std::stringstream ss;
   ss << client->name << " claim ";
   std::unique_lock<std::mutex> lock(mut);
@@ -113,6 +118,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
           }
           client->claim_resources.insert(p);
         } else {
+          unclaim(res, client);
           return false;
         }
       }
@@ -135,6 +141,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
           }
           client->claim_resources.insert(p);
         } else {
+          unclaim(res, client);
           return false;
         }
       }
@@ -157,6 +164,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
           }
           client->claim_resources.insert(p);
         } else {
+          unclaim(res, client);
           return false;
         }
       }

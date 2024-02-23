@@ -224,6 +224,69 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       CLOG(INFO, "tcs") << "init location size " << resource->locations.size();
     }
 
+    {
+      // block
+      auto block = root.find_child([](pugi::xml_node node) -> bool {
+        return std::string(node.name()) == "block";
+      });
+      while (block.type() != pugi::node_null) {
+        if (std::string(block.name()) != "block") {
+          break;
+        }
+        auto color = block.child("blockLayout").attribute("color").as_string();
+        // member
+        std::unordered_set<std::shared_ptr<TCSResource>> rs;
+        auto member = block.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "member";
+        });
+        while (member.type() != pugi::node_null) {
+          if (std::string(member.name()) != "member") {
+            break;
+          }
+          for (auto &x : resource->points) {
+            if (x->name == member.attribute("name").as_string()) {
+              rs.insert(x);
+            }
+          }
+          for (auto &x : resource->paths) {
+            if (x->name == member.attribute("name").as_string()) {
+              rs.insert(x);
+            }
+          }
+          for (auto &x : resource->locations) {
+            if (x->name == member.attribute("name").as_string()) {
+              rs.insert(x);
+            }
+          }
+          member = member.next_sibling();
+        }
+        if (block.attribute("type").as_string() ==
+            std::string("SINGLE_VEHICLE_ONLY")) {
+          auto rule = std::make_shared<kernel::allocate::OnlyOneGatherRule>(
+              block.attribute("name").as_string(), resource);
+          rule->occs = rs;
+          rule->color = color;
+          resource->rules.push_back(rule);
+        } else if (block.attribute("type").as_string() ==
+                   std::string("SAME_DIRECTION_ONLY")) {
+          std::string direction =
+              block.child("direct").attribute("value").as_string();
+          for (auto &x : resource->paths) {
+            auto p = rs.find(x);
+            if (p != rs.end()) {
+              auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
+              if (direction == "FRONT") {
+                path->max_reverse_vel = 0;
+              } else if (direction == "BACK") {
+                path->max_vel = 0;
+              }
+            }
+          }
+        }
+        block = block.next_sibling();
+      }
+    }
+
     //
     {
       auto vehicle = root.find_child([](pugi::xml_node node) {
@@ -1049,8 +1112,23 @@ std::pair<int, std::string> TCS::get_model() {
     location["layout"]["layerId"] = loc->layout.layer_id;
     res["locations"].push_back(location);
   }
+  // block
+  res["blocks"] = json::array();
 
-  // vehicles
+  for (auto &x : resource->rules) {
+    json block;
+    block["member"] = json::array();
+    for (auto &p : x->occs) {
+      json v;
+      v["name"] = p->name;
+      block["member"].push_back(v);
+    }
+    block["name"] = x->name;
+    block["type"] = "SINGLE_VEHICLE_ONLY";
+    block["blockLayout"]["color"] = x->color;
+    res["blocks"].push_back(block);
+  }
+  //  vehicles
   res["vehicles"] = json::array();
   for (auto &v : dispatcher->vehicles) {
     json vehicle;
