@@ -15,6 +15,7 @@ if(DEFINED TEST)
     message(STATUS  "Build test: " ${TEST})
 endif()
 
+find_package(PahoMqttCpp)
 
 ##
 file(GLOB_RECURSE COMPONENTS_SRC 
@@ -32,7 +33,7 @@ ${KERNEL_SRC}
 ${COMPONENTS_SRC}
 ${MAIN_SRC}
 )
-
+target_link_libraries(tcs paho-mqttpp3)
 ## 版本低的gcc 可能需要链接pthread
 # target_link_libraries(tcs pthread)
 
@@ -62,6 +63,11 @@ if(TEST)
     add_executable(json_test test/component/tools/json/json_test.cc 
     ${COMPONENTS_SRC} 
     )
+    add_executable(schema_test test/component/tools/json/schema_test.cc 
+    ${COMPONENTS_SRC} 
+    )
+    add_executable(mqtt_test test/component/tools/mqtt/mqtt_test.cc  )
+    target_link_libraries(mqtt_test paho-mqttpp3 paho-mqtt3a)
     install(TARGETS test_event log_event xml_test http_test json_test
     RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}
     )

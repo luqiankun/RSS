@@ -87,6 +87,7 @@ int main(int argc, char** argv) {
   el::Loggers::getLogger("planner");
   el::Loggers::getLogger("schedule");
   el::Loggers::getLogger("allocate");
+  el::Loggers::getLogger("mqtt");
   std::string path{"config/config.yaml"};
   if (argc >= 2) {
     path = std::string(argv[1]);
