@@ -32,6 +32,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       res.push_back(msg);
       return std::pair<int, std::string>(400, res.dump());
     }
+    { resource->model_name = root.attribute("name").as_string(); }
     {  // point
       auto point = root.find_child([](pugi::xml_node node) {
         return std::string(node.name()) == "point";
@@ -313,10 +314,62 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         std::string init_p_name =
             vehicle.child("initial_point").attribute("point").as_string();
 
+        auto interfaceName =
+            vehicle
+                .find_child([](pugi::xml_node node) {
+                  return (std::string(node.name()) == "property" &&
+                          node.attribute("name").as_string() ==
+                              std::string("vda5050:interfaceName"));
+                })
+                .attribute("value")
+                .as_string();
+        auto manufacturer =
+            vehicle
+                .find_child([](pugi::xml_node node) {
+                  return (std::string(node.name()) == "property" &&
+                          node.attribute("name").as_string() ==
+                              std::string("vda5050:manufacturer"));
+                })
+                .attribute("value")
+                .as_string();
+        auto serialNumber =
+            vehicle
+                .find_child([](pugi::xml_node node) {
+                  return (std::string(node.name()) == "property" &&
+                          node.attribute("name").as_string() ==
+                              std::string("vda5050:serialNumber"));
+                })
+                .attribute("value")
+                .as_string();
+        auto version = vehicle
+                           .find_child([](pugi::xml_node node) {
+                             return (std::string(node.name()) == "property" &&
+                                     node.attribute("name").as_string() ==
+                                         std::string("vda5050:version"));
+                           })
+                           .attribute("value")
+                           .as_string();
+        auto ip = vehicle
+                      .find_child([](pugi::xml_node node) {
+                        return (std::string(node.name()) == "property" &&
+                                node.attribute("name").as_string() ==
+                                    std::string("vda5050:ip"));
+                      })
+                      .attribute("value")
+                      .as_string();
+        auto port = vehicle
+                        .find_child([](pugi::xml_node node) {
+                          return (std::string(node.name()) == "property" &&
+                                  node.attribute("name").as_string() ==
+                                      std::string("vda5050:port"));
+                        })
+                        .attribute("value")
+                        .as_string();
         ///////////////////
-        /// // 使用仿真车辆
+        /// // 使用mqtt车辆
         //////////////////
-        auto veh = std::make_shared<kernel::driver::SimVehicle>(name);
+        auto veh = std::make_shared<kernel::driver::Rabbit3>(
+            name, interfaceName, serialNumber, version, manufacturer);
         veh->length = length;
         veh->width = 2.0 * length / 4;
         veh->max_reverse_vel = maxReverseVelocity;
@@ -326,26 +379,9 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         veh->energy_level_good = energyLevelGood;
         veh->engrgy_level_full = energyLevelFullyRecharged;
         veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
-        //////////仿真 假定在第一个点
-        for (auto &point : resource->points) {
-          if (init_p_name == point->name) {
-            veh->init_point = point;
-            veh->current_point = point;
-            veh->position = point->position;
-          }
-        }
-        veh->layout = veh->layout;
-        auto property = vehicle.find_child([](pugi::xml_node node) {
-          return std::string(node.name()) == "property";
-        });
-        while (property.type() != pugi::node_null) {
-          if (std::string(property.name()) != "property") {
-            break;
-          }
-          veh->properties[property.attribute("name").as_string()] =
-              property.attribute("value").as_string();
-          property = property.next_sibling();
-        }
+        veh->map_id = root.attribute("name").as_string();
+        veh->broker_ip = ip;
+        veh->broker_port = std::stoi(port);
         ///////////////////////////
         dispatcher->vehicles.push_back(veh);
         ///////////////////////

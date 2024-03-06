@@ -1,7 +1,9 @@
 #ifndef VEHICLE_HPP
 #define VEHICLE_HPP
+#include "../../../include/component/tools/json/json.hpp"
 #include "../../../include/component/tools/log/easylogging++.h"
 #include "../../../include/component/util/taskpool.hpp"
+#include "../../../include/component/vda5050/master.hpp"
 #include "../../component/data/order/orderquence.hpp"
 #include "../../component/tcsobject.hpp"
 #include "../allocate/order.hpp"
@@ -39,6 +41,7 @@ class Vehicle : public schedule::Client,
       std::shared_ptr<data::order::DriverOrder::Destination>) = 0;  // 执行动作
   virtual bool move(std::shared_ptr<data::order::Step>) = 0;  // 执行移动
   virtual void update() = 0;  // 接收外部信息更新机器人状态
+  virtual void init(){};
   virtual ~Vehicle();
 
  public:
@@ -55,7 +58,7 @@ class Vehicle : public schedule::Client,
   std::string integration_level;
   std::string color;
   ProcState proc_state{ProcState::IDLE};
-  State state{State::IDLE};
+  State state{State::UNKNOWN};
   bool paused{false};
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
@@ -72,6 +75,7 @@ class Vehicle : public schedule::Client,
   float angle{0};
   data::Vector3i layout;
   fa::taskpool_t pool{1};
+  bool task_run{false};
   std::chrono::system_clock::time_point idle_time;
 };
 class SimVehicle : public Vehicle {
@@ -84,6 +88,34 @@ class SimVehicle : public Vehicle {
  public:
   int rate{5};  // 时间快进比例
 };
+
+class Rabbit3 : public Vehicle, public vda5050::VehicleMaster {
+ public:
+  Rabbit3(const std::string& name, const std::string& interface_name,
+          const std::string& serial_number, const std::string& version,
+          const std::string& manufacturer)
+      : Vehicle(name),
+        vda5050::VehicleMaster(interface_name, serial_number, version,
+                               manufacturer) {}
+  bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
+  bool move(std::shared_ptr<data::order::Step>) override;
+  void update() override;
+  void init() override;
+  void onstate(mqtt::const_message_ptr);
+  void onconnect(mqtt::const_message_ptr);
+
+ public:
+  vda5050::VehicleMqttStatus veh_state{vda5050::VehicleMqttStatus::OFFLINE};
+  std::string broker_ip;
+  int broker_port;
+  nlohmann::json state_json;
+  std::string map_id;
+  int send_header_id{0};
+  int order_id{-1};
+  bool init_pos{false};
+  int rece_header_id{-1};
+};
+
 // TODO 工厂
 }  // namespace driver
 }  // namespace kernel

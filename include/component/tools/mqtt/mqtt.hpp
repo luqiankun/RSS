@@ -4,6 +4,8 @@
 
 #include <regex>
 
+#include "../../util/timer.hpp"
+
 class MqttClient : public mqtt::async_client {
  public:
   using mqtt::async_client::async_client;

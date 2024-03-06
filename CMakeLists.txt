@@ -14,12 +14,19 @@ option(TEST "Build test " OFF)
 if(DEFINED TEST)
     message(STATUS  "Build test: " ${TEST})
 endif()
-
+################
+#PahoMqttCpp 依赖openssl 和paho-mqtt-c
+find_package(OpenSSL)
+find_package(eclipse-paho-mqtt-c)
 find_package(PahoMqttCpp)
+find_package(Threads REQUIRED)
 
 ##
-file(GLOB_RECURSE COMPONENTS_SRC 
+file(GLOB_RECURSE TOOLS_SRC 
  src/component/tools/*.cc
+)
+file(GLOB_RECURSE MQTT_SRC 
+ src/component/vda5050/*.cc
 )
 file(GLOB_RECURSE KERNEL_SRC src/kernel/*.cc )
 file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
@@ -30,12 +37,12 @@ file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
 
 add_executable(tcs
 ${KERNEL_SRC}
-${COMPONENTS_SRC}
+${TOOLS_SRC}
 ${MAIN_SRC}
+${MQTT_SRC}
 )
-target_link_libraries(tcs paho-mqttpp3)
-## 版本低的gcc 可能需要链接pthread
-# target_link_libraries(tcs pthread)
+target_link_libraries(tcs PahoMqttCpp::paho-mqttpp3 Threads::Threads)
+
 
 #########
 #install#
@@ -55,22 +62,24 @@ if(TEST)
     src/component/event/*.cc
     )
     add_executable(test_event test/component/event/event_test.cc ${EVENT_SRC})
-    add_executable(log_event test/component/tools/log/log_test.cc ${COMPONENTS_SRC} )
+    add_executable(log_event test/component/tools/log/log_test.cc ${TOOLS_SRC} )
     target_link_libraries(log_event)
     add_executable(xml_test test/component/tools/xml/xml_test.cc  src/component/tools/xml/pugixml.cc)
     add_executable(http_test test/component/tools/http/http_test.cc)
     target_link_libraries(http_test)
     add_executable(json_test test/component/tools/json/json_test.cc 
-    ${COMPONENTS_SRC} 
+    ${TOOLS_SRC} 
     )
     add_executable(schema_test test/component/tools/json/schema_test.cc 
-    ${COMPONENTS_SRC} 
+    ${TOOLS_SRC} 
     )
     add_executable(mqtt_test test/component/tools/mqtt/mqtt_test.cc  )
-    target_link_libraries(mqtt_test paho-mqttpp3 paho-mqtt3a)
+    target_link_libraries(mqtt_test PahoMqttCpp::paho-mqttpp3)
     install(TARGETS test_event log_event xml_test http_test json_test
     RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}
     )
+    add_executable(sim_agv_test test/kernel/driver/rabbit3_test.cc  ${MQTT_SRC} ${TOOLS_SRC} )
+    target_link_libraries(sim_agv_test  PahoMqttCpp::paho-mqttpp3 Threads::Threads)
 endif()
 
 
