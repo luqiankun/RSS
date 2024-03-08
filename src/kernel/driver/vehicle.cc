@@ -61,24 +61,13 @@ void Vehicle::cancel_all_order() {
   orders.clear();
 }
 
-void Vehicle::run() {
-  init();
-  update_th = std::thread([&] {
-    while (pool.is_running()) {
-      update();
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    }
-  });
-}
+void Vehicle::run() { init(); }
 void Vehicle::close() {
   task_run = false;
   pool.stop();
   // if (run_th.joinable()) {
   //   run_th.join();
   // }
-  if (update_th.joinable()) {
-    update_th.join();
-  }
   current_command.reset();
 }
 Vehicle::~Vehicle() {
@@ -408,11 +397,6 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
   }
 }
 
-void SimVehicle::update() {
-  CLOG_EVERY_N(200, INFO, "driver")
-      << "simvehicle " << name << " update status from outside";
-}
-
 void Rabbit3::init() {
   set_mqtt_ops(name, this->broker_ip, this->broker_port);
   auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
@@ -443,10 +427,41 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       }
       auto h_id = v["headerId"].get<int>();
       if (h_id <= rece_header_id) {
+        LOG(WARNING) << h_id << " " << rece_header_id;
         return;
       }
       rece_header_id = h_id;
-      state_json = v;
+      vdastate = vda5050::state::VDA5050State(v);
+      //
+      for (auto& x : resource.lock()->points) {
+        if (x->name == v["lastNodeId"].get<std::string>()) {
+          current_point = x;
+          if (!init_pos) {
+            this->position = current_point->position;
+            init_pos = true;
+            init_point = x;
+            idle_time = std::chrono::system_clock::now();
+            std::vector<std::shared_ptr<TCSResource>> res;
+            res.push_back(x);
+            resource.lock()->claim(res, shared_from_this());
+          }
+        }
+      }
+      if (v.contains("agvPosition")) {
+        this->position.x = v["agvPosition"]["x"].get<float>();
+        this->position.y = v["agvPosition"]["y"].get<float>();
+        this->map_id = v["agvPosition"]["mapId"].get<std::string>();
+        this->angle = v["agvPosition"]["theta"].get<float>();
+        layout = position;
+      }
+      if (state == Vehicle::State::UNKNOWN) {
+        if (veh_state == vda5050::VehicleMqttStatus::ONLINE) {
+          state = State::IDLE;
+        }
+      }
+      if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
+        state = State::UNKNOWN;
+      }
     } else {
       std::for_each(ms.begin(), ms.end(),
                     [](const std::string s) { CLOG(WARNING, "driver") << s; });
@@ -484,40 +499,6 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
   }
 }
 
-void Rabbit3::update() {
-  if (state_json.empty()) return;
-  if (master_state != vda5050::MasterMqttStatus::ONLINE) return;
-  for (auto& x : resource.lock()->points) {
-    if (x->name == state_json["lastNodeId"].get<std::string>()) {
-      current_point = x;
-      if (!init_pos) {
-        this->position = current_point->position;
-        init_pos = true;
-        init_point = x;
-        idle_time = std::chrono::system_clock::now();
-        std::vector<std::shared_ptr<TCSResource>> res;
-        res.push_back(x);
-        resource.lock()->claim(res, shared_from_this());
-      }
-    }
-  }
-  if (state_json.contains("agvPosition")) {
-    this->position.x = state_json["agvPosition"]["x"].get<float>();
-    this->position.y = state_json["agvPosition"]["y"].get<float>();
-    this->map_id = state_json["agvPosition"]["mapId"].get<std::string>();
-    this->angle = state_json["agvPosition"]["theta"].get<float>();
-    layout = position;
-  }
-  if (state == Vehicle::State::UNKNOWN) {
-    if (veh_state == vda5050::VehicleMqttStatus::ONLINE) {
-      state = State::IDLE;
-    }
-  }
-  if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-    state = State::UNKNOWN;
-  }
-}
-
 bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
   CLOG(INFO, "driver") << "move along " << step->path->name;
   task_run = true;
@@ -531,156 +512,121 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
     task_run = false;
     return false;
   }
-  nlohmann::json order;
   auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
                 "/" + serial_number + "/";
-  order["headerId"] = send_header_id++;
-  order["timestamp"] = get_time_fmt(std::chrono::system_clock::now());
-  order["version"] = this->version;
-  order["manufacturer"] = this->manufacturer;
-  order["serialNumber"] = this->serial_number;
+  auto ord = vda5050::order::VDA5050Order();
+  ord.header_id = send_header_id++;
+  ord.timestamp = get_time_fmt(std::chrono::system_clock::now());
+  ord.version = version;
+  ord.manufacturer = manufacturer;
+  ord.serial_number = serial_number;
   order_id++;
-  order["orderId"] = prefix + std::to_string(order_id);
-  order["orderUpdateId"] = 0;
-  order["edges"] = nlohmann::json::array();
-  order["nodes"] = nlohmann::json::array();
-  nlohmann::json node_start;
-  nlohmann::json node_end;
-  nlohmann::json edge;
-
-  {
-    if (step->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-      node_start["nodeId"] = step->path->source_point.lock()->name;
-      node_start["released"] = false;
-      node_start["sequenceId"] = 0;
-      node_start["actions"] = nlohmann::json::array();
-      node_start["nodePosition"]["x"] =
-          step->path->source_point.lock()->position.x;
-      node_start["nodePosition"]["y"] =
-          step->path->source_point.lock()->position.y;
-      node_start["nodePosition"]["mapId"] = map_id;
-      node_start["nodePosition"]["theta"] = angle;
-      node_end["nodeId"] = step->path->destination_point.lock()->name;
-      node_end["released"] = false;
-      node_end["sequenceId"] = 1;
-      node_end["actions"] = nlohmann::json::array();
-      node_end["nodePosition"]["x"] =
-          step->path->destination_point.lock()->position.x;
-      node_end["nodePosition"]["y"] =
-          step->path->destination_point.lock()->position.y;
-      node_end["nodePosition"]["mapId"] = map_id;
-      node_end["nodePosition"]["theta"] = angle;
-
-      edge["edgeId"] = step->path->name;
-      edge["sequenceId"] = 0;
-      edge["actions"] = nlohmann::json::array();
-      edge["released"] = false;
-      edge["startNodeId"] = node_start["nodeId"];
-      edge["endNodeId"] = node_end["nodeId"];
-      edge["released"] = false;
-      edge["maxSpeed"] = max_vel;
-      edge["direction"] = "FORWARD";
-    } else {
-      node_start["nodeId"] = step->path->destination_point.lock()->name;
-      node_start["released"] = false;
-      node_start["sequenceId"] = 0;
-      node_start["actions"] = nlohmann::json::array();
-      node_start["nodePosition"]["x"] =
-          step->path->destination_point.lock()->position.x;
-      node_start["nodePosition"]["y"] =
-          step->path->destination_point.lock()->position.y;
-      node_start["nodePosition"]["mapId"] = map_id;
-      node_start["nodePosition"]["theta"] = angle;
-      node_end["nodeId"] = step->path->source_point.lock()->name;
-      node_end["released"] = false;
-      node_end["sequenceId"] = 1;
-      node_end["actions"] = nlohmann::json::array();
-      node_end["nodePosition"]["x"] =
-          step->path->source_point.lock()->position.x;
-      node_end["nodePosition"]["y"] =
-          step->path->source_point.lock()->position.y;
-      node_end["nodePosition"]["mapId"] = map_id;
-      node_end["nodePosition"]["theta"] = angle;
-
-      edge["edgeId"] = step->path->name;
-      edge["sequenceId"] = 0;
-      edge["released"] = false;
-      edge["startNodeId"] = node_end["nodeId"];
-      edge["endNodeId"] = node_start["nodeId"];
-      edge["released"] = false;
-      edge["maxSpeed"] = max_reverse_vel;
-      edge["direction"] = "BACKWARD";
-      edge["actions"] = nlohmann::json::array();
-    }
+  ord.order_id = prefix + std::to_string(order_id);
+  ord.order_update_id = 0;
+  std::shared_ptr<data::model::Point> start_point;
+  std::shared_ptr<data::model::Point> end_point;
+  if (step->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
+    start_point = step->path->source_point.lock();
+    end_point = step->path->destination_point.lock();
+  } else {
+    start_point = step->path->destination_point.lock();
+    end_point = step->path->source_point.lock();
   }
-  order["nodes"].push_back(node_start);
-  order["nodes"].push_back(node_end);
-  order["edges"].push_back(edge);
+  auto start = vda5050::order::Node();
+  start.node_id = start_point->name;
+  start.released = false;
+  start.sequence_id = 0;
+  auto pos = vda5050::order::NodePosition();
+  pos.x = start_point->position.x;
+  pos.y = start_point->position.y;
+  pos.map_id = map_id;
+  pos.theta = angle;
+  start.node_position = pos;
+  ord.nodes.push_back(start);
+  auto end = vda5050::order::Node();
+  end.node_id = end_point->name;
+  end.released = false;
+  end.sequence_id = 1;
+  auto pos2 = vda5050::order::NodePosition();
+  pos2.x = end_point->position.x;
+  pos2.y = end_point->position.y;
+  pos2.map_id = map_id;
+  pos2.theta = angle;
+  end.node_position = pos2;
+  ord.nodes.push_back(end);
+
+  auto e = vda5050::order::Edge();
+  e.edge_id = step->path->name;
+  e.sequence_id = 0;
+  e.released = false;
+  e.start_node_id = start_point->name;
+  e.end_node_id = end_point->name;
+  e.max_speed = max_vel;
+  ord.edges.push_back(e);
 
   //
 
   auto msg = std::make_shared<mqtt::message>();
   msg->set_qos(0);
   msg->set_topic(prefix + "order");
-  msg->set_payload(order.dump());
+  msg->set_payload(ord.to_json().dump());
   mqtt_client->publish(msg)->wait();
 
   // wait move
   int n{0};
   while (task_run) {
-    if (!state_json.is_null()) {
-      if (state_json["orderId"] == prefix + std::to_string(order_id)) {
-        auto p = get_time_from_str(state_json["timestamp"]);
-        auto dt = std::chrono::system_clock::now() - p.value();
-        if (dt > std::chrono::seconds(5)) {
-          task_run = false;
-          return false;
-        }
-        // state
-        if (veh_state == vda5050::VehicleMqttStatus::OFFLINE) {
-          CLOG(ERROR, "driver") << "vehicle offline";
-          task_run = false;
-          return false;
-        }
-        // error
-        if (!state_json["errors"].empty()) {
-          for (auto& x : state_json["errors"]) {
-            if (x["errorLevel"] == "WARNING") {
-              CLOG(WARNING, "driver") << x["errorDescription"];
-            } else {
-              CLOG(ERROR, "driver") << x["errorDescription"];
-              task_run = false;
-              return false;
-            }
-          }
-        }
-        //
-        bool node_ok{true};
-        for (auto& x : state_json["nodeStates"]) {
-          if (x["released"].get<bool>() == false) {
-            node_ok = false;
-            break;
-          }
-        }
-
-        bool edge_ok{true};
-        for (auto& x : state_json["edgeStates"]) {
-          if (x["released"].get<bool>() == false) {
-            edge_ok = false;
-            break;
-          }
-        }
-        if (node_ok && edge_ok) {
-          task_run = false;
-          CLOG(INFO, "driver") << "move ok " << step->path->name;
-          return true;
-        }
-      } else {
-        CLOG(WARNING, "driver")
-            << "orderId " << prefix + std::to_string(order_id) << " not match "
-            << state_json["orderId"];
+    if (vdastate.order_id == prefix + std::to_string(order_id)) {
+      auto p = get_time_from_str(vdastate.timestamp);
+      auto dt = std::chrono::system_clock::now() - p.value();
+      if (dt > std::chrono::seconds(5)) {
+        task_run = false;
+        return false;
       }
+      // state
+      if (veh_state == vda5050::VehicleMqttStatus::OFFLINE) {
+        CLOG(ERROR, "driver") << "vehicle offline";
+        task_run = false;
+        return false;
+      }
+      // error
+      if (!vdastate.errors.empty()) {
+        for (auto& x : vdastate.errors) {
+          if (x.error_level == vda5050::state::ErrorLevel::WARNING) {
+            CLOG(WARNING, "driver") << x.error_type;
+          } else {
+            CLOG(ERROR, "driver") << x.error_type;
+            task_run = false;
+            return false;
+          }
+        }
+      }
+      //
+      bool node_ok{true};
+      for (auto& x : vdastate.nodestates) {
+        if (x.released == false) {
+          node_ok = false;
+          break;
+        }
+      }
+
+      bool edge_ok{true};
+      for (auto& x : vdastate.edgestates) {
+        if (x.released == false) {
+          edge_ok = false;
+          break;
+        }
+      }
+      if (node_ok && edge_ok) {
+        task_run = false;
+        CLOG(INFO, "driver") << "move ok " << step->path->name;
+        return true;
+      }
+    } else {
+      CLOG(WARNING, "driver") << "order state has not been updated,want <"
+                              << prefix + std::to_string(order_id)
+                              << ">, but now is <" << vdastate.order_id << ">";
     }
+
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     n++;
     if (n > 2 * 60 * 10) {
@@ -707,150 +653,117 @@ bool Rabbit3::action(
     task_run = false;
     return false;
   }
-  nlohmann::json order;
+
   auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
                 "/" + serial_number + "/";
-  order["headerId"] = send_header_id++;
-  order["timestamp"] = get_time_fmt(std::chrono::system_clock::now());
-  order["version"] = this->version;
-  order["manufacturer"] = this->manufacturer;
-  order["serialNumber"] = this->serial_number;
+  auto ord = vda5050::order::VDA5050Order();
+  ord.header_id = send_header_id++;
+  ord.timestamp = get_time_fmt(std::chrono::system_clock::now());
+  ord.version = version;
+  ord.manufacturer = manufacturer;
+  ord.serial_number = serial_number;
   order_id++;
-  order["orderId"] = prefix + std::to_string(order_id);
-  order["orderUpdateId"] = 0;
-  order["edges"] = nlohmann::json::array();
-  order["nodes"] = nlohmann::json::array();
-  nlohmann::json node;
-  node["actions"] = nlohmann::json::array();
+  ord.order_id = prefix + std::to_string(order_id);
+  ord.order_update_id = 0;
   {
     if (dest->operation ==
         data::order::DriverOrder::Destination::OpType::MOVE) {
+      home_state = Vehicle::HomeState::PARK;
       task_run = false;
       return true;
-    } else if (dest->operation ==
-               data::order::DriverOrder::Destination::OpType::LOAD) {
-      auto t = std::dynamic_pointer_cast<data::model::Location>(
-          dest->destination.lock());
-      node["nodeId"] = t->link.lock()->name;
-      node["released"] = true;
-      node["sequenceId"] = 0;
-      node["nodePosition"]["x"] = t->link.lock()->position.x;
-      node["nodePosition"]["y"] = t->link.lock()->position.y;
-      node["nodePosition"]["mapId"] = map_id;
-      node["nodePosition"]["theta"] = angle + M_PI / 2;
-      nlohmann::json action;
-      action["actionId"] = order["orderId"].get<std::string>() + "/action";
-      action["actionType"] = "LOAD";
-      action["blockingType"] = "HARD";
-      action["actionParameters"] = nlohmann::json::array();
-      {
-        nlohmann::json act_param;
-        act_param["key"] = "x";
-        act_param["value"] = t->position.x;
-        action["actionParameters"].push_back(act_param);
-      }
-      {
-        nlohmann::json act_param;
-        act_param["key"] = "y";
-        act_param["value"] = t->position.y;
-        action["actionParameters"].push_back(act_param);
-      }
-
-      node["actions"].push_back(action);
-    } else if (dest->operation ==
-               data::order::DriverOrder::Destination::OpType::UNLOAD) {
-      auto t = std::dynamic_pointer_cast<data::model::Location>(
-          dest->destination.lock());
-      node["nodeId"] = t->link.lock()->name;
-      node["released"] = true;
-      node["sequenceId"] = 0;
-      node["nodePosition"]["x"] = t->link.lock()->position.x;
-      node["nodePosition"]["y"] = t->link.lock()->position.y;
-      node["nodePosition"]["mapId"] = map_id;
-      node["nodePosition"]["theta"] = angle + M_PI / 2;
-      nlohmann::json action;
-      action["actionId"] = order["orderId"].get<std::string>() + "/action";
-      action["actionType"] = "UNLOAD";
-      action["blockingType"] = "HARD";
-      action["actionParameters"] = nlohmann::json::array();
-      {
-        nlohmann::json act_param;
-        act_param["key"] = "x";
-        act_param["value"] = t->position.x;
-        action["actionParameters"].push_back(act_param);
-      }
-      {
-        nlohmann::json act_param;
-        act_param["key"] = "y";
-        act_param["value"] = t->position.y;
-        action["actionParameters"].push_back(act_param);
-      }
-      node["actions"].push_back(action);
     } else if (dest->operation ==
                data::order::DriverOrder::Destination::OpType::NOP) {
       task_run = false;
       return true;
     } else {
-      CLOG(ERROR, "driver") << "op do not support";
-      task_run = false;
-      return false;
+      home_state = Vehicle::HomeState::HOME;
+      auto t = std::dynamic_pointer_cast<data::model::Location>(
+          dest->destination.lock());
+      auto node = vda5050::order::Node();
+      node.node_id = t->link.lock()->name;
+      node.released = false;
+      node.sequence_id = 0;
+      node.node_position = vda5050::order::NodePosition();
+      node.node_position.value().x = t->link.lock()->position.x;
+      node.node_position.value().y = t->link.lock()->position.y;
+      node.node_position.value().map_id = map_id;
+      node.node_position.value().theta = angle + M_PI / 2;
+      auto act = vda5050::order::Action();
+      act.action_id = ord.order_id + "/action";
+      if (dest->operation ==
+          data::order::DriverOrder::Destination::OpType::LOAD) {
+        act.action_type = vda5050::order::ActionType::LOAD;
+      } else {
+        act.action_type = vda5050::order::ActionType::UNLOAD;
+      }
+      act.blocking_type = vda5050::order::ActionBlockingType::HARD;
+      act.action_parameters = std::vector<vda5050::order::ActionParam>();
+      auto param_x = vda5050::order::ActionParam();
+      param_x.key = "x";
+      param_x.value = (float)t->position.x;
+      act.action_parameters->push_back(param_x);
+      auto param_y = vda5050::order::ActionParam();
+      param_y.key = "y";
+      param_y.value = (float)t->position.y;
+      act.action_parameters->push_back(param_y);
+      node.actions.push_back(act);
+      ord.nodes.push_back(node);
     }
   }
-  order["nodes"].push_back(node);
   auto msg = std::make_shared<mqtt::message>();
   msg->set_qos(0);
   msg->set_topic(prefix + "order");
-  msg->set_payload(order.dump());
+  msg->set_payload(ord.to_json().dump());
   mqtt_client->publish(msg)->wait();
   // wait
   int n{0};
   while (task_run) {
-    if (!state_json.is_null()) {
-      if (state_json["orderId"] == prefix + std::to_string(order_id)) {
-        // state
-        if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-          CLOG(ERROR, "driver") << "vehicle not online";
+    if (vdastate.order_id == prefix + std::to_string(order_id)) {
+      // state
+      if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
+        CLOG(ERROR, "driver") << "vehicle not online";
+        task_run = false;
+        return false;
+      }
+      // error
+      if (!vdastate.errors.empty()) {
+        for (auto& x : vdastate.errors) {
+          if (x.error_level == vda5050::state::ErrorLevel::WARNING) {
+            CLOG(WARNING, "driver") << x.error_type;
+          } else {
+            CLOG(ERROR, "driver") << x.error_type;
+            task_run = false;
+            return false;
+          }
+        }
+      }
+      //
+      bool all_ok{true};
+      for (auto& x : vdastate.actionstates) {
+        auto sta = x.action_status;
+        if (sta == vda5050::state::ActionStatus::FINISHED) {
+          CLOG(INFO, "driver") << "action ok" << dest->destination.lock()->name;
+        } else if (sta == vda5050::state::ActionStatus::FAILED) {
+          CLOG(INFO, "driver")
+              << "action failed" << dest->destination.lock()->name;
           task_run = false;
           return false;
+        } else if (sta == vda5050::state::ActionStatus::WAITING) {
+          all_ok = false;
+        } else if (sta == vda5050::state::ActionStatus::RUNNING) {
+          all_ok = false;
+        } else if (sta == vda5050::state::ActionStatus::INITIALIZING) {
+          all_ok = false;
         }
-        // error
-        if (!state_json["errors"].empty()) {
-          for (auto& x : state_json["errors"]) {
-            if (x["errorLevel"] == "WARNING") {
-              CLOG(WARNING, "driver") << x["errorDescription"];
-            } else {
-              CLOG(ERROR, "driver") << x["errorDescription"];
-              task_run = false;
-              return false;
-            }
-          }
-        }
-        //
-        for (auto& x : state_json["actionStates"]) {
-          if (x["actionId"] ==
-              order["orderId"].get<std::string>() + "/action") {
-            auto sta = x["actionStatus"];
-            if (sta.get<std::string>() == "FINISHED") {
-              task_run = false;
-              CLOG(INFO, "driver")
-                  << "action ok" << dest->destination.lock()->name;
-              return true;
-            } else if (sta.get<std::string>() == "FAILED") {
-              task_run = false;
-              CLOG(INFO, "driver")
-                  << "action failed" << dest->destination.lock()->name;
-              return false;
-            } else if (sta.get<std::string>() == "WAITING") {
-            } else if (sta.get<std::string>() == "RUNNING") {
-            } else if (sta.get<std::string>() == "INITIALIZING") {
-            }
-          }
-        }
-      } else {
-        CLOG(WARNING, "driver")
-            << "orderId " << prefix + std::to_string(order_id) << " not match "
-            << state_json["orderId"];
       }
+      if (all_ok) {
+        task_run = false;
+        return true;
+      }
+    } else {
+      CLOG(WARNING, "driver") << "order state has not been updated,want <"
+                              << prefix + std::to_string(order_id)
+                              << ">, but now is <" << vdastate.order_id << ">";
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     n++;

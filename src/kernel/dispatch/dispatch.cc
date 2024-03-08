@@ -147,7 +147,8 @@ Dispatcher::~Dispatcher() {
 
 void Dispatcher::idle_detect() {
   for (auto& v : vehicles) {
-    if (v->state == driver::Vehicle::State::IDLE) {
+    if (v->state == driver::Vehicle::State::IDLE &&
+        v->home_state == driver::Vehicle::HomeState::HOME) {
       auto now = std::chrono::system_clock::now();
       auto dt = now - v->idle_time;
       auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);

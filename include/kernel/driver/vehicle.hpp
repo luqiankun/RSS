@@ -21,6 +21,7 @@ class Vehicle : public schedule::Client,
   Vehicle(const std::string& n) : schedule::Client(n) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
   enum class ProcState { IDLE, AWAITING_ORDER, PROCESSING_ORDER };
+  enum class HomeState { HOME, PARK };
   std::string get_state();
   std::string get_proc_state();
   static std::optional<std::string> get_proc_state(ProcState);
@@ -40,8 +41,7 @@ class Vehicle : public schedule::Client,
   virtual bool action(
       std::shared_ptr<data::order::DriverOrder::Destination>) = 0;  // 执行动作
   virtual bool move(std::shared_ptr<data::order::Step>) = 0;  // 执行移动
-  virtual void update() = 0;  // 接收外部信息更新机器人状态
-  virtual void init(){};
+  virtual void init(){};  // 初始化或者配置接收外部信息更新机器人状态
   virtual ~Vehicle();
 
  public:
@@ -60,6 +60,7 @@ class Vehicle : public schedule::Client,
   ProcState proc_state{ProcState::IDLE};
   State state{State::UNKNOWN};
   bool paused{false};
+  HomeState home_state{HomeState::HOME};
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<allocate::ResourceManager> resource;
@@ -70,7 +71,6 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::model::Point> current_point;
   std::shared_ptr<data::model::Point> init_point;
   std::thread run_th;
-  std::thread update_th;
   data::Vector3i position;
   float angle{0};
   data::Vector3i layout;
@@ -83,7 +83,6 @@ class SimVehicle : public Vehicle {
   using Vehicle::Vehicle;
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
   bool move(std::shared_ptr<data::order::Step>) override;
-  void update() override;
 
  public:
   int rate{5};  // 时间快进比例
@@ -99,7 +98,6 @@ class Rabbit3 : public Vehicle, public vda5050::VehicleMaster {
                                manufacturer) {}
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
   bool move(std::shared_ptr<data::order::Step>) override;
-  void update() override;
   void init() override;
   void onstate(mqtt::const_message_ptr);
   void onconnect(mqtt::const_message_ptr);
@@ -108,7 +106,7 @@ class Rabbit3 : public Vehicle, public vda5050::VehicleMaster {
   vda5050::VehicleMqttStatus veh_state{vda5050::VehicleMqttStatus::OFFLINE};
   std::string broker_ip;
   int broker_port;
-  nlohmann::json state_json;
+  vda5050::state ::VDA5050State vdastate;
   std::string map_id;
   int send_header_id{0};
   int order_id{-1};

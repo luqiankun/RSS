@@ -2,7 +2,9 @@
 #define VDA5050_MASTER_HPP
 #include "../data/order/orderquence.hpp"
 #include "../tools/json/json.hpp"
-#include "./vda5050.hpp"
+#include "./vda5050order.hpp"
+#include "./vda5050state.hpp"
+
 namespace vda5050 {
 
 class VehicleMaster {

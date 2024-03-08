@@ -1,5 +1,8 @@
 #include "../../../include/component/tools/mqtt/mqtt.hpp"
 #include "../../../include/component/vda5050/valitator.hpp"
+#include "../../../include/component/vda5050/vda5050order.hpp"
+#include "../../../include/component/vda5050/vda5050state.hpp"
+
 class SimRabbit3 {
  public:
   enum class Status { IDLE, ERROR, RUNNING };
@@ -10,30 +13,26 @@ class SimRabbit3 {
         serial_number(serial_number),
         version(version),
         manufacturer(manufacturer) {
-    state["version"] = version;
-    state["manufacturer"] = manufacturer;
-    state["serialNumber"] = serial_number;
-    state["orderId"] = "";
-    state["headerId"] = 0;
-    state["timestamp"] = get_time_fmt(std::chrono::system_clock::now());
-    state["orderUpdateId"] = 0;
-    state["lastNodeId"] = "P3";
-    state["agvPosition"]["x"] = 64387;
-    state["agvPosition"]["y"] = -107450;
-    state["agvPosition"]["theta"] = 0;
-    state["agvPosition"]["mapId"] = "";
-    state["agvPosition"]["positionInitialized"] = false;
-    state["lastNodeSequenceId"] = 0;
-    state["nodeStates"] = nlohmann::json::array();
-    state["edgeStates"] = nlohmann::json::array();
-    state["driving"] = false;
-    state["actionStates"] = nlohmann::json::array();
-    state["batteryState"]["batteryCharge"] = 90;
-    state["batteryState"]["charging"] = false;
-    state["operatingMode"] = "AUTOMATIC";
-    state["errors"] = nlohmann::json::array();
-    state["safetyState"]["eStop"] = "AUTOACK";
-    state["safetyState"]["fieldViolation"] = false;
+    vda_state.version = version;
+    vda_state.manufacturer = manufacturer;
+    vda_state.serial_number = serial_number;
+    vda_state.order_id = "";
+    vda_state.header_id = 0;
+    vda_state.timestamp = get_time_fmt(std::chrono::system_clock::now());
+    vda_state.order_update_id = 0;
+    vda_state.last_node_id = "P3";
+    vda_state.agv_position = vda5050::state::AgvPosition();
+    vda_state.agv_position.value().x = 64387;
+    vda_state.agv_position.value().y = -107450;
+    vda_state.agv_position.value().theta = 0;
+    vda_state.agv_position.value().map_id = "lyg";
+    vda_state.last_node_seq_id = 0;
+    vda_state.driving = false;
+    vda_state.battery_state.battery_charge = 90;
+    vda_state.battery_state.charging = false;
+    vda_state.operating_mode = vda5050::state::OperMode::AUTOMATIC;
+    vda_state.safetystate.estop = vda5050::state::SafetyStatus::AUTOACK;
+    vda_state.safetystate.field_violation = false;
   }
   void process_msgs();
   void set_mqtt_ops(const std::string& name, const std::string& server_ip,
@@ -87,145 +86,153 @@ class SimRabbit3 {
             } else if (!order_msgs.empty()) {
               auto step = order_msgs.front();
               order_msgs.pop();
-              LOG(INFO) << step->get_topic();
+              // LOG(INFO) << step->get_topic();
               try {
                 auto src = nlohmann::json::parse(step->get_payload());
                 auto err = vda5050::order_validate(src);
                 if (err.empty()) {
                   // do
-                  if (state["orderId"] != src["order"]) {
+                  auto ord = vda5050::order::VDA5050Order(src);
+                  if (vda_state.order_id != ord.order_id) {
                     // new order
-                    state["orderId"] = src["orderId"];
+                    auto state = vda5050::state::VDA5050State(vda_state);
+                    state.order_id = ord.order_id;
+                    state.errors.clear();
+                    state.nodestates.clear();
+                    state.edgestates.clear();
+                    state.actionstates.clear();
                     //
-                    if (src["nodes"].size() == 2) {
-                      LOG(INFO) << "move ....";
-                      status = Status::RUNNING;
-                      std::string start_node = src["nodes"].at(0)["nodeId"];
-                      std::string end_node = src["nodes"].at(1)["nodeId"];
-                      float s_x =
-                          src["nodes"].at(0)["nodePosition"]["x"].get<float>();
-                      float s_y =
-                          src["nodes"].at(0)["nodePosition"]["y"].get<float>();
-                      float e_x =
-                          src["nodes"].at(1)["nodePosition"]["x"].get<float>();
-                      float e_y =
-                          src["nodes"].at(1)["nodePosition"]["y"].get<float>();
-                      nlohmann::json n1;
-                      n1["nodeId"] = start_node;
-                      n1["released"] = false;
-                      n1["sequenceId"] = 0;
-                      n1["nodePosition"] = src["nodes"].at(0)["nodePosition"];
-                      nlohmann::json n2;
-                      n2["nodeId"] = end_node;
-                      n2["released"] = false;
-                      n2["sequenceId"] = 0;
-                      n2["nodePosition"] = src["nodes"].at(1)["nodePosition"];
-                      state["nodeStates"].clear();
-                      state["nodeStates"].push_back(n1);
-                      state["nodeStates"].push_back(n2);
-                      state["lastNodeId"] = start_node;
-                      nlohmann::json e1;
-                      e1["edgeId"] = src["edges"].at(0)["edgeId"];
-                      e1["sequenceId"] = 0;
-                      e1["released"] = false;
-                      state["edgeStates"].clear();
-                      state["edgeStates"].push_back(e1);
-                      state["agvPosition"]["x"] = s_x;
-                      state["agvPosition"]["y"] = s_y;
-                      state["agvPosition"]["theta"] = 0;
-                      state["agvPosition"]["mapId"] = "";
-                      state["agvPosition"]["positionInitialized"] = false;
-
-                      // move
-                      auto vx = 5000 * cos(std::atan2(e_y - s_y, e_x - s_x));
-                      auto vy = 5000 * sin(std::atan2(e_y - s_y, e_x - s_x));
-                      LOG(INFO) << "Vx " << vx << " Vy " << vy;
-                      auto time = sqrt((e_x - s_x) * (e_x - s_x) +
-                                       (e_y - s_y) * (e_y - s_y)) *
-                                  1000 / 5000;  // ms
-                      state["driving"] = true;
-                      state["nodeStates"].at(0)["released"] = true;
-                      for (auto i = 0; i < time; i = i + 50) {
-                        state["agvPosition"]["x"] = s_x + vx / 5000 * i;
-                        state["agvPosition"]["y"] = s_y + vy / 5000 * i;
-                        std::this_thread::sleep_for(
-                            std::chrono::milliseconds(50));
+                    if ((ord.nodes.size() - ord.edges.size()) != 1) {
+                      auto err = vda5050::state::Error();
+                      err.error_level = vda5050::state::ErrorLevel::FATAL;
+                      err.error_type = "node size not match edge size";
+                      state.errors.push_back(err);
+                      vda_state = state;
+                    } else if (ord.edges.size() > 0) {
+                      // state update
+                      for (int i = 0; i < ord.nodes.size(); i++) {
+                        auto n1 = vda5050::state::NodeState();
+                        n1.node_id = ord.nodes.at(i).node_id;
+                        n1.released = false;
+                        n1.sequence_id = ord.nodes.at(i).sequence_id;
+                        n1.node_position = vda5050::state::NodePosition();
+                        n1.node_position.value().x =
+                            ord.nodes.at(i).node_position.value().x;
+                        n1.node_position.value().y =
+                            ord.nodes.at(i).node_position.value().y;
+                        state.nodestates.push_back(n1);
                       }
-                      state["agvPosition"]["x"] = e_x;
-                      state["agvPosition"]["y"] = e_y;
-                      state["nodeStates"].at(1)["released"] = true;
-                      state["edgeStates"].at(0)["released"] = true;
-                      state["driving"] = false;
-                      state["lastNodeId"] = end_node;
-                      status = Status::IDLE;
-                      LOG(INFO) << "move end";
+                      vda_state = state;
+                      // move
+                      for (int i = 0; i < ord.nodes.size() - 1; i++) {
+                        status = Status::RUNNING;
+                        auto start_node = ord.nodes.at(i);
+                        auto end_node = ord.nodes.at(i + 1);
+                        LOG(INFO) << "move from " << start_node.node_id
+                                  << " to " << end_node.node_id;
+                        float s_x = start_node.node_position.value().x;
+                        float s_y = start_node.node_position.value().y;
+                        float e_x = end_node.node_position.value().x;
+                        float e_y = end_node.node_position.value().y;
+                        // move
+                        auto vx = 5000 * cos(std::atan2(e_y - s_y, e_x - s_x));
+                        auto vy = 5000 * sin(std::atan2(e_y - s_y, e_x - s_x));
+                        LOG(INFO) << "Vx " << vx << " Vy " << vy;
+                        auto time = sqrt((e_x - s_x) * (e_x - s_x) +
+                                         (e_y - s_y) * (e_y - s_y)) *
+                                    1000 / 5000;  // ms
+                        state.driving = true;
+                        state.nodestates.at(i).released = true;
 
-                    } else if (src["nodes"].size() == 1) {
-                      LOG(INFO) << "action";
-                      state["edgeStates"].clear();
+                        for (auto i = 0; i < time; i = i + 50) {
+                          state.agv_position.value().x = s_x + vx / 1000 * i;
+                          state.agv_position.value().y = s_y + vy / 1000 * i;
+                          std::this_thread::sleep_for(
+                              std::chrono::milliseconds(50));
+                          vda_state = state;
+                        }
+                        state.agv_position.value().x = e_x;
+                        state.agv_position.value().y = e_y;
+                        state.nodestates.at(i).released = true;
+                        state.nodestates.at(i + 1).released = true;
+                        state.driving = false;
+                        state.last_node_id = end_node.node_id;
+                        status = Status::IDLE;
+                        vda_state = state;
+                      }
+                    } else {
+                      // only action
+                      // state update
+                      for (int i = 0; i < ord.nodes.size(); i++) {
+                        auto n1 = vda5050::state::NodeState();
+                        n1.node_id = ord.nodes.at(i).node_id;
+                        n1.released = false;
+                        n1.sequence_id = ord.nodes.at(i).sequence_id;
+                        n1.node_position = vda5050::state::NodePosition();
+                        n1.node_position.value().x =
+                            ord.nodes.at(i).node_position.value().x;
+                        n1.node_position.value().y =
+                            ord.nodes.at(i).node_position.value().y;
+                        state.nodestates.push_back(n1);
+                        for (auto& x : ord.nodes.at(i).actions) {
+                          auto act = vda5050::state::ActionState();
+                          act.action_id = x.action_id;
+                          act.action_status =
+                              vda5050::state::ActionStatus::WAITING;
+                          state.actionstates.push_back(act);
+                        }
+                      }
+                      vda_state = state;
                       // action
                       status = Status::RUNNING;
-                      std::string start_node = src["nodes"].at(0)["nodeId"];
-                      float s_x =
-                          src["nodes"].at(0)["nodePosition"]["x"].get<float>();
-                      float s_y =
-                          src["nodes"].at(0)["nodePosition"]["y"].get<float>();
-                      nlohmann::json n1;
-                      n1["nodeId"] = start_node;
-                      n1["released"] = false;
-                      n1["sequenceId"] = 0;
-                      n1["nodePosition"] = src["nodes"].at(0)["nodePosition"];
-                      state["nodeStates"].clear();
-                      state["nodeStates"].push_back(n1);
-                      state["lastNodeId"] = start_node;
-                      float e_x = src["nodes"]
-                                      .at(0)["actions"]
-                                      .at(0)["actionParameters"]
-                                      .at(0)["value"]
-                                      .get<float>();
-                      float e_y = src["nodes"]
-                                      .at(0)["actions"]
-                                      .at(0)["actionParameters"]
-                                      .at(1)["value"]
-                                      .get<float>();
-                      state["agvPosition"]["x"] = s_x;
-                      state["agvPosition"]["y"] = s_y;
-                      state["agvPosition"]["theta"] = 0;
-                      state["agvPosition"]["mapId"] = "";
-                      state["agvPosition"]["positionInitialized"] = false;
-                      state["actionStates"] = nlohmann::json::array();
-                      nlohmann::json act_st;
-                      act_st["actionId"] =
-                          src["nodes"].at(0)["actions"].at(0)["actionId"];
-                      act_st["actionStatus"] = "RUNNING";
-                      state["actionStates"].push_back(act_st);
-                      auto vx = 5000 * cos(std::atan2(e_y - s_y, e_x - s_x));
-                      auto vy = 5000 * sin(std::atan2(e_y - s_y, e_x - s_x));
+                      for (int i = 0; i < ord.nodes.at(0).actions.size(); i++) {
+                        float s_x = ord.nodes.at(0).node_position.value().x;
+                        float s_y = ord.nodes.at(0).node_position.value().y;
+                        float e_x =
+                            std::get<float>(ord.nodes.at(0)
+                                                .actions.at(i)
+                                                .action_parameters.value()
+                                                .at(0)
+                                                .value);
+                        float e_y =
+                            std::get<float>(ord.nodes.at(0)
+                                                .actions.at(i)
+                                                .action_parameters.value()
+                                                .at(1)
+                                                .value);
+                        auto vx = 5000 * cos(std::atan2(e_y - s_y, e_x - s_x));
+                        auto vy = 5000 * sin(std::atan2(e_y - s_y, e_x - s_x));
+                        LOG(INFO) << "Vx " << vx << " Vy " << vy;
+                        auto time = sqrt((e_x - s_x) * (e_x - s_x) +
+                                         (e_y - s_y) * (e_y - s_y)) *
+                                    1000 / 5000;  // ms
+                        state.driving = true;
+                        state.nodestates.at(0).released = true;
 
-                      auto time = sqrt((e_x - s_x) * (e_x - s_x) +
-                                       (e_y - s_y) * (e_y - s_y)) *
-                                  1000 / 5000;  // ms
-                      state["driving"] = true;
-                      state["nodeStates"].at(0)["released"] = true;
-                      for (auto i = 0; i < time; i = i + 50) {
-                        state["agvPosition"]["x"] = s_x + vx / 5000 * i;
-                        state["agvPosition"]["y"] = s_y + vy / 5000 * i;
+                        for (auto i = 0; i < time; i = i + 50) {
+                          if (!state.agv_position.has_value()) {
+                            state.agv_position = vda5050::state::AgvPosition();
+                          }
+                          state.agv_position.value().x = s_x + vx / 1000 * i;
+                          state.agv_position.value().y = s_y + vy / 1000 * i;
+                          std::this_thread::sleep_for(
+                              std::chrono::milliseconds(50));
+                          vda_state = state;
+                        }
                         std::this_thread::sleep_for(
-                            std::chrono::milliseconds(50));
+                            std::chrono::milliseconds(500));
+                        state.agv_position.value().x = s_x;
+                        state.agv_position.value().y = s_y;
+                        state.driving = false;
+                        state.last_node_id = ord.nodes.at(0).node_id;
+                        state.actionstates.at(i).action_status =
+                            vda5050::state::ActionStatus::FINISHED;
+                        status = Status::IDLE;
+                        vda_state = state;
+                        LOG(INFO) << "action end";
                       }
-                      state["agvPosition"]["x"] = e_x;
-                      state["agvPosition"]["y"] = e_y;
-                      std::this_thread::sleep_for(
-                          std::chrono::milliseconds(1000));
-                      state["agvPosition"]["x"] = s_x;
-                      state["agvPosition"]["y"] = s_y;
-                      state["driving"] = false;
-                      state["actionStates"].at(0)["actionStatus"] = "FINISHED";
-                      status = Status::IDLE;
-                      LOG(INFO) << "action end";
                     }
-
-                  } else if (state["orderId"] == src["orderId"]) {
+                  } else if (vda_state.order_id == src["orderId"]) {
                     // update order
                   }
                 } else {
@@ -240,6 +247,7 @@ class SimRabbit3 {
         }
       });
       th_state = std::thread([&] {
+        int send_id{0};
         while (true) {
           if (mqtt_client->is_connected()) {
             auto prefix = "/" + interface_name + "/" + version + "/" +
@@ -247,13 +255,13 @@ class SimRabbit3 {
             mqtt::message_ptr msg = std::make_shared<mqtt::message>();
             msg->set_qos(0);
             msg->set_topic(prefix + "state");
-            int id = state["headerId"].get<int>();
-            state["headerId"] = ++id;
-            state["timestamp"] = get_time_fmt(std::chrono::system_clock::now());
-            msg->set_payload(state.dump());
+            vda_state.header_id = send_id++;
+            vda_state.timestamp =
+                get_time_fmt(std::chrono::system_clock::now());
+            msg->set_payload(vda_state.to_json().dump());
             mqtt_client->publish(msg);
           }
-          std::this_thread::sleep_for(std::chrono::milliseconds(200));
+          std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
       });
       mqtt_client->on();
@@ -291,7 +299,7 @@ class SimRabbit3 {
       auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
                     "/" + serial_number + "/";
       mqtt_client->set_func(prefix + "order", [&](mqtt::const_message_ptr t) {
-        LOG(INFO) << t->get_topic();
+        // LOG(INFO) << t->get_topic();
         order_msgs.push(t);
         con.notify_one();
       });
@@ -311,7 +319,7 @@ class SimRabbit3 {
   std::shared_ptr<MqttClient> mqtt_client;
   std::queue<mqtt::const_message_ptr> order_msgs;
   std::queue<mqtt::const_message_ptr> instantaction_msgs;
-  nlohmann::json state;
+  vda5050::state::VDA5050State vda_state;
   std::thread th_state;
   std::thread th_pro;
   std::mutex pro_mut;
