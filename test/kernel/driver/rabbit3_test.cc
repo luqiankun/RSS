@@ -113,7 +113,7 @@ class SimRabbit3 {
                       for (int i = 0; i < ord.nodes.size(); i++) {
                         auto n1 = vda5050::state::NodeState();
                         n1.node_id = ord.nodes.at(i).node_id;
-                        n1.released = false;
+                        n1.released = ord.nodes.at(i).released;
                         n1.sequence_id = ord.nodes.at(i).sequence_id;
                         n1.node_position = vda5050::state::NodePosition();
                         n1.node_position.value().x =
@@ -121,6 +121,18 @@ class SimRabbit3 {
                         n1.node_position.value().y =
                             ord.nodes.at(i).node_position.value().y;
                         state.nodestates.push_back(n1);
+                      }
+                      // edge
+                      for (int i = 0; i < ord.edges.size(); i++) {
+                        auto e1 = vda5050::state::EdgeState();
+                        e1.edge_id = ord.edges.at(i).edge_id;
+                        e1.released = ord.edges.at(i).released;
+                        e1.sequence_id = ord.edges.at(i).sequence_id;
+                        if (ord.edges.at(i).edge_description.has_value()) {
+                          e1.edge_description =
+                              ord.edges.at(i).edge_description.value();
+                        }
+                        state.edgestates.push_back(e1);
                       }
                       vda_state = state;
                       // move
@@ -142,8 +154,7 @@ class SimRabbit3 {
                                          (e_y - s_y) * (e_y - s_y)) *
                                     1000 / 5000;  // ms
                         state.driving = true;
-                        state.nodestates.at(i).released = true;
-
+                        state.nodestates.erase(state.nodestates.begin());
                         for (auto i = 0; i < time; i = i + 50) {
                           state.agv_position.value().x = s_x + vx / 1000 * i;
                           state.agv_position.value().y = s_y + vy / 1000 * i;
@@ -153,8 +164,8 @@ class SimRabbit3 {
                         }
                         state.agv_position.value().x = e_x;
                         state.agv_position.value().y = e_y;
-                        state.nodestates.at(i).released = true;
-                        state.nodestates.at(i + 1).released = true;
+                        state.nodestates.erase(state.nodestates.begin());
+                        state.edgestates.erase(state.edgestates.begin());
                         state.driving = false;
                         state.last_node_id = end_node.node_id;
                         status = Status::IDLE;
@@ -166,7 +177,7 @@ class SimRabbit3 {
                       for (int i = 0; i < ord.nodes.size(); i++) {
                         auto n1 = vda5050::state::NodeState();
                         n1.node_id = ord.nodes.at(i).node_id;
-                        n1.released = false;
+                        n1.released = ord.nodes.at(i).released;
                         n1.sequence_id = ord.nodes.at(i).sequence_id;
                         n1.node_position = vda5050::state::NodePosition();
                         n1.node_position.value().x =
@@ -207,7 +218,7 @@ class SimRabbit3 {
                                          (e_y - s_y) * (e_y - s_y)) *
                                     1000 / 5000;  // ms
                         state.driving = true;
-                        state.nodestates.at(0).released = true;
+                        state.nodestates.erase(state.nodestates.begin());
 
                         for (auto i = 0; i < time; i = i + 50) {
                           if (!state.agv_position.has_value()) {

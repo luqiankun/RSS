@@ -601,22 +601,7 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
         }
       }
       //
-      bool node_ok{true};
-      for (auto& x : vdastate.nodestates) {
-        if (x.released == false) {
-          node_ok = false;
-          break;
-        }
-      }
-
-      bool edge_ok{true};
-      for (auto& x : vdastate.edgestates) {
-        if (x.released == false) {
-          edge_ok = false;
-          break;
-        }
-      }
-      if (node_ok && edge_ok) {
+      if (vdastate.nodestates.empty() && vdastate.edgestates.empty()) {
         task_run = false;
         CLOG(INFO, "driver") << "move ok " << step->path->name;
         return true;
