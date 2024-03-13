@@ -75,11 +75,12 @@ if(TEST)
     )
     add_executable(mqtt_test test/component/tools/mqtt/mqtt_test.cc  )
     target_link_libraries(mqtt_test PahoMqttCpp::paho-mqttpp3)
-    install(TARGETS test_event log_event xml_test http_test json_test
-    RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}
-    )
     add_executable(sim_agv_test test/kernel/driver/rabbit3_test.cc  ${MQTT_SRC} ${TOOLS_SRC} )
     target_link_libraries(sim_agv_test  PahoMqttCpp::paho-mqttpp3 Threads::Threads)
+    install(TARGETS test_event log_event xml_test http_test json_test sim_agv_test
+    RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}
+    )
+  
 endif()
 
 

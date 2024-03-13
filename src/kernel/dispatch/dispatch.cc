@@ -130,12 +130,7 @@ std::set<std::shared_ptr<driver::Vehicle>> Dispatcher::find_owners(
   return res;
 }
 
-void Dispatcher::stop() {
-  for (auto& v : vehicles) {
-    v->close();
-  }
-  dispose = true;
-}
+void Dispatcher::stop() { dispose = true; }
 
 Dispatcher::~Dispatcher() {
   stop();

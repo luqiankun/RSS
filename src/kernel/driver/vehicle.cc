@@ -49,7 +49,18 @@ void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
     }
   });
 }
-
+void Vehicle::execute_instatn_action(
+    std::shared_ptr<vda5050::instantaction::Action> act) {
+  current_action = act;
+  instant_pool.async_run([&] {
+    auto ret = instant_action(current_action);
+    if (!ret) {
+      CLOG(ERROR, "driver") << current_action->action_id << " failed";
+    } else {
+      CLOG(INFO, "driver") << current_action->action_id << " ok";
+    }
+  });
+}
 void Vehicle::cancel_all_order() {
   for (auto& ord : orders) {
     if (ord->state == data::order::TransportOrder::State::RAW ||
@@ -64,11 +75,14 @@ void Vehicle::cancel_all_order() {
 void Vehicle::run() { init(); }
 void Vehicle::close() {
   task_run = false;
+  instanttask_run = false;
   pool.stop();
+  instant_pool.stop();
   // if (run_th.joinable()) {
   //   run_th.join();
   // }
-  current_command.reset();
+  // current_command.reset();
+  // current_action.reset();
 }
 Vehicle::~Vehicle() {
   close();
@@ -126,7 +140,6 @@ void Vehicle::get_next_ord() {
       state = State::IDLE;
       break;
     } else {
-      CLOG(INFO, "driver") << "_______________";
       current_order = orders.front();
       orders.pop_front();
       // TODO  solver
@@ -348,6 +361,10 @@ bool SimVehicle::action(
   }
   return true;
 }
+bool SimVehicle::instant_action(
+    std::shared_ptr<vda5050::instantaction::Action>) {
+  return true;
+};
 
 bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
   if (!step->path) {
@@ -398,43 +415,45 @@ bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
 }
 
 void Rabbit3::init() {
-  set_mqtt_ops(name, this->broker_ip, this->broker_port);
-  auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
-                "/" + serial_number + "/";
-  mqtt_client->set_func(prefix + "state", [&](mqtt::const_message_ptr msg) {
-    this->onstate(msg);
-  });
-  mqtt_client->set_func(
+  mqtt_cli->set_mqtt_ops(name, this->broker_ip, this->broker_port);
+  auto prefix = "/" + mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
+                mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
+  mqtt_cli->mqtt_client->set_func(
+      prefix + "state",
+      [&](mqtt::const_message_ptr msg) { this->onstate(msg); });
+  mqtt_cli->mqtt_client->set_func(
       prefix + "connection",
       [&](mqtt::const_message_ptr msg) { this->onconnect(msg); });
-  start();
+  mqtt_cli->start();
 }
 
 void Rabbit3::onstate(mqtt::const_message_ptr msg) {
-  auto m = msg->to_string();
-  nlohmann::json v;
+  // cpu_timer t;
+  auto m = msg->get_payload();
+  jsoncons::json v;
   try {
-    v = nlohmann::json::parse(m);
+    v = jsoncons::json::parse(m);
+    // cpu_timer t;
     auto ms = vda5050::state_validate(v);
     if (ms.empty()) {
-      auto serial = v["serialNumber"].get<std::string>();
-      if (serial != this->serial_number) {
+      auto serial = v["serialNumber"].as_string();
+      if (serial != this->mqtt_cli->serial_number) {
         return;
       }
-      auto ver = v["version"].get<std::string>();
-      if (ver != this->version) {
+      auto ver = v["version"].as_string();
+      if (ver != this->mqtt_cli->version) {
         return;
       }
-      auto h_id = v["headerId"].get<int>();
+      auto h_id = v["headerId"].as_integer<int>();
       if (h_id <= rece_header_id) {
-        LOG(WARNING) << h_id << " " << rece_header_id;
+        // LOG(WARNING) << h_id << " " << rece_header_id;
         return;
       }
       rece_header_id = h_id;
       vdastate = vda5050::state::VDA5050State(v);
       //
       for (auto& x : resource.lock()->points) {
-        if (x->name == v["lastNodeId"].get<std::string>()) {
+        if (x->name == v["lastNodeId"].as_string()) {
           current_point = x;
           if (!init_pos) {
             this->position = current_point->position;
@@ -448,10 +467,10 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
         }
       }
       if (v.contains("agvPosition")) {
-        this->position.x = v["agvPosition"]["x"].get<float>();
-        this->position.y = v["agvPosition"]["y"].get<float>();
-        this->map_id = v["agvPosition"]["mapId"].get<std::string>();
-        this->angle = v["agvPosition"]["theta"].get<float>();
+        this->position.x = v["agvPosition"]["x"].as_double();
+        this->position.y = v["agvPosition"]["y"].as_double();
+        this->map_id = v["agvPosition"]["mapId"].as_string();
+        this->angle = v["agvPosition"]["theta"].as_double();
         layout = position;
       }
       if (state == Vehicle::State::UNKNOWN) {
@@ -466,35 +485,36 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       std::for_each(ms.begin(), ms.end(),
                     [](const std::string s) { CLOG(WARNING, "driver") << s; });
     }
-  } catch (nlohmann::json::exception& ec) {
+  } catch (jsoncons::json_exception& ec) {
     CLOG(WARNING, "driver") << ec.what();
   }
 }
 
 void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
   auto m = msg->to_string();
-  nlohmann::json v;
+  jsoncons::json v;
   try {
-    v = nlohmann::json::parse(m);
+    v = jsoncons::json::parse(m);
     auto ms = vda5050::connection_validate(v);
     if (ms.empty()) {
       if (v["connectionState"] == "ONLINE") {
         veh_state = vda5050::VehicleMqttStatus::ONLINE;
-        CLOG(INFO, "driver") << serial_number + " ONLINE";
+        CLOG(INFO, "driver") << mqtt_cli->serial_number + " ONLINE";
       } else if (v["connectionState"] == "OFFLINE") {
         veh_state = vda5050::VehicleMqttStatus::OFFLINE;
         state = Vehicle::State::UNKNOWN;
-        CLOG(INFO, "driver") << serial_number + " OFFLINE";
+        CLOG(INFO, "driver") << mqtt_cli->serial_number + " OFFLINE";
       } else if (v["connectionState"] == "CONNECTIONBROKEN") {
         veh_state = vda5050::VehicleMqttStatus::CONNECTIONBROKEN;
-        CLOG(WARNING, "driver") << serial_number + " CONNECTIONBROKEN";
+        CLOG(WARNING, "driver")
+            << mqtt_cli->serial_number + " CONNECTIONBROKEN";
         state = Vehicle::State::UNKNOWN;
       }
     } else {
       std::for_each(ms.begin(), ms.end(),
                     [](const std::string s) { CLOG(WARNING, "driver") << s; });
     }
-  } catch (nlohmann::json::exception& ec) {
+  } catch (jsoncons::json_exception& ec) {
     CLOG(WARNING, "driver") << ec.what();
   }
 }
@@ -502,7 +522,7 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
 bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
   CLOG(INFO, "driver") << "move along " << step->path->name;
   task_run = true;
-  if (master_state != vda5050::MasterMqttStatus::ONLINE) {
+  if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
     CLOG(ERROR, "driver") << "master not online";
     task_run = false;
     return false;
@@ -512,14 +532,14 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
     task_run = false;
     return false;
   }
-  auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
-                "/" + serial_number + "/";
+  auto prefix = "/" + mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
+                mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   auto ord = vda5050::order::VDA5050Order();
   ord.header_id = send_header_id++;
   ord.timestamp = get_time_fmt(std::chrono::system_clock::now());
-  ord.version = version;
-  ord.manufacturer = manufacturer;
-  ord.serial_number = serial_number;
+  ord.version = mqtt_cli->version;
+  ord.manufacturer = mqtt_cli->manufacturer;
+  ord.serial_number = mqtt_cli->serial_number;
   order_id++;
   ord.order_id = prefix + std::to_string(order_id);
   ord.order_update_id = 0;
@@ -566,21 +586,26 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
 
   //
 
-  auto msg = std::make_shared<mqtt::message>();
-  msg->set_qos(0);
-  msg->set_topic(prefix + "order");
-  msg->set_payload(ord.to_json().dump());
-  mqtt_client->publish(msg)->wait();
+  auto msg =
+      mqtt::make_message(prefix + "order", ord.to_json().as_string(), 0, false);
+  mqtt_cli->mqtt_client->publish(msg)->wait();
 
   // wait move
   int n{0};
   while (task_run) {
     if (vdastate.order_id == prefix + std::to_string(order_id)) {
       auto p = get_time_from_str(vdastate.timestamp);
-      auto dt = std::chrono::system_clock::now() - p.value();
-      if (dt > std::chrono::seconds(5)) {
-        task_run = false;
-        return false;
+      if (p.has_value()) {
+        auto dt = std::chrono::system_clock::now() - p.value();
+        if (dt > std::chrono::seconds(10)) {
+          CLOG(ERROR, "driver")
+              << "The communication interval is too long > 10s";
+          task_run = false;
+          return false;
+        }
+      } else {
+        CLOG(WARNING, "driver")
+            << "dot not has timestamp, the status may be incorrect ";
       }
       // state
       if (veh_state == vda5050::VehicleMqttStatus::OFFLINE) {
@@ -612,9 +637,9 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
                               << ">, but now is <" << vdastate.order_id << ">";
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     n++;
-    if (n > 2 * 60 * 10) {
+    if (n > 2 * 60 * 100) {
       CLOG(ERROR, "driver") << "timeout";
       task_run = false;
       return false;
@@ -628,7 +653,7 @@ bool Rabbit3::action(
     std::shared_ptr<data::order::DriverOrder::Destination> dest) {
   CLOG(INFO, "driver") << "action along " << dest->destination.lock()->name;
   task_run = true;
-  if (master_state != vda5050::MasterMqttStatus::ONLINE) {
+  if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
     CLOG(ERROR, "driver") << "master not online";
     task_run = false;
     return false;
@@ -639,14 +664,14 @@ bool Rabbit3::action(
     return false;
   }
 
-  auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
-                "/" + serial_number + "/";
+  auto prefix = "/" + mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
+                mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   auto ord = vda5050::order::VDA5050Order();
   ord.header_id = send_header_id++;
   ord.timestamp = get_time_fmt(std::chrono::system_clock::now());
-  ord.version = version;
-  ord.manufacturer = manufacturer;
-  ord.serial_number = serial_number;
+  ord.version = mqtt_cli->version;
+  ord.manufacturer = mqtt_cli->manufacturer;
+  ord.serial_number = mqtt_cli->serial_number;
   order_id++;
   ord.order_id = prefix + std::to_string(order_id);
   ord.order_update_id = 0;
@@ -695,11 +720,8 @@ bool Rabbit3::action(
       ord.nodes.push_back(node);
     }
   }
-  auto msg = std::make_shared<mqtt::message>();
-  msg->set_qos(0);
-  msg->set_topic(prefix + "order");
-  msg->set_payload(ord.to_json().dump());
-  mqtt_client->publish(msg)->wait();
+  auto msg = mqtt::make_message(prefix + "order", ord.to_json().as_string());
+  mqtt_cli->mqtt_client->publish(msg)->wait();
   // wait
   int n{0};
   while (task_run) {
@@ -750,9 +772,9 @@ bool Rabbit3::action(
                               << prefix + std::to_string(order_id)
                               << ">, but now is <" << vdastate.order_id << ">";
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     n++;
-    if (n > 2 * 60 * 10) {
+    if (n > 2 * 60 * 100) {
       CLOG(ERROR, "driver") << "timeout";
       task_run = false;
       return false;
@@ -762,5 +784,71 @@ bool Rabbit3::action(
   CLOG(WARNING, "vehicel") << "task cancel";
   return false;
 }
+bool Rabbit3::instant_action(
+    std::shared_ptr<vda5050::instantaction::Action> act) {
+  CLOG(INFO, "driver") << "instantaction " << act->action_id;
+  if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
+    CLOG(ERROR, "driver") << "master not online";
+    instanttask_run = false;
+    return false;
+  }
+  if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
+    CLOG(ERROR, "driver") << "vehlicle not online";
+    instanttask_run = false;
+    return false;
+  }
+  auto prefix = "/" + mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
+                mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
+  auto insact = std::make_shared<vda5050::instantaction::InstantAction>();
+  insact->serial_number = mqtt_cli->serial_number;
+  insact->header_id = send_header_id++;
+  insact->manufacturer = mqtt_cli->manufacturer;
+  insact->timestamp = get_time_fmt(std::chrono::system_clock::now());
+  insact->version = mqtt_cli->version;
+  insact->actions.push_back(*act);
+  auto msg = mqtt::make_message(prefix + "instantAction",
+                                insact->to_json().as_string());
+  mqtt_cli->mqtt_client->publish(msg)->wait();
+  auto id = act->action_id;
+  int n{0};
+  instanttask_run = true;
+  bool ok{false};
+  while (instanttask_run) {
+    for (auto& x : vdastate.actionstates) {
+      if (x.action_id == id) {
+        if (x.action_status == vda5050::state::ActionStatus::WAITING) {
+        } else if (x.action_status == vda5050::state::ActionStatus::RUNNING) {
+        } else if (x.action_status ==
+                   vda5050::state::ActionStatus::INITIALIZING) {
+        } else if (x.action_status == vda5050::state::ActionStatus::FAILED) {
+          instanttask_run = false;
+          break;
+        } else if (x.action_status == vda5050::state::ActionStatus::FINISHED) {
+          ok = true;
+          instanttask_run = false;
+          break;
+        } else {
+        }
+      }
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    n++;
+    if (n > 2 * 60 * 100) {
+      CLOG(ERROR, "driver") << "timeout";
+      break;
+    }
+  }
+  instanttask_run = false;
+  return ok;
+}
+
+Rabbit3::~Rabbit3() {
+  if (mqtt_cli->mqtt_client->is_connected()) {
+    mqtt_cli->mqtt_client->disable_callbacks();
+    mqtt_cli->mqtt_client->unsubscribe("#");
+    mqtt_cli->mqtt_client->disconnect()->wait();
+  }
+}
+
 }  // namespace driver
 }  // namespace kernel

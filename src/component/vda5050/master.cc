@@ -60,11 +60,8 @@ void VehicleMaster::start() {
 }
 
 void VehicleMaster::stop() {
-  if (mqtt_client) {
-    mqtt_client->disconnect()->wait();
-    if (master_state != MasterMqttStatus::OFFLINE) {
-      master_state = MasterMqttStatus::OFFLINE;
-    }
+  if (master_state != MasterMqttStatus::OFFLINE) {
+    master_state = MasterMqttStatus::OFFLINE;
   }
 }
 

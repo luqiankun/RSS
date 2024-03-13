@@ -2,7 +2,7 @@
 #define VDA5050STATE_HPP
 #include <optional>
 
-#include "../tools/json/json.hpp"
+#include "../tools/jsoncons/json.hpp"
 #include "../tools/mqtt/mqtt.hpp"
 namespace vda5050 {
 enum class VehicleMqttStatus { ONLINE = 1, OFFLINE = 2, CONNECTIONBROKEN = 3 };
@@ -29,15 +29,16 @@ enum InfoLevel { INFO = 1, DEBUG = 2 };
 // data struct
 
 // safety
-struct SafetyState {
+class SafetyState {
+ public:
   SafetyStatus estop{SafetyStatus::NONE};
   bool field_violation{false};
   SafetyState() {
     estop = SafetyStatus::NONE;
     field_violation = false;
   }
-  SafetyState(nlohmann::json& obj) {
-    auto es = obj["eStop"].get<std::string>();
+  SafetyState(jsoncons::json& obj) {
+    auto es = obj["eStop"].as_string();
     if (es == "AUTOACK") {
       estop = SafetyStatus::AUTOACK;
     } else if (es == "MANUAL") {
@@ -47,15 +48,15 @@ struct SafetyState {
     } else {
       estop = SafetyStatus::NONE;
     }
-    auto f = obj["fieldViolation"].get<bool>();
+    auto f = obj["fieldViolation"].as_bool();
     field_violation = f;
   }
   SafetyState(SafetyStatus s, bool f) {
     estop = s;
     field_violation = f;
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["fieldViolation"] = field_violation;
     if (estop == SafetyStatus::AUTOACK) {
       res["eStop"] = "AUTOACK";
@@ -72,20 +73,22 @@ struct SafetyState {
 };
 
 // information
-struct InforRef {
+class InforRef {
+ public:
   std::string reference_key;
   std::string reference_value;
 };
 
-struct InforMation {
+class InforMation {
+ public:
   std::string info_type;
   InfoLevel info_level{InfoLevel::INFO};
   std::optional<std::string> info_description{std::nullopt};
   std::optional<std::vector<InforRef>> info_references{std::nullopt};
   InforMation(){};
-  InforMation(nlohmann::json& obj) {
-    info_type = obj["infoType"].get<std::string>();
-    auto level = obj["infoLevel"].get<std::string>();
+  InforMation(jsoncons::json& obj) {
+    info_type = obj["infoType"].as_string();
+    auto level = obj["infoLevel"].as_string();
     if (level == "INFO") {
       info_level = InfoLevel::INFO;
     } else {
@@ -93,19 +96,19 @@ struct InforMation {
     }
     if (obj.contains("infoReferences")) {
       info_references = std::vector<InforRef>();
-      for (auto& x : obj["infoReferences"]) {
+      for (auto& x : obj["infoReferences"].array_range()) {
         auto t = InforRef();
-        t.reference_key = x["referenceKey"].get<std::string>();
-        t.reference_key = x["referenceValue"].get<std::string>();
+        t.reference_key = x["referenceKey"].as_string();
+        t.reference_key = x["referenceValue"].as_string();
         info_references->push_back(t);
       }
     }
     if (obj.contains("infoDescription")) {
-      info_description = obj["infoDescription"].get<std::string>();
+      info_description = obj["infoDescription"].as_string();
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["infoType"] = info_type;
     if (info_level == InfoLevel::INFO) {
       res["infoLevel"] = "INFO";
@@ -116,9 +119,9 @@ struct InforMation {
       res["infoDescription"] = info_description.value();
     }
     if (info_references.has_value()) {
-      res["infoReferences"] = nlohmann::json::array();
+      res["infoReferences"] = jsoncons::json::array();
       for (auto& x : info_references.value()) {
-        nlohmann::json ref;
+        jsoncons::json ref;
         ref["referenceKey"] = x.reference_key;
         ref["referenceValue"] = x.reference_value;
         res["infoReferences"].push_back(ref);
@@ -130,39 +133,41 @@ struct InforMation {
 
 // errors
 
-struct ErrorRef {
+class ErrorRef {
+ public:
   std::string reference_key;
   std::string reference_value;
 };
-struct Error {
+class Error {
+ public:
   ErrorLevel error_level;
   std::string error_type;
   std::optional<std::string> error_description{std::nullopt};
   std::optional<std::vector<ErrorRef>> error_references{std::nullopt};
   Error() {}
-  Error(nlohmann::json& obj) {
-    error_type = obj["errorType"].get<std::string>();
-    auto level = obj["errorLevel"].get<std::string>();
+  Error(jsoncons::json& obj) {
+    error_type = obj["errorType"].as_string();
+    auto level = obj["errorLevel"].as_string();
     if (level == "WARNING") {
       error_level = ErrorLevel::WARNING;
     } else {
       error_level = ErrorLevel::FATAL;
     }
     if (obj.contains("errorDescription")) {
-      error_description = obj["errorDescription"].get<std::string>();
+      error_description = obj["errorDescription"].as_string();
     }
     if (obj.contains("errorReferences")) {
       error_references = std::vector<ErrorRef>();
-      for (auto& x : obj["errorReferences"]) {
+      for (auto& x : obj["errorReferences"].array_range()) {
         ErrorRef ref;
-        ref.reference_key = x["referenceKey"].get<std::string>();
-        ref.reference_value = x["referenceValue"].get<std::string>();
+        ref.reference_key = x["referenceKey"].as_string();
+        ref.reference_value = x["referenceValue"].as_string();
         error_references->push_back(ref);
       }
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["errorType"] = error_type;
     if (error_level == ErrorLevel::WARNING) {
       res["errorLevel"] = "WARNING";
@@ -173,9 +178,9 @@ struct Error {
       res["errorDescription"] = error_description.value();
     }
     if (error_references.has_value()) {
-      res["errorReferences"] = nlohmann::json::array();
+      res["errorReferences"] = jsoncons::json::array();
       for (auto& x : error_references.value()) {
-        nlohmann::json ref;
+        jsoncons::json ref;
         ref["referenceKey"] = x.reference_key;
         ref["referenceValue"] = x.reference_value;
         res["errorReferences"].push_back(ref);
@@ -187,28 +192,29 @@ struct Error {
 
 // battery
 
-struct BatteryState {
+class BatteryState {
+ public:
   float battery_charge;
   bool charging;
   std::optional<float> battery_voltage{std::nullopt};
   std::optional<float> battery_health{std::nullopt};
   std::optional<float> reach{std::nullopt};
   BatteryState() {}
-  BatteryState(nlohmann::json& obj) {
-    battery_charge = obj["batteryCharge"].get<float>();
-    charging = obj["charging"].get<bool>();
+  BatteryState(jsoncons::json& obj) {
+    battery_charge = obj["batteryCharge"].as_double();
+    charging = obj["charging"].as_bool();
     if (obj.contains("batteryHealth")) {
-      battery_health = obj["batteryHealth"].get<float>();
+      battery_health = obj["batteryHealth"].as_double();
     }
     if (obj.contains("batteryVoltage")) {
-      battery_voltage = obj["batteryVoltage"].get<float>();
+      battery_voltage = obj["batteryVoltage"].as_double();
     }
     if (obj.contains("reach")) {
-      reach = obj["reach"].get<float>();
+      reach = obj["reach"].as_double();
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["batteryCharge"] = battery_charge;
     res["charging"] = charging;
     if (battery_voltage.has_value()) {
@@ -226,16 +232,17 @@ struct BatteryState {
 
 // actionstate
 
-struct ActionState {
+class ActionState {
+ public:
   std::string action_id;
   std::optional<std::string> action_type{std::nullopt};
   std::optional<std::string> action_description{std::nullopt};
   std::optional<std::string> result_description{std::nullopt};
   ActionStatus action_status;
   ActionState(){};
-  ActionState(nlohmann::json& obj) {
-    action_id = obj["actionId"].get<std::string>();
-    auto status = obj["actionStatus"].get<std::string>();
+  ActionState(jsoncons::json& obj) {
+    action_id = obj["actionId"].as_string();
+    auto status = obj["actionStatus"].as_string();
     if (status == "WAITING") {
       action_status = ActionStatus::WAITING;
     } else if (status == "INITIALIZING") {
@@ -248,17 +255,17 @@ struct ActionState {
       action_status = ActionStatus::FAILED;
     }
     if (obj.contains("actionType")) {
-      action_type = obj["actionType"].get<std::string>();
+      action_type = obj["actionType"].as_string();
     }
     if (obj.contains("actionDescription")) {
-      action_description = obj["actionDescription"].get<std::string>();
+      action_description = obj["actionDescription"].as_string();
     }
     if (obj.contains("resultDescription")) {
-      result_description = obj["resultDescription"].get<std::string>();
+      result_description = obj["resultDescription"].as_string();
     }
   };
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["actionId"] = action_id;
     if (action_status == ActionStatus::WAITING) {
       res["actionStatus"] = "WAITING";
@@ -285,19 +292,22 @@ struct ActionState {
 };
 
 // loads
-struct BoundingBox {
+class BoundingBox {
+ public:
   float x;
   float y;
   float z;
   std::optional<float> theta;
 };
-struct LoadDimensions {
+class LoadDimensions {
+ public:
   float length;
   float width;
   std::optional<float> height;
 };
 
-struct Load {
+class Load {
+ public:
   std::optional<std::string> load_id{std::nullopt};
   std::optional<std::string> load_type{std::nullopt};
   std::optional<std::string> load_position{std::nullopt};
@@ -305,41 +315,41 @@ struct Load {
   std::optional<BoundingBox> bounding_boxReference{std::nullopt};
   std::optional<LoadDimensions> Load_dimensions{std::nullopt};
   Load(){};
-  Load(nlohmann::json& obj) {
+  Load(jsoncons::json& obj) {
     if (obj.contains("loadId")) {
-      load_id = obj["loadId"].get<std::string>();
+      load_id = obj["loadId"].as_string();
     }
     if (obj.contains("loadType")) {
-      load_type = obj["loadType"].get<std::string>();
+      load_type = obj["loadType"].as_string();
     }
     if (obj.contains("loadPosition")) {
-      load_position = obj["loadPosition"].get<std::string>();
+      load_position = obj["loadPosition"].as_string();
     }
     if (obj.contains("weight")) {
-      weight = obj["weight"].get<float>();
+      weight = obj["weight"].as_double();
     }
     if (obj.contains("boundingBoxReference")) {
       BoundingBox box;
-      box.x = obj["boundingBoxReference"]["x"].get<float>();
-      box.y = obj["boundingBoxReference"]["y"].get<float>();
-      box.z = obj["boundingBoxReference"]["z"].get<float>();
+      box.x = obj["boundingBoxReference"]["x"].as_double();
+      box.y = obj["boundingBoxReference"]["y"].as_double();
+      box.z = obj["boundingBoxReference"]["z"].as_double();
       if (obj["boundingBoxReference"].contains("theta")) {
-        box.theta = obj["boundingBoxReference"]["theta"].get<float>();
+        box.theta = obj["boundingBoxReference"]["theta"].as_double();
       }
       bounding_boxReference = box;
     }
     if (obj.contains("loadDimensions")) {
       LoadDimensions box;
-      box.width = obj["loadDimensions"]["width"].get<float>();
-      box.length = obj["loadDimensions"]["length"].get<float>();
+      box.width = obj["loadDimensions"]["width"].as_double();
+      box.length = obj["loadDimensions"]["length"].as_double();
       if (obj["loadDimensions"].contains("height")) {
-        box.height = obj["loadDimensions"]["height"].get<float>();
+        box.height = obj["loadDimensions"]["height"].as_double();
       }
       Load_dimensions = box;
     }
   };
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     if (load_id.has_value()) {
       res["loadId"] = load_id.value();
     }
@@ -375,24 +385,25 @@ struct Load {
 
 // velocity
 
-struct Velocity {
+class Velocity {
+ public:
   std::optional<float> vx{std::nullopt};
   std::optional<float> vy{std::nullopt};
   std::optional<float> omega{std::nullopt};
   Velocity(){};
-  Velocity(nlohmann::json& obj) {
+  Velocity(jsoncons::json& obj) {
     if (obj.contains("vx")) {
-      vx = obj["vx"].get<float>();
+      vx = obj["vx"].as_double();
     }
     if (obj.contains("vy")) {
-      vy = obj["vy"].get<float>();
+      vy = obj["vy"].as_double();
     }
     if (obj.contains("omega")) {
-      omega = obj["omega"].get<float>();
+      omega = obj["omega"].as_double();
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     if (vx.has_value()) {
       res["vx"] = vx.value();
     }
@@ -408,7 +419,8 @@ struct Velocity {
 
 // agvpositon
 
-struct AgvPosition {
+class AgvPosition {
+ public:
   float x;
   float y;
   float theta;
@@ -418,25 +430,25 @@ struct AgvPosition {
   std::optional<float> deviation_range;
   std::optional<float> localization_score;
   AgvPosition(){};
-  AgvPosition(nlohmann::json obj) {
-    x = obj["x"].get<float>();
-    y = obj["y"].get<float>();
-    theta = obj["theta"].get<float>();
-    map_id = obj["mapId"].get<std::string>();
-    position_initialized = obj["positionInitialized"].get<bool>();
+  AgvPosition(jsoncons::json obj) {
+    x = obj["x"].as_double();
+    y = obj["y"].as_double();
+    theta = obj["theta"].as_double();
+    map_id = obj["mapId"].as_string();
+    position_initialized = obj["positionInitialized"].as_bool();
     if (obj.contains("mapDescription")) {
-      map_description = obj["mapDescription"].get<std::string>();
+      map_description = obj["mapDescription"].as_string();
     }
     if (obj.contains("localizationScore")) {
-      localization_score = obj["localizationScore"].get<float>();
+      localization_score = obj["localizationScore"].as_double();
     }
     if (obj.contains("deviationRange")) {
-      deviation_range = obj["deviationRange"].get<float>();
+      deviation_range = obj["deviationRange"].as_double();
     }
   }
 
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["x"] = x;
     res["y"] = y;
     res["theta"] = theta;
@@ -457,52 +469,55 @@ struct AgvPosition {
 
 // edgeStates
 
-struct ControlPoint {
+class ControlPoint {
+ public:
   float x;
   float y;
   std::optional<float> weight;
 };
 
-struct Trajectory {
+class Trajectory {
+ public:
   int degree;
   std::vector<float> knot_vector;
   std::vector<ControlPoint> control_points;
 };
 
-struct EdgeState {
+class EdgeState {
+ public:
   std::string edge_id;
   int sequence_id;
   bool released;
   std::optional<std::string> edge_description;
   std::optional<Trajectory> trajectory;
   EdgeState() {}
-  EdgeState(nlohmann::json& obj) {
-    edge_id = obj["edgeId"].get<std::string>();
-    sequence_id = obj["sequenceId"].get<int>();
-    released = obj["released"].get<bool>();
+  EdgeState(jsoncons::json& obj) {
+    edge_id = obj["edgeId"].as_string();
+    sequence_id = obj["sequenceId"].as_integer<int>();
+    released = obj["released"].as_bool();
     if (obj.contains("edgeDescription")) {
-      edge_description = obj["edgeDescription"].get<std::string>();
+      edge_description = obj["edgeDescription"].as_string();
     }
     if (obj.contains("trajectory")) {
       trajectory = Trajectory();
-      trajectory->degree = obj["trajectory"]["degree"].get<int>();
-      for (auto& x : obj["trajectory"]["knotVector"]) {
-        trajectory->knot_vector.push_back(x.get<float>());
+      trajectory->degree = obj["trajectory"]["degree"].as_integer<int>();
+      for (auto& x : obj["trajectory"]["knotVector"].array_range()) {
+        trajectory->knot_vector.push_back(x.as_double());
       }
-      for (auto& x : obj["trajectory"]["controlPoints"]) {
+      for (auto& x : obj["trajectory"]["controlPoints"].array_range()) {
         auto p = ControlPoint();
-        p.x = x["x"].get<float>();
-        p.y = x["y"].get<float>();
+        p.x = x["x"].as_double();
+        p.y = x["y"].as_double();
         if (x.contains("weight")) {
-          p.weight = x["weight"].get<float>();
+          p.weight = x["weight"].as_double();
         }
         trajectory->control_points.push_back(p);
       }
     }
   }
 
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["edgeId"] = edge_id;
     res["sequenceId"] = sequence_id;
     res["released"] = released;
@@ -511,13 +526,13 @@ struct EdgeState {
     }
     if (trajectory.has_value()) {
       res["trajectory"]["degree"] = trajectory.value().degree;
-      res["knotVector"] = nlohmann::json::array();
-      res["controlPoints"] = nlohmann::json::array();
+      res["knotVector"] = jsoncons::json::array();
+      res["controlPoints"] = jsoncons::json::array();
       for (auto& x : trajectory.value().knot_vector) {
         res["knotVector"].push_back(x);
       }
       for (auto& x : trajectory.value().control_points) {
-        nlohmann::json p;
+        jsoncons::json p;
         p["x"] = x.x;
         p["y"] = x.y;
         if (x.weight.has_value()) {
@@ -532,37 +547,39 @@ struct EdgeState {
 
 // nodestates
 
-struct NodePosition {
+class NodePosition {
+ public:
   float x;
   float y;
   float theta;
   std::string map_id;
 };
 
-struct NodeState {
+class NodeState {
+ public:
   std::string node_id;
   int sequence_id;
   bool released;
   std::optional<std::string> node_description;
   std::optional<NodePosition> node_position;
   NodeState(){};
-  NodeState(nlohmann::json& obj) {
-    node_id = obj["nodeId"].get<std::string>();
-    sequence_id = obj["sequenceId"].get<int>();
-    released = obj["released"].get<bool>();
+  NodeState(jsoncons::json& obj) {
+    node_id = obj["nodeId"].as_string();
+    sequence_id = obj["sequenceId"].as_integer<int>();
+    released = obj["released"].as_bool();
     if (obj.contains("nodeDescription")) {
-      node_description = obj["nodeDescription"].get<std::string>();
+      node_description = obj["nodeDescription"].as_string();
     }
     if (obj.contains("nodePosition")) {
       node_position = NodePosition();
-      node_position->x = obj["nodePosition"]["x"].get<float>();
-      node_position->y = obj["nodePosition"]["y"].get<float>();
-      node_position->theta = obj["nodePosition"]["theta"].get<float>();
-      node_position->map_id = obj["nodePosition"]["mapId"].get<std::string>();
+      node_position->x = obj["nodePosition"]["x"].as_double();
+      node_position->y = obj["nodePosition"]["y"].as_double();
+      node_position->theta = obj["nodePosition"]["theta"].as_double();
+      node_position->map_id = obj["nodePosition"]["mapId"].as_string();
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["nodeId"] = node_id;
     res["released"] = released;
     res["sequenceId"] = sequence_id;
@@ -570,7 +587,7 @@ struct NodeState {
       res["nodeDescription"] = node_description.value();
     }
     if (node_position.has_value()) {
-      nlohmann::json p;
+      jsoncons::json p;
       p["x"] = node_position.value().x;
       p["y"] = node_position.value().y;
       p["theta"] = node_position.value().theta;
@@ -583,7 +600,8 @@ struct NodeState {
 
 //
 
-struct VDA5050State {
+class VDA5050State {
+ public:
   int header_id;
   std::string timestamp;
   std::string version;
@@ -611,46 +629,46 @@ struct VDA5050State {
   std::optional<std::vector<Load>> loads;
   std::optional<InforMation> information;
   VDA5050State(){};
-  VDA5050State(nlohmann::json& obj) {
-    header_id = obj["headerId"].get<int>();
-    timestamp = obj["timestamp"].get<std::string>();
-    version = obj["version"].get<std::string>();
-    manufacturer = obj["manufacturer"].get<std::string>();
-    serial_number = obj["serialNumber"].get<std::string>();
-    order_id = obj["orderId"].get<std::string>();
-    order_update_id = obj["orderUpdateId"].get<int>();
-    last_node_id = obj["lastNodeId"].get<std::string>();
-    last_node_seq_id = obj["lastNodeSequenceId"].get<int>();
-    for (auto& x : obj["nodeStates"]) {
+  VDA5050State(jsoncons::json& obj) {
+    header_id = obj["headerId"].as_integer<int>();
+    timestamp = obj["timestamp"].as_string();
+    version = obj["version"].as_string();
+    manufacturer = obj["manufacturer"].as_string();
+    serial_number = obj["serialNumber"].as_string();
+    order_id = obj["orderId"].as_string();
+    order_update_id = obj["orderUpdateId"].as_integer<int>();
+    last_node_id = obj["lastNodeId"].as_string();
+    last_node_seq_id = obj["lastNodeSequenceId"].as_integer<int>();
+    for (auto& x : obj["nodeStates"].array_range()) {
       auto s = NodeState(x);
       nodestates.push_back(s);
     }
 
-    for (auto& x : obj["edgeStates"]) {
+    for (auto& x : obj["edgeStates"].array_range()) {
       auto e = EdgeState(x);
       edgestates.push_back(e);
     }
 
-    driving = obj["driving"].get<bool>();
-    for (auto& x : obj["actionStates"]) {
+    driving = obj["driving"].as_bool();
+    for (auto& x : obj["actionStates"].array_range()) {
       auto s = ActionState(x);
       actionstates.push_back(s);
     }
 
     battery_state = BatteryState(obj["batteryState"]);
-    if (obj["operatingMode"].get<std::string>() == "AUTOMATIC") {
+    if (obj["operatingMode"].as_string() == "AUTOMATIC") {
       operating_mode = OperMode::AUTOMATIC;
-    } else if (obj["operatingMode"].get<std::string>() == "SEMIAUTOMATIC") {
+    } else if (obj["operatingMode"].as_string() == "SEMIAUTOMATIC") {
       operating_mode = OperMode::SEMIAUTOMATIC;
-    } else if (obj["operatingMode"].get<std::string>() == "MANUAL") {
+    } else if (obj["operatingMode"].as_string() == "MANUAL") {
       operating_mode = OperMode::MANUAL;
-    } else if (obj["operatingMode"].get<std::string>() == "SERVICE") {
+    } else if (obj["operatingMode"].as_string() == "SERVICE") {
       operating_mode = OperMode::SERVICE;
     } else {
       operating_mode = OperMode::TEACHIN;
     }
 
-    for (auto& x : obj["errors"]) {
+    for (auto& x : obj["errors"].array_range()) {
       auto e = Error(x);
       errors.push_back(e);
     }
@@ -659,16 +677,16 @@ struct VDA5050State {
     // optional
 
     if (obj.contains("paused")) {
-      paused = obj["paused"].get<bool>();
+      paused = obj["paused"].as_bool();
     }
     if (obj.contains("newBaseRequest")) {
-      newbase_request = obj["newBaseRequest"].get<bool>();
+      newbase_request = obj["newBaseRequest"].as_bool();
     }
     if (obj.contains("distanceSinceLastNode")) {
-      distance_since_last_node = obj["distanceSinceLastNode"].get<bool>();
+      distance_since_last_node = obj["distanceSinceLastNode"].as_bool();
     }
     if (obj.contains("zoneSetId")) {
-      zoneset_id = obj["zoneSetId"].get<std::string>();
+      zoneset_id = obj["zoneSetId"].as_string();
     }
     if (obj.contains("agvPosition")) {
       agv_position = AgvPosition(obj["agvPosition"]);
@@ -678,7 +696,7 @@ struct VDA5050State {
     }
     if (obj.contains("loads")) {
       loads = std::vector<Load>();
-      for (auto& x : obj["loads"]) {
+      for (auto& x : obj["loads"].array_range()) {
         auto l = Load(x);
         loads.value().push_back(l);
       }
@@ -687,8 +705,8 @@ struct VDA5050State {
       information = InforMation(obj["information"]);
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["headerId"] = header_id;
     res["timestamp"] = timestamp;
     res["version"] = version;
@@ -698,16 +716,16 @@ struct VDA5050State {
     res["orderUpdateId"] = order_update_id;
     res["lastNodeId"] = last_node_id;
     res["lastNodeSequenceId"] = last_node_seq_id;
-    res["nodeStates"] = nlohmann::json::array();
+    res["nodeStates"] = jsoncons::json::array();
     for (auto& x : nodestates) {
       res["nodeStates"].push_back(x.to_json());
     }
-    res["edgeStates"] = nlohmann::json::array();
+    res["edgeStates"] = jsoncons::json::array();
     for (auto& x : edgestates) {
       res["edgeStates"].push_back(x.to_json());
     }
     res["driving"] = driving;
-    res["actionStates"] = nlohmann::json::array();
+    res["actionStates"] = jsoncons::json::array();
     for (auto& x : actionstates) {
       res["actionStates"].push_back(x.to_json());
     }
@@ -723,7 +741,7 @@ struct VDA5050State {
     } else {
       res["operatingMode"] = "TEACHIN";
     }
-    res["errors"] = nlohmann::json::array();
+    res["errors"] = jsoncons::json::array();
     for (auto& x : errors) {
       res["errors"].push_back(x.to_json());
     }
@@ -749,7 +767,7 @@ struct VDA5050State {
       res["velocity"] = velocity.value().to_json();
     }
     if (loads.has_value()) {
-      res["loads"] = nlohmann::json::array();
+      res["loads"] = jsoncons::json::array();
       for (auto& x : loads.value()) {
         res["loads"].push_back(x.to_json());
       }

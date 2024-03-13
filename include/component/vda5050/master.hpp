@@ -1,7 +1,7 @@
 #ifndef VDA5050_MASTER_HPP
 #define VDA5050_MASTER_HPP
 #include "../data/order/orderquence.hpp"
-#include "../tools/json/json.hpp"
+#include "./vda5050insact.hpp"
 #include "./vda5050order.hpp"
 #include "./vda5050state.hpp"
 
@@ -24,6 +24,7 @@ class VehicleMaster {
                     int server_port = 1883, bool ssl = false);
   void start();
   void stop();
+  virtual ~VehicleMaster() { stop(); }
 
  public:
   std::string interface_name;

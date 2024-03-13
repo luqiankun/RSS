@@ -172,6 +172,20 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
+  srv.Put(R"(/vehicles/([^/]+)/paused)",
+          [=](const httplib::Request &req, httplib::Response &res) {
+            std::string name;
+            name = *(req.matches.end() - 1);
+            bool state;
+            if (req.has_param("newValue")) {
+              state = req.get_param_value("newValue") == "true" ? true : false;
+            }
+            auto ret = put_vehicle_paused(name, state);
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
+            }
+          });
   srv.Post(R"(/vehicles/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
              std::string name{""};

@@ -193,6 +193,9 @@ int main(int argc, char** argv) {
         std::bind(&TCS::put_location_locked, tcs, std::placeholders::_1,
                   std::placeholders::_2);
     srv->get_view = std::bind(&TCS::get_view, tcs);
+    srv->put_vehicle_paused =
+        std::bind(&TCS::put_vehicle_paused, tcs, std::placeholders::_1,
+                  std::placeholders::_2);
   }
   std::thread th{[&] { srv->listen(); }};
   signal(SIGINT, signalHandler);

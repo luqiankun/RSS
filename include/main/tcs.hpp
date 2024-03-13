@@ -46,6 +46,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
   // vehicle
   std::pair<int, std::string> get_vehicles(const std::string& state = "");
   std::pair<int, std::string> get_vehicle(const std::string& vehicle);
+  std::pair<int, std::string> put_vehicle_paused(const std::string&, bool);
   std::pair<int, std::string> post_vehicle_withdrawl(
       const std::string& vehicle, bool immediate = false,
       bool disableVehicle = false);

@@ -1084,6 +1084,41 @@ std::pair<int, std::string> TCS::post_vehicle_withdrawl(
   res.push_back(msg);
   return std::pair<int, std::string>(404, res.dump());
 }
+
+std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
+                                                    bool p) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
+  for (auto &x : dispatcher->vehicles) {
+    if (x->name == name) {
+      //
+      // x->paused = p;
+      auto paused_task = std::make_shared<vda5050::instantaction::Action>();
+      paused_task->action_description = "set paused action";
+      if (p) {
+        paused_task->action_type =
+            vda5050::instantaction::ActionType::startPause;
+      } else {
+        paused_task->action_type =
+            vda5050::instantaction::ActionType::stopPause;
+      }
+      paused_task->blocking_type =
+          vda5050::instantaction::ActionBlockingType::HARD;
+      paused_task->action_id = name + "_set_pasued_<" + std::to_string(p) + ">";
+      x->execute_instatn_action(paused_task);
+      return std::pair<int, std::string>(200, "");
+    }
+  }
+  json res = json::array();
+  auto msg = "no vehicle named '" + name + "'.";
+  res.push_back(msg);
+  return std::pair<int, std::string>(404, res.dump());
+}
+
 std::pair<int, std::string> TCS::get_model() {
   if (!is_run) {
     json res = json::array();

@@ -26,6 +26,7 @@ class HTTPServer {
   std::function<TCSRep(std::string)> get_vehicles;
   std::function<TCSRep(std::string)> get_vehicle;
   std::function<TCSRep(std::string, bool, bool)> post_vehicle_withdrawl;
+  std::function<TCSRep(std::string, bool)> put_vehicle_paused;
   std::function<TCSRep()> get_model;
   std::function<TCSRep(std::string)> put_model;
   std::function<TCSRep(std::string)> put_model_xml;

@@ -3,7 +3,7 @@
 #include <optional>
 #include <variant>
 
-#include "../tools/json/json.hpp"
+#include "../tools/jsoncons/json.hpp"
 #include "../tools/mqtt/mqtt.hpp"
 namespace vda5050 {
 namespace order {
@@ -17,63 +17,65 @@ enum class ActionBlockingType { NONE = 1, SOFT = 2, HARD = 3 };
 
 // action
 
-struct ActionParam {
+class ActionParam {
+ public:
   std::string key;
-  std::variant<std::string, bool, float, std::vector<std::string>> value;
+  std::variant<std::string, bool, double, std::vector<std::string>> value;
 };
 
-struct Action {
+class Action {
+ public:
   ActionType action_type{ActionType::NOP};
   std::string action_id;
   std::optional<std::string> action_description;
   ActionBlockingType blocking_type{ActionBlockingType::HARD};
   std::optional<std::vector<ActionParam>> action_parameters;
   Action() {}
-  Action(nlohmann::json& obj) {
-    if (obj["actionType"].get<std::string>() == "LOAD") {
+  Action(jsoncons::json& obj) {
+    if (obj["actionType"].as_string() == "LOAD") {
       action_type = ActionType::LOAD;
-    } else if (obj["actionType"].get<std::string>() == "UNLOAD") {
+    } else if (obj["actionType"].as_string() == "UNLOAD") {
       action_type = ActionType::UNLOAD;
-    } else if (obj["actionType"].get<std::string>() == "MOVE") {
+    } else if (obj["actionType"].as_string() == "MOVE") {
       action_type = ActionType::MOVE;
     } else {
       action_type = ActionType::NOP;
     }
-    action_id = obj["actionId"].get<std::string>();
+    action_id = obj["actionId"].as_string();
     if (obj.contains("actionDescription")) {
-      action_description = obj["actionDescription"].get<std::string>();
+      action_description = obj["actionDescription"].as_string();
     }
-    if (obj["blockingType"].get<std::string>() == "NONE") {
+    if (obj["blockingType"].as_string() == "NONE") {
       blocking_type = ActionBlockingType::NONE;
-    } else if (obj["blockingType"].get<std::string>() == "SOFT") {
+    } else if (obj["blockingType"].as_string() == "SOFT") {
       blocking_type = ActionBlockingType::SOFT;
     } else {
       blocking_type = ActionBlockingType::HARD;
     }
     if (obj.contains("actionParameters")) {
       action_parameters = std::vector<ActionParam>();
-      for (auto& x : obj["actionParameters"]) {
+      for (auto& x : obj["actionParameters"].array_range()) {
         ActionParam param;
-        param.key = x["key"].get<std::string>();
-        if (x["value"].is_boolean()) {
-          param.value = x["value"].get<bool>();
+        param.key = x["key"].as_string();
+        if (x["value"].is_bool()) {
+          param.value = x["value"].as_bool();
         } else if (x["value"].is_string()) {
-          param.value = x["value"].get<std::string>();
+          param.value = x["value"].as_string();
         } else if (x["value"].is_number()) {
-          param.value = x["value"].get<float>();
+          param.value = x["value"].as_double();
         } else if (x["value"].is_array()) {
           param.value = std::vector<std::string>();
-          for (auto& str : x["value"]) {
+          for (auto& str : x["value"].array_range()) {
             std::get<std::vector<std::string>>(param.value)
-                .push_back(str.get<std::string>());
+                .push_back(str.as_string());
           }
         }
         action_parameters->push_back(param);
       }
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["actionId"] = action_id;
     if (action_type == ActionType::LOAD) {
       res["actionType"] = "LOAD";
@@ -95,9 +97,9 @@ struct Action {
       res["actionDescription"] = action_description.value();
     }
     if (action_parameters.has_value()) {
-      res["actionParameters"] = nlohmann::json::array();
+      res["actionParameters"] = jsoncons::json::array();
       for (auto& x : action_parameters.value()) {
-        nlohmann::json p;
+        jsoncons::json p;
         p["key"] = x.key;
         if (x.value.index() == 0) {
           p["value"] = std::get<0>(x.value);
@@ -106,7 +108,7 @@ struct Action {
         } else if (x.value.index() == 2) {
           p["value"] = std::get<2>(x.value);
         } else {
-          p["value"] = nlohmann::json::array();
+          p["value"] = jsoncons::json::array();
           for (auto& str : std::get<3>(x.value)) {
             p["value"].push_back(str);
           }
@@ -120,18 +122,21 @@ struct Action {
 
 // edge
 
-struct ControlPoint {
+class ControlPoint {
+ public:
   float x;
   float y;
   std::optional<float> weight;
 };
 
-struct Trajectory {
+class Trajectory {
+ public:
   int degree;
   std::vector<float> knot_vector;
   std::vector<ControlPoint> control_points;
 };
-struct Edge {
+class Edge {
+ public:
   std::string edge_id;
   int sequence_id;
   bool released;
@@ -150,69 +155,69 @@ struct Edge {
   std::optional<float> length;
   std::optional<Trajectory> trajectory;
   Edge() {}
-  Edge(nlohmann::json& obj) {
-    edge_id = obj["edgeId"].get<std::string>();
-    sequence_id = obj["sequenceId"].get<int>();
-    released = obj["released"].get<bool>();
-    start_node_id = obj["startNodeId"].get<std::string>();
-    end_node_id = obj["endNodeId"].get<std::string>();
-    for (auto& x : obj["actions"]) {
+  Edge(jsoncons::json& obj) {
+    edge_id = obj["edgeId"].as_string();
+    sequence_id = obj["sequenceId"].as_integer<int>();
+    released = obj["released"].as_bool();
+    start_node_id = obj["startNodeId"].as_string();
+    end_node_id = obj["endNodeId"].as_string();
+    for (auto& x : obj["actions"].array_range()) {
       Action act(x);
       actions.push_back(act);
     }
     //
     if (obj.contains("maxSpeed")) {
-      max_speed = obj["maxSpeed"].get<float>();
+      max_speed = obj["maxSpeed"].as_double();
     }
     if (obj.contains("maxHeight")) {
-      max_height = obj["maxHeight"].get<float>();
+      max_height = obj["maxHeight"].as_double();
     }
     if (obj.contains("minHeight")) {
-      min_height = obj["minHeight"].get<float>();
+      min_height = obj["minHeight"].as_double();
     }
     if (obj.contains("orientation")) {
-      orientation = obj["orientation"].get<float>();
+      orientation = obj["orientation"].as_double();
     }
     if (obj.contains("orientationType")) {
-      orientation_type = obj["orientationType"].get<std::string>();
+      orientation_type = obj["orientationType"].as_string();
     }
     if (obj.contains("direction")) {
-      direction = obj["direction"].get<std::string>();
+      direction = obj["direction"].as_string();
     }
     if (obj.contains("rotationAllowed")) {
-      rotation_allowed = obj["rotationAllowed"].get<bool>();
+      rotation_allowed = obj["rotationAllowed"].as_bool();
     }
     if (obj.contains("maxRotationSpeed")) {
-      max_rotation_speed = obj["maxRotationSpeed"].get<float>();
+      max_rotation_speed = obj["maxRotationSpeed"].as_double();
     }
     if (obj.contains("length")) {
-      length = obj["length"].get<float>();
+      length = obj["length"].as_double();
     }
     if (obj.contains("trajectory")) {
       trajectory = Trajectory();
-      trajectory->degree = obj["trajectory"]["degree"].get<int>();
-      for (auto& x : obj["trajectory"]["knotVector"]) {
-        trajectory->knot_vector.push_back(x.get<float>());
+      trajectory->degree = obj["trajectory"]["degree"].as_integer<int>();
+      for (auto& x : obj["trajectory"]["knotVector"].array_range()) {
+        trajectory->knot_vector.push_back(x.as_double());
       }
-      for (auto& x : obj["trajectory"]["controlPoints"]) {
+      for (auto& x : obj["trajectory"]["controlPoints"].array_range()) {
         auto p = ControlPoint();
-        p.x = x["x"].get<float>();
-        p.y = x["y"].get<float>();
+        p.x = x["x"].as_double();
+        p.y = x["y"].as_double();
         if (x.contains("weight")) {
-          p.weight = x["weight"].get<float>();
+          p.weight = x["weight"].as_double();
         }
         trajectory->control_points.push_back(p);
       }
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["edgeId"] = edge_id;
     res["sequenceId"] = sequence_id;
     res["released"] = released;
     res["startNodeId"] = start_node_id;
     res["endNodeId"] = end_node_id;
-    res["actions"] = nlohmann::json::array();
+    res["actions"] = jsoncons::json::array();
     for (auto& x : actions) {
       res["actions"].push_back(x.to_json());
     }
@@ -248,13 +253,13 @@ struct Edge {
     }
     if (trajectory.has_value()) {
       res["trajectory"]["degree"] = trajectory.value().degree;
-      res["knotVector"] = nlohmann::json::array();
-      res["controlPoints"] = nlohmann::json::array();
+      res["knotVector"] = jsoncons::json::array();
+      res["controlPoints"] = jsoncons::json::array();
       for (auto& x : trajectory.value().knot_vector) {
         res["knotVector"].push_back(x);
       }
       for (auto& x : trajectory.value().control_points) {
-        nlohmann::json p;
+        jsoncons::json p;
         p["x"] = x.x;
         p["y"] = x.y;
         if (x.weight.has_value()) {
@@ -269,7 +274,8 @@ struct Edge {
 
 // node
 
-struct NodePosition {
+class NodePosition {
+ public:
   float x;
   float y;
   std::string map_id;
@@ -279,7 +285,8 @@ struct NodePosition {
   std::optional<std::string> map_description;
 };
 
-struct Node {
+class Node {
+ public:
   std::string node_id;
   int sequence_id;
   bool released;
@@ -287,46 +294,45 @@ struct Node {
   std::optional<std::string> node_description;
   std::optional<NodePosition> node_position;
   Node() {}
-  Node(nlohmann::json& obj) {
-    node_id = obj["nodeId"].get<std::string>();
-    sequence_id = obj["sequenceId"].get<int>();
-    released = obj["released"].get<bool>();
-    for (auto& x : obj["actions"]) {
+  Node(jsoncons::json& obj) {
+    node_id = obj["nodeId"].as_string();
+    sequence_id = obj["sequenceId"].as_integer<int>();
+    released = obj["released"].as_bool();
+    for (auto& x : obj["actions"].array_range()) {
       Action act(x);
       actions.push_back(act);
     }
     if (obj.contains("nodeDescription")) {
-      node_description = obj["nodeDescription"].get<std::string>();
+      node_description = obj["nodeDescription"].as_string();
     }
     if (obj.contains("nodePosition")) {
       node_position = NodePosition();
-      node_position.value().x = obj["nodePosition"]["x"].get<float>();
-      node_position.value().y = obj["nodePosition"]["y"].get<float>();
-      node_position.value().map_id =
-          obj["nodePosition"]["mapId"].get<std::string>();
+      node_position.value().x = obj["nodePosition"]["x"].as_double();
+      node_position.value().y = obj["nodePosition"]["y"].as_double();
+      node_position.value().map_id = obj["nodePosition"]["mapId"].as_string();
       if (obj["nodePosition"].contains("theta")) {
-        node_position.value().theta = obj["nodePosition"]["theta"].get<float>();
+        node_position.value().theta = obj["nodePosition"]["theta"].as_double();
       }
       if (obj["nodePosition"].contains("allowedDeviationXy")) {
         node_position.value().allowed_deviation_xy =
-            obj["nodePosition"]["allowedDeviationXy"].get<float>();
+            obj["nodePosition"]["allowedDeviationXy"].as_double();
       }
       if (obj["nodePosition"].contains("allowedDeviationTheta")) {
         node_position.value().allowed_deviation_theta =
-            obj["nodePosition"]["allowedDeviationTheta"].get<float>();
+            obj["nodePosition"]["allowedDeviationTheta"].as_double();
       }
       if (obj["nodePosition"].contains("mapDescription")) {
         node_position.value().map_description =
-            obj["nodePosition"]["mapDescription"].get<std::string>();
+            obj["nodePosition"]["mapDescription"].as_string();
       }
     }
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["nodeId"] = node_id;
     res["sequenceId"] = sequence_id;
     res["released"] = released;
-    res["actions"] = nlohmann::json::array();
+    res["actions"] = jsoncons::json::array();
     for (auto& x : actions) {
       res["actions"].push_back(x.to_json());
     }
@@ -359,7 +365,8 @@ struct Node {
 
 // order
 
-struct VDA5050Order {
+class VDA5050Order {
+ public:
   int header_id;
   std::string timestamp;
   std::string version;
@@ -371,18 +378,18 @@ struct VDA5050Order {
   std::vector<Edge> edges;
   std::optional<std::string> zoneset_id;
   VDA5050Order() {}
-  VDA5050Order(nlohmann::json& obj) {
-    header_id = obj["headerId"].get<int>();
-    timestamp = obj["timestamp"].get<std::string>();
-    version = obj["version"].get<std::string>();
-    manufacturer = obj["manufacturer"].get<std::string>();
-    serial_number = obj["serialNumber"].get<std::string>();
-    order_id = obj["orderId"].get<std::string>();
-    order_update_id = obj["orderUpdateId"].get<int>();
+  VDA5050Order(jsoncons::json& obj) {
+    header_id = obj["headerId"].as_integer<int>();
+    timestamp = obj["timestamp"].as_string();
+    version = obj["version"].as_string();
+    manufacturer = obj["manufacturer"].as_string();
+    serial_number = obj["serialNumber"].as_string();
+    order_id = obj["orderId"].as_string();
+    order_update_id = obj["orderUpdateId"].as_integer<int>();
     if (obj.contains("zoneSetId")) {
-      zoneset_id = obj["zoneSetId"].get<std::string>();
+      zoneset_id = obj["zoneSetId"].as_string();
     }
-    for (auto& x : obj["nodes"]) {
+    for (auto& x : obj["nodes"].array_range()) {
       auto n = Node(x);
       nodes.push_back(n);
     }
@@ -390,7 +397,7 @@ struct VDA5050Order {
                      [](const Node& a, const Node& b) {
                        return a.sequence_id < b.sequence_id;
                      });
-    for (auto& x : obj["edges"]) {
+    for (auto& x : obj["edges"].array_range()) {
       auto n = Edge(x);
       edges.push_back(n);
     }
@@ -399,8 +406,8 @@ struct VDA5050Order {
                        return a.sequence_id < b.sequence_id;
                      });
   }
-  nlohmann::json to_json() {
-    nlohmann::json res;
+  jsoncons::json to_json() {
+    jsoncons::json res;
     res["headerId"] = header_id;
     res["timestamp"] = timestamp;
     res["version"] = version;
@@ -408,8 +415,8 @@ struct VDA5050Order {
     res["serialNumber"] = serial_number;
     res["orderId"] = order_id;
     res["orderUpdateId"] = order_update_id;
-    res["nodes"] = nlohmann::json::array();
-    res["edges"] = nlohmann::json::array();
+    res["nodes"] = jsoncons::json::array();
+    res["edges"] = jsoncons::json::array();
     for (auto& x : nodes) {
       res["nodes"].push_back(x.to_json());
     }

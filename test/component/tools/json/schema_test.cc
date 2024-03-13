@@ -1,12 +1,10 @@
 #include "../../../../include/component/tools/json_validator/validator.hpp"
 // for brevity
-using jsoncons::json;
-namespace jsonschema = jsoncons::jsonschema;
 #include "../../../../include/component/tools/log/easylogging++.h"
 #include "../../../../include/component/tools/utest/utest.h"
 INITIALIZE_EASYLOGGINGPP
 
-nlohmann::json sc = nlohmann::json::parse(R"(
+jsoncons::json sc = jsoncons::json::parse(R"(
 {
     "$schema": "https://json-schema.org/draft/2019-09/schema",
     "title": "state",
@@ -584,7 +582,7 @@ nlohmann::json sc = nlohmann::json::parse(R"(
     }
 }
     )");
-nlohmann::json ob = nlohmann::json::parse(R"(
+jsoncons::json ob = jsoncons::json::parse(R"(
 {
   "actionStates": [],
   "agvPosition": {
@@ -621,7 +619,7 @@ nlohmann::json ob = nlohmann::json::parse(R"(
 }
    )");
 // JSON Schema
-json schema = json::parse(R"(
+jsoncons::json schema = jsoncons::json::parse(R"(
 {
   "$id": "https://example.com/arrays.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -659,7 +657,7 @@ json schema = json::parse(R"(
     )");
 
 // Data
-json data = json::parse(R"(
+jsoncons::json data = jsoncons::json::parse(R"(
 {
   "fruits": [ "apple", "orange", "pear" ],
   "vegetables": [
@@ -700,7 +698,7 @@ json data = json::parse(R"(
 // }
 
 UTEST(schema, case2) {
-  auto s = SchemaValidator::validate(ob, sc);
+  auto s = SchemaValidator::validate(ob, jsoncons::jsonschema::make_schema(sc));
   EXPECT_EQ(s.size(), 0);
 }
 

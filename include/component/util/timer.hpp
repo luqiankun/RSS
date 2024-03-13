@@ -17,10 +17,11 @@ class cpu_timer {
     auto end = std::chrono::steady_clock::now();
     auto dur =
         std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    uint32_t s = dur.count() / 1000;
-    uint32_t ms = dur.count() % 1000;
-    CLOG(INFO, "timer") << name << " use time: " << s << "(s) " << ms
-                        << "(ms)\n\n";
+    uint32_t s = dur.count() / 1000000;
+    uint32_t ms = dur.count() / 1000;
+    uint32_t us = dur.count() % 1000;
+    CLOG(INFO, "timer") << name << " use time: " << s << "(s) " << ms << "(ms) "
+                        << us << "(us)";
   }
 
  private:
@@ -57,16 +58,21 @@ inline std::optional<std::chrono::system_clock::time_point> get_time_from_str(
   if (!std::regex_match(msg, match_reg)) {
     return std::nullopt;
   }
-  std::smatch cmatch;
-  std::regex_search(msg, cmatch, search_reg);
-  std::chrono::milliseconds ms(std::stoi(*(cmatch.end() - 1)));
-  std::tm t = {};
-  std::istringstream ss{msg};
-  ss >> std::get_time(&t, "%Y-%m-%dT%H:%M:%S");
-  long timeSinceEpoch = std::mktime(&t);
-  auto duration = std::chrono::seconds(timeSinceEpoch);
-  auto time_point = std::chrono::system_clock::time_point(duration) + ms;
-  return time_point;
+  try {
+    std::smatch cmatch;
+    std::regex_search(msg, cmatch, search_reg);
+    std::chrono::milliseconds ms(std::stoi(*(cmatch.end() - 1)));
+    std::tm t = {};
+    std::istringstream ss{msg};
+    ss >> std::get_time(&t, "%Y-%m-%dT%H:%M:%S");
+    long timeSinceEpoch = std::mktime(&t);
+    auto duration = std::chrono::seconds(timeSinceEpoch);
+    auto time_point = std::chrono::system_clock::time_point(duration) + ms;
+    return time_point;
+  } catch (std::exception& ec) {
+    CLOG(ERROR, "timer") << ec.what();
+    return std::nullopt;
+  }
 }
 
 #endif

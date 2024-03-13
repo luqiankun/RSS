@@ -29,12 +29,6 @@ class MqttClient : public mqtt::async_client {
       }
     });
   }
-  virtual ~MqttClient() {
-    if (is_connected()) {
-      auto ptr = disconnect();
-      ptr->wait();
-    }
-  }
 
  protected:
   std::unordered_map<std::string, message_handler> cbs;

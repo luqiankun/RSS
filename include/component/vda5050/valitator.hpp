@@ -3,8 +3,7 @@
 #include "../tools/json_validator/validator.hpp"
 namespace vda5050 {
 
-static std::vector<std::string> state_validate(nlohmann::json src) {
-  nlohmann::json schema = R"(
+static std::string state_sch = R"(
 {
     "$schema": "https://json-schema.org/draft/2019-09/schema",
     "title": "state",
@@ -566,12 +565,10 @@ static std::vector<std::string> state_validate(nlohmann::json src) {
         }
     }
 }
-  )"_json;
-  return SchemaValidator::validate(src, schema);
-}
+  )";
+static jsoncons::json state_schema = jsoncons::json::parse(state_sch);
 
-static std::vector<std::string> connection_validate(nlohmann::json src) {
-  nlohmann::json schema = R"(
+static std::string con_sch = R"(
 {
     "$schema": "https://json-schema.org/draft/2019-09/schema",
     "title": "connection",
@@ -625,12 +622,10 @@ static std::vector<std::string> connection_validate(nlohmann::json src) {
         }
     }
 }
-  )"_json;
-  return SchemaValidator::validate(src, schema);
-}
+  )";
+static jsoncons::json con_schema = jsoncons::json::parse(con_sch);
 
-static std::vector<std::string> order_validate(nlohmann::json src) {
-  nlohmann::json schema = R"(
+static std::string ord_sch = R"(
 {
     "$schema": "https://json-schema.org/draft/2019-09/schema",
     "title": "Order Message",
@@ -1002,12 +997,11 @@ static std::vector<std::string> order_validate(nlohmann::json src) {
         }
     }
 }
-  )"_json;
-  return SchemaValidator::validate(src, schema);
-}
+  )";
 
-static std::vector<std::string> instantaction_validate(nlohmann::json src) {
-  nlohmann::json schema = R"(
+static jsoncons::json ord_schema = jsoncons::json::parse(ord_sch);
+
+static std::string ins_sch = R"(
 {
     "$schema": "https://json-schema.org/draft/2019-09/schema",
     "title": "instantActions",
@@ -1125,8 +1119,29 @@ static std::vector<std::string> instantaction_validate(nlohmann::json src) {
         }
     }
 }
-  )"_json;
-  return SchemaValidator::validate(src, schema);
+  )";
+
+static jsoncons::json ins_schema = jsoncons::json::parse(ins_sch);
+
+static auto state_schema_ptr = jsoncons::jsonschema::make_schema(state_schema);
+static auto con_schema_ptr = jsoncons::jsonschema::make_schema(con_schema);
+static auto ord_schema_ptr = jsoncons::jsonschema::make_schema(ord_schema);
+static auto ins_schema_ptr = jsoncons::jsonschema::make_schema(ins_schema);
+
+static std::vector<std::string> state_validate(jsoncons::json src) {
+  return SchemaValidator::validate(src, state_schema_ptr);
+}
+
+static std::vector<std::string> connection_validate(jsoncons::json src) {
+  return SchemaValidator::validate(src, con_schema_ptr);
+}
+
+static std::vector<std::string> order_validate(jsoncons::json src) {
+  return SchemaValidator::validate(src, ord_schema_ptr);
+}
+
+static std::vector<std::string> instantaction_validate(jsoncons::json src) {
+  return SchemaValidator::validate(src, ins_schema_ptr);
 }
 
 }  // namespace vda5050
