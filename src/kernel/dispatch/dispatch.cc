@@ -137,7 +137,7 @@ Dispatcher::~Dispatcher() {
   if (dispatch_th.joinable()) {
     dispatch_th.join();
   }
-  CLOG(INFO, "dispatch") << name << " close";
+  CLOG(INFO, dispatch_log) << name << " close";
 }
 
 void Dispatcher::idle_detect() {
@@ -163,13 +163,13 @@ void Dispatcher::dispatch_once() {
   } else {
     if (current->state == data::order::TransportOrder::State::RAW) {
       // TODO
-      CLOG(INFO, "dispatch") << current->name << " status: raw";
+      CLOG(INFO, dispatch_log) << current->name << " status: raw";
       if (current->driverorders.empty()) {
         current->state = data::order::TransportOrder::State::FINISHED;
-        CLOG(INFO, "dispatch") << current->name << " status: finished";
+        CLOG(INFO, dispatch_log) << current->name << " status: finished";
       } else {
         current->state = data::order::TransportOrder::State::ACTIVE;
-        CLOG(INFO, "dispatch") << current->name << " status: active";
+        CLOG(INFO, dispatch_log) << current->name << " status: active";
       }
     }
     if (current->state == data::order::TransportOrder::State::ACTIVE) {
@@ -178,7 +178,7 @@ void Dispatcher::dispatch_once() {
       if (v) {
         // 订单指定了车辆
         current->state = data::order::TransportOrder::State::DISPATCHABLE;
-        CLOG(INFO, "dispatch") << current->name << " status: dispatchable";
+        CLOG(INFO, dispatch_log) << current->name << " status: dispatchable";
 
       } else {
         if (auto_select) {  // 自动分配车辆
@@ -199,24 +199,25 @@ void Dispatcher::dispatch_once() {
           if (v) {
             current->intended_vehicle = v;
             current->state = data::order::TransportOrder::State::DISPATCHABLE;
-            CLOG(INFO, "dispatch") << current->name << " status: dispatchable";
+            CLOG(INFO, dispatch_log)
+                << current->name << " status: dispatchable";
           } else {
             current->state = data::order::TransportOrder::State::FAILED;
-            CLOG(INFO, "dispatch") << current->name << " status: failed";
+            CLOG(INFO, dispatch_log) << current->name << " status: failed";
           }
         } else {
           current->state = data::order::TransportOrder::State::FAILED;
-          CLOG(INFO, "dispatch") << current->name << " status: failed";
+          CLOG(INFO, dispatch_log) << current->name << " status: failed";
         }
       }
     }
     if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
       current->state = data::order::TransportOrder::State::BEING_PROCESSED;
-      CLOG(INFO, "dispatch") << current->name << " status: being_processed";
+      CLOG(INFO, dispatch_log) << current->name << " status: being_processed";
       if (current->intended_vehicle.lock()->state ==
           driver::Vehicle::State::UNAVAILABLE) {
         current->state = data::order::TransportOrder::State::FAILED;
-        CLOG(INFO, "dispatch") << current->name << " status: failed";
+        CLOG(INFO, dispatch_log) << current->name << " status: failed";
       } else {
         current->intended_vehicle.lock()->receive_task(current);
         current->processing_vehicle = current->intended_vehicle;
@@ -248,7 +249,7 @@ void Dispatcher::brake_deadlock(
 
 void Dispatcher::run() {
   dispatch_th = std::thread([&] {
-    CLOG(INFO, "dispatch") << this->name << " run....";
+    CLOG(INFO, dispatch_log) << this->name << " run....";
     while (!dispose) {
       idle_detect();
       dispatch_once();
@@ -260,7 +261,7 @@ void Dispatcher::run() {
           ss << v->name << " ,";
         }
         ss << "]";
-        CLOG_EVERY_N(100, ERROR, "dispatch") << "deadlock --> " << ss.str();
+        CLOG_EVERY_N(100, ERROR, dispatch_log) << "deadlock --> " << ss.str();
         brake_deadlock(loop);
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(10));

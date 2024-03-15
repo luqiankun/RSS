@@ -136,7 +136,7 @@ void Command::run_once() {
     }
     if (scheduler.lock()->resource.lock()->unclaim(temp, veh)) {
       state = State::END;
-      CLOG(INFO, "driver") << ss.str();
+      CLOG(INFO, driver_log) << ss.str() << "\n";
     }
   } else if (state == State::END) {
     veh->command_done();

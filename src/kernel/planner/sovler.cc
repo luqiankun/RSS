@@ -63,7 +63,7 @@ void Solver::solver(const VertexPtr& begin) {
         }
       }
     } while (!open_list.empty());
-    CLOG(INFO, "planner") << "solver end\n";
+    CLOG(INFO, planner_log) << "solver end\n";
   }
 }
 std::vector<std::vector<VertexPtr>> Solver::get_paths(const VertexPtr& end) {

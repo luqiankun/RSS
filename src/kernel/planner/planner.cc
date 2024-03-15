@@ -161,25 +161,25 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
     }
   }
   if (st == nullptr || ed == nullptr) {
-    LOG(ERROR) << "The start or end point does not exist\n";
+    CLOG(ERROR, planner_log) << "The start or end point does not exist\n";
     return res;
   }
   if (st == ed) {
-    LOG(WARNING) << "The starting point and"
-                    "the ending point are the same\n ";
+    CLOG(WARNING, planner_log) << "The starting point and"
+                                  "the ending point are the same\n ";
     res.emplace_back(
         std::vector<std::shared_ptr<data::model::Point>>{st->equal_point});
     return res;
   }
   {
     if (st == cur_begin) {
-      CLOG(INFO, "planner") << "already sovled\n";
+      CLOG(INFO, planner_log) << "already sovled\n";
     } else {
       solver->solver(st);
       cur_begin = st;
     }
     auto paths = solver->get_paths(ed);
-    CLOG(INFO, "planner") << "find " << paths.size() << " s paths\n";
+    CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
     if (paths.empty()) {
     } else {
       // 按转弯数量排序
@@ -206,7 +206,7 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
           ss << "this path is not open";
         }
         ss << " - - - - - - - - - - - - - - - - - \n";
-        CLOG(INFO, "planner") << ss.str();
+        CLOG(INFO, planner_log) << ss.str();
       }
     }
   }

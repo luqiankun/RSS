@@ -6,7 +6,6 @@
 #include "../../include/main/httpsrv.hpp"
 #include "../../include/main/tcs.hpp"
 INITIALIZE_EASYLOGGINGPP
-
 // signal
 void (*signal(int sig, void (*func)(int)))(int);
 std::condition_variable con;
@@ -69,25 +68,25 @@ void read_params(std::string path) {
     if (!root["tcs"]["auto_init"]["xml_path"].IsNone()) {
       init_xml_path = root["tcs"]["auto_init"]["xml_path"].As<std::string>();
     }
-    CLOG(INFO, "tcs") << "read param success";
+    CLOG(INFO, tcs_log) << "read param success";
   } catch (Yaml::Exception& ec) {
-    CLOG(ERROR, "tcs") << "load param from <" << path << "> failed :"
-                       << " " << ec.Message() << ", will use deafult params.";
+    CLOG(ERROR, tcs_log) << "load param from <" << path << "> failed :"
+                         << " " << ec.Message() << ", will use deafult params.";
   }
 }
 
 int main(int argc, char** argv) {
-  el::Loggers::getLogger("tcs");
-  el::Loggers::getLogger("timer");
-  el::Loggers::getLogger("order");
-  el::Loggers::getLogger("visual");
-  el::Loggers::getLogger("http");
-  el::Loggers::getLogger("driver");
+  el::Loggers::getLogger("_____tcs");
+  el::Loggers::getLogger("___timer");
+  el::Loggers::getLogger("___order");
+  el::Loggers::getLogger("__visual");
+  el::Loggers::getLogger("____http");
+  el::Loggers::getLogger("__driver");
   el::Loggers::getLogger("dispatch");
-  el::Loggers::getLogger("planner");
+  el::Loggers::getLogger("_planner");
   el::Loggers::getLogger("schedule");
   el::Loggers::getLogger("allocate");
-  el::Loggers::getLogger("mqtt");
+  el::Loggers::getLogger("____mqtt");
   std::string path{"config/config.yaml"};
   if (argc >= 2) {
     path = std::string(argv[1]);
@@ -150,7 +149,7 @@ int main(int argc, char** argv) {
   {
     std::smatch m;
     if (!std::regex_match(http_ip, reg)) {
-      CLOG(ERROR, "tcs") << "ip's format is wrong";
+      CLOG(ERROR, tcs_log) << "ip's format is wrong";
       return -1;
     }
     srv->ip = http_ip;
@@ -215,20 +214,20 @@ int main(int argc, char** argv) {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   if (init_enable) {
     pugi::xml_document doc;
-    CLOG(INFO, "tcs") << "auto init using " << init_xml_path;
+    CLOG(INFO, tcs_log) << "auto init using " << init_xml_path;
     auto ret = doc.load_file(init_xml_path.c_str());
     if (ret.status == pugi::xml_parse_status::status_ok) {
       std::stringstream body;
       doc.save(body);
       tcs->put_model_xml(body.str());
     } else {
-      CLOG(ERROR, "tcs") << "parse xml failed: " << ret.description();
+      CLOG(ERROR, tcs_log) << "parse xml failed: " << ret.description();
     }
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  CLOG(INFO, "tcs") << "service start, press 'Ctrl + C' to exit.";
+  CLOG(INFO, tcs_log) << "service start, press 'Ctrl + C' to exit.";
   if (th_wait.joinable()) {
     th_wait.join();
   }
-  CLOG(INFO, "tcs") << "service shutdown";
+  CLOG(INFO, tcs_log) << "service shutdown";
 }

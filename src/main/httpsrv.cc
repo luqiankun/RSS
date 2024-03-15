@@ -292,6 +292,6 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
 }
 
 void HTTPServer::listen() {
-  CLOG(INFO, "http") << "listen " << ip << ":" << port;
+  CLOG(INFO, http_log) << "listen " << ip << ":" << port;
   srv.listen(ip, port);
 }

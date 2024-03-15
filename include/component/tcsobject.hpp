@@ -16,6 +16,14 @@
 #include <vector>
 
 #include "./util/timer.hpp"
+constexpr auto tcs_log{"_____tcs"};
+constexpr auto dispatch_log{"dispatch"};
+constexpr auto allocate_log{"allocate"};
+constexpr auto order_log{"___order"};
+constexpr auto planner_log{"_planner"};
+constexpr auto visual_log{"__visual"};
+constexpr auto driver_log{"__driver"};
+constexpr auto mqtt_log{"____mqtt"};
 
 class TCSObject {
  public:

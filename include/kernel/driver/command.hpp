@@ -30,7 +30,7 @@ class Command : public TCSObject {
       std::shared_ptr<data::order::DriverOrder>);
   void vehicle_execute_cb(bool);  // 车辆通知动作结果
   void run_once();
-  ~Command() { CLOG(INFO, "driver") << name << " drop"; }
+  ~Command() { CLOG(INFO, driver_log) << name << " drop\n"; }
 
  public:
   State state{State::INIT};

@@ -4,7 +4,6 @@
 #include "../component/tools/xml/pugixml.hpp"
 #include "../kernel/dispatch/dispatch.hpp"
 #include "../kernel/schedule/schedule.hpp"
-
 inline std::string get_log_path(const std::string& path) {
   auto data = get_time_fmt(std::chrono::system_clock::now());
 #ifdef _WIN32

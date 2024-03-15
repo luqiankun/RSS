@@ -3,6 +3,7 @@
 #include "../component/tools/http/httplib.h"
 #include "../component/tools/json/json.hpp"
 #include "../component/util/timer.hpp"
+const auto http_log{"____http"};
 using TCSRep = std::pair<int, std::string>;
 class HTTPServer {
  public:
@@ -11,7 +12,7 @@ class HTTPServer {
   ~HTTPServer() {
     if (srv.is_running()) {
       srv.stop();
-      CLOG(INFO, "http") << "http server close";
+      CLOG(INFO, http_log) << "http server close";
     }
   }
 

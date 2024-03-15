@@ -14,7 +14,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
   try {
     auto ret = doc.load_string(body.c_str());
     if (ret.status != pugi::status_ok) {
-      LOG(ERROR) << "parse error: " << ret.description();
+      CLOG(ERROR, tcs_log) << "parse error: " << ret.description();
       json res = json::array();
       auto msg =
           "Could not parse XML input '" + std::string(ret.description()) + "'.";
@@ -24,8 +24,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
     //
     auto root = doc.first_child();  // <model>
     if (std::string(root.name()) != "model") {
-      LOG(ERROR) << "parse error: "
-                 << "'don't has model'";
+      CLOG(ERROR, tcs_log) << "parse error: "
+                           << "'don't has model'";
       json res = json::array();
       auto msg =
           "Could not parse XML input '" + std::string("'don't has model'.");
@@ -77,7 +77,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->points.push_back(p);
         point = point.next_sibling();
       }
-      CLOG(INFO, "tcs") << "init point size " << resource->points.size();
+      CLOG(INFO, tcs_log) << "init point size " << resource->points.size();
     }
 
     {  // path
@@ -125,7 +125,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->paths.push_back(p);
         path = path.next_sibling();
       }
-      CLOG(INFO, "tcs") << "init path size " << resource->paths.size();
+      CLOG(INFO, tcs_log) << "init path size " << resource->paths.size();
     }
 
     {  // location
@@ -222,7 +222,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->locations.push_back(loc);
         location = location.next_sibling();
       }
-      CLOG(INFO, "tcs") << "init location size " << resource->locations.size();
+      CLOG(INFO, tcs_log) << "init location size "
+                          << resource->locations.size();
     }
 
     {
@@ -387,10 +388,11 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         ///////////////////////
         vehicle = vehicle.next_sibling();
       }
-      CLOG(INFO, "tcs") << "init vehicle size " << dispatcher->vehicles.size();
+      CLOG(INFO, tcs_log) << "init vehicle size "
+                          << dispatcher->vehicles.size();
     }
     ///
-    CLOG(INFO, "tcs") << "init resource ok";
+    CLOG(INFO, tcs_log) << "init resource ok";
     init_planner();
     scheduler->resource = resource;
     // connect signals
@@ -409,7 +411,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
     run();
     return std::pair<int, std::string>(200, "");
   } catch (pugi::xpath_exception ec) {
-    LOG(ERROR) << "parse error: " << ec.what();
+    CLOG(ERROR, tcs_log) << "parse error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse XML input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
@@ -459,8 +461,8 @@ void TCS::home_order(const std::string &name,
   ord->create_time = time;
   ord->dead_time = time + std::chrono::minutes(60);
   ord->state = data::order::TransportOrder::State::RAW;
-  CLOG(INFO, "tcs") << "new ord " << ord->name << " name_hash "
-                    << ord->name_hash;
+  CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
+                      << ord->name_hash << "\n";
   auto destination = orderpool->res_to_destination(
       v->init_point, data::order::DriverOrder::Destination::OpType::MOVE);
   auto dr = std::make_shared<data::order::DriverOrder>("driverorder_" +
@@ -473,23 +475,23 @@ void TCS::home_order(const std::string &name,
 }
 
 TCS::~TCS() {
-  CLOG(INFO, "tcs") << "TCS  stop";
+  CLOG(INFO, tcs_log) << "TCS  stop";
   stop();
 }
 
 bool TCS::init_dispatcher() {
   dispatcher = std::make_shared<kernel::dispatch::Dispatcher>("Dispatcher");
-  CLOG(INFO, "tcs") << "init dispatcher ok";
+  CLOG(INFO, tcs_log) << "init dispatcher ok";
   return true;
 }
 bool TCS::init_orderpool() {
   orderpool = std::make_shared<kernel::allocate::OrderPool>("OrderPool");
-  CLOG(INFO, "tcs") << "init orderpool ok";
+  CLOG(INFO, tcs_log) << "init orderpool ok";
   return true;
 }
 bool TCS::init_scheduler() {
   this->scheduler = std::make_shared<kernel::schedule::Scheduler>("Scheduler");
-  CLOG(INFO, "tcs") << "init scheduler ok";
+  CLOG(INFO, tcs_log) << "init scheduler ok";
   return true;
 }
 bool TCS::init_planner() {
@@ -497,7 +499,7 @@ bool TCS::init_planner() {
     return false;
   }
   this->planner = std::make_shared<kernel::planner::Planner>(this->resource);
-  CLOG(INFO, "tcs") << "init planner ok";
+  CLOG(INFO, tcs_log) << "init planner ok";
   return true;
 }
 void TCS::cancel_all_order() { orderpool->cancel_all_order(); }
@@ -637,7 +639,7 @@ std::pair<int, std::string> TCS::post_transport_order(
       json res = json::array();
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
-      LOG(ERROR) << msg;
+      CLOG(ERROR, tcs_log) << msg;
       return std::pair<int, std::string>(409, res.dump());
     }
   }
@@ -646,7 +648,7 @@ std::pair<int, std::string> TCS::post_transport_order(
       json res = json::array();
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
-      LOG(ERROR) << msg;
+      CLOG(ERROR, tcs_log) << msg;
       return std::pair<int, std::string>(409, res.dump());
     }
   }
@@ -692,7 +694,7 @@ std::pair<int, std::string> TCS::post_transport_order(
           json res = json::array();
           auto msg = "Could not find location '" + loc + "'.";
           res.push_back(msg);
-          LOG(ERROR) << msg;
+          CLOG(ERROR, tcs_log) << msg;
           ord->state = data::order::TransportOrder::State::UNROUTABLE;
           orderpool->ended_orderpool.push_back(ord);
           return std::pair<int, std::string>(404, res.dump());
@@ -706,8 +708,8 @@ std::pair<int, std::string> TCS::post_transport_order(
                     data::order::DriverOrder::Destination::OpType::UNLOAD) {
               if (check.first !=
                   kernel::allocate::ResourceManager::ResType::Location) {
-                LOG(ERROR) << "op type '" + std::string(op) +
-                                  "' is not support,need a location";
+                CLOG(ERROR, tcs_log) << "op type '" + std::string(op) +
+                                            "' is not support,need a location";
                 ord->state = data::order::TransportOrder::State::FAILED;
                 orderpool->ended_orderpool.push_back(ord);
                 break;
@@ -721,7 +723,8 @@ std::pair<int, std::string> TCS::post_transport_order(
             dr->transport_order = ord;
             ord->driverorders.push_back(dr);
           } else {
-            LOG(ERROR) << "op type '" + std::string(op) + "' is not support";
+            CLOG(ERROR, tcs_log)
+                << "op type '" + std::string(op) + "' is not support";
             ord->state = data::order::TransportOrder::State::FAILED;
             orderpool->ended_orderpool.push_back(ord);
             break;
@@ -779,19 +782,19 @@ std::pair<int, std::string> TCS::post_transport_order(
     }
     return std::pair<int, std::string>(200, res.dump());
   } catch (json::parse_error ec) {
-    LOG(ERROR) << "parse failed :" << ec.what();
+    CLOG(ERROR, tcs_log) << "parse failed :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   } catch (json::type_error ec) {
-    LOG(ERROR) << "type error :" << ec.what();
+    CLOG(ERROR, tcs_log) << "type error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   } catch (json::other_error ec) {
-    LOG(ERROR) << "other error :" << ec.what();
+    CLOG(ERROR, tcs_log) << "other error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
@@ -946,19 +949,19 @@ std::pair<int, std::string> TCS::post_ordersequence(
     res.push_back(msg);
     return std::pair<int, std::string>(404, res.dump());
   } catch (json::parse_error ec) {
-    LOG(ERROR) << "parse error:" << ec.what();
+    CLOG(ERROR, tcs_log) << "parse error:" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   } catch (json::type_error ec) {
-    LOG(ERROR) << "type error :" << ec.what();
+    CLOG(ERROR, tcs_log) << "type error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   } catch (json::other_error ec) {
-    LOG(ERROR) << "other error :" << ec.what();
+    CLOG(ERROR, tcs_log) << "other error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
@@ -1372,7 +1375,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     // for (auto &v : model["blocks"]) {
     // }
     //
-    CLOG(INFO, "tcs") << "init resource ok";
+    CLOG(INFO, tcs_log) << "init resource ok";
     init_planner();
     scheduler->resource = resource;
     // connect signals
@@ -1391,19 +1394,19 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     run();
     return std::pair<int, std::string>(200, "");
   } catch (json::parse_error ec) {
-    LOG(ERROR) << "parse error: " << ec.what();
+    CLOG(ERROR, tcs_log) << "parse error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   } catch (json::type_error ec) {
-    LOG(ERROR) << "type error :" << ec.what();
+    CLOG(ERROR, tcs_log) << "type error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(400, res.dump());
   } catch (json::other_error ec) {
-    LOG(ERROR) << "other error :" << ec.what();
+    CLOG(ERROR, tcs_log) << "other error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);

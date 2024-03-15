@@ -30,7 +30,7 @@ void Scheduler::run() {
 
 void Scheduler::add_command(std::shared_ptr<driver::Command> cmd) {
   if (cmd) {
-    CLOG(INFO, "schedule") << "add new cmd " << cmd->name;
+    CLOG(INFO, "schedule") << "add new cmd " << cmd->name << "\n";
     commands.push_back(cmd);
     con_var.notify_one();
   }

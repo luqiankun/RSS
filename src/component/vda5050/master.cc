@@ -42,19 +42,19 @@ void VehicleMaster::start() {
     mqtt_client->on();
     mqtt_client->set_connected_handler([&](std::string) {
       master_state = MasterMqttStatus::ONLINE;
-      CLOG(INFO, "mqtt") << serial_number << " master ONLINE";
+      CLOG(INFO, mqtt_log) << serial_number << " master ONLINE";
       mqtt_client->subscribe("/" + interface_name + "/" + version + "/" +
                                  manufacturer + "/" + serial_number + "/#",
                              0);
     });
     mqtt_client->set_connection_lost_handler([&](std::string) {
       master_state = MasterMqttStatus::CONNECTIONBROKEN;
-      CLOG(WARNING, "mqtt") << serial_number << " master CONNECTIONBROKEN";
+      CLOG(WARNING, mqtt_log) << serial_number << " master CONNECTIONBROKEN";
     });
     mqtt_client->set_disconnected_handler(
         [&](const mqtt::properties&, mqtt::ReasonCode) {
           master_state = MasterMqttStatus::OFFLINE;
-          CLOG(INFO, "mqtt") << serial_number << " master OFFLINE";
+          CLOG(INFO, mqtt_log) << serial_number << " master OFFLINE";
         });
     mqtt_client->connect(con_ops);
   }

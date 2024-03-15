@@ -4,7 +4,6 @@
 
 namespace kernel {
 namespace allocate {
-
 std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
     std::vector<std::shared_ptr<data::model::Point>> ps) {
   std::string route_name = ps.front()->name + "_" + ps.back()->name;
@@ -149,7 +148,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
          x != client->future_claim_resources.end();) {
       if (*x == r) {
         x = client->future_claim_resources.erase(x);
-        CLOG(INFO, "allocate")
+        CLOG(INFO, allocate_log)
             << r->name << " from future to claim of " << client->name;
       } else {
         x++;
@@ -157,7 +156,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
     }
   }
 
-  CLOG(INFO, "allocate") << ss.str();
+  CLOG(INFO, allocate_log) << ss.str();
   return true;
 }
 

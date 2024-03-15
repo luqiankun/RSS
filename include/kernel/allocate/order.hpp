@@ -1,7 +1,6 @@
 #ifndef ORDER_HPP
 #define ORDER_HPP
 #include "../../component/data/order/orderquence.hpp"
-
 namespace kernel {
 namespace allocate {
 class OrderPool : public TCSObject {
@@ -15,7 +14,7 @@ class OrderPool : public TCSObject {
   void cancel_all_order();
   void cancel_order(size_t order_uuid);
   std::shared_ptr<data::order::TransportOrder> pop();
-  ~OrderPool() { CLOG(INFO, "allocate") << name << " close"; }
+  ~OrderPool() { CLOG(INFO, allocate_log) << name << " close"; }
   void update_quence();
 
  public:

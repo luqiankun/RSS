@@ -8,6 +8,8 @@
 #include <sstream>
 
 #include "../tools/log/easylogging++.h"
+constexpr auto timer_log{"___timer"};
+
 class cpu_timer {
  public:
   explicit cpu_timer(const std::string& n = "") : name(n) {
@@ -20,8 +22,8 @@ class cpu_timer {
     uint32_t s = dur.count() / 1000000;
     uint32_t ms = dur.count() / 1000;
     uint32_t us = dur.count() % 1000;
-    CLOG(INFO, "timer") << name << " use time: " << s << "(s) " << ms << "(ms) "
-                        << us << "(us)";
+    CLOG(INFO, timer_log) << name << " use time: " << s << "(s) " << ms
+                          << "(ms) " << us << "(us)";
   }
 
  private:
@@ -70,7 +72,7 @@ inline std::optional<std::chrono::system_clock::time_point> get_time_from_str(
     auto time_point = std::chrono::system_clock::time_point(duration) + ms;
     return time_point;
   } catch (std::exception& ec) {
-    CLOG(ERROR, "timer") << ec.what();
+    CLOG(ERROR, timer_log) << ec.what();
     return std::nullopt;
   }
 }
