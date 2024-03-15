@@ -28,7 +28,8 @@ class Vehicle : public schedule::Client,
 
   void receive_task(std::shared_ptr<data::order::TransportOrder>);
   void next_command();
-  void execute_move(std::shared_ptr<data::order::Step>);  // 执行移动回调
+  void execute_move(
+      std::vector<std::shared_ptr<data::order::Step>>);  // 执行移动回调
   void execute_action(
       std::shared_ptr<data::order::DriverOrder::Destination>);  // 执行移动回调
                                                                 // //
@@ -41,7 +42,8 @@ class Vehicle : public schedule::Client,
   void close();
   virtual bool action(
       std::shared_ptr<data::order::DriverOrder::Destination>) = 0;  // 执行动作
-  virtual bool move(std::shared_ptr<data::order::Step>) = 0;  // 执行移动
+  virtual bool move(
+      std::vector<std::shared_ptr<data::order::Step>>) = 0;  // 执行移动
   virtual void init(){};  // 初始化或者配置接收外部信息更新机器人状态
   virtual bool instant_action(
       std::shared_ptr<vda5050::instantaction::Action>) = 0;
@@ -81,6 +83,7 @@ class Vehicle : public schedule::Client,
   fa::taskpool_t pool{1};          // 普通任务
   fa::taskpool_t instant_pool{1};  // 立即任务
   bool task_run{false};
+  uint32_t send_queue_size{2};
   bool instanttask_run{false};
   std::chrono::system_clock::time_point idle_time;
 };
@@ -88,7 +91,7 @@ class SimVehicle : public Vehicle {
  public:
   using Vehicle::Vehicle;
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
-  bool move(std::shared_ptr<data::order::Step>) override;
+  bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
   bool instant_action(std::shared_ptr<vda5050::instantaction::Action>) override;
 
  public:
@@ -105,7 +108,7 @@ class Rabbit3 : public Vehicle {
         interface_name, serial_number, version, manufacturer);
   }
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
-  bool move(std::shared_ptr<data::order::Step>) override;
+  bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
   bool instant_action(std::shared_ptr<vda5050::instantaction::Action>) override;
   void init() override;
   void onstate(mqtt::const_message_ptr);

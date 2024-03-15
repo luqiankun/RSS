@@ -34,13 +34,16 @@ void Command::run_once() {
       driver_order->state = data::order::DriverOrder::State::TRAVELLING;
     }
     if (driver_order->state == data::order::DriverOrder::State::TRAVELLING) {
-      auto step = get_step_nopop(driver_order);
-      if (!step) {
+      auto steps =
+          get_step_nopop(driver_order, vehicle.lock()->send_queue_size);
+      if (steps.empty()) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
       } else {
         std::vector<std::shared_ptr<TCSResource>> temp;
-        temp.push_back(step->path->source_point.lock());
-        temp.push_back(step->path->destination_point.lock());
+        for (auto& x : steps) {
+          temp.push_back(x->path->source_point.lock());
+          temp.push_back(x->path->destination_point.lock());
+        }
         if (scheduler.lock()->resource.lock()->claim(temp, vehicle.lock())) {
           // TODO 添加future_claim
           for (auto& x : get_future(driver_order)) {
@@ -86,11 +89,11 @@ void Command::run_once() {
     // execute
     auto& driver_order = order->driverorders[order->current_driver_index];
     if (driver_order->state == data::order::DriverOrder::State::TRAVELLING) {
-      auto step = get_step(driver_order);
-      if (!step) {
+      auto steps = get_step(driver_order, vehicle.lock()->send_queue_size);
+      if (steps.empty()) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
       } else {
-        move(step);
+        move(steps);
         state = State::EXECUTING;
       }
 
@@ -143,25 +146,41 @@ std::shared_ptr<data::order::DriverOrder::Destination> Command::get_dest(
     std::shared_ptr<data::order::DriverOrder> order) {
   return order->destination;
 }
-std::shared_ptr<data::order::Step> Command::get_step(
-    std::shared_ptr<data::order::DriverOrder> order) {
+std::vector<std::shared_ptr<data::order::Step>> Command::get_step(
+    std::shared_ptr<data::order::DriverOrder> order, uint32_t size) {
   if (order->route->steps.empty()) {
-    order->route->current_step.reset();
-    return nullptr;
+    order->route->current_steps.clear();
+    return std::vector<std::shared_ptr<data::order::Step>>();
   }
-  auto res = order->route->steps.front();
-  order->route->current_step = res;
-  order->route->steps.pop_front();
+  order->route->current_steps.clear();
+  auto step = order->route->steps.front();
+  order->route->current_steps.push_back(step);
+  auto res = std::vector<std::shared_ptr<data::order::Step>>();
+  auto len =
+      size >= order->route->steps.size() ? order->route->steps.size() : size;
+  for (auto i = 0; i < len; i++) {
+    res.push_back(order->route->steps.front());
+    order->route->current_steps.push_back(order->route->steps.front());
+    order->route->steps.pop_front();
+  }
   return res;
 }
-std::shared_ptr<data::order::Step> Command::get_step_nopop(
-    std::shared_ptr<data::order::DriverOrder> order) {
+std::vector<std::shared_ptr<data::order::Step>> Command::get_step_nopop(
+    std::shared_ptr<data::order::DriverOrder> order, uint32_t size) {
   if (order->route->steps.empty()) {
-    order->route->current_step.reset();
-    return nullptr;
+    order->route->current_steps.clear();
+    return std::vector<std::shared_ptr<data::order::Step>>();
   }
-  auto res = order->route->steps.front();
-  order->route->current_step = res;
+  order->route->current_steps.clear();
+  auto step = order->route->steps.front();
+  order->route->current_steps.push_back(step);
+  auto res = std::vector<std::shared_ptr<data::order::Step>>();
+  auto len =
+      size >= order->route->steps.size() ? order->route->steps.size() : size;
+  for (auto i = 0; i < len; i++) {
+    res.push_back(order->route->steps.at(i));
+    order->route->current_steps.push_back(order->route->steps.front());
+  }
   return res;
 }
 std::vector<std::shared_ptr<TCSResource>> Command::get_future(

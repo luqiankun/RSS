@@ -47,7 +47,7 @@ class SimRabbit3 {
       mqtt_client = std::make_shared<MqttClient>(addr, name);
     }
     con_ops.set_automatic_reconnect(true);
-    con_ops.set_keep_alive_interval(5);
+    con_ops.set_keep_alive_interval(5000);
     con_ops.set_connect_timeout(2);
     auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
                   "/" + serial_number + "/";
@@ -189,6 +189,7 @@ class SimRabbit3 {
                     std::chrono::milliseconds(50);
                   }
                   // move
+                  state.nodestates.erase(state.nodestates.begin());
                   for (int i = 0; i < ord.nodes.size() - 1; i++) {
                     auto start_node = ord.nodes.at(i);
                     auto end_node = ord.nodes.at(i + 1);
@@ -206,7 +207,6 @@ class SimRabbit3 {
                                      (e_y - s_y) * (e_y - s_y)) *
                                 1000 / 5000;  // ms
                     state.driving = true;
-                    state.nodestates.erase(state.nodestates.begin());
                     for (auto i = 0; i < time; i = i + 50) {
                       while (status == Status::PASUED) {
                         std::chrono::milliseconds(50);

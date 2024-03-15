@@ -22,10 +22,10 @@ class Command : public TCSObject {
   };
   std::shared_ptr<data::order::DriverOrder::Destination> get_dest(
       std::shared_ptr<data::order::DriverOrder>);
-  std::shared_ptr<data::order::Step> get_step(
-      std::shared_ptr<data::order::DriverOrder>);
-  std::shared_ptr<data::order::Step> get_step_nopop(
-      std::shared_ptr<data::order::DriverOrder>);
+  std::vector<std::shared_ptr<data::order::Step>> get_step(
+      std::shared_ptr<data::order::DriverOrder>, uint32_t);
+  std::vector<std::shared_ptr<data::order::Step>> get_step_nopop(
+      std::shared_ptr<data::order::DriverOrder>, uint32_t);
   std::vector<std::shared_ptr<TCSResource>> get_future(
       std::shared_ptr<data::order::DriverOrder>);
   void vehicle_execute_cb(bool);  // 车辆通知动作结果
@@ -37,7 +37,7 @@ class Command : public TCSObject {
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<driver::Vehicle> vehicle;
   std::shared_ptr<data::order::TransportOrder> order;
-  std::function<void(const std::shared_ptr<data::order::Step>)> move;
+  std::function<void(std::vector<std::shared_ptr<data::order::Step>>)> move;
   std::function<void(
       const std::shared_ptr<data::order::DriverOrder::Destination>)>
       action;

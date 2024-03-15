@@ -28,20 +28,29 @@ void Vehicle::execute_action(
     }
   });
 }
-void Vehicle::execute_move(std::shared_ptr<data::order::Step> step) {
+void Vehicle::execute_move(
+    std::vector<std::shared_ptr<data::order::Step>> steps) {
   pool.async_run([=] {
-    auto move_ret = move(step);
+    auto move_ret = move(steps);
     if (!move_ret) {
       // 订单失败
       current_order->driverorders[current_order->current_driver_index]->state =
           data::order::DriverOrder::State::FAILED;
       current_order->state = data::order::TransportOrder::State::FAILED;
       current_order->end_time = std::chrono::system_clock::now();
-      CLOG(WARNING, "driver") << current_order->name << " action : "
-                              << " move : " << step->name.c_str() << " failed";
+      std::stringstream ss;
+      ss << current_order->name << " action : ";
+      for (auto& x : steps) {
+        ss << " move : " << x->name.c_str() << " & ";
+      }
+      CLOG(WARNING, "driver") << ss.str() << " failed";
     } else {
-      CLOG(INFO, "driver") << current_order->name
-                           << " move : " << step->name.c_str() << " ok";
+      std::stringstream ss;
+      ss << current_order->name << " action : ";
+      for (auto& x : steps) {
+        ss << " move : " << x->name.c_str() << " & ";
+      }
+      CLOG(INFO, "driver") << ss.str() << " ok";
     }
 
     if (current_command) {
@@ -366,52 +375,65 @@ bool SimVehicle::instant_action(
   return true;
 };
 
-bool SimVehicle::move(std::shared_ptr<data::order::Step> step) {
-  if (!step->path) {
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(step->wait_time / rate));
-    return true;
-  }
-  if (step->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-    auto end = step->path->destination_point.lock();
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(step->wait_time / rate));
-    size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-    int x_len = end->position.x - position.x;
-    int y_len = end->position.y - position.y;
-    for (int i = 0; i < 10; i++) {
-      position.x += x_len / 10;
-      position.y += y_len / 10;
-      std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
+  std::vector<int> res;
+  for (auto& step : steps) {
+    if (!step->path) {
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(step->wait_time / rate));
+      res.push_back(1);
+      continue;
     }
-    position.x = end->position.x;
-    position.y = end->position.y;
-    current_point = end;
-    CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
-                         << position.y << ")";
-    return true;
-  } else if (step->vehicle_orientation ==
-             data::order::Step::Orientation::BACKWARD) {
-    auto end = step->path->source_point.lock();
-    size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(step->wait_time / rate));
-    int x_len = end->position.x - position.x;
-    int y_len = end->position.y - position.y;
-    for (int i = 0; i < 10; i++) {
-      position.x += x_len / 10;
-      position.y += y_len / 10;
-      std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+    if (step->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
+      auto end = step->path->destination_point.lock();
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(step->wait_time / rate));
+      size_t t = step->path->length * 1000 / max_vel / rate;  // ms
+      int x_len = end->position.x - position.x;
+      int y_len = end->position.y - position.y;
+      for (int i = 0; i < 10; i++) {
+        position.x += x_len / 10;
+        position.y += y_len / 10;
+        std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+      }
+      position.x = end->position.x;
+      position.y = end->position.y;
+      current_point = end;
+      CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
+                           << position.y << ")";
+      res.push_back(1);
+      continue;
+    } else if (step->vehicle_orientation ==
+               data::order::Step::Orientation::BACKWARD) {
+      auto end = step->path->source_point.lock();
+      size_t t = step->path->length * 1000 / max_vel / rate;  // ms
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(step->wait_time / rate));
+      int x_len = end->position.x - position.x;
+      int y_len = end->position.y - position.y;
+      for (int i = 0; i < 10; i++) {
+        position.x += x_len / 10;
+        position.y += y_len / 10;
+        std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+      }
+      position.x = end->position.x;
+      position.y = end->position.y;
+      current_point = end;
+      CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
+                           << position.y << ")";
+      res.push_back(1);
+      continue;
+    } else {
+      res.push_back(0);
+      continue;
     }
-    position.x = end->position.x;
-    position.y = end->position.y;
-    current_point = end;
-    CLOG(INFO, "driver") << name << " now at (" << position.x << " , "
-                         << position.y << ")";
-    return true;
-  } else {
-    return false;
   }
+  for (auto& x : res) {
+    if (x == 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 void Rabbit3::init() {
@@ -519,8 +541,18 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
   }
 }
 
-bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
-  CLOG(INFO, "driver") << "move along " << step->path->name;
+bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
+  std::string name_{};
+  for (auto& x : steps) {
+    name_.append(x->name);
+    name_.append(" & ");
+  }
+  CLOG(INFO, "driver") << "move along " << name_;
+
+  if (steps.empty()) {
+    CLOG(WARNING, "driver") << "move  null step";
+    return true;
+  }
   task_run = true;
   if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
     CLOG(ERROR, "driver") << "master not online";
@@ -543,14 +575,13 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
   order_id++;
   ord.order_id = prefix + std::to_string(order_id);
   ord.order_update_id = 0;
+
   std::shared_ptr<data::model::Point> start_point;
-  std::shared_ptr<data::model::Point> end_point;
-  if (step->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-    start_point = step->path->source_point.lock();
-    end_point = step->path->destination_point.lock();
+  if (steps.front()->vehicle_orientation ==
+      data::order::Step::Orientation::FORWARD) {
+    start_point = steps.front()->path->source_point.lock();
   } else {
-    start_point = step->path->destination_point.lock();
-    end_point = step->path->source_point.lock();
+    start_point = steps.front()->path->destination_point.lock();
   }
   auto start = vda5050::order::Node();
   start.node_id = start_point->name;
@@ -563,26 +594,33 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
   pos.theta = angle;
   start.node_position = pos;
   ord.nodes.push_back(start);
-  auto end = vda5050::order::Node();
-  end.node_id = end_point->name;
-  end.released = false;
-  end.sequence_id = 1;
-  auto pos2 = vda5050::order::NodePosition();
-  pos2.x = end_point->position.x;
-  pos2.y = end_point->position.y;
-  pos2.map_id = map_id;
-  pos2.theta = angle;
-  end.node_position = pos2;
-  ord.nodes.push_back(end);
-
-  auto e = vda5050::order::Edge();
-  e.edge_id = step->path->name;
-  e.sequence_id = 0;
-  e.released = false;
-  e.start_node_id = start_point->name;
-  e.end_node_id = end_point->name;
-  e.max_speed = max_vel;
-  ord.edges.push_back(e);
+  for (auto& x : steps) {
+    std::shared_ptr<data::model::Point> end_point;
+    if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
+      end_point = x->path->destination_point.lock();
+    } else {
+      end_point = x->path->source_point.lock();
+    }
+    auto end = vda5050::order::Node();
+    end.node_id = end_point->name;
+    end.released = false;
+    end.sequence_id = 1;
+    auto pos2 = vda5050::order::NodePosition();
+    pos2.x = end_point->position.x;
+    pos2.y = end_point->position.y;
+    pos2.map_id = map_id;
+    pos2.theta = angle;
+    end.node_position = pos2;
+    ord.nodes.push_back(end);
+    auto e = vda5050::order::Edge();
+    e.edge_id = x->path->name;
+    e.sequence_id = 0;
+    e.released = false;
+    e.start_node_id = ord.nodes.back().node_id;
+    e.end_node_id = end_point->name;
+    e.max_speed = max_vel;
+    ord.edges.push_back(e);
+  }
 
   //
 
@@ -638,7 +676,7 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
       //
       if (vdastate.nodestates.empty() && vdastate.edgestates.empty()) {
         task_run = false;
-        CLOG(INFO, "driver") << "move ok " << step->path->name;
+        CLOG(INFO, "driver") << "move ok " << name_;
         return true;
       }
     } else {

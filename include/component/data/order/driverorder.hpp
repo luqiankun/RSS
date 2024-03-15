@@ -52,14 +52,18 @@ class DriverOrder : public TCSObject {
     if (route->steps.empty()) {
       return "->operation]";
     } else {
-      std::string msg;
-      if (route->current_step->vehicle_orientation ==
-          Step::Orientation::FORWARD) {
-        msg = "->forward]";
-      } else {
-        msg = "->backward]";
+      std::string msg{"["};
+      for (auto& x : route->current_steps) {
+        if (x->vehicle_orientation == Step::Orientation::FORWARD) {
+          msg.append(x->name);
+          msg.append("->forward]");
+        } else {
+          msg.append(x->name);
+          msg.append("->backward]");
+        }
+        msg.append("[");
       }
-      return "[" + route->current_step->name + msg;
+      return msg;
     }
   }
 

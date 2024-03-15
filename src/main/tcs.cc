@@ -1439,17 +1439,16 @@ std::string TCS::get_vehicles_step() {
           if (dr->state == data::order::DriverOrder::State::TRAVELLING ||
               dr->state == data::order::DriverOrder::State::OPERATING) {
             // current
-            if (dr->route->current_step) {
-              auto beg = dr->route->current_step->path->source_point.lock();
-              auto end =
-                  dr->route->current_step->path->destination_point.lock();
+            for (auto &step_ : dr->route->current_steps) {
+              auto beg = step_->path->source_point.lock();
+              auto end = step_->path->destination_point.lock();
               json step;
               step["src"] = beg->name;
               step["dest"] = end->name;
-              if (dr->route->current_step->vehicle_orientation ==
+              if (step_->vehicle_orientation ==
                   data::order::Step::Orientation::FORWARD) {
                 step["orientation"] = "FORWARD";
-              } else if (dr->route->current_step->vehicle_orientation ==
+              } else if (step_->vehicle_orientation ==
                          data::order::Step::Orientation::BACKWARD) {
                 step["orientation"] = "BACKWARD";
               } else {
