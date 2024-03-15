@@ -10,7 +10,8 @@ class SimRabbit3 {
   enum class Status { RUNNING, PASUED };
   SimRabbit3(const std::string& interface_name,
              const std::string& serial_number, const std::string& version,
-             const std::string& manufacturer)
+             const std::string& manufacturer, const std::string& init_point,
+             double x, double y)
       : interface_name(interface_name),
         serial_number(serial_number),
         version(version),
@@ -22,10 +23,10 @@ class SimRabbit3 {
     vda_state.header_id = 0;
     vda_state.timestamp = get_time_fmt(std::chrono::system_clock::now());
     vda_state.order_update_id = 0;
-    vda_state.last_node_id = "P3";
+    vda_state.last_node_id = init_point;
     vda_state.agv_position = vda5050::state::AgvPosition();
-    vda_state.agv_position.value().x = 64387;
-    vda_state.agv_position.value().y = -107450;
+    vda_state.agv_position.value().x = x;
+    vda_state.agv_position.value().y = y;
     vda_state.agv_position.value().theta = 0;
     vda_state.agv_position.value().map_id = "lyg";
     vda_state.last_node_seq_id = 0;
@@ -404,8 +405,17 @@ INITIALIZE_EASYLOGGINGPP
 
 int main(int argc, char** argv) {
   el::Loggers::getLogger("timer");
-  SimRabbit3 agv("uagv", "tx1", "2.0", "rw");
-  agv.set_mqtt_ops(agv.serial_number, "192.168.0.39");
-  agv.start();
+  SimRabbit3 agv1("uagv", "tx1", "2.0", "rw", "P1", 45150, -107450);
+  agv1.set_mqtt_ops(agv1.serial_number, "192.168.0.39");
+  agv1.start();
+  SimRabbit3 agv2("uagv", "tx2", "2.0", "rw", "P4", 74475, -107450);
+  agv2.set_mqtt_ops(agv2.serial_number, "192.168.0.39");
+  agv2.start();
+  SimRabbit3 agv3("uagv", "tx3", "2.0", "rw", "P5", 84087, -107450);
+  agv3.set_mqtt_ops(agv3.serial_number, "192.168.0.39");
+  agv3.start();
+  SimRabbit3 agv4("uagv", "tx4", "2.0", "rw", "P6", 93837, -107450);
+  agv4.set_mqtt_ops(agv4.serial_number, "192.168.0.39");
+  agv4.start();
   std::cin.get();
 }

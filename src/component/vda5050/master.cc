@@ -18,7 +18,8 @@ void vda5050::VehicleMaster::set_mqtt_ops(const std::string& name,
     mqtt_client = std::make_shared<MqttClient>(addr, name);
   }
   con_ops.set_automatic_reconnect(true);
-  con_ops.set_keep_alive_interval(5);
+  // con_ops.set_keep_alive_interval(5);
+  con_ops.set_connect_timeout(2);
 }
 
 void vda5050::VehicleMaster::set_mqtt_ops(const std::string& name,
@@ -32,7 +33,7 @@ void vda5050::VehicleMaster::set_mqtt_ops(const std::string& name,
     mqtt_client = std::make_shared<MqttClient>(addr, name);
   }
   con_ops.set_automatic_reconnect(true);
-  con_ops.set_keep_alive_interval(5);
+  // con_ops.set_keep_alive_interval(5);
   con_ops.set_connect_timeout(2);
 }
 

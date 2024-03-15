@@ -33,9 +33,9 @@ std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
       }
     }
   }
-  // if (!res->steps.empty()) {
-  //   res->current_steps = g;
-  // }
+  if (!res->steps.empty()) {
+    res->current_steps.push_back(res->steps.front());
+  }
   return res;
 }
 
@@ -106,18 +106,9 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
         auto it = p->owner.lock();
         if (!it || it == client) {
           p->owner = client;
-          for (auto x = client->future_claim_resources.begin();
-               x != client->future_claim_resources.end();) {
-            if (*x == p) {
-              x = client->future_claim_resources.erase(x);
-              CLOG(INFO, "allocate")
-                  << p->name << " from future to claim of " << client->name;
-            } else {
-              x++;
-            }
-          }
           client->claim_resources.insert(p);
         } else {
+          lock.unlock();
           unclaim(res, client);
           return false;
         }
@@ -129,18 +120,9 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
         auto it = p->owner.lock();
         if (!it || it == client) {
           p->owner = client;
-          for (auto x = client->future_claim_resources.begin();
-               x != client->future_claim_resources.end();) {
-            if (*x == p) {
-              x = client->future_claim_resources.erase(x);
-              CLOG(INFO, "allocate")
-                  << p->name << " from future to claim of " << client->name;
-            } else {
-              x++;
-            }
-          }
           client->claim_resources.insert(p);
         } else {
+          lock.unlock();
           unclaim(res, client);
           return false;
         }
@@ -152,24 +134,29 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
         auto it = p->owner.lock();
         if (!it || it == client) {
           p->owner = client;
-          for (auto x = client->future_claim_resources.begin();
-               x != client->future_claim_resources.end();) {
-            if (*x == p) {
-              x = client->future_claim_resources.erase(x);
-              CLOG(INFO, "allocate")
-                  << p->name << " from future to claim of " << client->name;
-            } else {
-              x++;
-            }
-          }
           client->claim_resources.insert(p);
         } else {
+          lock.unlock();
           unclaim(res, client);
           return false;
         }
       }
     }
   }
+
+  for (auto& r : res) {
+    for (auto x = client->future_claim_resources.begin();
+         x != client->future_claim_resources.end();) {
+      if (*x == r) {
+        x = client->future_claim_resources.erase(x);
+        CLOG(INFO, "allocate")
+            << r->name << " from future to claim of " << client->name;
+      } else {
+        x++;
+      }
+    }
+  }
+
   CLOG(INFO, "allocate") << ss.str();
   return true;
 }
@@ -179,11 +166,11 @@ bool ResourceManager::unclaim(
     const std::shared_ptr<schedule::Client>& client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
-    r->owner.reset();
     for (auto it = client->claim_resources.begin();
          it != client->claim_resources.end();) {
       if (r.get() == (*it).get()) {
         it = client->claim_resources.erase(it);
+        r->owner.reset();
       } else {
         it++;
       }

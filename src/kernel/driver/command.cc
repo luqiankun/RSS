@@ -10,6 +10,7 @@ void Command::run_once() {
   if (vehicle.lock()->paused) {
     return;
   }
+  auto veh = vehicle.lock();
   for (auto& x : order->dependencies) {
     auto dep = x.lock();
     if (dep) {
@@ -34,8 +35,7 @@ void Command::run_once() {
       driver_order->state = data::order::DriverOrder::State::TRAVELLING;
     }
     if (driver_order->state == data::order::DriverOrder::State::TRAVELLING) {
-      auto steps =
-          get_step_nopop(driver_order, vehicle.lock()->send_queue_size);
+      auto steps = get_step_nopop(driver_order, veh->send_queue_size);
       if (steps.empty()) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
       } else {
@@ -44,30 +44,44 @@ void Command::run_once() {
           temp.push_back(x->path->source_point.lock());
           temp.push_back(x->path->destination_point.lock());
         }
-        if (scheduler.lock()->resource.lock()->claim(temp, vehicle.lock())) {
+        for (auto x = temp.begin(); x != temp.end();) {
+          bool has{false};
+          for (auto& c : veh->claim_resources) {
+            if (c == *x) {
+              has = true;
+              break;
+            }
+          }
+          if (has) {
+            x = temp.erase(x);
+          } else {
+            x++;
+          }
+        }
+        if (scheduler.lock()->resource.lock()->claim(temp, veh)) {
           // TODO 添加future_claim
           for (auto& x : get_future(driver_order)) {
             bool has{false};
-            for (auto& c : vehicle.lock()->claim_resources) {
+            for (auto& c : veh->claim_resources) {
               if (c == x) {
                 has = true;
               }
             }
             if (!has) {
-              vehicle.lock()->future_claim_resources.insert(x);
+              veh->future_claim_resources.insert(x);
             }
           }
           state = State::CLAIMED;
         } else {
           for (auto& x : temp) {
             bool has{false};
-            for (auto& c : vehicle.lock()->claim_resources) {
+            for (auto& c : veh->claim_resources) {
               if (c == x) {
                 has = true;
               }
             }
             if (!has) {
-              vehicle.lock()->future_claim_resources.insert(x);
+              veh->future_claim_resources.insert(x);
             }
           }
         }
@@ -77,7 +91,7 @@ void Command::run_once() {
       auto dest = get_dest(driver_order);
       std::vector<std::shared_ptr<TCSResource>> temp;
       temp.push_back(dest->destination.lock());
-      if (scheduler.lock()->resource.lock()->claim(temp, vehicle.lock())) {
+      if (scheduler.lock()->resource.lock()->claim(temp, veh)) {
         state = State::CLAIMED;
       }
     }
@@ -89,7 +103,7 @@ void Command::run_once() {
     // execute
     auto& driver_order = order->driverorders[order->current_driver_index];
     if (driver_order->state == data::order::DriverOrder::State::TRAVELLING) {
-      auto steps = get_step(driver_order, vehicle.lock()->send_queue_size);
+      auto steps = get_step(driver_order, veh->send_queue_size);
       if (steps.empty()) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
       } else {
@@ -112,20 +126,20 @@ void Command::run_once() {
   } else if (state == State::EXECUTED) {
     // unclaim
     std::stringstream ss;
-    ss << vehicle.lock()->name << " unclaim ";
+    ss << veh->name << " unclaim ";
     std::vector<std::shared_ptr<TCSResource>> temp;
-    for (auto& x : vehicle.lock()->claim_resources) {
-      if (x != vehicle.lock()->current_point) {
+    for (auto& x : veh->claim_resources) {
+      if (x != veh->current_point) {
         temp.push_back(x);
         ss << x->name << " ";
       }
     }
-    if (scheduler.lock()->resource.lock()->unclaim(temp, vehicle.lock())) {
+    if (scheduler.lock()->resource.lock()->unclaim(temp, veh)) {
       state = State::END;
       CLOG(INFO, "driver") << ss.str();
     }
   } else if (state == State::END) {
-    vehicle.lock()->command_done();
+    veh->command_done();
     state = State::DISPOSABLE;
   }
 }
@@ -185,12 +199,13 @@ std::vector<std::shared_ptr<data::order::Step>> Command::get_step_nopop(
 }
 std::vector<std::shared_ptr<TCSResource>> Command::get_future(
     std::shared_ptr<data::order::DriverOrder> order) {
+  auto veh = vehicle.lock();
   std::vector<std::shared_ptr<TCSResource>> res;
-  if (order->route->steps.size() > 1) {
-    auto next = *(order->route->steps.begin() + 1);
+  if (order->route->steps.size() > veh->send_queue_size) {
+    auto next = *(order->route->steps.begin() + veh->send_queue_size);
     auto beg = next->path->destination_point.lock();
     auto end = next->path->source_point.lock();
-    for (auto& x : vehicle.lock()->claim_resources) {
+    for (auto& x : veh->claim_resources) {
       if (x == beg) {
         beg = nullptr;
       }
