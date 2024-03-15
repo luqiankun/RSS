@@ -125,7 +125,7 @@ class SimRabbit3 {
       const std::string prefix = "/" + interface_name + "/" + version + "/" +
                                  manufacturer + "/" + serial_number + "/";
       mqtt_client->set_func(prefix + "order", [&](mqtt::const_message_ptr t) {
-        LOG(INFO) << t->get_topic();
+        // LOG(INFO) << t->get_topic();
         current_msg = mqtt::message_ptr_builder()
                           .topic(t->get_topic())
                           .properties(t->get_properties())
@@ -136,7 +136,7 @@ class SimRabbit3 {
         move_task.async_run([&] {
           try {
             auto src = jsoncons::json::parse(current_msg->get_payload());
-            LOG(INFO) << current_msg->to_string();
+            // LOG(INFO) << current_msg->to_string();
             auto err = vda5050::order_validate(src);
             if (err.empty()) {
               // do

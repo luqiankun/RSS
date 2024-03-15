@@ -700,6 +700,19 @@ std::pair<int, std::string> TCS::post_transport_order(
           auto op = d["operation"].get<std::string>();
           auto op_ = data::order::DriverOrder::Destination::get_optype(op);
           if (op_.has_value()) {
+            if (op_.value() ==
+                    data::order::DriverOrder::Destination::OpType::LOAD ||
+                op_.value() ==
+                    data::order::DriverOrder::Destination::OpType::UNLOAD) {
+              if (check.first !=
+                  kernel::allocate::ResourceManager::ResType::Location) {
+                LOG(ERROR) << "op type '" + std::string(op) +
+                                  "' is not support,need a location";
+                ord->state = data::order::TransportOrder::State::FAILED;
+                orderpool->ended_orderpool.push_back(ord);
+                break;
+              }
+            }
             auto destination =
                 orderpool->res_to_destination(check.second, op_.value());
             auto dr = std::make_shared<data::order::DriverOrder>(

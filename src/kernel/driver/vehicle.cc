@@ -593,6 +593,16 @@ bool Rabbit3::move(std::shared_ptr<data::order::Step> step) {
   // wait move
   int n{0};
   while (task_run) {
+    if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
+      CLOG(ERROR, "driver") << "master not online";
+      task_run = false;
+      return false;
+    }
+    if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
+      CLOG(ERROR, "driver") << "vehlicle not online";
+      task_run = false;
+      return false;
+    }
     if (vdastate.order_id == prefix + std::to_string(order_id)) {
       auto p = get_time_from_str(vdastate.timestamp);
       if (p.has_value()) {
@@ -725,6 +735,16 @@ bool Rabbit3::action(
   // wait
   int n{0};
   while (task_run) {
+    if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
+      CLOG(ERROR, "driver") << "master not online";
+      task_run = false;
+      return false;
+    }
+    if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
+      CLOG(ERROR, "driver") << "vehlicle not online";
+      task_run = false;
+      return false;
+    }
     if (vdastate.order_id == prefix + std::to_string(order_id)) {
       // state
       if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
@@ -814,6 +834,16 @@ bool Rabbit3::instant_action(
   instanttask_run = true;
   bool ok{false};
   while (instanttask_run) {
+    if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
+      CLOG(ERROR, "driver") << "master not online";
+      instanttask_run = false;
+      return false;
+    }
+    if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
+      CLOG(ERROR, "driver") << "vehlicle not online";
+      instanttask_run = false;
+      return false;
+    }
     for (auto& x : vdastate.actionstates) {
       if (x.action_id == id) {
         if (x.action_status == vda5050::state::ActionStatus::WAITING) {
