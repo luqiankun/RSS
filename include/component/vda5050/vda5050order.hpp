@@ -11,7 +11,8 @@ enum class ActionType {
   NOP,     // 啥也不干
   LOAD,    // 去某location load
   UNLOAD,  // 去某location unload
-  MOVE     // 停在某point,
+  MOVE,    // 去某point
+  CHARGE,  // 充电
 };
 enum class ActionBlockingType { NONE = 1, SOFT = 2, HARD = 3 };
 

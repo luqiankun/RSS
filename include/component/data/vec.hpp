@@ -1,6 +1,7 @@
 #ifndef VEC_HPP_
 #define VEC_HPP_
 #include <cmath>
+#include <ostream>
 namespace data {
 struct Vector2i {
   int x{0};
@@ -26,7 +27,7 @@ struct Vector2i {
     x = r.x;
     y = r.y;
   }
-  int norm() { return sqrt(x * x + y * y); }
+  int norm() { return sqrt(double(x) * double(x) + double(y) * double(y)); }
   bool operator!=(Vector2i t) { return !(&t == this); }
 };
 struct Vector3i {
@@ -59,7 +60,13 @@ struct Vector3i {
     y = r.y;
     z = r.z;
   }
-  int norm() { return sqrt(x * x + y * y + z * z); }
+  int norm() {
+    return sqrt(double(x) * double(x) + double(y) * double(y) +
+                double(z) * double(z));
+  }
+  friend std::ostream& operator<<(std::ostream& in, Vector3i v) {
+    return in << v.x << " " << v.y << " " << v.z;
+  }
 };
 struct Vector2f {
   float x{0.0};

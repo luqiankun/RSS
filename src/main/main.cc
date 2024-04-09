@@ -76,17 +76,17 @@ void read_params(std::string path) {
 }
 
 int main(int argc, char** argv) {
-  el::Loggers::getLogger("_____tcs");
-  el::Loggers::getLogger("___timer");
-  el::Loggers::getLogger("___order");
-  el::Loggers::getLogger("__visual");
-  el::Loggers::getLogger("____http");
-  el::Loggers::getLogger("__driver");
+  el::Loggers::getLogger("tcs");
+  el::Loggers::getLogger("timer");
+  el::Loggers::getLogger("order");
+  el::Loggers::getLogger("visual");
+  el::Loggers::getLogger("http");
+  el::Loggers::getLogger("driver");
   el::Loggers::getLogger("dispatch");
-  el::Loggers::getLogger("_planner");
+  el::Loggers::getLogger("planner");
   el::Loggers::getLogger("schedule");
   el::Loggers::getLogger("allocate");
-  el::Loggers::getLogger("____mqtt");
+  el::Loggers::getLogger("mqtt");
   std::string path{"config/config.yaml"};
   if (argc >= 2) {
     path = std::string(argv[1]);

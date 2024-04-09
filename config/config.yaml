@@ -1,8 +1,8 @@
 #windows下注意该文件编码格式要为GBK格式,否则可以读取失败
 log:
   path: "logs"
-  fmt: "[%levshort] [%logger] [%datetime{%y-%M-%dT%H:%m:%s.%gZ}] %msg" #log format
-  # fmt: "[%level] [%logger] %datetime %fbase:%line] %msg" #log format
+  # fmt: "[%levshort] %datetime{%y%M%d %H:%m:%s.%g} %logger %thread %fbase:%line] %msg" #log format
+  fmt: "[%levshort %datetime{%y%M%d %H:%m:%s.%g} %fbase:%line] %msg" #log format
   size: "2097152" # 2MB
   # size: "1000" #
   max_num: 5 # 最大文件个数

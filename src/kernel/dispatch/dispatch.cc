@@ -142,14 +142,18 @@ Dispatcher::~Dispatcher() {
 
 void Dispatcher::idle_detect() {
   for (auto& v : vehicles) {
+    // TODO 充电
+    //
     if (v->state == driver::Vehicle::State::IDLE &&
         v->home_state == driver::Vehicle::HomeState::HOME) {
       auto now = std::chrono::system_clock::now();
       auto dt = now - v->idle_time;
       auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
-      if (dt_s.count() > 10) {
-        if (v->current_point != v->init_point) {
-          go_home("TOder_" + get_time_fmt(now) + v->name + "_gohome", v);
+      if (dt_s.count() > 0) {
+        if (v->current_point->type != data::model::Point::Type::PARK_POSITION) {
+          go_home("TOder_" + std::to_string(now.time_since_epoch().count()) +
+                      v->name + "_gohome",
+                  v);
         }
       }
     }

@@ -23,6 +23,10 @@ class ResourceManager : public TCSObject {
             const std::shared_ptr<schedule::Client>&);
   bool unclaim(const std::vector<std::shared_ptr<TCSResource>>&,
                const std::shared_ptr<schedule::Client>&);
+  std::shared_ptr<data::model::Point> get_recent_park_point(
+      std::shared_ptr<data::model::Point>);
+  std::shared_ptr<data::model::Location> get_recent_charge_loc(
+      std::shared_ptr<data::model::Point>);
   std::shared_ptr<data::order::Route> paths_to_route(
       std::vector<std::shared_ptr<data::model::Point>> ps);
   std::pair<ResType, std::shared_ptr<TCSResource>> find(
@@ -34,6 +38,7 @@ class ResourceManager : public TCSObject {
   std::vector<std::shared_ptr<data::model::Path>> paths;
   std::vector<std::shared_ptr<data::model::Point>> points;
   std::vector<std::shared_ptr<data::model::Location>> locations;
+  std::vector<std::shared_ptr<data::model::LocationType>> location_types;
 
  public:
   std::vector<std::shared_ptr<RuleBase>> rules;

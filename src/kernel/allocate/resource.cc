@@ -201,6 +201,46 @@ bool ResourceManager::free(const std::vector<std::shared_ptr<TCSResource>>& res,
   }
   return true;
 }
+std::shared_ptr<data::model::Point> ResourceManager::get_recent_park_point(
+    std::shared_ptr<data::model::Point> cur) {
+  // CLOG(INFO, "allocate") << "now" << cur->name << " " << cur->position;
+  std::vector<double> dis;
+  for (auto& x : points) {
+    if (x != cur) {
+      if (x->type == data::model::Point::Type::PARK_POSITION) {
+        double D = (cur->position - x->position).norm();
+        dis.push_back(D);
+        // CLOG(INFO, "allocate") << x->position << " " << x->name << " " << D;
+      } else {
+        dis.push_back(std::numeric_limits<double>::max());
+      }
+    } else {
+      dis.push_back(std::numeric_limits<double>::max());
+    }
+  }
+  auto min = std::min_element(dis.begin(), dis.end());
+  return points.at(min - dis.begin());
+}
+std::shared_ptr<data::model::Location> ResourceManager::get_recent_charge_loc(
+    std::shared_ptr<data::model::Point> cur) {
+  std::vector<double> dis;
+  for (auto& x : locations) {
+    if (x->link.lock() != cur) {
+      if (std::find(x->type.lock()->allowrd_ops.begin(),
+                    x->type.lock()->allowrd_ops.end(),
+                    "charge") != x->type.lock()->allowrd_ops.end()) {
+        double D = (cur->position - x->position).norm();
+        dis.push_back(D);
+      } else {
+        dis.push_back(std::numeric_limits<double>::max());
+      }
+    } else {
+      dis.push_back(std::numeric_limits<double>::max());
+    }
+  }
+  auto min = std::min_element(dis.begin(), dis.end());
+  return locations.at(min - dis.begin());
+}
 
 }  // namespace allocate
 }  // namespace kernel

@@ -145,8 +145,7 @@ void Vehicle::get_next_ord() {
   // 获取新订单
   for (;;) {
     if (orders.empty()) {
-      proc_state = ProcState::AWAITING_ORDER;
-      state = State::IDLE;
+      // state = State::IDLE;
       break;
     } else {
       current_order = orders.front();
@@ -169,14 +168,12 @@ void Vehicle::get_next_ord() {
     }
   }
   if (current_order) {
-    state = State::EXECUTING;
-    proc_state = ProcState::PROCESSING_ORDER;
+    // state = State::EXECUTING;
     next_command();
   } else {
-    proc_state = ProcState::AWAITING_ORDER;
-    state = State::IDLE;
-    idle_time = std::chrono::system_clock::now();
-    CLOG(INFO, driver_log) << "now is idle " << get_time_fmt(idle_time);
+    // state = State::IDLE;
+    // idle_time = std::chrono::system_clock::now();
+    // CLOG(INFO, driver_log) << "now is idle " << get_time_fmt(idle_time);
   }
 }
 
@@ -221,8 +218,7 @@ void Vehicle::command_done() {
     if (current_order->state ==
         data::order::TransportOrder::State::BEING_PROCESSED) {
       next_command();
-      state = State::EXECUTING;
-      proc_state = ProcState::PROCESSING_ORDER;
+      // state = State::EXECUTING;
     } else {
       // 订单取消了或失败了
       command_done();
@@ -249,21 +245,7 @@ std::string Vehicle::get_state() {
     return "UNKNOWN";
   }
 }
-std::optional<std::string> Vehicle::get_proc_state(ProcState s) {
-  if (s == kernel::driver::Vehicle::ProcState::IDLE) {
-    return "IDLE";
-  } else if (s == kernel::driver::Vehicle::ProcState::AWAITING_ORDER) {
-    return "AWAITING_ORDER";
-  } else if (s == kernel::driver::Vehicle::ProcState::PROCESSING_ORDER) {
-    return "PROCESSING_ORDER";
-  } else {
-    return std::nullopt;
-  }
-}
-std::string Vehicle::get_proc_state() {
-  auto res = Vehicle::get_proc_state(this->proc_state);
-  return res.value_or("");
-}
+
 void Vehicle::next_command() {
   if (!current_order) {
     if (orders.empty()) {
@@ -303,7 +285,6 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
   } else if (state == State::IDLE) {
     // TODO
     state = State::EXECUTING;
-    proc_state = ProcState::PROCESSING_ORDER;
     current_order.reset();
     orders.push_back(order);
     next_command();
@@ -481,7 +462,6 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
           if (!init_pos) {
             this->position = current_point->position;
             init_pos = true;
-            init_point = x;
             idle_time = std::chrono::system_clock::now();
             std::vector<std::shared_ptr<TCSResource>> res;
             res.push_back(x);
@@ -496,14 +476,27 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
         this->angle = v["agvPosition"]["theta"].as_double();
         layout = position;
       }
+
       if (state == Vehicle::State::UNKNOWN) {
         if (veh_state == vda5050::VehicleMqttStatus::ONLINE) {
           state = State::IDLE;
         }
       }
+      if (!vdastate.errors.empty()) {
+        state = State::ERROR;
+      } else if (vdastate.battery_state.charging) {
+        state = State::CHARGING;
+      } else if (vdastate.driving) {
+        state = State::EXECUTING;
+      } else {
+        state = State::IDLE;
+        idle_time = std::chrono::system_clock::now();
+        CLOG(INFO, driver_log) << "now is idle " << get_time_fmt(idle_time);
+      }
       if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
         state = State::UNKNOWN;
       }
+
     } else {
       std::for_each(ms.begin(), ms.end(), [](const std::string s) {
         CLOG(WARNING, driver_log) << s;
@@ -729,49 +722,46 @@ bool Rabbit3::action(
   ord.order_id = prefix + std::to_string(order_id);
   ord.order_update_id = 0;
   {
+    auto t = std::dynamic_pointer_cast<data::model::Location>(
+        dest->destination.lock());
+    auto node = vda5050::order::Node();
+    node.node_id = t->link.lock()->name;
+    node.released = false;
+    node.sequence_id = 0;
+    node.node_position = vda5050::order::NodePosition();
+    node.node_position.value().x = t->link.lock()->position.x;
+    node.node_position.value().y = t->link.lock()->position.y;
+    node.node_position.value().map_id = map_id;
+    node.node_position.value().theta = angle + M_PI / 2;
+    auto act = vda5050::order::Action();
+    act.action_id = ord.order_id + "/action";
     if (dest->operation ==
-        data::order::DriverOrder::Destination::OpType::MOVE) {
-      home_state = Vehicle::HomeState::PARK;
-      task_run = false;
-      return true;
+        data::order::DriverOrder::Destination::OpType::LOAD) {
+      act.action_type = vda5050::order::ActionType::LOAD;
     } else if (dest->operation ==
-               data::order::DriverOrder::Destination::OpType::NOP) {
-      task_run = false;
-      return true;
+               data::order::DriverOrder::Destination::OpType::UNLOAD) {
+      act.action_type = vda5050::order::ActionType::UNLOAD;
+    } else if (dest->operation ==
+               data::order::DriverOrder::Destination::OpType::MOVE) {
+      act.action_type = vda5050::order::ActionType::MOVE;
+    } else if (dest->operation ==
+               data::order::DriverOrder::Destination::OpType::CHARGE) {
+      act.action_type = vda5050::order::ActionType::CHARGE;
     } else {
-      home_state = Vehicle::HomeState::HOME;
-      auto t = std::dynamic_pointer_cast<data::model::Location>(
-          dest->destination.lock());
-      auto node = vda5050::order::Node();
-      node.node_id = t->link.lock()->name;
-      node.released = false;
-      node.sequence_id = 0;
-      node.node_position = vda5050::order::NodePosition();
-      node.node_position.value().x = t->link.lock()->position.x;
-      node.node_position.value().y = t->link.lock()->position.y;
-      node.node_position.value().map_id = map_id;
-      node.node_position.value().theta = angle + M_PI / 2;
-      auto act = vda5050::order::Action();
-      act.action_id = ord.order_id + "/action";
-      if (dest->operation ==
-          data::order::DriverOrder::Destination::OpType::LOAD) {
-        act.action_type = vda5050::order::ActionType::LOAD;
-      } else {
-        act.action_type = vda5050::order::ActionType::UNLOAD;
-      }
-      act.blocking_type = vda5050::order::ActionBlockingType::HARD;
-      act.action_parameters = std::vector<vda5050::order::ActionParam>();
-      auto param_x = vda5050::order::ActionParam();
-      param_x.key = "x";
-      param_x.value = (float)t->position.x;
-      act.action_parameters->push_back(param_x);
-      auto param_y = vda5050::order::ActionParam();
-      param_y.key = "y";
-      param_y.value = (float)t->position.y;
-      act.action_parameters->push_back(param_y);
-      node.actions.push_back(act);
-      ord.nodes.push_back(node);
+      act.action_type = vda5050::order::ActionType::NOP;
     }
+    act.blocking_type = vda5050::order::ActionBlockingType::HARD;
+    act.action_parameters = std::vector<vda5050::order::ActionParam>();
+    auto param_x = vda5050::order::ActionParam();
+    param_x.key = "x";
+    param_x.value = (float)t->position.x;
+    act.action_parameters->push_back(param_x);
+    auto param_y = vda5050::order::ActionParam();
+    param_y.key = "y";
+    param_y.value = (float)t->position.y;
+    act.action_parameters->push_back(param_y);
+    node.actions.push_back(act);
+    ord.nodes.push_back(node);
   }
   auto msg = mqtt::make_message(prefix + "order", ord.to_json().as_string());
   mqtt_cli->mqtt_client->publish(msg)->wait();
