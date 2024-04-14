@@ -1369,7 +1369,11 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       point->position.y = p["position"]["y"].get<int>();
       point->position.z = p["position"]["z"].get<int>();
       if (p.contains("vehicleOrientationAngle")) {
-        point->client_angle = p["vehicleOrientationAngle"].get<int>();
+        if (!p["vehicleOrientationAngle"].is_string())
+          point->client_angle = p["vehicleOrientationAngle"].get<int>();
+        else {
+          point->client_angle = 0;
+        }
       }
       point->type = data::model::Point::new_type(p["type"].get<std::string>());
       point->layout.position.x = p["layout"]["position"]["x"].get<int>();
@@ -1379,12 +1383,23 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       point->layout.layer_id = p["layout"]["layerId"].get<int>();
       if (p.contains("properties")) {
         for (auto &pro : p["properties"]) {
+          std::string value;
+          if (pro["value"].is_boolean()) {
+            if (pro["value"].get<bool>()) {
+              value = "true";
+            } else {
+              value = "false";
+            }
+          } else {
+            value = pro["value"].get<std::string>();
+          }
           point->properties.insert(std::pair<std::string, std::string>(
-              pro["name"].get<std::string>(), pro["value"].get<std::string>()));
+              pro["name"].get<std::string>(), value));
         }
       }
       resource->points.push_back(point);
     }
+    CLOG(INFO, tcs_log) << resource->points.size() << " point";
     // path
     for (auto &p : model["paths"]) {
       auto path = std::make_shared<data::model::Path>(p["name"]);
@@ -1408,8 +1423,18 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           data::model::Path::new_connect_type(p["layout"]["connectionType"]);
       if (p.contains("properties")) {
         for (auto &pro : p["properties"]) {
+          std::string value;
+          if (pro["value"].is_boolean()) {
+            if (pro["value"].get<bool>()) {
+              value = "true";
+            } else {
+              value = "false";
+            }
+          } else {
+            value = pro["value"].get<std::string>();
+          }
           path->properties.insert(std::pair<std::string, std::string>(
-              pro["name"].get<std::string>(), pro["value"].get<std::string>()));
+              pro["name"].get<std::string>(), value));
         }
       }
       if (!p.contains("length")) {
@@ -1419,6 +1444,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       }
       resource->paths.push_back(path);
     }
+    CLOG(INFO, tcs_log) << resource->paths.size() << " path";
 
     for (auto &x : model["locationTypes"]) {
       auto type = std::make_shared<data::model::LocationType>(
@@ -1439,6 +1465,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       }
       resource->location_types.push_back(type);
     }
+    CLOG(INFO, tcs_log) << resource->location_types.size() << " locationtype";
 
     // location
     for (auto &l : model["locations"]) {
@@ -1473,6 +1500,8 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       // }
       resource->locations.push_back(loc);
     }
+    CLOG(INFO, tcs_log) << resource->locations.size() << " location";
+
     // vehicle
     for (auto &v : model["vehicles"]) {
       // TODO 工厂
@@ -1492,6 +1521,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       vehicle->position.x = resource->points.front()->position.x;
       vehicle->position.y = resource->points.front()->position.y;
       vehicle->current_point = resource->points.front();  // 当前点
+      vehicle->state = kernel::driver::Vehicle::State::IDLE;
       ///////////////////////////
       dispatcher->vehicles.push_back(vehicle);
     }
