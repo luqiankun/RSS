@@ -15,7 +15,8 @@ class DriverOrder : public TCSObject {
       NOP,     // 啥也不干
       LOAD,    // 去某location load
       UNLOAD,  // 去某location unload
-      MOVE     // 去某point
+      MOVE,    // 去某point
+      CHARGE,  // 充电
     };
     std::map<std::string, std::string> properties;
     std::weak_ptr<TCSResource> destination;
@@ -29,6 +30,8 @@ class DriverOrder : public TCSObject {
       } else if (op == "UNLOAD") {
         return OpType::UNLOAD;
 
+      } else if (op == "CHARGE") {
+        return OpType::CHARGE;
       } else if (op == "MOVE") {
         return OpType::MOVE;
       } else {
@@ -43,6 +46,8 @@ class DriverOrder : public TCSObject {
 
       } else if (operation == OpType::UNLOAD) {
         return "UNLOAD";
+      } else if (operation == OpType::CHARGE) {
+        return "CHARGE";
       } else {
         return "NOP";
       }

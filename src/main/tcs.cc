@@ -122,12 +122,88 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         p->locked = locked;
         p->source_point.lock()->incoming_paths.push_back(p);
         p->destination_point.lock()->outgoing_paths.push_back(p);
+        // pro
+        auto property = path.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "property ";
+        });
+        while (property.type() != pugi::node_null) {
+          if (std::string(property.name()) != "property ") {
+            break;
+          }
+          auto name_ = property.attribute("name").as_string();
+          auto vlaue_ = property.attribute("value").as_string();
+          p->properties.insert(
+              std::pair<std::string, std::string>(name_, vlaue_));
+          property = property.next_sibling();
+        }
+        //
         resource->paths.push_back(p);
         path = path.next_sibling();
       }
       CLOG(INFO, tcs_log) << "init path size " << resource->paths.size();
     }
+    {
+      // locatintype
+      auto loc_type = root.find_child([](pugi::xml_node node) {
+        return std::string(node.name()) == "locationType";
+      });
+      while (loc_type.type() != pugi::node_null) {
+        if (std::string(loc_type.name()) != "locationType") {
+          break;
+        }
+        auto name = loc_type.attribute("name").as_string();
+        auto lt = std::make_shared<data::model::LocationType>(name);
+        // allow
+        auto allow_ops = loc_type.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "allowedOperation";
+        });
+        while (allow_ops.type() != pugi::node_null) {
+          if (std::string(allow_ops.name()) != "property") {
+            break;
+          }
+          auto name_ = allow_ops.attribute("name").as_string();
+          lt->allowrd_ops.push_back(name_);
+          allow_ops = allow_ops.next_sibling();
+        }
+        auto allow_per_ops = loc_type.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "allowedOperation";
+        });
+        while (allow_per_ops.type() != pugi::node_null) {
+          if (std::string(allow_per_ops.name()) != "property") {
+            break;
+          }
+          auto name_ = allow_per_ops.attribute("name").as_string();
+          lt->allowrd_per_ops.push_back(name_);
+          allow_per_ops = allow_per_ops.next_sibling();
+        }
+        // pro
+        auto property = loc_type.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "property";
+        });
+        while (property.type() != pugi::node_null) {
+          if (std::string(property.name()) != "property") {
+            break;
+          }
+          auto name_ = property.attribute("name").as_string();
+          auto vlaue_ = property.attribute("value").as_string();
+          lt->properties.insert(
+              std::pair<std::string, std::string>(name_, vlaue_));
+          property = property.next_sibling();
+        }
+        //
+        auto loc_layout = loc_type.child("locationTypeLayout")
+                              .attribute("locationRepresentation")
+                              .as_string();
+        lt->layout.location_representation =
+            data::model::new_location_type(loc_layout);
 
+        //
+        resource->location_types.push_back(lt);
+        loc_type = loc_type.next_sibling();
+      }
+      CLOG(INFO, tcs_log) << "init loc_type size "
+                          << resource->location_types.size();
+    }
     {  // location
       auto location = root.find_child([](pugi::xml_node node) {
         return std::string(node.name()) == "location";
@@ -162,51 +238,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         layout.position = data::Vector2i(xPosition_layout, yPosition_layout);
         layout.label_offset = data::Vector2i(xLabelOffset, yLabelOffset);
         layout.layer_id = layerId;
-        // data::model::Location::LocationTypeLayout location_type_layout;
-        // if (locationRepresentation == "NONE") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::NONE;
-        // } else if (locationRepresentation == "DEFAULT") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::DEFAULT;
-        // } else if (locationRepresentation == "LOAD_TRANSFER_GENERIC") {
-        //   location_type_layout.location_representation =
-        //   data::model::Location::
-        //       LocationRepresentation::LOAD_TRANSFER_GENERIC;
-        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_1") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_1;
-        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_2") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_2;
-        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_3") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_3;
-        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_4") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_4;
-        // } else if (locationRepresentation == "LOAD_TRANSFER_ALT_5") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::LOAD_TRANSFER_ALT_5;
-        // } else if (locationRepresentation == "WORKING_GENERIC") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::WORKING_GENERIC;
-        // } else if (locationRepresentation == "WORKING_ALT_1") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::WORKING_ALT_1;
-        // } else if (locationRepresentation == "WORKING_ALT_2") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::WORKING_ALT_2;
-        // } else if (locationRepresentation == "RECHARGE_GENERIC") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::RECHARGE_GENERIC;
-        // } else if (locationRepresentation == "RECHARGE_ALT_1") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::RECHARGE_ALT_1;
-        // } else if (locationRepresentation == "RECHARGE_ALT_2") {
-        //   location_type_layout.location_representation =
-        //       data::model::Location::LocationRepresentation::RECHARGE_ALT_2;
-        // }
+
         auto loc = std::make_shared<data::model::Location>(name);
         std::weak_ptr<data::model::Point> link;
         for (auto &p : resource->points) {
@@ -215,10 +247,30 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
             p->attached_links.push_back(loc);
           }
         }
+
+        for (auto &t : resource->location_types) {
+          if (t->name == type) {
+            loc->type = t;
+          }
+        }
+
         loc->position = data::Vector3i(xPosition, yPosition, zPosition);
         loc->layout = layout;
         loc->link = link;
         loc->locked = locked;
+        auto property = location.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "property";
+        });
+        while (property.type() != pugi::node_null) {
+          if (std::string(property.name()) != "property") {
+            break;
+          }
+          auto name_ = property.attribute("name").as_string();
+          auto vlaue_ = property.attribute("value").as_string();
+          loc->properties.insert(
+              std::pair<std::string, std::string>(name_, vlaue_));
+          property = property.next_sibling();
+        }
         resource->locations.push_back(loc);
         location = location.next_sibling();
       }
@@ -464,9 +516,10 @@ void TCS::home_order(const std::string &name,
   CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   auto destination = orderpool->res_to_destination(
-      v->init_point, data::order::DriverOrder::Destination::OpType::MOVE);
-  auto dr = std::make_shared<data::order::DriverOrder>("driverorder_" +
-                                                       v->init_point->name);
+      resource->get_recent_park_point(v->current_point),
+      data::order::DriverOrder::Destination::OpType::MOVE);
+  auto dr =
+      std::make_shared<data::order::DriverOrder>("driverorder_home_" + v->name);
   dr->destination = destination;
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
@@ -982,7 +1035,6 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["energyLevelGood"] = v->energy_level_good;
   res["integrationLevel"] = v->integration_level;
   res["paused"] = v->paused;
-  res["procState"] = v->get_proc_state();
   res["transportOrder"] = v->current_order ? v->current_order->name : "";
   res["currentPosition"] = v->current_point ? v->current_point->name : "";
   res["precisePosition"]["x"] = v->position.x;
@@ -1017,33 +1069,50 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
     }
     return std::pair<int, std::string>(200, res.dump());
   } else {
-    if (state == kernel::driver::Vehicle::get_proc_state(
-                     kernel::driver::Vehicle::ProcState::IDLE)) {
+    if (state == "IDLE") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
-        if (v->proc_state == kernel::driver::Vehicle::ProcState::IDLE) {
+        if (v->state == kernel::driver::Vehicle::State::IDLE) {
           res.push_back(vehicle_to_json(v));
         }
       }
       return std::pair<int, std::string>(200, res.dump());
-    } else if (state ==
-               kernel::driver::Vehicle::get_proc_state(
-                   kernel::driver::Vehicle::ProcState::AWAITING_ORDER)) {
+    } else if (state == "ERROR") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
-        if (v->proc_state ==
-            kernel::driver::Vehicle::ProcState::AWAITING_ORDER) {
+        if (v->state == kernel::driver::Vehicle::State::ERROR) {
           res.push_back(vehicle_to_json(v));
         }
       }
       return std::pair<int, std::string>(200, res.dump());
-    } else if (state ==
-               kernel::driver::Vehicle::get_proc_state(
-                   kernel::driver::Vehicle::ProcState::PROCESSING_ORDER)) {
+    } else if (state == "EXECUTING") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
-        if (v->proc_state ==
-            kernel::driver::Vehicle::ProcState::PROCESSING_ORDER) {
+        if (v->state == kernel::driver::Vehicle::State::EXECUTING) {
+          res.push_back(vehicle_to_json(v));
+        }
+      }
+      return std::pair<int, std::string>(200, res.dump());
+    } else if (state == "UNKNOWN") {
+      json res = json::array();
+      for (auto &v : dispatcher->vehicles) {
+        if (v->state == kernel::driver::Vehicle::State::UNKNOWN) {
+          res.push_back(vehicle_to_json(v));
+        }
+      }
+      return std::pair<int, std::string>(200, res.dump());
+    } else if (state == "UNAVAILABLE") {
+      json res = json::array();
+      for (auto &v : dispatcher->vehicles) {
+        if (v->state == kernel::driver::Vehicle::State::UNAVAILABLE) {
+          res.push_back(vehicle_to_json(v));
+        }
+      }
+      return std::pair<int, std::string>(200, res.dump());
+    } else if (state == "CHARGING") {
+      json res = json::array();
+      for (auto &v : dispatcher->vehicles) {
+        if (v->state == kernel::driver::Vehicle::State::CHARGING) {
           res.push_back(vehicle_to_json(v));
         }
       }
@@ -1194,12 +1263,36 @@ std::pair<int, std::string> TCS::get_model() {
     }
     res["paths"].push_back(path);
   }
+  // location type
+  res["locationTypes"] = json::array();
+  for (auto &type : resource->location_types) {
+    json loc_type;
+    loc_type["typeName"] = type->name;
+    loc_type["allowedOperation"] = json::array();
+    loc_type["allowedPeripheralOperation"] = json::array();
+    loc_type["properties"] = json::array();
+    for (auto &x : type->allowrd_ops) {
+      loc_type["allowedOperation"].push_back(x);
+    }
+    for (auto &x : type->allowrd_ops) {
+      loc_type["allowedPeripheralOperation"].push_back(x);
+    }
+    for (auto &pro : type->properties) {
+      json t;
+      t["name"] = pro.first;
+      t["value"] = pro.second;
+      loc_type["properties"].push_back(t);
+    }
+    loc_type["layout"]["locationRepresentation"] =
+        data::model::get_Representation(type->layout.location_representation);
+    res["locationTypes"].push_back(loc_type);
+  }
   // location
   res["locations"] = json::array();
   for (auto &loc : resource->locations) {
     json location;
     location["name"] = loc->name;
-    location["typeNmae"] = "";  // TODO
+    location["typeName"] = loc->type.lock()->name;  // TODO
     location["position"]["x"] = loc->position.x;
     location["position"]["y"] = loc->position.y;
     location["position"]["z"] = loc->position.z;
@@ -1211,9 +1304,16 @@ std::pair<int, std::string> TCS::get_model() {
     location["layout"]["labelOffset"]["x"] = loc->layout.label_offset.x;
     location["layout"]["labelOffset"]["y"] = loc->layout.label_offset.y;
     location["layout"]["locationRepresentation"] =
-        data::model::Location::get_Representation(
-            loc->type.layout.location_representation);
+        data::model::get_Representation(
+            loc->type.lock()->layout.location_representation);
     location["layout"]["layerId"] = loc->layout.layer_id;
+    location["properties"] = json::array();
+    for (auto &pro : loc->properties) {
+      json t;
+      t["name"] = pro.first;
+      t["value"] = pro.second;
+      location["properties"].push_back(t);
+    }
     res["locations"].push_back(location);
   }
   // block
@@ -1319,6 +1419,27 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       }
       resource->paths.push_back(path);
     }
+
+    for (auto &x : model["locationTypes"]) {
+      auto type = std::make_shared<data::model::LocationType>(
+          x["name"].get<std::string>());
+      type->layout.location_representation = data::model::new_location_type(
+          x["layout"]["locationRepresentation"].get<std::string>());
+      for (auto &pro : x["property "]) {
+        auto key = pro["name"].get<std::string>();
+        auto value = pro["value"].get<std::string>();
+        type->properties.insert(
+            std::pair<std::string, std::string>(key, value));
+      }
+      for (auto &allow : x["allowedOperation"]) {
+        type->allowrd_ops.push_back(allow);
+      }
+      for (auto &allow : x["allowedPeripheralOperation"]) {
+        type->allowrd_per_ops.push_back(allow);
+      }
+      resource->location_types.push_back(type);
+    }
+
     // location
     for (auto &l : model["locations"]) {
       auto loc =
@@ -1340,11 +1461,16 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       loc->layout.label_offset.x = l["layout"]["labelOffset"]["x"].get<int>();
       loc->layout.label_offset.y = l["layout"]["labelOffset"]["y"].get<int>();
       loc->layout.layer_id = l["layout"]["layerId"].get<int>();
-      if (l["layout"].contains("locationRepresentation")) {
-        loc->type.layout.location_representation =
-            data::model::Location::new_location_type(
-                l["layout"]["locationRepresentation"].get<std::string>());
+      for (auto &x : resource->location_types) {
+        if (x->name == l["typeName"].get<std::string>()) {
+          loc->type = x;
+        }
       }
+      // if (l["layout"].contains("locationRepresentation")) {
+      //   loc->type.layout.location_representation =
+      //       data::model::Location::new_location_type(
+      //           l["layout"]["locationRepresentation"].get<std::string>());
+      // }
       resource->locations.push_back(loc);
     }
     // vehicle
@@ -1366,7 +1492,6 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       vehicle->position.x = resource->points.front()->position.x;
       vehicle->position.y = resource->points.front()->position.y;
       vehicle->current_point = resource->points.front();  // 当前点
-      vehicle->init_point = resource->points.front();     // 初始点
       ///////////////////////////
       dispatcher->vehicles.push_back(vehicle);
     }

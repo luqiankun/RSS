@@ -20,11 +20,8 @@ class Vehicle : public schedule::Client,
  public:
   Vehicle(const std::string& n) : schedule::Client(n) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
-  enum class ProcState { IDLE, AWAITING_ORDER, PROCESSING_ORDER };
   enum class HomeState { HOME, PARK };
   std::string get_state();
-  std::string get_proc_state();
-  static std::optional<std::string> get_proc_state(ProcState);
 
   void receive_task(std::shared_ptr<data::order::TransportOrder>);
   void next_command();
@@ -55,14 +52,13 @@ class Vehicle : public schedule::Client,
   int width;
   int max_vel{0};
   int max_reverse_vel{0};
-  int energy_level_good{0};
-  int energy_level_critical{0};
-  int engrgy_level_recharge{0};
-  int engrgy_level_full{0};
+  int energy_level_good{70};      // 接收订单，无订单自动充电
+  int energy_level_critical{15};  // 低于值不可移动
+  int engrgy_level_recharge{35};  // 只充电不接订单
+  int engrgy_level_full{90};      // 满电
   int engerg_level{100};
   std::string integration_level;
   std::string color;
-  ProcState proc_state{ProcState::IDLE};
   State state{State::UNKNOWN};
   bool paused{false};
   HomeState home_state{HomeState::HOME};
@@ -74,7 +70,6 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::order::TransportOrder> current_order;
   std::shared_ptr<Command> current_command;
   std::shared_ptr<data::model::Point> current_point;
-  std::shared_ptr<data::model::Point> init_point;
   std::shared_ptr<vda5050::instantaction::Action> current_action;
   std::thread run_th;
   data::Vector3i position;

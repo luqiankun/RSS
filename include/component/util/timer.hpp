@@ -8,7 +8,7 @@
 #include <sstream>
 
 #include "../tools/log/easylogging++.h"
-constexpr auto timer_log{"___timer"};
+constexpr auto timer_log{"timer"};
 
 class cpu_timer {
  public:

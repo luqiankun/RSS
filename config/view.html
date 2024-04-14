@@ -7,10 +7,11 @@
     <title>TCS_view</title>
     <script type="application/javascript">
         class Point {
-            constructor(name, x, y) {
+            constructor(name, x, y, t) {
                 this.name = name;
                 this.x = x;
                 this.y = y;
+                this.type = t
             }
         }
         class Path {
@@ -24,12 +25,13 @@
             }
         }
         class Location {
-            constructor(name, x, y, link) {
+            constructor(name, x, y, link, t) {
                 this.name = name;
                 this.x = x;
                 this.y = y;
                 this.link = link;
                 this.locked = false;
+                this.type = t;
             }
         }
         class Vehicle {
@@ -196,7 +198,8 @@
                         let x = point["layout"]["position"]["x"];
                         let y = point["layout"]["position"]["y"];
                         let name = point["name"];
-                        let p = new Point(name, x, y);
+                        let t = point["type"]
+                        let p = new Point(name, x, y, t);
                         points.push(p);
                     }
                     for (let path of model["paths"]) {
@@ -216,7 +219,8 @@
                         let name = loc["name"];
                         let locked = loc["locked"];
                         let link = loc["links"][0];
-                        let p = new Location(name, x, y, link);
+                        let type = loc["typeName"]
+                        let p = new Location(name, x, y, link, type);
                         p.locked = locked;
                         locations.push(p);
                     }
@@ -345,6 +349,9 @@
                         ctx.lineWidth = 1;
                     }
                     ctx.arc(x, y, radius, 0, 2 * Math.PI, true)
+                    if (point.type == "PARK_POSITION") {
+                        ctx.arc(x, y, radius + 2, 0, 2 * Math.PI, true)
+                    }
                     ctx.stroke()
                     let font_size = (13 * (50 / resolution)).toFixed(0);
                     if (font_size < 1) {
@@ -455,6 +462,9 @@
                     ctx.strokeStyle = '#233bc2'
                     ctx.moveTo(start_x + radius, start_y);
                     ctx.arc(start_x, start_y, radius, 0, 2 * Math.PI, true)
+                    if (loc.type == "charge") {
+                        ctx.arc(start_x, start_y, radius + 3, 0, 2 * Math.PI, true)
+                    }
                     ctx.stroke()
                     ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
                     let len = Math.sqrt((link_x - start_x) * (link_x - start_x) + (link_y - start_y) * (link_y - start_y));

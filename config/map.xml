@@ -1074,642 +1074,660 @@
         <initial_point point="P3"></initial_point>
         <vehicleLayout color="#CCCCFF" />
     </vehicle> -->
-    <locationType name="LType-0001">
+    <locationType name="Door">
+        <allowedPeripheralOperation name="close" />
+        <allowedPeripheralOperation name="open" />
+        <property name="tcs:defaultLocationTypeSymbol" value="NONE" />
+        <locationTypeLayout locationRepresentation="NONE" />
+    </locationType>
+    <locationType name="Transfer">
+        <allowedOperation name="NOP" />
+        <allowedOperation name="drop" />
+        <allowedOperation name="pick" />
+        <property name="tcs:defaultLocationTypeSymbol" value="LOAD_TRANSFER_ALT_2" />
+        <property name="vda5050:destinationAction.drop.parameter.angle" value="1.57" />
+        <property name="vda5050:destinationAction.drop.parameter.script" value="robot_rotate" />
+        <property name="vda5050:destinationAction.pick.parameter.angle" value="1.57" />
+        <property name="vda5050:destinationAction.pick.parameter.script" value="robot_rotate" />
+        <locationTypeLayout locationRepresentation="LOAD_TRANSFER_ALT_2" />
+    </locationType>
+    <locationType name="charge">
+        <allowedOperation name="Charge" />
         <property name="tcs:defaultLocationTypeSymbol" value="NONE" />
         <locationTypeLayout locationRepresentation="NONE" />
     </locationType>
     <location name="Location-0001" xPosition="32600" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0038" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0002" xPosition="38150" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0038" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="38150" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0003" xPosition="32600" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0037" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-64725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0004" xPosition="38150" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0037" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="38150" yPosition="-64725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0005" xPosition="32600" yPosition="-70950" zPosition="0" locked="false"
-        type="LType-0001">
+        type="charge">
         <link point="Point-0001" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-70950" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0006" xPosition="32600" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0007" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0007" xPosition="32600" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0008" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0008" xPosition="32600" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="charge">
         <link point="Point-0009" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0009" xPosition="32600" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="charge">
         <link point="Point-0010" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0010" xPosition="32600" yPosition="-104300" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0015" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-104300" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0011" xPosition="38150" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="charge">
         <link point="Point-0010" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="38150" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0012" xPosition="38150" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0009" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="38150" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0013" xPosition="38150" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0008" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="38150" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0014" xPosition="38150" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0007" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="38150" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0015" xPosition="42275" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0011" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="42275" yPosition="-77675" xLabelOffset="-9" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0016" xPosition="42275" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0012" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="42275" yPosition="-84500" xLabelOffset="-9" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0017" xPosition="42275" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0013" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="42275" yPosition="-91400" xLabelOffset="-9" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0018" xPosition="42275" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0014" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="42275" yPosition="-97725" xLabelOffset="-9" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0019" xPosition="48050" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0014" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="48050" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0020" xPosition="47950" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0013" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="47950" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0021" xPosition="47950" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0012" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="47950" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0022" xPosition="47950" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0011" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="47950" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0023" xPosition="52050" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0021" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="52050" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0024" xPosition="52000" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0020" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="52000" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0025" xPosition="52150" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0019" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="52150" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0026" xPosition="52000" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0018" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="52000" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0027" xPosition="57650" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0018" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="57650" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0028" xPosition="57750" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0019" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="57750" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0029" xPosition="57850" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0020" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="57850" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0030" xPosition="57550" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0021" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="57550" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0031" xPosition="61850" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0022" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="61850" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0032" xPosition="61800" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0023" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="61800" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0033" xPosition="61950" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0024" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="61950" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0034" xPosition="61800" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0025" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="61800" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0035" xPosition="67400" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0025" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="67400" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0036" xPosition="71250" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0028" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="71250" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0037" xPosition="71400" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0029" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="71400" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0038" xPosition="67400" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0024" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="67400" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0039" xPosition="67400" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0023" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="67400" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0040" xPosition="71550" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0030" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="71550" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0041" xPosition="71600" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0031" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="71600" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0042" xPosition="67400" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0022" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="67400" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0043" xPosition="76950" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0031" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="76950" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0044" xPosition="81200" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0032" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="81200" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0045" xPosition="77050" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0030" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="77050" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0046" xPosition="81450" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0033" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="81450" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0047" xPosition="77150" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0029" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="77150" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0048" xPosition="81200" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0034" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="81200" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0049" xPosition="77200" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0028" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="77200" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0050" xPosition="81250" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0035" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="81250" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0051" xPosition="87000" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0035" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="87000" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0052" xPosition="87050" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0034" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="87050" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0053" xPosition="86850" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0033" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="86850" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0054" xPosition="87000" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0032" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="87000" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0055" xPosition="91250" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0052" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="91250" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0056" xPosition="91050" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0053" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="91050" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0057" xPosition="91050" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0054" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="91050" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0058" xPosition="91050" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0055" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="91050" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0059" xPosition="96650" yPosition="-97725" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0055" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="96650" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0060" xPosition="96600" yPosition="-91400" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0054" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="96600" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0061" xPosition="96750" yPosition="-84500" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0053" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="96750" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0062" xPosition="96550" yPosition="-77675" zPosition="0" locked="false"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0052" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="96550" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0063" xPosition="101000" yPosition="-77675" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0061" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="101000" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0064" xPosition="101000" yPosition="-84500" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0060" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="101000" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0065" xPosition="101000" yPosition="-91400" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0059" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="101000" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0066" xPosition="101000" yPosition="-97725" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0058" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="101000" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0067" xPosition="106600" yPosition="-97725" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0058" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="106600" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0068" xPosition="106600" yPosition="-91400" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0059" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="106600" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0069" xPosition="106600" yPosition="-84500" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0060" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="106600" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0070" xPosition="106600" yPosition="-77675" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0061" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="106600" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0071" xPosition="110700" yPosition="-77675" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0067" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="110700" yPosition="-77675" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0072" xPosition="110700" yPosition="-84500" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0068" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="110700" yPosition="-84500" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0073" xPosition="110700" yPosition="-91400" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0069" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="110700" yPosition="-91400" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0074" xPosition="110700" yPosition="-97725" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0070" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="110700" yPosition="-97725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0075" xPosition="48000" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0047" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="48000" yPosition="-64725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0076" xPosition="47750" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0075" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="47750" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0079" xPosition="61750" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0041" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="61750" yPosition="-64725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0080" xPosition="61650" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0042" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="61650" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0081" xPosition="67400" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0042" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="67400" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0082" xPosition="67400" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0041" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="67400" yPosition="-64725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0083" xPosition="81200" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0081" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="81200" yPosition="-64725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0084" xPosition="81200" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0082" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="81200" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0085" xPosition="86875" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0082" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="86875" yPosition="-57700" xLabelOffset="-9" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0086" xPosition="86875" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0081" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="86875" yPosition="-64725" xLabelOffset="-9" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0087" xPosition="90975" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0079" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="90975" yPosition="-64725" xLabelOffset="-9" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0088" xPosition="90975" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0080" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="90975" yPosition="-57700" xLabelOffset="-9" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0089" xPosition="96925" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0078" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="96925" yPosition="-57700" xLabelOffset="-9" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0090" xPosition="96925" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0077" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="96925" yPosition="-64725" xLabelOffset="-9" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0091" xPosition="113550" yPosition="-57700" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0073" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="113550" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0092" xPosition="113650" yPosition="-64725" zPosition="0" locked="true"
-        type="LType-0001">
+        type="Transfer">
         <link point="Point-0072" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="113650" yPosition="-64725" xLabelOffset="-10" yLabelOffset="-19"
             locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <location name="Location-0093" xPosition="116500" yPosition="-70950" zPosition="0"
-        locked="false" type="LType-0001">
+        locked="false" type="Transfer">
         <link point="Point-0066" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="116500" yPosition="-70950" xLabelOffset="-10" yLabelOffset="-20"

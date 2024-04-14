@@ -3,7 +3,7 @@
 #include "../component/tools/http/httplib.h"
 #include "../component/tools/json/json.hpp"
 #include "../component/util/timer.hpp"
-const auto http_log{"____http"};
+const auto http_log{"http"};
 using TCSRep = std::pair<int, std::string>;
 class HTTPServer {
  public:
