@@ -66,6 +66,8 @@ class TCS : public std::enable_shared_from_this<TCS> {
   bool init_planner();
   void home_order(const std::string& name,
                   std::shared_ptr<kernel::driver::Vehicle> v);
+  void charge_order(const std::string& name,
+                    std::shared_ptr<kernel::driver::Vehicle> v);
   void cancel_order(const std::string& order_name);  // 取消某个订单
   void cancel_all_order();                           // 取消所有订单
   void cancel_vehicle_all_order(

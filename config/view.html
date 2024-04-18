@@ -35,13 +35,14 @@
             }
         }
         class Vehicle {
-            constructor(name, x, y) {
+            constructor(name, x, y, level) {
                 this.name = name;
                 this.x = x;
                 this.y = y;
                 this.color = "#891111";
                 this.step = [];
                 this.destination = {};
+                this.battery = level
             }
         }
         class Block {
@@ -278,7 +279,7 @@
                     let model = JSON.parse(Http.responseText);
                     for (let v of model) {
                         // console.log(x = v["position"]);
-                        let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"]);
+                        let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"], v["battery_level"]);
                         veh.color = v["color"];
                         // console.log(v["step"]);
                         veh.step = v["step"];
@@ -464,6 +465,8 @@
                     ctx.arc(start_x, start_y, radius, 0, 2 * Math.PI, true)
                     if (loc.type == "charge") {
                         ctx.arc(start_x, start_y, radius + 3, 0, 2 * Math.PI, true)
+                    } else if (loc.type == "Door") {
+                        ctx.strokeRect(start_x - 8, start_y - 8, 16, 16);
                     }
                     ctx.stroke()
                     ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
@@ -522,7 +525,7 @@
                     }
                     ctx.font = font_size.toString() + 'px Arial';
                     ctx.textBaseline = "top";
-                    ctx.fillText(v.name, x, y, v.name.length * font_size);
+                    ctx.fillText(v.name + "[" + v.battery + "%]", x, y, v.name.length * font_size);
                     for (let step of v.step) {
                         let start = get_point(step["src"]);
                         let end = get_point(step["dest"]);

@@ -13,6 +13,7 @@ class Planner {
  public:
   Planner() = delete;
   explicit Planner(const std::shared_ptr<allocate::ResourceManager> &);
+  ~Planner();
   void rebuild();
   // 设置障碍点
   void set_barrier_vertex(const std::string &n_s);

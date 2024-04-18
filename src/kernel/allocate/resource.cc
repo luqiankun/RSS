@@ -149,14 +149,15 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (*x == r) {
         x = client->future_claim_resources.erase(x);
         CLOG(INFO, allocate_log)
-            << r->name << " from future to claim of " << client->name;
+            << r->name << " from future_claim move to claim of "
+            << client->name;
       } else {
         x++;
       }
     }
   }
 
-  CLOG(INFO, allocate_log) << ss.str();
+  CLOG(INFO, allocate_log) << ss.str() << "\n";
   return true;
 }
 
@@ -226,9 +227,8 @@ std::shared_ptr<data::model::Location> ResourceManager::get_recent_charge_loc(
   std::vector<double> dis;
   for (auto& x : locations) {
     if (x->link.lock() != cur) {
-      if (std::find(x->type.lock()->allowrd_ops.begin(),
-                    x->type.lock()->allowrd_ops.end(),
-                    "charge") != x->type.lock()->allowrd_ops.end()) {
+      if (x->type.lock()->allowed_ops.find("Charge") !=
+          x->type.lock()->allowed_ops.end()) {
         double D = (cur->position - x->position).norm();
         dis.push_back(D);
       } else {

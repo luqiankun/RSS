@@ -1,6 +1,7 @@
 #ifndef PATH_HPP
 #define PATH_HPP
 #include "../../tcsresource.hpp"
+#include "./action.hpp"
 #include "point.hpp"
 namespace data {
 namespace model {
@@ -75,6 +76,7 @@ class Path : public TCSResource {
   int max_reverse_vel{0};
   bool locked{false};
   PathLayout layout;
+  Actions acts;
 };
 }  // namespace model
 }  // namespace data

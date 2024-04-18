@@ -8,6 +8,7 @@ endif()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 # set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 # set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
+add_compile_options(-std=c++17)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(TEST "Build test " OFF)
@@ -77,7 +78,7 @@ if(TEST)
     target_link_libraries(mqtt_test PahoMqttCpp::paho-mqttpp3)
     add_executable(sim_agv_test test/kernel/driver/rabbit3_test.cc  ${MQTT_SRC} ${TOOLS_SRC} )
     target_link_libraries(sim_agv_test  PahoMqttCpp::paho-mqttpp3 Threads::Threads)
-    install(TARGETS test_event log_event xml_test http_test json_test sim_agv_test
+    install(TARGETS test_event log_event xml_test http_test json_test sim_agv_test mqtt_test
     RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}
     )
   

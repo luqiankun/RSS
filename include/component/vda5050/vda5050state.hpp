@@ -628,7 +628,7 @@ class VDA5050State {
   std::optional<Velocity> velocity;
   std::optional<std::vector<Load>> loads;
   std::optional<InforMation> information;
-  VDA5050State(){};
+  VDA5050State() {}
   VDA5050State(jsoncons::json& obj) {
     header_id = obj["headerId"].as_integer<int>();
     timestamp = obj["timestamp"].as_string();

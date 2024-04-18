@@ -31,7 +31,7 @@ class SimRabbit3 {
     vda_state.agv_position.value().map_id = "lyg";
     vda_state.last_node_seq_id = 0;
     vda_state.driving = false;
-    vda_state.battery_state.battery_charge = 90;
+    vda_state.battery_state.battery_charge = 40;
     vda_state.battery_state.charging = false;
     vda_state.operating_mode = vda5050::state::OperMode::AUTOMATIC;
     vda_state.safetystate.estop = vda5050::state::SafetyStatus::AUTOACK;
@@ -41,10 +41,10 @@ class SimRabbit3 {
   void set_mqtt_ops(const std::string& name, const std::string& server_ip,
                     int server_port = 1883, bool ssl = false) {
     if (ssl) {
-      auto addr = "mqtts://" + server_ip + ":" + std::to_string(server_port);
+      auto addr = "ssl://" + server_ip + ":" + std::to_string(server_port);
       mqtt_client = std::make_shared<MqttClient>(addr, name);
     } else {
-      auto addr = "mqtt://" + server_ip + ":" + std::to_string(server_port);
+      auto addr = "tcp://" + server_ip + ":" + std::to_string(server_port);
       mqtt_client = std::make_shared<MqttClient>(addr, name);
     }
     con_ops.set_automatic_reconnect(true);
@@ -136,6 +136,7 @@ class SimRabbit3 {
                           .finalize();
         move_task.async_run([&] {
           try {
+            LOG(INFO) << current_msg->get_payload();
             auto src = jsoncons::json::parse(current_msg->get_payload());
             // LOG(INFO) << current_msg->to_string();
             auto err = vda5050::order_validate(src);
@@ -144,21 +145,22 @@ class SimRabbit3 {
               auto ord = vda5050::order::VDA5050Order(src);
               if (vda_state.order_id != ord.order_id) {
                 // new order
-                auto state = vda5050::state::VDA5050State(vda_state);
-                state.order_id = ord.order_id;
-                state.errors.clear();
-                state.nodestates.clear();
-                state.edgestates.clear();
-                state.actionstates.clear();  //
+                auto state = std::shared_ptr<vda5050::state::VDA5050State>(
+                    new vda5050::state::VDA5050State(vda_state));
+                state->order_id = ord.order_id;
+                state->errors.clear();
+                state->nodestates.clear();
+                state->edgestates.clear();
+                state->actionstates.clear();  //
 
                 //
                 if ((ord.nodes.size() - ord.edges.size()) != 1) {
                   auto err = vda5050::state::Error();
                   err.error_level = vda5050::state::ErrorLevel::FATAL;
                   err.error_type = "node size not match edge size";
-                  state.errors.push_back(err);
+                  state->errors.push_back(err);
                   std::unique_lock<std::mutex> lock(mut);
-                  vda_state = state;
+                  vda_state = *state;
                 } else if (ord.edges.size() > 0) {
                   // state update
                   for (int i = 0; i < ord.nodes.size(); i++) {
@@ -171,7 +173,13 @@ class SimRabbit3 {
                         ord.nodes.at(i).node_position.value().x;
                     n1.node_position.value().y =
                         ord.nodes.at(i).node_position.value().y;
-                    state.nodestates.push_back(n1);
+                    state->nodestates.push_back(n1);
+                    for (auto& x : ord.nodes.at(i).actions) {
+                      auto act = vda5050::state::ActionState();
+                      act.action_id = x.action_id;
+                      act.action_status = vda5050::state::ActionStatus::WAITING;
+                      state->actionstates.push_back(act);
+                    }
                   }
                   // edge
                   for (int i = 0; i < ord.edges.size(); i++) {
@@ -183,17 +191,68 @@ class SimRabbit3 {
                       e1.edge_description =
                           ord.edges.at(i).edge_description.value();
                     }
-                    state.edgestates.push_back(e1);
+                    state->edgestates.push_back(e1);
+                    for (auto& x : ord.edges.at(i).actions) {
+                      auto act = vda5050::state::ActionState();
+                      act.action_id = x.action_id;
+                      act.action_status = vda5050::state::ActionStatus::WAITING;
+                      state->actionstates.push_back(act);
+                    }
                   }
-                  vda_state = state;
+                  std::unique_lock<std::mutex> lock(mut);
+                  vda_state = *state;
+                  lock.unlock();
                   while (status == Status::PASUED) {
                     std::chrono::milliseconds(50);
                   }
-                  // move
-                  state.nodestates.erase(state.nodestates.begin());
-                  for (int i = 0; i < ord.nodes.size() - 1; i++) {
-                    auto start_node = ord.nodes.at(i);
-                    auto end_node = ord.nodes.at(i + 1);
+                  // TODO
+                  //  front action
+                  //   move
+                  // first node
+                  bool first{true};
+                  for (auto i = 0; i < ord.edges.size(); i++) {
+                    vda5050::order::Node start_node;
+                    vda5050::order::Node end_node;
+                    for (auto& x : ord.nodes) {
+                      if (x.node_id == ord.edges.at(i).start_node_id) {
+                        start_node = x;
+                        break;
+                      }
+                    }
+                    for (auto& x : ord.nodes) {
+                      if (x.node_id == ord.edges.at(i).end_node_id) {
+                        end_node = x;
+                        break;
+                      }
+                    }
+                    assert(!start_node.node_id.empty());
+                    assert(!end_node.node_id.empty());
+                    if (first) {
+                      state->nodestates.erase(
+                          state->nodestates.begin());  // move out
+                      std::unique_lock<std::mutex> lock(mut);
+                      vda_state = *state;  // update once
+                      lock.unlock();
+                      for (int j = 0; j < start_node.actions.size(); j++) {
+                        LOG(INFO)
+                            << "action " << start_node.actions.at(j).action_id;
+                        std::this_thread::sleep_for(
+                            std::chrono::milliseconds(500));
+                        for (auto& x : state->actionstates) {
+                          if (x.action_id ==
+                              start_node.actions.at(j).action_id) {
+                            x.action_status =
+                                vda5050::state::ActionStatus::FINISHED;
+                            std::unique_lock<std::mutex> lock(mut);
+                            vda_state = *state;
+                            lock.unlock();
+                            break;
+                          }
+                        }
+                      }
+                      first = false;
+                    }
+                    // move to end point
                     LOG(INFO) << "move from " << start_node.node_id << " to "
                               << end_node.node_id;
                     float s_x = start_node.node_position.value().x;
@@ -207,25 +266,63 @@ class SimRabbit3 {
                     auto time = sqrt((e_x - s_x) * (e_x - s_x) +
                                      (e_y - s_y) * (e_y - s_y)) *
                                 1000 / 5000;  // ms
-                    state.driving = true;
+                    state->driving = true;
                     for (auto i = 0; i < time; i = i + 50) {
                       while (status == Status::PASUED) {
                         std::chrono::milliseconds(50);
                       }
-                      state.agv_position.value().x = s_x + vx / 1000 * i;
-                      state.agv_position.value().y = s_y + vy / 1000 * i;
+                      state->agv_position.value().x = s_x + vx / 1000 * i;
+                      state->agv_position.value().y = s_y + vy / 1000 * i;
                       std::this_thread::sleep_for(
                           std::chrono::milliseconds(50));
-                      vda_state = state;
+                      std::unique_lock<std::mutex> lock(mut);
+                      vda_state = *state;
+                      lock.unlock();
                     }
-                    state.agv_position.value().x = e_x;
-                    state.agv_position.value().y = e_y;
-                    state.nodestates.erase(state.nodestates.begin());
-                    state.edgestates.erase(state.edgestates.begin());
-                    state.driving = false;
-                    state.last_node_id = end_node.node_id;
-                    vda_state = state;
+                    state->agv_position.value().x = e_x;
+                    state->agv_position.value().y = e_y;
+                    state->edgestates.erase(state->edgestates.begin());
+                    state->driving = false;
+                    state->last_node_id = end_node.node_id;
+                    std::unique_lock<std::mutex> lock(mut);
+                    vda_state = *state;
+                    lock.unlock();
+                    for (int j = 0; j < end_node.actions.size(); j++) {
+                      LOG(INFO)
+                          << "action " << end_node.actions.at(j).action_id;
+                      std::this_thread::sleep_for(
+                          std::chrono::milliseconds(500));
+                      for (auto& x : state->actionstates) {
+                        if (x.action_id == end_node.actions.at(j).action_id) {
+                          x.action_status =
+                              vda5050::state::ActionStatus::FINISHED;
+                          std::unique_lock<std::mutex> lock(mut);
+                          vda_state = *state;
+                          break;
+                        }
+                      }
+                    }
+                    for (int j = 0; j < ord.edges.at(i).actions.size(); j++) {
+                      LOG(INFO) << "action "
+                                << ord.edges.at(i).actions.at(j).action_id;
+                      std::this_thread::sleep_for(
+                          std::chrono::milliseconds(500));
+                      for (auto& x : state->actionstates) {
+                        if (x.action_id ==
+                            ord.edges.at(i).actions.at(j).action_id) {
+                          x.action_status =
+                              vda5050::state::ActionStatus::FINISHED;
+                          std::unique_lock<std::mutex> lock(mut);
+                          vda_state = *state;
+                          break;
+                        }
+                      }
+                    }
+                    state->nodestates.erase(state->nodestates.begin());
                   }
+                  lock.lock();
+                  vda_state = *state;
+                  std::cout << "--------------------------------------------\n";
                 } else {
                   // only action
                   // state update
@@ -239,16 +336,16 @@ class SimRabbit3 {
                         ord.nodes.at(i).node_position.value().x;
                     n1.node_position.value().y =
                         ord.nodes.at(i).node_position.value().y;
-                    state.nodestates.push_back(n1);
+                    state->nodestates.push_back(n1);
                     for (auto& x : ord.nodes.at(i).actions) {
                       auto act = vda5050::state::ActionState();
                       act.action_id = x.action_id;
                       act.action_status = vda5050::state::ActionStatus::WAITING;
-                      state.actionstates.push_back(act);
+                      state->actionstates.push_back(act);
                     }
                   }
                   std::unique_lock<std::mutex> lock(mut);
-                  vda_state = state;
+                  vda_state = *state;
                   lock.unlock();
                   // action
                   for (int i = 0; i < ord.nodes.at(0).actions.size(); i++) {
@@ -270,29 +367,57 @@ class SimRabbit3 {
                     auto time = sqrt((e_x - s_x) * (e_x - s_x) +
                                      (e_y - s_y) * (e_y - s_y)) *
                                 1000 / 5000;  // ms
-                    state.driving = true;
-                    state.nodestates.erase(state.nodestates.begin());
+                    state->driving = true;
+                    state->nodestates.erase(state->nodestates.begin());
 
                     for (auto i = 0; i < time; i = i + 50) {
-                      if (!state.agv_position.has_value()) {
-                        state.agv_position = vda5050::state::AgvPosition();
+                      if (!state->agv_position.has_value()) {
+                        state->agv_position = vda5050::state::AgvPosition();
                       }
-                      state.agv_position.value().x = s_x + vx / 1000 * i;
-                      state.agv_position.value().y = s_y + vy / 1000 * i;
+                      state->agv_position.value().x = s_x + vx / 1000 * i;
+                      state->agv_position.value().y = s_y + vy / 1000 * i;
                       std::this_thread::sleep_for(
                           std::chrono::milliseconds(50));
-                      vda_state = state;
+                      std::unique_lock<std::mutex> lock(mut);
+                      vda_state = *state;
                     }
-                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                    state.agv_position.value().x = s_x;
-                    state.agv_position.value().y = s_y;
-                    state.driving = false;
-                    state.last_node_id = ord.nodes.at(0).node_id;
-                    state.actionstates.at(i).action_status =
-                        vda5050::state::ActionStatus::FINISHED;
-                    std::unique_lock<std::mutex> lock(mut);
-                    vda_state = state;
-                    lock.unlock();
+                    if (ord.nodes.at(0).actions.at(i).action_type ==
+                        vda5050::order::ActionType::CHARGE) {
+                      state->driving = false;
+                      state->last_node_id = "";
+                      state->actionstates.at(i).action_status =
+                          vda5050::state::ActionStatus::FINISHED;
+                      std::unique_lock<std::mutex> lock(mut);
+                      vda_state = *state;
+                      lock.unlock();
+                      util_task.async_run([&]() mutable {
+                        while (vda_state.battery_state.battery_charge < 100) {
+                          std::unique_lock<std::mutex> lock(mut);
+                          if (vda_state.driving) {
+                            break;
+                          }
+                          vda_state.battery_state.battery_charge += 1;
+                          vda_state.battery_state.charging = true;
+                          lock.unlock();
+                          std::this_thread::sleep_for(
+                              std::chrono::milliseconds(100));
+                        }
+                        std::unique_lock<std::mutex> lock(mut);
+                        vda_state.battery_state.charging = false;
+                      });
+                      LOG(INFO) << "=====charging=====";
+                    } else {
+                      std::this_thread::sleep_for(
+                          std::chrono::milliseconds(500));
+                      state->agv_position.value().x = s_x;
+                      state->agv_position.value().y = s_y;
+                      state->driving = false;
+                      state->last_node_id = ord.nodes.at(0).node_id;
+                      state->actionstates.at(i).action_status =
+                          vda5050::state::ActionStatus::FINISHED;
+                      std::unique_lock<std::mutex> lock(mut);
+                      vda_state = *state;
+                    }
                     LOG(INFO) << "action end";
                   }
                 }
@@ -374,6 +499,7 @@ class SimRabbit3 {
   ~SimRabbit3() {
     action_task.stop();
     move_task.stop();
+    util_task.stop();
   }
 
  public:
@@ -386,6 +512,7 @@ class SimRabbit3 {
   std::thread th_pro;
   fa::taskpool_t move_task{1};
   fa::taskpool_t action_task{1};
+  fa::taskpool_t util_task{4};
   std::mutex mut;
   std::mutex pro_mut;
   std::condition_variable con;
@@ -408,14 +535,14 @@ int main(int argc, char** argv) {
   SimRabbit3 agv1("uagv", "tx1", "2.0", "rw", "P1", 45150, -107450);
   agv1.set_mqtt_ops(agv1.serial_number, "192.168.0.39");
   agv1.start();
-  SimRabbit3 agv2("uagv", "tx2", "2.0", "rw", "P4", 74475, -107450);
-  agv2.set_mqtt_ops(agv2.serial_number, "192.168.0.39");
-  agv2.start();
-  SimRabbit3 agv3("uagv", "tx3", "2.0", "rw", "P5", 84087, -107450);
-  agv3.set_mqtt_ops(agv3.serial_number, "192.168.0.39");
-  agv3.start();
-  SimRabbit3 agv4("uagv", "tx4", "2.0", "rw", "P6", 93837, -107450);
-  agv4.set_mqtt_ops(agv4.serial_number, "192.168.0.39");
-  agv4.start();
+  // SimRabbit3 agv2("uagv", "tx2", "2.0", "rw", "P4", 74475, -107450);
+  // agv2.set_mqtt_ops(agv2.serial_number, "192.168.0.39");
+  // agv2.start();
+  // SimRabbit3 agv3("uagv", "tx3", "2.0", "rw", "P5", 84087, -107450);
+  // agv3.set_mqtt_ops(agv3.serial_number, "192.168.0.39");
+  // agv3.start();
+  // SimRabbit3 agv4("uagv", "tx4", "2.0", "rw", "P6", 93837, -107450);
+  // agv4.set_mqtt_ops(agv4.serial_number, "192.168.0.39");
+  // agv4.start();
   std::cin.get();
 }

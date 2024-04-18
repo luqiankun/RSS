@@ -72,6 +72,7 @@ class TransportOrder : public TCSObject {
   bool dispensable{false};
   std::weak_ptr<kernel::driver::Vehicle> intended_vehicle;
   std::weak_ptr<kernel::driver::Vehicle> processing_vehicle;
+  bool anytime_drop{false};  // 不影响车辆状态，可随时丢弃的
 };
 }  // namespace order
 }  // namespace data

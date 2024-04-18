@@ -68,10 +68,36 @@ struct LocationTypeLayout {
 class LocationType : public TCSResource {
  public:
   using TCSResource::TCSResource;
+  void get_param() {
+    std::regex P{R"(^vda5050:destinationAction.([^.]+).parameter.([^.]+)$)"};
+    for (auto& x : properties) {
+      if (std::regex_match(x.first, P)) {
+        std::smatch sm;
+        std::regex_search(x.first, sm, P);
+        auto name = (*(sm.end() - 2)).str();
+        auto key = (*(sm.end() - 1)).str();
+        auto value = x.second;
+        for (auto& op : allowed_ops) {
+          if (op.first == name) {
+            op.second.insert(std::pair<std::string, std::string>(key, value));
+            break;
+          }
+        }
+        for (auto& op : allowrd_per_ops) {
+          if (op.first == name) {
+            op.second.insert(std::pair<std::string, std::string>(key, value));
+            break;
+          }
+        }
+      }
+    }
+  }
 
  public:
-  std::vector<std::string> allowrd_ops;
-  std::vector<std::string> allowrd_per_ops;
+  std::map<std::string, std::map<std::string, std::string>>
+      allowed_ops;  // 本地操作，优先通过vdaaction启动，类型hard
+  std::map<std::string, std::map<std::string, std::string>>
+      allowrd_per_ops;  // 外围操作，在其他点触发，通过vdaaction来启动
   LocationTypeLayout layout;
 };
 

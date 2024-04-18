@@ -20,7 +20,6 @@ class Vehicle : public schedule::Client,
  public:
   Vehicle(const std::string& n) : schedule::Client(n) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
-  enum class HomeState { HOME, PARK };
   std::string get_state();
 
   void receive_task(std::shared_ptr<data::order::TransportOrder>);
@@ -57,11 +56,11 @@ class Vehicle : public schedule::Client,
   int engrgy_level_recharge{35};  // 只充电不接订单
   int engrgy_level_full{90};      // 满电
   int engerg_level{100};
+  bool process_chargeing{false};
   std::string integration_level;
   std::string color;
   State state{State::UNKNOWN};
   bool paused{false};
-  HomeState home_state{HomeState::HOME};
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<allocate::ResourceManager> resource;
@@ -70,6 +69,7 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::order::TransportOrder> current_order;
   std::shared_ptr<Command> current_command;
   std::shared_ptr<data::model::Point> current_point;
+  std::shared_ptr<data::model::Point> last_point;
   std::shared_ptr<vda5050::instantaction::Action> current_action;
   std::thread run_th;
   data::Vector3i position;

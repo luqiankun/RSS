@@ -80,68 +80,6 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       CLOG(INFO, tcs_log) << "init point size " << resource->points.size();
     }
 
-    {  // path
-      auto path = root.find_child([](pugi::xml_node node) {
-        return std::string(node.name()) == "path";
-      });
-      while (path.type() != pugi::node_null) {
-        if (std::string(path.name()) != "path") {
-          break;
-        }
-        std::string name = path.attribute("name").as_string();
-        std::string sourcePoint = path.attribute("sourcePoint").as_string();
-        std::string destinationPoint =
-            path.attribute("destinationPoint").as_string();
-        int length = path.attribute("length").as_int();
-        int maxVelocity = path.attribute("maxVelocity").as_int();
-        int maxReverseVelocity = path.attribute("maxReverseVelocity").as_int();
-        bool locked = path.attribute("locked").as_bool();
-        std::string connectionType =
-            path.child("pathLayout").attribute("connectionType").as_string();
-        int layerId = path.child("pointLayout").attribute("layerId").as_int();
-        std::weak_ptr<data::model::Point> source_point;
-        std::weak_ptr<data::model::Point> destination_point;
-        for (auto &p : resource->points) {
-          if (p->name == sourcePoint) {
-            source_point = p;
-          }
-          if (p->name == destinationPoint) {
-            destination_point = p;
-          }
-        }
-        data::model::Path::PathLayout layout;
-        layout.layer_id = layerId;
-        data::model::Path::new_connect_type(connectionType);
-        auto p = std::make_shared<data::model::Path>(name);
-        p->layout = layout;
-        p->source_point = source_point;
-        p->destination_point = destination_point;
-        p->length = length;
-        p->max_vel = maxVelocity;
-        p->max_reverse_vel = maxReverseVelocity;
-        p->locked = locked;
-        p->source_point.lock()->incoming_paths.push_back(p);
-        p->destination_point.lock()->outgoing_paths.push_back(p);
-        // pro
-        auto property = path.find_child([](pugi::xml_node node) {
-          return std::string(node.name()) == "property ";
-        });
-        while (property.type() != pugi::node_null) {
-          if (std::string(property.name()) != "property ") {
-            break;
-          }
-          auto name_ = property.attribute("name").as_string();
-          auto vlaue_ = property.attribute("value").as_string();
-          p->properties.insert(
-              std::pair<std::string, std::string>(name_, vlaue_));
-          property = property.next_sibling();
-        }
-        //
-        resource->paths.push_back(p);
-        path = path.next_sibling();
-      }
-      CLOG(INFO, tcs_log) << "init path size " << resource->paths.size();
-    }
     {
       // locatintype
       auto loc_type = root.find_child([](pugi::xml_node node) {
@@ -158,22 +96,23 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
           return std::string(node.name()) == "allowedOperation";
         });
         while (allow_ops.type() != pugi::node_null) {
-          if (std::string(allow_ops.name()) != "property") {
+          if (std::string(allow_ops.name()) != "allowedOperation") {
             break;
           }
           auto name_ = allow_ops.attribute("name").as_string();
-          lt->allowrd_ops.push_back(name_);
+          lt->allowed_ops[name_] = std::map<std::string, std::string>();
           allow_ops = allow_ops.next_sibling();
         }
         auto allow_per_ops = loc_type.find_child([](pugi::xml_node node) {
-          return std::string(node.name()) == "allowedOperation";
+          return std::string(node.name()) == "allowedPeripheralOperation";
         });
         while (allow_per_ops.type() != pugi::node_null) {
-          if (std::string(allow_per_ops.name()) != "property") {
+          if (std::string(allow_per_ops.name()) !=
+              "allowedPeripheralOperation") {
             break;
           }
           auto name_ = allow_per_ops.attribute("name").as_string();
-          lt->allowrd_per_ops.push_back(name_);
+          lt->allowrd_per_ops[name_] = std::map<std::string, std::string>();
           allow_per_ops = allow_per_ops.next_sibling();
         }
         // pro
@@ -190,6 +129,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
               std::pair<std::string, std::string>(name_, vlaue_));
           property = property.next_sibling();
         }
+        lt->get_param();
         //
         auto loc_layout = loc_type.child("locationTypeLayout")
                               .attribute("locationRepresentation")
@@ -241,23 +181,6 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
 
         auto loc = std::make_shared<data::model::Location>(name);
         std::weak_ptr<data::model::Point> link;
-        for (auto &p : resource->points) {
-          if (p->name == link_point) {
-            link = p;
-            p->attached_links.push_back(loc);
-          }
-        }
-
-        for (auto &t : resource->location_types) {
-          if (t->name == type) {
-            loc->type = t;
-          }
-        }
-
-        loc->position = data::Vector3i(xPosition, yPosition, zPosition);
-        loc->layout = layout;
-        loc->link = link;
-        loc->locked = locked;
         auto property = location.find_child([](pugi::xml_node node) {
           return std::string(node.name()) == "property";
         });
@@ -271,13 +194,143 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
               std::pair<std::string, std::string>(name_, vlaue_));
           property = property.next_sibling();
         }
+        for (auto &p : resource->points) {
+          if (p->name == link_point) {
+            link = p;
+            p->attached_links.push_back(loc);
+          }
+        }
+
+        for (auto &t : resource->location_types) {
+          if (t->name == type) {
+            loc->type = t;
+            for (auto &a_op : t->allowed_ops) {
+              for (auto &per : loc->properties) {
+                a_op.second.insert(per);
+              }
+            }
+            for (auto &a_op : t->allowrd_per_ops) {
+              for (auto &per : loc->properties) {
+                a_op.second.insert(per);
+              }
+            }
+          }
+        }
+
+        loc->position = data::Vector3i(xPosition, yPosition, zPosition);
+        loc->layout = layout;
+        loc->link = link;
+        loc->locked = locked;
+
         resource->locations.push_back(loc);
         location = location.next_sibling();
       }
       CLOG(INFO, tcs_log) << "init location size "
                           << resource->locations.size();
     }
+    {  // path
+      auto path = root.find_child([](pugi::xml_node node) {
+        return std::string(node.name()) == "path";
+      });
+      while (path.type() != pugi::node_null) {
+        if (std::string(path.name()) != "path") {
+          break;
+        }
 
+        std::string name = path.attribute("name").as_string();
+        std::string sourcePoint = path.attribute("sourcePoint").as_string();
+        std::string destinationPoint =
+            path.attribute("destinationPoint").as_string();
+        int length = path.attribute("length").as_int();
+        int maxVelocity = path.attribute("maxVelocity").as_int();
+        int maxReverseVelocity = path.attribute("maxReverseVelocity").as_int();
+        bool locked = path.attribute("locked").as_bool();
+        std::string connectionType =
+            path.child("pathLayout").attribute("connectionType").as_string();
+        int layerId = path.child("pointLayout").attribute("layerId").as_int();
+        std::weak_ptr<data::model::Point> source_point;
+        std::weak_ptr<data::model::Point> destination_point;
+        for (auto &p : resource->points) {
+          if (p->name == sourcePoint) {
+            source_point = p;
+          }
+          if (p->name == destinationPoint) {
+            destination_point = p;
+          }
+        }
+        data::model::Path::PathLayout layout;
+        layout.layer_id = layerId;
+        data::model::Path::new_connect_type(connectionType);
+        auto p = std::make_shared<data::model::Path>(name);
+        p->layout = layout;
+        p->source_point = source_point;
+        p->destination_point = destination_point;
+        p->length = length;
+        p->max_vel = maxVelocity;
+        p->max_reverse_vel = maxReverseVelocity;
+        p->locked = locked;
+        p->source_point.lock()->incoming_paths.push_back(p);
+        p->destination_point.lock()->outgoing_paths.push_back(p);
+        // pro
+        auto property = path.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "property";
+        });
+        while (property.type() != pugi::node_null) {
+          if (std::string(property.name()) != "property") {
+            break;
+          }
+          auto name_ = property.attribute("name").as_string();
+          auto vlaue_ = property.attribute("value").as_string();
+          p->properties.insert(
+              std::pair<std::string, std::string>(name_, vlaue_));
+          property = property.next_sibling();
+        }
+        //
+        data::model::Actions acts(p->properties);
+        {
+          auto peripher_op = path.find_child([](pugi::xml_node node) {
+            return std::string(node.name()) == "peripheralOperation";
+          });
+
+          while (peripher_op.type() != pugi::node_null) {
+            if (std::string(peripher_op.name()) != "peripheralOperation") {
+              break;
+            }
+            auto per_op_name = peripher_op.attribute("name").as_string();
+            auto wait = peripher_op.attribute("completionRequired").as_bool()
+                            ? "SOFT"
+                            : "NONE";
+            auto when = peripher_op.attribute("executionTrigger").as_string();
+            auto link_loc_name =
+                peripher_op.attribute("locationName").as_string();
+            for (auto &loc : resource->locations) {
+              if (loc->name == link_loc_name) {
+                if (loc->type.lock()->allowrd_per_ops.find(per_op_name) !=
+                    loc->type.lock()->allowrd_per_ops.end()) {
+                  // exist
+                  data::model::Actions::Action act;
+                  act.params.insert(loc->properties.begin(),
+                                    loc->properties.end());
+                  act.block_type = wait;
+                  act.when = when;
+                  act.vaild = true;
+                  act.id = p->name + "_action_" + per_op_name;
+                  act.name = loc->type.lock()->name;
+                  acts.append(act);
+                  break;
+                }
+              }
+            }
+            peripher_op = peripher_op.next_sibling();
+          }
+        }
+        p->acts = (acts);
+        //
+        resource->paths.push_back(p);
+        path = path.next_sibling();
+      }
+      CLOG(INFO, tcs_log) << "init path size " << resource->paths.size();
+    }
     {
       // block
       auto block = root.find_child([](pugi::xml_node node) -> bool {
@@ -430,8 +483,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         veh->color = color;
         veh->energy_level_critical = energyLevelCritical;
         veh->energy_level_good = energyLevelGood;
-        veh->engrgy_level_full = energyLevelFullyRecharged;
-        veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
+        veh->engrgy_level_full = energyLevelSufficientlyRecharged;
+        veh->engrgy_level_recharge = energyLevelFullyRecharged;
         veh->map_id = root.attribute("name").as_string();
         veh->broker_ip = ip;
         veh->broker_port = std::stoi(port);
@@ -452,6 +505,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
                                      resource, std::placeholders::_1);
     dispatcher->go_home = std::bind(
         &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2);
+    dispatcher->go_charge = std::bind(
+        &TCS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->get_next_ord =
         std::bind(&kernel::allocate::OrderPool::pop, orderpool);
     for (auto &v : dispatcher->vehicles) {
@@ -460,7 +515,10 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       v->orderpool = orderpool;
       v->resource = resource;
     }
+    assert(dispatcher);
+    CLOG(INFO, tcs_log) << "run all ...";
     run();
+    CLOG(INFO, tcs_log) << "run all ok";
     return std::pair<int, std::string>(200, "");
   } catch (pugi::xpath_exception ec) {
     CLOG(ERROR, tcs_log) << "parse error: " << ec.what();
@@ -516,7 +574,7 @@ void TCS::home_order(const std::string &name,
   CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   auto destination = orderpool->res_to_destination(
-      resource->get_recent_park_point(v->current_point),
+      resource->get_recent_park_point(v->last_point),
       data::order::DriverOrder::Destination::OpType::MOVE);
   auto dr =
       std::make_shared<data::order::DriverOrder>("driverorder_home_" + v->name);
@@ -524,9 +582,32 @@ void TCS::home_order(const std::string &name,
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
   ord->intended_vehicle = v;
+  ord->anytime_drop = true;
   orderpool->orderpool.push_back(ord);
 }
-
+void TCS::charge_order(const std::string &name,
+                       std::shared_ptr<kernel::driver::Vehicle> v) {
+  v->process_chargeing = true;
+  auto time = std::chrono::system_clock::now();
+  std::shared_ptr<data::order::TransportOrder> ord =
+      std::make_shared<data::order::TransportOrder>(name);
+  std::hash<std::string> hash_fn;
+  ord->create_time = time;
+  ord->dead_time = time + std::chrono::minutes(60);
+  ord->state = data::order::TransportOrder::State::RAW;
+  CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
+                      << ord->name_hash << "\n";
+  auto destination = orderpool->res_to_destination(
+      resource->get_recent_charge_loc(v->last_point),
+      data::order::DriverOrder::Destination::OpType::CHARGE);
+  auto dr = std::make_shared<data::order::DriverOrder>("driverorder_charge_" +
+                                                       v->name);
+  dr->destination = destination;
+  dr->transport_order = ord;
+  ord->driverorders.push_back(dr);
+  ord->intended_vehicle = v;
+  orderpool->orderpool.push_back(ord);
+}
 TCS::~TCS() {
   CLOG(INFO, tcs_log) << "TCS  stop";
   stop();
@@ -570,6 +651,7 @@ void TCS::cancel_vehicle_all_order(const std::string &vehicle_name) {
   }
 }
 void TCS::run() {
+  assert(dispatcher != nullptr);
   if (dispatcher) {
     for (auto &v : dispatcher->vehicles) {
       v->run();
@@ -740,7 +822,7 @@ std::pair<int, std::string> TCS::post_transport_order(
       orderpool->ended_orderpool.push_back(ord);
     } else {
       for (auto &d : destinations) {
-        // TODO
+        // TODO 操作类型判断
         auto loc = d["locationName"].get<std::string>();
         auto check = resource->find(loc);
         if (check.first == kernel::allocate::ResourceManager::ResType::Err) {
@@ -1271,11 +1353,11 @@ std::pair<int, std::string> TCS::get_model() {
     loc_type["allowedOperation"] = json::array();
     loc_type["allowedPeripheralOperation"] = json::array();
     loc_type["properties"] = json::array();
-    for (auto &x : type->allowrd_ops) {
-      loc_type["allowedOperation"].push_back(x);
+    for (auto &x : type->allowed_ops) {
+      loc_type["allowedOperation"].push_back(x.first);
     }
-    for (auto &x : type->allowrd_ops) {
-      loc_type["allowedPeripheralOperation"].push_back(x);
+    for (auto &x : type->allowrd_per_ops) {
+      loc_type["allowedPeripheralOperation"].push_back(x.first);
     }
     for (auto &pro : type->properties) {
       json t;
@@ -1340,8 +1422,8 @@ std::pair<int, std::string> TCS::get_model() {
     vehicle["length"] = v->length;
     vehicle["energyLevelCritical"] = v->energy_level_critical;
     vehicle["energyLevelGood"] = v->energy_level_good;
-    vehicle["energyLevelFullyRecharged"] = v->engrgy_level_full;
-    vehicle["energyLevelSufficientlyRecharged"] = v->engrgy_level_recharge;
+    vehicle["energyLevelFullyRecharged"] = v->engrgy_level_recharge;
+    vehicle["energyLevelSufficientlyRecharged"] = v->engrgy_level_full;
     vehicle["maxVelocity"] = v->max_vel;
     vehicle["maxReverseVelocity"] = v->max_reverse_vel;
     vehicle["layout"]["routeColor"] = v->color;
@@ -1451,18 +1533,19 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           x["name"].get<std::string>());
       type->layout.location_representation = data::model::new_location_type(
           x["layout"]["locationRepresentation"].get<std::string>());
-      for (auto &pro : x["property "]) {
+      for (auto &pro : x["property"]) {
         auto key = pro["name"].get<std::string>();
         auto value = pro["value"].get<std::string>();
         type->properties.insert(
             std::pair<std::string, std::string>(key, value));
       }
       for (auto &allow : x["allowedOperation"]) {
-        type->allowrd_ops.push_back(allow);
+        type->allowed_ops[allow] = std::map<std::string, std::string>();
       }
       for (auto &allow : x["allowedPeripheralOperation"]) {
-        type->allowrd_per_ops.push_back(allow);
+        type->allowrd_per_ops[allow] = std::map<std::string, std::string>();
       }
+      type->get_param();
       resource->location_types.push_back(type);
     }
     CLOG(INFO, tcs_log) << resource->location_types.size() << " locationtype";
@@ -1521,6 +1604,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       vehicle->position.x = resource->points.front()->position.x;
       vehicle->position.y = resource->points.front()->position.y;
       vehicle->current_point = resource->points.front();  // 当前点
+      vehicle->last_point = vehicle->current_point;
       vehicle->state = kernel::driver::Vehicle::State::IDLE;
       ///////////////////////////
       dispatcher->vehicles.push_back(vehicle);
@@ -1540,6 +1624,8 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->get_next_ord =
         std::bind(&kernel::allocate::OrderPool::pop, orderpool);
+    dispatcher->go_charge = std::bind(
+        &TCS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
     for (auto &v : dispatcher->vehicles) {
       v->planner = planner;
       v->scheduler = scheduler;
@@ -1653,6 +1739,7 @@ std::string TCS::get_vehicles_step() {
         }
       }
     }
+    veh["battery_level"] = v->engerg_level;
     value.push_back(veh);
   }
   return value.dump();

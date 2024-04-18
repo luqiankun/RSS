@@ -13,6 +13,9 @@ enum class ActionType {
   UNLOAD,  // 去某location unload
   MOVE,    // 去某point
   CHARGE,  // 充电
+  CLOSE,
+  OPEN,
+  LIFT
 };
 enum class ActionBlockingType { NONE = 1, SOFT = 2, HARD = 3 };
 
@@ -23,7 +26,49 @@ class ActionParam {
   std::string key;
   std::variant<std::string, bool, double, std::vector<std::string>> value;
 };
-
+inline vda5050::order::ActionType get_vda5050_type_from_str(
+    const std::string& t) {
+  vda5050::order::ActionType res{ActionType::NOP};
+  if (t == "LOAD") {
+    res = ActionType::LOAD;
+  } else if (t == "UNLOAD") {
+    res = ActionType::UNLOAD;
+  } else if (t == "MOVE") {
+    res = ActionType::MOVE;
+  } else if (t == "LIFT") {
+    res = ActionType::LIFT;
+  } else if (t == "OPEN") {
+    res = ActionType::OPEN;
+  } else if (t == "CHARGE") {
+    res = ActionType::CHARGE;
+  } else if (t == "CLOSE") {
+    res = ActionType::CLOSE;
+  } else {
+    res = ActionType::NOP;
+  }
+  return res;
+}
+inline std::string vda5050_type_to_str(vda5050::order::ActionType t) {
+  std::string res{"NOP"};
+  if (t == ActionType::LOAD) {
+    res = "LOAD";
+  } else if (t == ActionType::UNLOAD) {
+    res = "UNLOAD";
+  } else if (t == ActionType::MOVE) {
+    res = "MOVE";
+  } else if (t == ActionType::LIFT) {
+    res = "LIFT";
+  } else if (t == ActionType::OPEN) {
+    res = "OPEN";
+  } else if (t == ActionType::CLOSE) {
+    res = "CLOSE";
+  } else if (t == ActionType::CHARGE) {
+    res = "CHARGE";
+  } else {
+    res = "NOP";
+  }
+  return res;
+}
 class Action {
  public:
   ActionType action_type{ActionType::NOP};
@@ -33,15 +78,7 @@ class Action {
   std::optional<std::vector<ActionParam>> action_parameters;
   Action() {}
   Action(jsoncons::json& obj) {
-    if (obj["actionType"].as_string() == "LOAD") {
-      action_type = ActionType::LOAD;
-    } else if (obj["actionType"].as_string() == "UNLOAD") {
-      action_type = ActionType::UNLOAD;
-    } else if (obj["actionType"].as_string() == "MOVE") {
-      action_type = ActionType::MOVE;
-    } else {
-      action_type = ActionType::NOP;
-    }
+    action_type = get_vda5050_type_from_str(obj["actionType"].as_string());
     action_id = obj["actionId"].as_string();
     if (obj.contains("actionDescription")) {
       action_description = obj["actionDescription"].as_string();
@@ -78,15 +115,7 @@ class Action {
   jsoncons::json to_json() {
     jsoncons::json res;
     res["actionId"] = action_id;
-    if (action_type == ActionType::LOAD) {
-      res["actionType"] = "LOAD";
-    } else if (action_type == ActionType::UNLOAD) {
-      res["actionType"] = "UNLOAD";
-    } else if (action_type == ActionType::MOVE) {
-      res["actionType"] = "MOVE";
-    } else {
-      res["actionType"] = "NOP";
-    }
+    res["actionType"] = vda5050_type_to_str(action_type);
     if (blocking_type == ActionBlockingType::HARD) {
       res["blockingType"] = "HARD";
     } else if (blocking_type == ActionBlockingType::NONE) {

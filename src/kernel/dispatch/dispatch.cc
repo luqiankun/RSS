@@ -141,19 +141,42 @@ Dispatcher::~Dispatcher() {
 }
 
 void Dispatcher::idle_detect() {
+  auto now = std::chrono::system_clock::now();
   for (auto& v : vehicles) {
-    // TODO 充电
-    //
-    if (v->state == driver::Vehicle::State::IDLE &&
-        v->home_state == driver::Vehicle::HomeState::HOME) {
-      auto now = std::chrono::system_clock::now();
-      auto dt = now - v->idle_time;
-      auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
-      if (dt_s.count() > 0) {
-        if (v->current_point->type != data::model::Point::Type::PARK_POSITION) {
-          go_home("TOder_" + std::to_string(now.time_since_epoch().count()) +
-                      v->name + "_gohome",
+    if (v->state == driver::Vehicle::State::UNKNOWN) {
+      continue;
+    }
+    if (v->process_chargeing) {
+      continue;
+    }
+    //  充电
+    if (v->engerg_level <= v->energy_level_critical) {
+      v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
+      v->cancel_all_order();
+      v->state = driver::Vehicle::State::ERROR;
+    } else if (v->engerg_level <= v->engrgy_level_recharge) {
+      v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
+      v->cancel_all_order();
+      go_charge("TOder_" + std::to_string(now.time_since_epoch().count()) +
+                    "_" + v->name + "_goto_charge",
+                v);
+    } else if (v->engerg_level <= v->energy_level_good) {
+      if (v->state == driver::Vehicle::State::IDLE) {
+        go_charge("TOder_" + std::to_string(now.time_since_epoch().count()) +
+                      "_" + v->name + "_goto_charge",
                   v);
+      }
+    } else {
+      //
+      if (v->state == driver::Vehicle::State::IDLE) {
+        auto dt = now - v->idle_time;
+        auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
+        if (dt_s.count() > 5) {
+          if (v->last_point->type != data::model::Point::Type::PARK_POSITION) {
+            go_home("TOder_" + std::to_string(now.time_since_epoch().count()) +
+                        "_" + v->name + "_goto_park",
+                    v);
+          }
         }
       }
     }
@@ -167,13 +190,13 @@ void Dispatcher::dispatch_once() {
   } else {
     if (current->state == data::order::TransportOrder::State::RAW) {
       // TODO
-      CLOG(INFO, dispatch_log) << current->name << " status: raw";
+      CLOG(INFO, dispatch_log) << current->name << " status: [raw]";
       if (current->driverorders.empty()) {
         current->state = data::order::TransportOrder::State::FINISHED;
-        CLOG(INFO, dispatch_log) << current->name << " status: finished";
+        CLOG(INFO, dispatch_log) << current->name << " status: [finished]";
       } else {
         current->state = data::order::TransportOrder::State::ACTIVE;
-        CLOG(INFO, dispatch_log) << current->name << " status: active";
+        CLOG(INFO, dispatch_log) << current->name << " status: [active]";
       }
     }
     if (current->state == data::order::TransportOrder::State::ACTIVE) {
@@ -182,7 +205,7 @@ void Dispatcher::dispatch_once() {
       if (v) {
         // 订单指定了车辆
         current->state = data::order::TransportOrder::State::DISPATCHABLE;
-        CLOG(INFO, dispatch_log) << current->name << " status: dispatchable";
+        CLOG(INFO, dispatch_log) << current->name << " status: [dispatchable]";
 
       } else {
         if (auto_select) {  // 自动分配车辆
@@ -204,24 +227,24 @@ void Dispatcher::dispatch_once() {
             current->intended_vehicle = v;
             current->state = data::order::TransportOrder::State::DISPATCHABLE;
             CLOG(INFO, dispatch_log)
-                << current->name << " status: dispatchable";
+                << current->name << " status: [dispatchable]";
           } else {
             current->state = data::order::TransportOrder::State::FAILED;
-            CLOG(INFO, dispatch_log) << current->name << " status: failed";
+            CLOG(INFO, dispatch_log) << current->name << " status: [failed]";
           }
         } else {
           current->state = data::order::TransportOrder::State::FAILED;
-          CLOG(INFO, dispatch_log) << current->name << " status: failed";
+          CLOG(INFO, dispatch_log) << current->name << " status: [failed]";
         }
       }
     }
     if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
       current->state = data::order::TransportOrder::State::BEING_PROCESSED;
-      CLOG(INFO, dispatch_log) << current->name << " status: being_processed";
+      CLOG(INFO, dispatch_log) << current->name << " status: [being_processed]";
       if (current->intended_vehicle.lock()->state ==
           driver::Vehicle::State::UNAVAILABLE) {
         current->state = data::order::TransportOrder::State::FAILED;
-        CLOG(INFO, dispatch_log) << current->name << " status: failed";
+        CLOG(INFO, dispatch_log) << current->name << " status: [failed]";
       } else {
         current->intended_vehicle.lock()->receive_task(current);
         current->processing_vehicle = current->intended_vehicle;

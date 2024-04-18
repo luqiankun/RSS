@@ -124,12 +124,14 @@ void Command::run_once() {
   } else if (state == State::EXECUTING) {
     // wait  do nothing
   } else if (state == State::EXECUTED) {
+    auto& driver_order = order->driverorders[order->current_driver_index];
     // unclaim
     std::stringstream ss;
     ss << veh->name << " unclaim ";
     std::vector<std::shared_ptr<TCSResource>> temp;
     for (auto& x : veh->claim_resources) {
-      if (x != veh->current_point) {
+      if (x != veh->current_point &&
+          x != get_dest(driver_order)->destination.lock()) {
         temp.push_back(x);
         ss << x->name << " ";
       }

@@ -35,6 +35,8 @@ class Dispatcher : public TCSObject {
       find_res;
   std::function<void(const std::string&, std::shared_ptr<driver::Vehicle>)>
       go_home;
+  std::function<void(const std::string&, std::shared_ptr<driver::Vehicle>)>
+      go_charge;
   std::function<std::shared_ptr<data::order::TransportOrder>()> get_next_ord;
 };
 }  // namespace dispatch

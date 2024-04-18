@@ -12,6 +12,7 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
   this->res = manager;
   rebuild();
 }
+Planner::~Planner() { CLOG(INFO, planner_log) << "Planner close"; }
 
 void Planner::rebuild() {
   cpu_timer t("generate map");
@@ -189,14 +190,18 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
                 });
       for (auto &x : paths) {
         std::stringstream ss;
-        ss << "\n - - - - - - - - - - - - - - - - - \n"
-           << "turns : " << calculate_turns(x) << " cost : " << x.back()->F
+        ss << "\n.- - - - - - - - - - - - - - - - - - - - - - -.\n"
+           << "| turns : " << calculate_turns(x) << " cost : " << x.back()->F
            << " vertex number : " << x.size() << "\n";
         std::vector<std::shared_ptr<data::model::Point>> temp;
-        ss << "path:[";
+        ss << "| path:[";
         temp.reserve(x.size());
         for (auto &p : x) {
-          ss << p->name << " -> ";
+          if (p == *(x.end() - 1)) {
+            ss << p->name << "";
+          } else {
+            ss << p->name << " -> ";
+          }
           temp.push_back(p->equal_point);
         }
         ss << "]\n";
@@ -205,7 +210,7 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
         } else {
           ss << "this path is not open";
         }
-        ss << " - - - - - - - - - - - - - - - - - \n";
+        ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
         CLOG(INFO, planner_log) << ss.str();
       }
     }

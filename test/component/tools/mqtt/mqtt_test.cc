@@ -3,7 +3,7 @@
 #include <regex>
 
 int main() {
-  std::string addr = "mqtt://192.168.0.39:1883";
+  std::string addr = "tcp://192.168.0.39:1883";
   mqtt::connect_options ops;
   ops.set_connect_timeout(2);
   ops.set_automatic_reconnect(true);
