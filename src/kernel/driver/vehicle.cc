@@ -94,11 +94,13 @@ void Vehicle::execute_action(
           data::order::DriverOrder::State::FAILED;
       current_order->state = data::order::TransportOrder::State::FAILED;
       current_order->end_time = std::chrono::system_clock::now();
-      CLOG(WARNING, driver_log) << current_order->name << " action : "
-                                << " failed";
+      CLOG(WARNING, driver_log)
+          << name << " " << current_order->name << " action : "
+          << " failed";
     } else {
-      CLOG(INFO, driver_log) << current_order->name << " action : "
-                             << " ok\n";
+      CLOG(INFO, driver_log)
+          << name << " " << current_order->name << " action : "
+          << " ok\n";
     }
     if (current_command) {
       current_command->vehicle_execute_cb(op_ret);
@@ -120,14 +122,14 @@ void Vehicle::execute_move(
       for (auto& x : steps) {
         ss << " move : " << x->name.c_str() << " & ";
       }
-      CLOG(WARNING, driver_log) << ss.str() << " failed";
+      CLOG(WARNING, driver_log) << name << " " << ss.str() << " failed";
     } else {
       std::stringstream ss;
       ss << current_order->name << " : ";
       for (auto& x : steps) {
         ss << " {" << x->name.c_str() << "} ";
       }
-      CLOG(INFO, driver_log) << ss.str() << " ok\n";
+      CLOG(INFO, driver_log) << name << " " << ss.str() << " ok\n";
     }
 
     if (current_command) {
@@ -141,9 +143,11 @@ void Vehicle::execute_instatn_action(
   instant_pool.async_run([&] {
     auto ret = instant_action(current_action);
     if (!ret) {
-      CLOG(ERROR, driver_log) << current_action->action_id << " failed";
+      CLOG(ERROR, driver_log)
+          << name << " " << current_action->action_id << " failed";
     } else {
-      CLOG(INFO, driver_log) << current_action->action_id << " ok";
+      CLOG(INFO, driver_log)
+          << name << " " << current_action->action_id << " ok";
     }
   });
 }
@@ -199,12 +203,14 @@ void Vehicle::plan_route() {
     }
     if (!end_planner) {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
-      CLOG(WARNING, driver_log) << current_order->name << " can not find obj";
+      CLOG(WARNING, driver_log)
+          << name << " " << current_order->name << " can not find obj";
     }
     auto path = planner.lock()->find_paths(start_planner, end_planner);
     if (path.empty()) {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
-      CLOG(WARNING, driver_log) << current_order->name << " can not routable";
+      CLOG(WARNING, driver_log)
+          << name << " " << current_order->name << " can not routable";
     } else {
       auto driverorder = orderpool.lock()->route_to_driverorder(
           resource.lock()->paths_to_route(path.front()), destination);
@@ -252,15 +258,18 @@ void Vehicle::get_next_ord() {
     if (process_chargeing) {
       state = State::CHARGING;
       CLOG_IF(state != State::CHARGING, INFO, driver_log)
+          << name << " "
           << "state transform to : [" << vehicle_state_to_str(State::CHARGING)
           << "]";
     } else {
       CLOG_IF(state != State::IDLE, INFO, driver_log)
+          << name << " "
           << "state transform to : [" << vehicle_state_to_str(State::IDLE)
           << "]";
       state = State::IDLE;
       idle_time = std::chrono::system_clock::now();
-      CLOG(INFO, driver_log) << "now is idle " << get_time_fmt(idle_time);
+      CLOG(INFO, driver_log) << name << " "
+                             << "now is idle " << get_time_fmt(idle_time);
     }
   }
 }
@@ -270,13 +279,15 @@ void Vehicle::command_done() {
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     // 订单取消
     future_claim_resources.clear();
-    CLOG(ERROR, driver_log) << current_order->name << " withdrawl.";
+    CLOG(ERROR, driver_log)
+        << name << " " << current_order->name << " withdrawl.";
     current_order.reset();
     get_next_ord();
     return;
   }
   if (current_order->dead_time < std::chrono::system_clock::now()) {
-    CLOG(ERROR, driver_log) << current_order->name << " timeout.";
+    CLOG(ERROR, driver_log)
+        << name << " " << current_order->name << " timeout.";
     current_order->state = data::order::TransportOrder::State::FAILED;
   }
   if (current_order->state == data::order::TransportOrder::State::FAILED) {
@@ -295,7 +306,8 @@ void Vehicle::command_done() {
   if (current_order->driverorders.size() <=
       current_order->current_driver_index) {
     current_order->state = data::order::TransportOrder::State::FINISHED;
-    CLOG(INFO, driver_log) << current_order->name << " finished\n";
+    CLOG(INFO, driver_log) << name << " " << current_order->name
+                           << " finished\n";
     current_order->end_time = std::chrono::system_clock::now();
     current_order.reset();
     current_command.reset();
@@ -363,18 +375,18 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
                          << "\n";
   if (state == State::ERROR) {  // TODO
     order->state = data::order::TransportOrder::State::FAILED;
-    CLOG(ERROR, driver_log)
-        << order->name << " failed : " << name << " state is ERROR";
+    CLOG(ERROR, driver_log) << name << " " << order->name
+                            << " failed : " << name << " state is ERROR";
   } else if (state == State::UNAVAILABLE) {
     // TODO
     order->state = data::order::TransportOrder::State::FAILED;
-    CLOG(ERROR, driver_log)
-        << order->name << " failed : " << name << " state is UNAVAILABLE";
+    CLOG(ERROR, driver_log) << name << " " << order->name
+                            << " failed : " << name << " state is UNAVAILABLE";
   } else if (state == State::IDLE) {
     // TODO
     CLOG_IF(state != State::EXECUTING, INFO, driver_log)
-        << "state transform to : [" << vehicle_state_to_str(State::EXECUTING)
-        << "]";
+        << name << " state transform to : ["
+        << vehicle_state_to_str(State::EXECUTING) << "]";
     state = State::EXECUTING;
     if (current_order) {
       current_order->state = data::order::TransportOrder::State::WITHDRAWL;
@@ -395,6 +407,7 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
     if (engerg_level > energy_level_good) {
       // TODO stop 充电
       CLOG_IF(state != State::EXECUTING, INFO, driver_log)
+          << name << " "
           << "state transform to : [" << vehicle_state_to_str(State::EXECUTING)
           << "]";
       state = State::EXECUTING;
@@ -403,8 +416,8 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
     }
   } else {
     order->state = data::order::TransportOrder::State::FAILED;
-    CLOG(ERROR, driver_log)
-        << order->name << " failed : " << name << " state is UNKNOWN";
+    CLOG(ERROR, driver_log) << name << " " << order->name
+                            << " failed : " << name << " state is UNKNOWN";
   }
 }
 bool SimVehicle::action(
@@ -561,6 +574,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       auto last_vdastate = vdastate;
       vdastate = vda5050::state::VDA5050State(v);
       CLOG_IF(vdastate.order_id != last_vdastate.order_id, INFO, driver_log)
+          << name << " "
           << "order id has been updated, {\'" << last_vdastate.order_id
           << "\'} ==> {\'" << vdastate.order_id << "\'}\n";
       // LOG(INFO) << "------" << vdastate.battery_state.battery_charge;
@@ -622,12 +636,12 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       }
 
     } else {
-      std::for_each(ms.begin(), ms.end(), [](const std::string s) {
-        CLOG(WARNING, driver_log) << s;
+      std::for_each(ms.begin(), ms.end(), [&](const std::string s) {
+        CLOG(WARNING, driver_log) << name << " " << s;
       });
     }
   } catch (jsoncons::json_exception& ec) {
-    CLOG(WARNING, driver_log) << ec.what();
+    CLOG(WARNING, driver_log) << name << " " << ec.what();
   }
 }
 
@@ -654,12 +668,12 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
         state = Vehicle::State::UNKNOWN;
       }
     } else {
-      std::for_each(ms.begin(), ms.end(), [](const std::string s) {
-        CLOG(WARNING, driver_log) << s;
+      std::for_each(ms.begin(), ms.end(), [&](const std::string s) {
+        CLOG(WARNING, driver_log) << name << " " << s;
       });
     }
   } catch (jsoncons::json_exception& ec) {
-    CLOG(WARNING, driver_log) << ec.what();
+    CLOG(WARNING, driver_log) << name << " " << ec.what();
   }
 }
 
@@ -671,20 +685,20 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     name_.append("}");
   }
   name_.append("]");
-  CLOG(INFO, driver_log) << "move step: " << name_ << "\n";
+  CLOG(INFO, driver_log) << name << " move step: " << name_ << "\n";
 
   if (steps.empty()) {
-    CLOG(WARNING, driver_log) << "move  null step";
+    CLOG(WARNING, driver_log) << name << " move  null step";
     return true;
   }
   task_run = true;
   if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << "master not online";
+    CLOG(ERROR, driver_log) << name << " master not online";
     task_run = false;
     return false;
   }
   if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << "vehlicle not online";
+    CLOG(ERROR, driver_log) << name << " vehlicle not online";
     task_run = false;
     return false;
   }
@@ -758,11 +772,11 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     {
       // action
       if (!x->path->acts.actions.empty()) {
-        CLOG(INFO, driver_log)
-            << "this node had " << x->path->acts.actions.size() << " actions";
+        CLOG(INFO, driver_log) << name << " this node had "
+                               << x->path->acts.actions.size() << " actions";
         for (auto& act : x->path->acts.actions) {
           if (!act.vaild) continue;
-          CLOG(INFO, driver_log) << act.id << " " << act.name;
+          CLOG(INFO, driver_log) << name << " " << act.id << " " << act.name;
           vda5050::order::Action action;
           if (data_actions_to_vda5050_actions(act, action)) {
             if (act.when == "ORDER_START" || act.when == "AFTER_ALLOCATION") {
@@ -776,13 +790,14 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
               wait_act.insert(action.action_id);
             }
           } else {
-            CLOG(ERROR, driver_log) << act.name << " trans failed";
+            CLOG(ERROR, driver_log)
+                << name << " " << act.name << " trans failed";
           }
         }
       }
     }
   }
-  CLOG(INFO, driver_log) << ss.str() << "\n";
+  CLOG(INFO, driver_log) << name << " " << ss.str() << "\n";
   //
 
   auto msg =
@@ -793,12 +808,12 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   int n{0};
   while (task_run) {
     if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << "master not online";
+      CLOG(ERROR, driver_log) << name << " master not online";
       task_run = false;
       return false;
     }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << "vehlicle not online";
+      CLOG(ERROR, driver_log) << name << " vehlicle not online";
       task_run = false;
       return false;
     }
@@ -808,17 +823,17 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
         auto dt = std::chrono::system_clock::now() - p.value();
         if (dt > std::chrono::seconds(10)) {
           CLOG(ERROR, driver_log)
-              << "The communication interval is too long > 10s";
+              << name << " The communication interval is too long > 10s";
           task_run = false;
           return false;
         }
       } else {
         CLOG(WARNING, driver_log)
-            << "dot not has timestamp, the status may be incorrect ";
+            << name << " dot not has timestamp, the status may be incorrect ";
       }
       // state
       if (veh_state == vda5050::VehicleMqttStatus::OFFLINE) {
-        CLOG(ERROR, driver_log) << "vehicle offline";
+        CLOG(ERROR, driver_log) << name << " vehicle offline";
         task_run = false;
         return false;
       }
@@ -826,9 +841,9 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       if (!vdastate.errors.empty()) {
         for (auto& x : vdastate.errors) {
           if (x.error_level == vda5050::state::ErrorLevel::WARNING) {
-            CLOG(WARNING, driver_log) << x.error_type;
+            CLOG(WARNING, driver_log) << name << " " << x.error_type;
           } else {
-            CLOG(ERROR, driver_log) << x.error_type;
+            CLOG(ERROR, driver_log) << name << " " << x.error_type;
             task_run = false;
             return false;
           }
@@ -850,7 +865,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
             return false;
           } else if (x.action_status ==
                      vda5050::state::ActionStatus::FINISHED) {
-            CLOG(INFO, driver_log) << "wait action [" << x.action_id << "] ok ";
+            CLOG(INFO, driver_log) << name << " "
+                                   << "wait action [" << x.action_id << "] ok ";
             wait_act.erase(wait_act.find(x.action_id));
           }
         }
@@ -858,11 +874,13 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       if (vdastate.nodestates.empty() && vdastate.edgestates.empty() &&
           all_act_ok) {
         task_run = false;
-        CLOG(INFO, driver_log) << "move along [" << name_ << "] ok";
+        CLOG(INFO, driver_log) << name << " "
+                               << "move along [" << name_ << "] ok";
         return true;
       }
     } else {
       CLOG(WARNING, driver_log)
+          << name << " "
           << "order state has not been updated,wait_for {\'"
           << prefix + std::to_string(order_id) << "\'}, but now is {\'"
           << vdastate.order_id << "\'}\n";
@@ -871,27 +889,32 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     n++;
     if (n > 2 * 60 * 100) {
-      CLOG(ERROR, driver_log) << "timeout";
+      CLOG(ERROR, driver_log) << name << " "
+                              << "timeout";
       task_run = false;
       return false;
     }
   }
-  CLOG(WARNING, driver_log) << "task cancel";
+  CLOG(WARNING, driver_log) << name << " "
+                            << "task cancel";
   task_run = false;
   return false;
 }
 bool Rabbit3::action(
     std::shared_ptr<data::order::DriverOrder::Destination> dest) {
-  CLOG(INFO, driver_log) << "action execute [" << dest->get_type() << "] at "
+  CLOG(INFO, driver_log) << name << " "
+                         << "action execute [" << dest->get_type() << "] at "
                          << dest->destination.lock()->name << "\n";
   task_run = true;
   if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << "master not online";
+    CLOG(ERROR, driver_log) << name << " "
+                            << "master not online";
     task_run = false;
     return false;
   }
   if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << "vehlicle not online";
+    CLOG(ERROR, driver_log) << name << " "
+                            << "vehlicle not online";
     task_run = false;
     return false;
   }
@@ -945,7 +968,8 @@ bool Rabbit3::action(
       param_y.value = (float)t1->position.y;
       act.action_parameters->push_back(param_y);
     } else {
-      CLOG(ERROR, driver_log) << "dest type is err";
+      CLOG(ERROR, driver_log) << name << " "
+                              << "dest type is err";
       return false;
     }
 
@@ -963,19 +987,22 @@ bool Rabbit3::action(
   int n{0};
   while (task_run) {
     if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << "master not online";
+      CLOG(ERROR, driver_log) << name << " "
+                              << "master not online";
       task_run = false;
       return false;
     }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << "vehlicle not online";
+      CLOG(ERROR, driver_log) << name << " "
+                              << "vehlicle not online";
       task_run = false;
       return false;
     }
     if (vdastate.order_id == prefix + std::to_string(order_id)) {
       // state
       if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-        CLOG(ERROR, driver_log) << "vehicle not online";
+        CLOG(ERROR, driver_log) << name << " "
+                                << "vehicle not online";
         task_run = false;
         return false;
       }
@@ -983,9 +1010,9 @@ bool Rabbit3::action(
       if (!vdastate.errors.empty()) {
         for (auto& x : vdastate.errors) {
           if (x.error_level == vda5050::state::ErrorLevel::WARNING) {
-            CLOG(WARNING, driver_log) << x.error_type;
+            CLOG(WARNING, driver_log) << name << " " << x.error_type;
           } else {
-            CLOG(ERROR, driver_log) << x.error_type;
+            CLOG(ERROR, driver_log) << name << " " << x.error_type;
             task_run = false;
             return false;
           }
@@ -996,9 +1023,11 @@ bool Rabbit3::action(
       for (auto& x : vdastate.actionstates) {
         auto sta = x.action_status;
         if (sta == vda5050::state::ActionStatus::FINISHED) {
-          CLOG(INFO, driver_log) << "action [" << dest->get_type() << "] ok";
+          CLOG(INFO, driver_log) << name << " "
+                                 << "action [" << dest->get_type() << "] ok";
         } else if (sta == vda5050::state::ActionStatus::FAILED) {
           CLOG(INFO, driver_log)
+              << name << " "
               << "action failed" << dest->destination.lock()->name;
           task_run = false;
           return false;
@@ -1011,12 +1040,14 @@ bool Rabbit3::action(
         }
       }
       if (all_ok) {
-        CLOG(INFO, driver_log) << "all actions ok";
+        CLOG(INFO, driver_log) << name << " "
+                               << "all actions ok";
         task_run = false;
         return true;
       }
     } else {
       CLOG(WARNING, driver_log)
+          << name << " "
           << "order state has not been updated,needed {\'"
           << prefix + std::to_string(order_id) << "\'}, but now is {\'"
           << vdastate.order_id << "}\n";
@@ -1024,25 +1055,29 @@ bool Rabbit3::action(
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     n++;
     if (n > 2 * 60 * 100) {
-      CLOG(ERROR, driver_log) << "timeout";
+      CLOG(ERROR, driver_log) << name << " "
+                              << "timeout";
       task_run = false;
       return false;
     }
   }
   task_run = false;
-  CLOG(WARNING, "vehicel") << "task cancel";
+  CLOG(WARNING, driver_log) << name << " "
+                            << "task cancel";
   return false;
 }
 bool Rabbit3::instant_action(
     std::shared_ptr<vda5050::instantaction::Action> act) {
   CLOG(INFO, driver_log) << "instantaction " << act->action_id;
   if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << "master not online";
+    CLOG(ERROR, driver_log) << name << " "
+                            << "master not online";
     instanttask_run = false;
     return false;
   }
   if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << "vehlicle not online";
+    CLOG(ERROR, driver_log) << name << " "
+                            << "vehlicle not online";
     instanttask_run = false;
     return false;
   }
@@ -1064,12 +1099,14 @@ bool Rabbit3::instant_action(
   bool ok{false};
   while (instanttask_run) {
     if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << "master not online";
+      CLOG(ERROR, driver_log) << name << " "
+                              << "master not online";
       instanttask_run = false;
       return false;
     }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << "vehlicle not online";
+      CLOG(ERROR, driver_log) << name << " "
+                              << "vehlicle not online";
       instanttask_run = false;
       return false;
     }
@@ -1093,7 +1130,8 @@ bool Rabbit3::instant_action(
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     n++;
     if (n > 2 * 60 * 100) {
-      CLOG(ERROR, driver_log) << "timeout";
+      CLOG(ERROR, driver_log) << name << " "
+                              << "timeout";
       break;
     }
   }

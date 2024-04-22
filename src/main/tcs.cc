@@ -63,16 +63,20 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         p->position.x = xPosition;
         p->position.y = yPosition;
         p->layout = layout;
-        if (type == "HALT_POSITION") {
-          p->type = data::model::Point::Type::HALT_POSITION;
-        } else if (type == "REPORT_POSITION") {
-          p->type = data::model::Point::Type::REPORT_POSITION;
-        } else if (type == "PARK_POSITION") {
-          p->type = data::model::Point::Type::PARK_POSITION;
-        } else if (type == "NORMAL_POSITION") {
-          p->type = data::model::Point::Type::NORMAL_POSITION;
-        } else {
-          p->type = data::model::Point::Type::UNKNOWN;
+        p->type = data::model::Point::new_type(type);
+        // pro
+        auto property = point.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "property";
+        });
+        while (property.type() != pugi::node_null) {
+          if (std::string(property.name()) != "property") {
+            break;
+          }
+          auto name_ = property.attribute("name").as_string();
+          auto vlaue_ = property.attribute("value").as_string();
+          p->properties.insert(
+              std::pair<std::string, std::string>(name_, vlaue_));
+          property = property.next_sibling();
         }
         resource->points.push_back(p);
         point = point.next_sibling();
@@ -1482,6 +1486,63 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       resource->points.push_back(point);
     }
     CLOG(INFO, tcs_log) << resource->points.size() << " point";
+
+    // locationtype
+    for (auto &x : model["locationTypes"]) {
+      auto type = std::make_shared<data::model::LocationType>(
+          x["name"].get<std::string>());
+      type->layout.location_representation = data::model::new_location_type(
+          x["layout"]["locationRepresentation"].get<std::string>());
+      for (auto &pro : x["property"]) {
+        auto key = pro["name"].get<std::string>();
+        auto value = pro["value"].get<std::string>();
+        type->properties.insert(
+            std::pair<std::string, std::string>(key, value));
+      }
+      for (auto &allow : x["allowedOperation"]) {
+        type->allowed_ops[allow] = std::map<std::string, std::string>();
+      }
+      for (auto &allow : x["allowedPeripheralOperation"]) {
+        type->allowrd_per_ops[allow] = std::map<std::string, std::string>();
+      }
+      type->get_param();
+      resource->location_types.push_back(type);
+    }
+    CLOG(INFO, tcs_log) << resource->location_types.size() << " locationtype";
+    // location
+    for (auto &l : model["locations"]) {
+      auto loc =
+          std::make_shared<data::model::Location>(l["name"].get<std::string>());
+      loc->position.x = l["position"]["x"].get<int>();
+      loc->position.y = l["position"]["y"].get<int>();
+      loc->position.z = l["position"]["z"].get<int>();
+      if (!l["links"].empty()) {
+        auto p_name = l["links"].front()["pointName"].get<std::string>();
+        for (auto &x : resource->points) {
+          if (x->name == p_name) {
+            loc->link = x;
+          }
+        }
+      }
+      loc->locked = l["locked"].get<bool>();
+      loc->layout.position.x = l["layout"]["position"]["x"].get<int>();
+      loc->layout.position.y = l["layout"]["position"]["y"].get<int>();
+      loc->layout.label_offset.x = l["layout"]["labelOffset"]["x"].get<int>();
+      loc->layout.label_offset.y = l["layout"]["labelOffset"]["y"].get<int>();
+      loc->layout.layer_id = l["layout"]["layerId"].get<int>();
+      for (auto &x : resource->location_types) {
+        if (x->name == l["typeName"].get<std::string>()) {
+          loc->type = x;
+        }
+      }
+      // if (l["layout"].contains("locationRepresentation")) {
+      //   loc->type.layout.location_representation =
+      //       data::model::Location::new_location_type(
+      //           l["layout"]["locationRepresentation"].get<std::string>());
+      // }
+      resource->locations.push_back(loc);
+    }
+    CLOG(INFO, tcs_log) << resource->locations.size() << " location";
     // path
     for (auto &p : model["paths"]) {
       auto path = std::make_shared<data::model::Path>(p["name"]);
@@ -1524,67 +1585,81 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
                         path->destination_point.lock()->position)
                            .norm();
       }
-      resource->paths.push_back(path);
-    }
-    CLOG(INFO, tcs_log) << resource->paths.size() << " path";
-
-    for (auto &x : model["locationTypes"]) {
-      auto type = std::make_shared<data::model::LocationType>(
-          x["name"].get<std::string>());
-      type->layout.location_representation = data::model::new_location_type(
-          x["layout"]["locationRepresentation"].get<std::string>());
-      for (auto &pro : x["property"]) {
-        auto key = pro["name"].get<std::string>();
-        auto value = pro["value"].get<std::string>();
-        type->properties.insert(
-            std::pair<std::string, std::string>(key, value));
-      }
-      for (auto &allow : x["allowedOperation"]) {
-        type->allowed_ops[allow] = std::map<std::string, std::string>();
-      }
-      for (auto &allow : x["allowedPeripheralOperation"]) {
-        type->allowrd_per_ops[allow] = std::map<std::string, std::string>();
-      }
-      type->get_param();
-      resource->location_types.push_back(type);
-    }
-    CLOG(INFO, tcs_log) << resource->location_types.size() << " locationtype";
-
-    // location
-    for (auto &l : model["locations"]) {
-      auto loc =
-          std::make_shared<data::model::Location>(l["name"].get<std::string>());
-      loc->position.x = l["position"]["x"].get<int>();
-      loc->position.y = l["position"]["y"].get<int>();
-      loc->position.z = l["position"]["z"].get<int>();
-      if (!l["links"].empty()) {
-        auto p_name = l["links"].front()["pointName"].get<std::string>();
-        for (auto &x : resource->points) {
-          if (x->name == p_name) {
-            loc->link = x;
+      //
+      data::model::Actions acts(path->properties);
+      {
+        if (p.contains("peripheralOperation")) {
+          for (auto &op : p["peripheralOperation"]) {
+            auto per_op_name = op["name"].get<std::string>();
+            auto wait = op["completionRequired"].get<bool>() ? "SOFT" : "NONE";
+            auto when = op["executionTrigger"].get<std::string>();
+            auto link_loc_name = op["locationName"].get<std::string>();
+            for (auto &loc : resource->locations) {
+              if (loc->name == link_loc_name) {
+                if (loc->type.lock()->allowrd_per_ops.find(per_op_name) !=
+                    loc->type.lock()->allowrd_per_ops.end()) {
+                  // exist
+                  data::model::Actions::Action act;
+                  act.params.insert(loc->properties.begin(),
+                                    loc->properties.end());
+                  act.block_type = wait;
+                  act.when = when;
+                  act.vaild = true;
+                  act.id = path->name + "_action_" + per_op_name;
+                  act.name = loc->type.lock()->name;
+                  acts.append(act);
+                  break;
+                }
+              }
+            }
           }
         }
       }
-      loc->locked = l["locked"].get<bool>();
-      loc->layout.position.x = l["layout"]["position"]["x"].get<int>();
-      loc->layout.position.y = l["layout"]["position"]["y"].get<int>();
-      loc->layout.label_offset.x = l["layout"]["labelOffset"]["x"].get<int>();
-      loc->layout.label_offset.y = l["layout"]["labelOffset"]["y"].get<int>();
-      loc->layout.layer_id = l["layout"]["layerId"].get<int>();
-      for (auto &x : resource->location_types) {
-        if (x->name == l["typeName"].get<std::string>()) {
-          loc->type = x;
+      path->acts = acts;
+      resource->paths.push_back(path);
+    }
+    CLOG(INFO, tcs_log) << resource->paths.size() << " path";
+    // block
+    for (auto &block : model["blocks"]) {
+      std::unordered_set<std::shared_ptr<TCSResource>> rs;
+      for (auto &ch : block["memberNames"]) {
+        for (auto &x : resource->points) {
+          if (x->name == ch) {
+            rs.insert(x);
+          }
+        }
+        for (auto &x : resource->paths) {
+          if (x->name == ch) {
+            rs.insert(x);
+          }
+        }
+        for (auto &x : resource->locations) {
+          if (x->name == ch) {
+            rs.insert(x);
+          }
         }
       }
-      // if (l["layout"].contains("locationRepresentation")) {
-      //   loc->type.layout.location_representation =
-      //       data::model::Location::new_location_type(
-      //           l["layout"]["locationRepresentation"].get<std::string>());
-      // }
-      resource->locations.push_back(loc);
+      if (block["type"] == "SINGLE_VEHICLE_ONLY") {
+        auto rule = std::make_shared<kernel::allocate::OnlyOneGatherRule>(
+            block["name"], resource);
+        rule->occs = rs;
+        rule->color = block["layout"]["color"];
+        resource->rules.push_back(rule);
+      } else if (block["type"] == "SAME_DIRECTION_ONLY") {
+        std::string direction = block["direct"];
+        for (auto &x : resource->paths) {
+          auto p = rs.find(x);
+          if (p != rs.end()) {
+            auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
+            if (direction == "FRONT") {
+              path->max_reverse_vel = 0;
+            } else if (direction == "BACK") {
+              path->max_vel = 0;
+            }
+          }
+        }
+      }
     }
-    CLOG(INFO, tcs_log) << resource->locations.size() << " location";
-
     // vehicle
     for (auto &v : model["vehicles"]) {
       // TODO 工厂
