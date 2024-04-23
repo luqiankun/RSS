@@ -770,6 +770,18 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     last_id = end_point->name;
     ord.edges.push_back(e);
     {
+      // peraction
+      if (!x->path->per_acts.acts.empty()) {
+        for (auto& op : x->path->per_acts.acts) {
+          if (op.execution_trigger == "AFTER_ALLOCATION") {
+            // TODO
+            CLOG(INFO, driver_log)
+                << "do " << op.location_name << "[" << op.op_name << "]";
+            if (op.completion_required) {
+            }
+          }
+        }
+      }
       // action
       if (!x->path->acts.actions.empty()) {
         CLOG(INFO, driver_log) << name << " this node had "
@@ -779,10 +791,9 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
           CLOG(INFO, driver_log) << name << " " << act.id << " " << act.name;
           vda5050::order::Action action;
           if (data_actions_to_vda5050_actions(act, action)) {
-            if (act.when == "ORDER_START" || act.when == "AFTER_ALLOCATION") {
+            if (act.when == "ORDER_START") {
               (ord.nodes.end() - 2)->actions.push_back(action);
-            } else if (act.when == "ORDER_END" ||
-                       act.when == "AFTER_MOVEMENT") {
+            } else if (act.when == "ORDER_END") {
               (ord.nodes.end() - 1)->actions.push_back(action);
             }
             if (action.blocking_type !=
@@ -876,6 +887,19 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
         task_run = false;
         CLOG(INFO, driver_log) << name << " "
                                << "move along [" << name_ << "] ok";
+        {  // per act
+           // TODO
+          for (auto& x : steps) {
+            for (auto& op : x->path->per_acts.acts) {
+              if (op.execution_trigger == "AFTER_MOVEMENT") {
+                CLOG(INFO, driver_log)
+                    << "do " << op.location_name << "[" << op.op_name << "]";
+                if (op.completion_required) {
+                }
+              }
+            }
+          }
+        }
         return true;
       }
     } else {
@@ -955,10 +979,10 @@ bool Rabbit3::action(
     } else if (t.first == allocate::ResourceManager::ResType::Location) {
       auto t1 = std::dynamic_pointer_cast<data::model::Location>(
           dest->destination.lock());
+      act.action_parameters = std::vector<vda5050::order::ActionParam>();
       node.node_id = t1->link.lock()->name;
       node.node_position.value().x = t1->link.lock()->position.x;
       node.node_position.value().y = t1->link.lock()->position.y;
-      act.action_parameters = std::vector<vda5050::order::ActionParam>();
       auto param_x = vda5050::order::ActionParam();
       param_x.key = "x";
       param_x.value = (float)t1->position.x;
@@ -967,6 +991,14 @@ bool Rabbit3::action(
       param_y.key = "y";
       param_y.value = (float)t1->position.y;
       act.action_parameters->push_back(param_y);
+      auto it = t1->type.lock()->allowed_ops.find(dest->get_type());
+      auto params = it->second;
+      for (auto& param : params) {
+        auto p_ = vda5050::order::ActionParam();
+        p_.key = param.first;
+        p_.value = (std::string)param.second;
+        act.action_parameters->push_back(p_);
+      }
     } else {
       CLOG(ERROR, driver_log) << name << " "
                               << "dest type is err";

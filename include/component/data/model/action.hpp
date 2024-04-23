@@ -124,6 +124,17 @@ class Actions {
  public:
   std::vector<Action> actions;
 };
+class PeripheralActions {
+ public:
+  class PeripheralAction {
+   public:
+    std::string op_name;
+    std::string location_name;
+    bool completion_required{false};
+    std::string execution_trigger;
+  };
+  std::vector<PeripheralAction> acts;
+};
 }  // namespace model
 }  // namespace data
 

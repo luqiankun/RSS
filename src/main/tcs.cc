@@ -104,7 +104,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
             break;
           }
           auto name_ = allow_ops.attribute("name").as_string();
-          lt->allowed_ops[name_] = std::map<std::string, std::string>();
+          auto name_t = lt->allowed_ops[name_] =
+              std::map<std::string, std::string>();
           allow_ops = allow_ops.next_sibling();
         }
         auto allow_per_ops = loc_type.find_child([](pugi::xml_node node) {
@@ -134,6 +135,9 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
           property = property.next_sibling();
         }
         lt->get_param();
+        // for (auto &p : lt->allowed_ops) {
+        //   LOG(INFO) << p.first << " " << p.second.size();
+        // }
         //
         auto loc_layout = loc_type.child("locationTypeLayout")
                               .attribute("locationRepresentation")
@@ -292,6 +296,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         //
         data::model::Actions acts(p->properties);
         {
+          // TODO perop
           auto peripher_op = path.find_child([](pugi::xml_node node) {
             return std::string(node.name()) == "peripheralOperation";
           });
@@ -301,9 +306,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
               break;
             }
             auto per_op_name = peripher_op.attribute("name").as_string();
-            auto wait = peripher_op.attribute("completionRequired").as_bool()
-                            ? "SOFT"
-                            : "NONE";
+            auto wait = peripher_op.attribute("completionRequired").as_bool();
             auto when = peripher_op.attribute("executionTrigger").as_string();
             auto link_loc_name =
                 peripher_op.attribute("locationName").as_string();
@@ -312,15 +315,12 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
                 if (loc->type.lock()->allowrd_per_ops.find(per_op_name) !=
                     loc->type.lock()->allowrd_per_ops.end()) {
                   // exist
-                  data::model::Actions::Action act;
-                  act.params.insert(loc->properties.begin(),
-                                    loc->properties.end());
-                  act.block_type = wait;
-                  act.when = when;
-                  act.vaild = true;
-                  act.id = p->name + "_action_" + per_op_name;
-                  act.name = loc->type.lock()->name;
-                  acts.append(act);
+                  data::model::PeripheralActions::PeripheralAction per_act;
+                  per_act.completion_required = wait;
+                  per_act.execution_trigger = when;
+                  per_act.location_name = link_loc_name;
+                  per_act.op_name = per_op_name;
+                  p->per_acts.acts.push_back(per_act);
                   break;
                 }
               }
@@ -841,19 +841,19 @@ std::pair<int, std::string> TCS::post_transport_order(
           auto op = d["operation"].get<std::string>();
           auto op_ = data::order::DriverOrder::Destination::get_optype(op);
           if (op_.has_value()) {
-            if (op_.value() ==
-                    data::order::DriverOrder::Destination::OpType::LOAD ||
-                op_.value() ==
-                    data::order::DriverOrder::Destination::OpType::UNLOAD) {
-              if (check.first !=
-                  kernel::allocate::ResourceManager::ResType::Location) {
-                CLOG(ERROR, tcs_log) << "op type '" + std::string(op) +
-                                            "' is not support,need a location";
+            if (check.first ==
+                kernel::allocate::ResourceManager::ResType::Location) {
+              auto t1 = std::dynamic_pointer_cast<data::model::Location>(
+                  check.second);
+              auto it = t1->type.lock()->allowed_ops.find(op);
+              if (it == t1->type.lock()->allowed_ops.end()) {
+                CLOG(ERROR, driver_log) << op << "type is err";
                 ord->state = data::order::TransportOrder::State::FAILED;
                 orderpool->ended_orderpool.push_back(ord);
                 break;
               }
             }
+
             auto destination =
                 orderpool->res_to_destination(check.second, op_.value());
             auto dr = std::make_shared<data::order::DriverOrder>(

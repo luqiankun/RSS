@@ -27,9 +27,9 @@ class DriverOrder : public TCSObject {
     static std::optional<OpType> get_optype(const std::string& op) {
       if (op == "NOP") {
         return OpType::NOP;
-      } else if (op == "LOAD") {
+      } else if (op == "pick") {
         return OpType::LOAD;
-      } else if (op == "UNLOAD") {
+      } else if (op == "drop") {
         return OpType::UNLOAD;
       } else if (op == "CLOSE") {
         return OpType::CLOSE;
@@ -37,7 +37,7 @@ class DriverOrder : public TCSObject {
         return OpType::OPEN;
       } else if (op == "LIFT") {
         return OpType::LIFT;
-      } else if (op == "CHARGE") {
+      } else if (op == "Charge") {
         return OpType::CHARGE;
       } else if (op == "MOVE") {
         return OpType::MOVE;
@@ -49,11 +49,11 @@ class DriverOrder : public TCSObject {
       if (operation == OpType::MOVE) {
         return "MOVE";
       } else if (operation == OpType::LOAD) {
-        return "LOAD";
+        return "pick";
       } else if (operation == OpType::UNLOAD) {
-        return "UNLOAD";
+        return "drop";
       } else if (operation == OpType::CHARGE) {
-        return "CHARGE";
+        return "Charge";
       } else if (operation == OpType::OPEN) {
         return "OPEN";
       } else if (operation == OpType::CLOSE) {

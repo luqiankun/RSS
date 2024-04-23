@@ -29,9 +29,9 @@ class ActionParam {
 inline vda5050::order::ActionType get_vda5050_type_from_str(
     const std::string& t) {
   vda5050::order::ActionType res{ActionType::NOP};
-  if (t == "LOAD") {
+  if (t == "pick") {
     res = ActionType::LOAD;
-  } else if (t == "UNLOAD") {
+  } else if (t == "drop") {
     res = ActionType::UNLOAD;
   } else if (t == "MOVE") {
     res = ActionType::MOVE;
@@ -39,7 +39,7 @@ inline vda5050::order::ActionType get_vda5050_type_from_str(
     res = ActionType::LIFT;
   } else if (t == "OPEN") {
     res = ActionType::OPEN;
-  } else if (t == "CHARGE") {
+  } else if (t == "Charge") {
     res = ActionType::CHARGE;
   } else if (t == "CLOSE") {
     res = ActionType::CLOSE;
@@ -51,9 +51,9 @@ inline vda5050::order::ActionType get_vda5050_type_from_str(
 inline std::string vda5050_type_to_str(vda5050::order::ActionType t) {
   std::string res{"NOP"};
   if (t == ActionType::LOAD) {
-    res = "LOAD";
+    res = "pick";
   } else if (t == ActionType::UNLOAD) {
-    res = "UNLOAD";
+    res = "drop";
   } else if (t == ActionType::MOVE) {
     res = "MOVE";
   } else if (t == ActionType::LIFT) {
@@ -63,7 +63,7 @@ inline std::string vda5050_type_to_str(vda5050::order::ActionType t) {
   } else if (t == ActionType::CLOSE) {
     res = "CLOSE";
   } else if (t == ActionType::CHARGE) {
-    res = "CHARGE";
+    res = "Charge";
   } else {
     res = "NOP";
   }

@@ -97,7 +97,7 @@ class LocationType : public TCSResource {
   std::map<std::string, std::map<std::string, std::string>>
       allowed_ops;  // 本地操作，优先通过vdaaction启动，类型hard
   std::map<std::string, std::map<std::string, std::string>>
-      allowrd_per_ops;  // 外围操作，在其他点触发，通过vdaaction来启动
+      allowrd_per_ops;  // 外围操作，在其他点触发，服务器来启动
   LocationTypeLayout layout;
 };
 

@@ -76,7 +76,8 @@ class Path : public TCSResource {
   int max_reverse_vel{0};
   bool locked{false};
   PathLayout layout;
-  Actions acts;
+  Actions acts;  // vda action
+  PeripheralActions per_acts;
 };
 }  // namespace model
 }  // namespace data

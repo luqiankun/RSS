@@ -1106,8 +1106,8 @@
     </locationType>
     <locationType name="Transfer">
         <allowedOperation name="NOP" />
-        <allowedOperation name="drop" />
         <allowedOperation name="pick" />
+        <allowedOperation name="drop" />
         <property name="tcs:defaultLocationTypeSymbol" value="LOAD_TRANSFER_ALT_2" />
         <property name="vda5050:destinationAction.drop.parameter.angle" value="1.57" />
         <property name="vda5050:destinationAction.drop.parameter.script" value="robot_rotate" />

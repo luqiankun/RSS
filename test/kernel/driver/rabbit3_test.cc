@@ -383,6 +383,7 @@ class SimRabbit3 {
                     }
                     if (ord.nodes.at(0).actions.at(i).action_type ==
                         vda5050::order::ActionType::CHARGE) {
+                      LOG(INFO) << "=====charging=====";
                       state->driving = false;
                       state->last_node_id = "";
                       state->actionstates.at(i).action_status =
