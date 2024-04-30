@@ -64,6 +64,25 @@ config中有api接口定义文件
 参数 type 设置为xml
 body config中的map.xml
 
+注意修改车辆属性中的MQTT代理的ip
+```xml
+ <vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx4" />
+        <property name="vda5050:version" value="2.0" />
+        <property name="vda5050:ip" value="192.168.0.39" />
+        <property name="vda5050:port" value="1883" />
+        <vehicleLayout color="#FFFF00" />
+    </vehicle>
+```
+
 操作成功服务器会输出
 ```
 [I 240430 11:33:47.4365 tcs.cc:627] init orderpool ok
