@@ -11,6 +11,11 @@ ubuntu 安装依赖
 
 
 添加test选项编译，编译车辆端模拟的代码
+注意修改test/kernel/driver/rabbit3_test.cc中的line537，改为自己的MQTT代理服务器的ip地址
+```cpp
+agv1.set_mqtt_ops(agv1.serial_number, "192.168.0.39");
+```
+
 ```bash
 mkdir build
 cd build
@@ -18,6 +23,7 @@ mkdir install
 cmake -DTEST=ON -DCMAKE_INSTALL_PREFIX=./install .. 
 make install -j4
 ```
+
 
 ### 配置MQTT代理服务器
 我用的 **Eclipse Mosquitto**
