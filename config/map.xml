@@ -963,9 +963,9 @@
         length="7250" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0" />
         <peripheralOperation completionRequired="true" executionTrigger="AFTER_ALLOCATION"
-            locationName="Loc-door1" name="up" />
+            locationName="Location-0001" name="up" />
         <peripheralOperation completionRequired="false" executionTrigger="AFTER_MOVEMENT"
-            locationName="Loc-door1" name="down" />
+            locationName="Location-0001" name="down" />
     </path>
     <path name="Point-0091 --- Point-0005" sourcePoint="Point-0091" destinationPoint="Point-0005"
         length="3700" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
@@ -1098,9 +1098,9 @@
         <initial_point point="P3"></initial_point>
         <vehicleLayout color="#CCCCFF" />
     </vehicle> -->
-    <locationType name="Door">
-        <allowedPeripheralOperation name="close" />
-        <allowedPeripheralOperation name="open" />
+    <locationType name="LIFT">
+        <allowedPeripheralOperation name="up" />
+        <allowedPeripheralOperation name="down" />
         <property name="tcs:defaultLocationTypeSymbol" value="NONE" />
         <locationTypeLayout locationRepresentation="NONE" />
     </locationType>
@@ -1121,7 +1121,7 @@
         <locationTypeLayout locationRepresentation="NONE" />
     </locationType>
     <location name="Location-0001" xPosition="32600" yPosition="-57700" zPosition="0" locked="false"
-        type="Door">
+        type="LIFT">
         <link point="Point-0038" />
         <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
         <locationLayout xPosition="32600" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
