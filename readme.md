@@ -11,6 +11,11 @@ ubuntu 安装依赖
 
 
 添加test选项编译，编译车辆端模拟的代码
+注意修改test/kernel/driver/rabbit3_test.cc中的line537，改为自己的MQTT代理服务器的ip地址
+```cpp
+agv1.set_mqtt_ops(agv1.serial_number, "192.168.0.39");
+```
+
 ```bash
 mkdir build
 cd build
@@ -18,6 +23,7 @@ mkdir install
 cmake -DTEST=ON -DCMAKE_INSTALL_PREFIX=./install .. 
 make install -j4
 ```
+
 
 ### 配置MQTT代理服务器
 我用的 **Eclipse Mosquitto**
@@ -57,6 +63,25 @@ config中有api接口定义文件
 路由 /plantModel
 参数 type 设置为xml
 body config中的map.xml
+
+注意修改车辆属性中的MQTT代理的ip
+```xml
+ <vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx4" />
+        <property name="vda5050:version" value="2.0" />
+        <property name="vda5050:ip" value="192.168.0.39" />
+        <property name="vda5050:port" value="1883" />
+        <vehicleLayout color="#FFFF00" />
+    </vehicle>
+```
 
 操作成功服务器会输出
 ```
