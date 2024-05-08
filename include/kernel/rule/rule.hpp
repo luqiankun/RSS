@@ -15,18 +15,34 @@ class RuleBase : public TCSObject {
   RuleBase(const std::string& name, std::shared_ptr<ResourceManager> r)
       : TCSObject(name), res(r){};
   using TCSObject::TCSObject;
-  virtual bool pass(std::shared_ptr<schedule::Client>) = 0;
+  virtual bool pass(std::vector<std::shared_ptr<TCSResource>> res,
+                    std::shared_ptr<schedule::Client>) = 0;
+
+ public:
+  std::weak_ptr<ResourceManager> res;
+};
+
+class OwnerRule : public RuleBase {
+ public:
+  using RuleBase::RuleBase;
+  bool pass(std::vector<std::shared_ptr<TCSResource>>,
+            std::shared_ptr<schedule::Client>) override;
+};
+
+class BlockRuleBase : public RuleBase {
+ public:
+  using RuleBase::RuleBase;
 
  public:
   std::string color;
-  std::weak_ptr<ResourceManager> res;
   std::unordered_set<std::shared_ptr<TCSObject>> owners;
   std::unordered_set<std::shared_ptr<TCSResource>> occs;
 };
-class OnlyOneGatherRule : public RuleBase {
+class OnlyOneGatherRule : public BlockRuleBase {
  public:
-  using RuleBase::RuleBase;
-  bool pass(std::shared_ptr<schedule::Client>) override;
+  using BlockRuleBase::BlockRuleBase;
+  bool pass(std::vector<std::shared_ptr<TCSResource>>,
+            std::shared_ptr<schedule::Client>) override;
 
  public:
   int32_t n{1};

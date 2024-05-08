@@ -10,6 +10,9 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
   init_dispatcher();
   this->resource =
       std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
+  auto control_rule =
+      std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
+  resource->rules.push_back(control_rule);
   pugi::xml_document doc;
   try {
     auto ret = doc.load_string(body.c_str());
@@ -1406,16 +1409,24 @@ std::pair<int, std::string> TCS::get_model() {
   res["blocks"] = json::array();
 
   for (auto &x : resource->rules) {
+    std::shared_ptr<kernel::allocate::BlockRuleBase> it = nullptr;
+    try {
+      it = std::dynamic_pointer_cast<kernel::allocate::BlockRuleBase>(x);
+    } catch (std::exception &) {
+    }
+    if (!it) {
+      continue;
+    }
     json block;
     block["member"] = json::array();
-    for (auto &p : x->occs) {
+    for (auto &p : it->occs) {
       json v;
       v["name"] = p->name;
       block["member"].push_back(v);
     }
     block["name"] = x->name;
     block["type"] = "SINGLE_VEHICLE_ONLY";
-    block["blockLayout"]["color"] = x->color;
+    block["blockLayout"]["color"] = it->color;
     res["blocks"].push_back(block);
   }
   //  vehicles
@@ -1444,6 +1455,9 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     json model = json::parse(body);
     resource =
         std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
+    auto control_rule =
+        std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
+    resource->rules.push_back(control_rule);
     if (model.contains("name")) {
       resource->model_name = model["name"].get<std::string>();
     }

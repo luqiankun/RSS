@@ -90,55 +90,38 @@ bool ResourceManager::allocate(
 
 bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
                             std::shared_ptr<schedule::Client> client) {
+  std::unique_lock<std::mutex> lock(mut);
   for (auto& r : rules) {
-    if (!r->pass(client)) {
+    if (!r->pass(res, client)) {
+      CLOG(WARNING, allocate_log) << r->name << " not pass of " << client->name;
       return false;
     }
   }
   std::stringstream ss;
   ss << client->name << " claim ";
-  std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
     for (auto& p : points) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
-        auto it = p->owner.lock();
-        if (!it || it == client) {
-          p->owner = client;
-          client->claim_resources.insert(p);
-        } else {
-          lock.unlock();
-          unclaim(res, client);
-          return false;
-        }
+        p->owner = client;
+        client->claim_resources.insert(p);
+        break;
       }
     }
     for (auto& p : paths) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
-        auto it = p->owner.lock();
-        if (!it || it == client) {
-          p->owner = client;
-          client->claim_resources.insert(p);
-        } else {
-          lock.unlock();
-          unclaim(res, client);
-          return false;
-        }
+        p->owner = client;
+        client->claim_resources.insert(p);
+        break;
       }
     }
     for (auto& p : locations) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
-        auto it = p->owner.lock();
-        if (!it || it == client) {
-          p->owner = client;
-          client->claim_resources.insert(p);
-        } else {
-          lock.unlock();
-          unclaim(res, client);
-          return false;
-        }
+        p->owner = client;
+        client->claim_resources.insert(p);
+        break;
       }
     }
   }
@@ -156,7 +139,6 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       }
     }
   }
-
   CLOG(INFO, allocate_log) << ss.str() << "\n";
   return true;
 }

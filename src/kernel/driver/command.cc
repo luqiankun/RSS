@@ -41,8 +41,19 @@ void Command::run_once() {
       } else {
         std::vector<std::shared_ptr<TCSResource>> temp;
         for (auto& x : steps) {
-          temp.push_back(x->path->source_point.lock());
-          temp.push_back(x->path->destination_point.lock());
+          bool has_1{false}, has_2{false};
+          auto s_p = x->path->source_point.lock();
+          auto e_p = x->path->destination_point.lock();
+          for (auto& exist : temp) {
+            if (exist->name == s_p->name) {
+              has_1 = true;
+            }
+            if (exist->name == e_p->name) {
+              has_2 = true;
+            }
+          }
+          if (!has_1) temp.push_back(x->path->source_point.lock());
+          if (!has_2) temp.push_back(x->path->destination_point.lock());
         }
         for (auto x = temp.begin(); x != temp.end();) {
           bool has{false};
@@ -138,7 +149,7 @@ void Command::run_once() {
     }
     if (scheduler.lock()->resource.lock()->unclaim(temp, veh)) {
       state = State::END;
-      CLOG(INFO, driver_log) << ss.str() << "\n";
+      CLOG_IF(!ss.str().empty(), INFO, driver_log) << ss.str() << "\n";
     }
   } else if (state == State::END) {
     veh->command_done();
