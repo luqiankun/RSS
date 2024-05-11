@@ -93,7 +93,8 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : rules) {
     if (!r->pass(res, client)) {
-      CLOG(WARNING, allocate_log) << r->name << " not pass of " << client->name;
+      // CLOG(WARNING, allocate_log) << r->name << " not pass of " <<
+      // client->name;
       return false;
     }
   }
@@ -104,6 +105,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
+        p->envelopes[client->name] = client->envelope;
         client->claim_resources.insert(p);
         break;
       }
@@ -112,6 +114,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
+        p->envelopes[client->name] = client->envelope;
         client->claim_resources.insert(p);
         break;
       }
@@ -120,6 +123,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
+        p->envelopes[client->name] = client->envelope;
         client->claim_resources.insert(p);
         break;
       }
@@ -153,6 +157,9 @@ bool ResourceManager::unclaim(
       if (r.get() == (*it).get()) {
         it = client->claim_resources.erase(it);
         r->owner.reset();
+        if (r->envelopes.find(client->name) != r->envelopes.end()) {
+          r->envelopes.erase(client->name);
+        }
       } else {
         it++;
       }

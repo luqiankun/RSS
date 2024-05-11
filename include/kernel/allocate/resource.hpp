@@ -39,6 +39,7 @@ class ResourceManager : public TCSObject {
   std::vector<std::shared_ptr<data::model::Point>> points;
   std::vector<std::shared_ptr<data::model::Location>> locations;
   std::vector<std::shared_ptr<data::model::LocationType>> location_types;
+  std::vector<std::shared_ptr<data::model::Envelope>> envelopes;
 
  public:
   std::vector<std::shared_ptr<RuleBase>> rules;

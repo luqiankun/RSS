@@ -54,6 +54,7 @@ void Command::run_once() {
           }
           if (!has_1) temp.push_back(x->path->source_point.lock());
           if (!has_2) temp.push_back(x->path->destination_point.lock());
+          temp.push_back(x->path);
         }
         for (auto x = temp.begin(); x != temp.end();) {
           bool has{false};
@@ -216,6 +217,7 @@ std::vector<std::shared_ptr<TCSResource>> Command::get_future(
   std::vector<std::shared_ptr<TCSResource>> res;
   if (order->route->steps.size() > veh->send_queue_size) {
     auto next = *(order->route->steps.begin() + veh->send_queue_size);
+    auto path = next->path;
     auto beg = next->path->destination_point.lock();
     auto end = next->path->source_point.lock();
     for (auto& x : veh->claim_resources) {
@@ -225,12 +227,18 @@ std::vector<std::shared_ptr<TCSResource>> Command::get_future(
       if (x == end) {
         end = nullptr;
       }
+      if (x == path) {
+        path = nullptr;
+      }
     }
     if (beg) {
       res.push_back(beg);
     }
     if (end) {
       res.push_back(end);
+    }
+    if (path) {
+      res.push_back(path);
     }
   }
   return res;

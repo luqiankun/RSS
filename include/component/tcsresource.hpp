@@ -7,5 +7,6 @@ class TCSResource : public TCSObject {
   using TCSObject::TCSObject;
   std::weak_ptr<TCSObject> owner;
   std::vector<std::weak_ptr<TCSObject>> future_owner;
+  std::map<std::string, std::weak_ptr<TCSObject>> envelopes;
 };
 #endif

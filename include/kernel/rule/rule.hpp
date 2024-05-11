@@ -29,6 +29,13 @@ class OwnerRule : public RuleBase {
             std::shared_ptr<schedule::Client>) override;
 };
 
+class CollisionRule : public RuleBase {
+ public:
+  using RuleBase::RuleBase;
+  bool pass(std::vector<std::shared_ptr<TCSResource>> res,
+            std::shared_ptr<schedule::Client>) override;
+};
+
 class BlockRuleBase : public RuleBase {
  public:
   using RuleBase::RuleBase;

@@ -1,4 +1,5 @@
-﻿#include <csignal>
+﻿#include <Eigen/Eigen>
+#include <csignal>
 
 #include "../../include/component/tools/fs/filesystem.hpp"
 #include "../../include/component/tools/log/easylogging++.h"

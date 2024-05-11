@@ -2,6 +2,7 @@
 #define POINT_HPP
 #include "../../tcsresource.hpp"
 #include "../vec.hpp"
+#include "./envelope.hpp"
 namespace data {
 namespace model {
 class Path;

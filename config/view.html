@@ -35,7 +35,7 @@
             }
         }
         class Vehicle {
-            constructor(name, x, y, level) {
+            constructor(name, x, y, level, envelope) {
                 this.name = name;
                 this.x = x;
                 this.y = y;
@@ -43,6 +43,7 @@
                 this.step = [];
                 this.destination = {};
                 this.battery = level
+                this.envelope = envelope
             }
         }
         class Block {
@@ -278,8 +279,7 @@
                     vehicles = [];
                     let model = JSON.parse(Http.responseText);
                     for (let v of model) {
-                        // console.log(x = v["position"]);
-                        let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"], v["battery_level"]);
+                        let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"], v["battery_level"], v["envelope"]);
                         veh.color = v["color"];
                         // console.log(v["step"]);
                         veh.step = v["step"];
@@ -526,6 +526,28 @@
                     ctx.font = font_size.toString() + 'px Arial';
                     ctx.textBaseline = "top";
                     ctx.fillText(v.name + "[" + v.battery + "%]", x, y, v.name.length * font_size);
+                    // console.log(v);
+
+                    let len = v.envelope.vertex.length
+                    ctx.beginPath()
+                    ctx.strokeStyle = v.color
+                    for (let index = 0; index < len; index++) {
+                        const element = v.envelope.vertex[index];
+                        let s_x = (element.x + v.x - xmin) / resolution;
+                        let s_y = canvas.height - (element.y + v.y - ymin) / resolution;
+                        ctx.moveTo(s_x, s_y);
+                        if (index == len - 1) {
+                            let e_x = (v.envelope.vertex[0].x + v.x - xmin) / resolution;
+                            let e_y = canvas.height - (v.envelope.vertex[0].y + v.y - ymin) / resolution;
+                            ctx.lineTo(e_x, e_y);
+                        } else {
+                            let e_x = (v.envelope.vertex[index + 1].x + v.x - xmin) / resolution;
+                            let e_y = canvas.height - (v.envelope.vertex[index + 1].y + v.y - ymin) / resolution;
+                            ctx.lineTo(e_x, e_y);
+                        }
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
                     for (let step of v.step) {
                         let start = get_point(step["src"]);
                         let end = get_point(step["dest"]);

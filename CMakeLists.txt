@@ -18,10 +18,14 @@ endif()
 ################
 #PahoMqttCpp 依赖openssl 和paho-mqtt-c
 find_package(OpenSSL)
-find_package(eclipse-paho-mqtt-c)
-find_package(PahoMqttCpp)
+find_package(eclipse-paho-mqtt-c REQUIRED)
+find_package(PahoMqttCpp REQUIRED)
 find_package(Threads REQUIRED)
-
+################
+find_package (Eigen3 REQUIRED NO_MODULE)
+include_directories( ${EIGEN3_INCLUDE_DIR} )
+find_package(fcl REQUIRED)
+################
 ##
 file(GLOB_RECURSE TOOLS_SRC 
  src/component/tools/*.cc
@@ -42,7 +46,7 @@ ${TOOLS_SRC}
 ${MAIN_SRC}
 ${MQTT_SRC}
 )
-target_link_libraries(tcs PahoMqttCpp::paho-mqttpp3 Threads::Threads)
+target_link_libraries(tcs PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen ${FCL_LIBRARIES})
 
 
 #########

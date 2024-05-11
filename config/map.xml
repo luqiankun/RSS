@@ -979,9 +979,16 @@
         <property name="vda5050:action.02.parameter.script" value="robot_pose" />
         <property name="vda5050:action.02.when" value="ORDER_END" />
     </path>
+    <vehicleEnvelope name="3A" type="2D">
+        <vertex x="-1260" y="900" z="0"></vertex>
+        <vertex x="-1420" y="-860" z="0"></vertex>
+        <vertex x="1080" y="-880" z="0"></vertex>
+        <vertex x="1900" y="-280" z="0"></vertex>
+        <vertex x="940" y="920" z="0"></vertex>
+    </vehicleEnvelope>
     <vehicle name="Vehicle-0001" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
-        maxReverseVelocity="1000">
+        maxReverseVelocity="1000" envelope="3A">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
         <property name="vda5050:interfaceName" value="uagv" />
@@ -996,7 +1003,7 @@
     </vehicle>
     <vehicle name="Vehicle-0002" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
-        maxReverseVelocity="1000">
+        maxReverseVelocity="1000" envelope="3A">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
         <property name="vda5050:interfaceName" value="uagv" />
@@ -1011,7 +1018,7 @@
     </vehicle>
     <vehicle name="Vehicle-0003" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
-        maxReverseVelocity="1000">
+        maxReverseVelocity="1000" envelope="3A">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
         <property name="vda5050:interfaceName" value="uagv" />
@@ -1026,7 +1033,7 @@
     </vehicle>
     <vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
-        maxReverseVelocity="1000">
+        maxReverseVelocity="1000" envelope="3A">
         <property name="tcs:preferredAdapterClass"
             value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
         <property name="vda5050:interfaceName" value="uagv" />

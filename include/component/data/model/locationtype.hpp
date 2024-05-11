@@ -65,9 +65,9 @@ struct LocationTypeLayout {
   };
   LocationRepresentation location_representation{LocationRepresentation::NONE};
 };
-class LocationType : public TCSResource {
+class LocationType : public TCSObject {
  public:
-  using TCSResource::TCSResource;
+  using TCSObject::TCSObject;
   void get_param() {
     std::regex P{R"(^vda5050:destinationAction.([^.]+).parameter.([^.]+)$)"};
     for (auto& x : properties) {

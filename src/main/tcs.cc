@@ -12,7 +12,10 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
   auto control_rule =
       std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
+  auto envelope_rule = std::make_shared<kernel::allocate::CollisionRule>(
+      "collision_rule", resource);
   resource->rules.push_back(control_rule);
+  resource->rules.push_back(envelope_rule);
   pugi::xml_document doc;
   try {
     auto ret = doc.load_string(body.c_str());
@@ -36,6 +39,36 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       return std::pair<int, std::string>(400, res.dump());
     }
     { resource->model_name = root.attribute("name").as_string(); }
+    {
+      // envelope
+      auto envelope = root.find_child([](pugi::xml_node node) {
+        return std::string(node.name()) == "vehicleEnvelope";
+      });
+      while (envelope.type() != pugi::node_null) {
+        if (std::string(envelope.name()) != "vehicleEnvelope") {
+          break;
+        }
+        auto name = envelope.attribute("name").as_string();
+        auto type = envelope.attribute("type").as_string();
+        auto env = std::make_shared<data::model::Envelope>(name, type);
+        auto vertex = envelope.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "vertex";
+        });
+        while (vertex.type() != pugi::node_null) {
+          if (std::string(vertex.name()) != "vertex") {
+            break;
+          }
+          auto x = vertex.attribute("x").as_double();
+          auto y = vertex.attribute("y").as_double();
+          auto z = vertex.attribute("z").as_double();
+          env->add_vertex(x, y, z);
+          vertex = vertex.next_sibling();
+        }
+        env->compute_mesh();
+        resource->envelopes.push_back(env);
+        envelope = envelope.next_sibling();
+      }
+    }
     {  // point
       auto point = root.find_child([](pugi::xml_node node) {
         return std::string(node.name()) == "point";
@@ -276,7 +309,12 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         p->layout = layout;
         p->source_point = source_point;
         p->destination_point = destination_point;
-        p->length = length;
+        // TODO xmllength不准
+        p->length = Eigen::Vector2d(source_point.lock()->position.x -
+                                        destination_point.lock()->position.x,
+                                    source_point.lock()->position.y -
+                                        destination_point.lock()->position.y)
+                        .norm();
         p->max_vel = maxVelocity;
         p->max_reverse_vel = maxReverseVelocity;
         p->locked = locked;
@@ -426,7 +464,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
             vehicle.attribute("energyLevelSufficientlyRecharged").as_int();
         std::string init_p_name =
             vehicle.child("initial_point").attribute("point").as_string();
-
+        std::string envelope = vehicle.attribute("envelope").as_string();
         auto interfaceName =
             vehicle
                 .find_child([](pugi::xml_node node) {
@@ -495,6 +533,13 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         veh->map_id = root.attribute("name").as_string();
         veh->broker_ip = ip;
         veh->broker_port = std::stoi(port);
+
+        for (auto &x : resource->envelopes) {
+          if (x->name == envelope) {
+            veh->envelope = x;
+          }
+        }
+
         ///////////////////////////
         dispatcher->vehicles.push_back(veh);
         ///////////////////////
@@ -1442,6 +1487,15 @@ std::pair<int, std::string> TCS::get_model() {
     vehicle["maxVelocity"] = v->max_vel;
     vehicle["maxReverseVelocity"] = v->max_reverse_vel;
     vehicle["layout"]["routeColor"] = v->color;
+    vehicle["envelope"]["type"] = v->envelope->name;
+    vehicle["envelope"]["vertex"] = json::array();
+    for (auto &vertex : v->envelope->vertexs) {
+      json ver;
+      ver["x"] = vertex.x() * 1000;
+      ver["y"] = vertex.y() * 1000;
+      ver["z"] = vertex.z() * 1000;
+      vehicle["envelope"]["vertex"].push_back(ver);
+    }
     res["vehicles"].push_back(vehicle);
   }
   return std::pair<int, std::string>(200, res.dump());
@@ -1458,6 +1512,9 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     auto control_rule =
         std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
     resource->rules.push_back(control_rule);
+    auto envelope_rule = std::make_shared<kernel::allocate::CollisionRule>(
+        "collision_rule", resource);
+    resource->rules.push_back(envelope_rule);
     if (model.contains("name")) {
       resource->model_name = model["name"].get<std::string>();
     }
@@ -1765,6 +1822,15 @@ std::string TCS::get_vehicles_step() {
     veh["step"] = json::array();
     veh["position"]["x"] = v->position.x;
     veh["position"]["y"] = v->position.y;
+    veh["envelope"]["type"] = v->envelope->name;
+    veh["envelope"]["vertex"] = json::array();
+    for (auto &vertex : v->envelope->vertexs) {
+      json ver;
+      ver["x"] = vertex.x() * 1000;
+      ver["y"] = vertex.y() * 1000;
+      ver["z"] = vertex.z() * 1000;
+      veh["envelope"]["vertex"].push_back(ver);
+    }
     if (v->current_order) {
       if (v->current_order->state ==
           data::order::TransportOrder::State::BEING_PROCESSED) {
