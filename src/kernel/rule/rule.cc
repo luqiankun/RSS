@@ -116,6 +116,9 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
                                          x->position.z * 1.0 / 1000);
         // 在该点是否碰撞
         for (auto& e : x->envelopes) {
+          if (e.second.lock() == client->envelope) {
+            continue;
+          }
           auto ret = fcl::continuousCollide(
               std::dynamic_pointer_cast<data::model::Envelope>(e.second.lock())
                   ->convex.get(),
@@ -135,12 +138,16 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
                                            loc->position.z * 1.0 / 1000);
           fcl::Vector3d dist = t1.translation() - t2.translation();
           for (auto& e : loc->envelopes) {
+            if (e.second.lock() == client->envelope) {
+              continue;
+            }
             auto ret = fcl::continuousCollide(
                 std::dynamic_pointer_cast<data::model::Envelope>(
                     e.second.lock())
                     ->convex.get(),
                 t2, t2, client->envelope->convex.get(), t1, t1, req, rep);
             if (rep.is_collide) {
+              // LOG(WARNING) << "■■■■■■■■■■■■■";
               return false;
             }
           }
@@ -156,12 +163,16 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
                                            p->position.z * 1.0 / 1000);
           // 在该点是否碰撞
           for (auto& e : p->envelopes) {
+            if (e.second.lock() == client->envelope) {
+              continue;
+            }
             auto ret = fcl::continuousCollide(
                 std::dynamic_pointer_cast<data::model::Envelope>(
                     e.second.lock())
                     ->convex.get(),
                 t2, t2, client->envelope->convex.get(), t1, t1, req, rep);
             if (rep.is_collide) {
+              // LOG(WARNING) << "■■■■■■■■■■■■■";
               return false;
             }
           }
@@ -176,12 +187,16 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
                                            p->position.z * 1.0 / 1000);
           // 在该点是否碰撞
           for (auto& e : p->envelopes) {
+            if (e.second.lock() == client->envelope) {
+              continue;
+            }
             auto ret = fcl::continuousCollide(
                 std::dynamic_pointer_cast<data::model::Envelope>(
                     e.second.lock())
                     ->convex.get(),
                 t2, t2, client->envelope->convex.get(), t1, t1, req, rep);
             if (rep.is_collide) {
+              // LOG(WARNING) << "■■■■■■■■■■■■■";
               return false;
             }
           }
@@ -202,6 +217,9 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
                           x->destination_point.lock()->position.y * 1.0 / 1000,
                           x->destination_point.lock()->position.z * 1.0 / 1000);
         for (auto& e : x->envelopes) {
+          if (e.second.lock() == client->envelope) {
+            continue;
+          }
           auto ret = fcl::continuousCollide(
               std::dynamic_pointer_cast<data::model::Envelope>(e.second.lock())
                   ->convex.get(),
@@ -223,6 +241,9 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
                                          x->position.y * 1.0 / 1000,
                                          x->position.z * 1.0 / 1000);
         for (auto& e : x->envelopes) {
+          if (e.second.lock() == client->envelope) {
+            continue;
+          }
           auto ret = fcl::continuousCollide(
               std::dynamic_pointer_cast<data::model::Envelope>(e.second.lock())
                   ->convex.get(),

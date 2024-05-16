@@ -206,7 +206,7 @@ void Vehicle::plan_route() {
       CLOG(WARNING, driver_log)
           << name << " " << current_order->name << " can not find obj";
     }
-    auto path = planner.lock()->find_paths(start_planner, end_planner);
+    auto path = planner.lock()->find_second_paths(start_planner, end_planner);
     if (path.empty()) {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
       CLOG(WARNING, driver_log)

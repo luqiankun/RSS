@@ -93,8 +93,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : rules) {
     if (!r->pass(res, client)) {
-      // CLOG(WARNING, allocate_log) << r->name << " not pass of " <<
-      // client->name;
+      CLOG(WARNING, allocate_log) << r->name << " not pass of " << client->name;
       return false;
     }
   }

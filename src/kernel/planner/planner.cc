@@ -147,6 +147,81 @@ uint32_t Planner::calculate_turns(const std::vector<VertexPtr> &path,
   return con;
 }
 
+std::vector<std::pair<std::vector<VertexPtr>, double>>
+Planner::find_paths_with_vertex(
+    const std::shared_ptr<data::model::Point> &begin,
+    const std::shared_ptr<data::model::Point> &end) {
+  std::vector<std::pair<std::vector<VertexPtr>, double>> res;
+  VertexPtr st{nullptr};
+  VertexPtr ed{nullptr};
+  for (auto &v : vertexs) {
+    if (v->equal_point == begin) {
+      st = v;
+    }
+    if (v->equal_point == end) {
+      ed = v;
+    }
+  }
+  if (st == nullptr || ed == nullptr) {
+    CLOG(ERROR, planner_log) << "The start or end point does not exist\n";
+    return res;
+  }
+  if (st == ed) {
+    CLOG(WARNING, planner_log) << "The starting point and"
+                                  "the ending point are the same\n ";
+    res.emplace_back(std::pair<std::vector<VertexPtr>, double>(
+        std::vector<VertexPtr>{st}, 0));
+    return res;
+  }
+  {
+    solver->solver(st);
+    cur_begin = st;
+    auto paths = solver->get_paths(ed);
+    // CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
+    if (paths.empty()) {
+    } else {
+      // 按转弯数量排序
+      std::sort(paths.begin(), paths.end(),
+                [this](std::vector<VertexPtr> &a, std::vector<VertexPtr> &b) {
+                  return calculate_turns(a) < calculate_turns(b);
+                });
+      for (auto &x : paths) {
+        std::stringstream ss;
+        ss << "\n.- - - - - - - - - - - - - - - - - - - - - - -.\n"
+           << "| turns : " << calculate_turns(x) << " cost : " << x.back()->F
+           << " vertex number : " << x.size() << "\n";
+        std::vector<VertexPtr> temp;
+        ss << "| path:[";
+        temp.reserve(x.size());
+        for (auto &p : x) {
+          if (p == *(x.end() - 1)) {
+            ss << p->name << "";
+          } else {
+            ss << p->name << " -> ";
+          }
+          temp.push_back(p);
+        }
+        ss << "]\n";
+        if (x.back()->F != std::numeric_limits<float>::max()) {
+          res.push_back(std::pair<std::vector<VertexPtr>, double>(
+              std::move(temp), x.back()->F));
+        } else {
+          ss << "this path is not open";
+        }
+        ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
+        // CLOG(INFO, planner_log) << ss.str();
+      }
+    }
+  }
+  // 复位顶点类型，已经设置为了障碍点则保持原样
+  for (auto &x : vertexs) {
+    if (x->type == AType::ATYPE_OPENED || x->type == AType::ATYPE_CLOSED) {
+      x->set_type(AType::ATYPE_UNKNOWN);
+    }
+  }
+  return res;
+}
+
 std::vector<std::vector<std::shared_ptr<data::model::Point>>>
 Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
                     const std::shared_ptr<data::model::Point> &end) {
@@ -222,6 +297,96 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
     }
   }
   return res;
+}
+
+std::vector<std::vector<std::shared_ptr<data::model::Point>>> to_model_path(
+    std::vector<std::pair<std::vector<VertexPtr>, double>> src) {
+  std::vector<std::vector<std::shared_ptr<data::model::Point>>> res;
+  for (auto &x : src) {
+    std::vector<std::shared_ptr<data::model::Point>> temp;
+    for (auto &p : x.first) {
+      temp.push_back(p->equal_point);
+    }
+    res.push_back(temp);
+  }
+  return res;
+}
+
+std::vector<std::vector<std::shared_ptr<data::model::Point>>>
+Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
+                           const std::shared_ptr<data::model::Point> &end) {
+  auto paths = find_paths_with_vertex(begin, end);
+  if (paths.empty() || begin == end) {
+    CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
+    return to_model_path(paths);
+  } else {
+    std::vector<std::pair<std::vector<VertexPtr>, double>> temp;
+    // edges
+    for (auto &x : paths) {
+      for (auto i = 0; i < x.first.size() - 1; i++) {
+        auto p1 = x.first[i];
+        auto p2 = x.first[i + 1];
+        std::string name1 = p1->name + " --- " + p2->name;
+        std::string name2 = p2->name + " --- " + p1->name;
+        set_barrier_edge(name1);
+        set_barrier_edge(name2);
+        auto paths_ = find_paths_with_vertex(begin, end);
+        if (!paths_.empty()) {
+          temp.insert(temp.end(), paths_.begin(), paths_.end());
+        }
+        reset_edge(name1);
+        reset_edge(name2);
+      }
+    }
+
+    // 去重
+    //  CLOG(INFO, planner_log) << "find " << temp.size() << " s paths\n";
+    if (!temp.empty()) {
+      std::sort(temp.begin(), temp.end(),
+                [](std::pair<std::vector<VertexPtr>, double> a,
+                   std::pair<std::vector<VertexPtr>, double> b) {
+                  return a.second < b.second;
+                });
+      auto last = std::unique(temp.begin(), temp.end(),
+                              [](std::pair<std::vector<VertexPtr>, double> a,
+                                 std::pair<std::vector<VertexPtr>, double> b) {
+                                if (a.first.size() != b.first.size()) {
+                                  return false;
+                                }
+                                for (int i = 0; i < a.first.size(); ++i) {
+                                  if (a.first[i]->name != b.first[i]->name) {
+                                    return false;
+                                  }
+                                }
+                                return true;
+                              });
+      temp.erase(last, temp.end());
+      paths.insert(paths.end(), temp.begin(), temp.end());
+    }
+    CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
+    for (auto &x : paths) {
+      std::stringstream ss;
+      ss << "\n.- - - - - - - - - - - - - - - - - - - - - - -.\n"
+         << "| turns : " << calculate_turns(x.first) << " cost : " << x.second
+         << " vertex number : " << x.first.size() << "\n";
+      ss << "| path:[";
+      for (auto &p : x.first) {
+        if (p == *(x.first.end() - 1)) {
+          ss << p->name << "";
+        } else {
+          ss << p->name << " -> ";
+        }
+      }
+      ss << "]\n";
+      if (x.second != std::numeric_limits<float>::max()) {
+      } else {
+        ss << "this path is not open";
+      }
+      ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
+      CLOG(INFO, planner_log) << ss.str();
+    }
+    return to_model_path(paths);
+  }
 }
 
 }  // namespace planner
