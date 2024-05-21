@@ -632,7 +632,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       if (last_state != state) {
         CLOG(INFO, driver_log)
             << name << " "
-            << "state transform to : [" << vehicle_state_to_str(state) << "]";
+            << "state transform to : [" << vehicle_state_to_str(state) << "]\n";
       }
 
     } else {
@@ -886,7 +886,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
           all_act_ok) {
         task_run = false;
         CLOG(INFO, driver_log) << name << " "
-                               << "move along [" << name_ << "] ok";
+                               << "move along [" << name_ << "] ok\n";
         {  // per act
            // TODO
           for (auto& x : steps) {
@@ -1056,7 +1056,7 @@ bool Rabbit3::action(
         auto sta = x.action_status;
         if (sta == vda5050::state::ActionStatus::FINISHED) {
           CLOG(INFO, driver_log) << name << " "
-                                 << "action [" << dest->get_type() << "] ok";
+                                 << "action [" << dest->get_type() << "] ok\n";
         } else if (sta == vda5050::state::ActionStatus::FAILED) {
           CLOG(INFO, driver_log)
               << name << " "
@@ -1073,7 +1073,7 @@ bool Rabbit3::action(
       }
       if (all_ok) {
         CLOG(INFO, driver_log) << name << " "
-                               << "all actions ok";
+                               << "all actions ok\n";
         task_run = false;
         return true;
       }

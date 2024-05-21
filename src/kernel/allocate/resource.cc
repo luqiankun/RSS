@@ -135,8 +135,8 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (*x == r) {
         x = client->future_claim_resources.erase(x);
         CLOG(INFO, allocate_log)
-            << r->name << " from future_claim move to claim of "
-            << client->name;
+            << r->name << " from future_claim move to claim of " << client->name
+            << "\n";
       } else {
         x++;
       }

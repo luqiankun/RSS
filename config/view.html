@@ -6,6 +6,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TCS_view</title>
     <script type="application/javascript">
+        class Queue {
+            constructor() {
+                this.items = {};
+                this.headIndex = 0;
+                this.tailIndex = 0;
+            }
+
+            enqueue(item) {
+                this.items[this.tailIndex] = item;
+                this.tailIndex++;
+            }
+
+            dequeue() {
+                const item = this.items[this.headIndex];
+                delete this.items[this.headIndex];
+                this.headIndex++;
+                return item;
+            }
+
+            peek() {
+                return this.items[this.headIndex];
+            }
+            get length() {
+                return this.tailIndex - this.headIndex;
+            }
+        }
         class Point {
             constructor(name, x, y, t) {
                 this.name = name;
@@ -63,12 +89,16 @@
         let locations = [];
         let vehicles = [];
         let blocks = [];
+        let orders = new Map();
+        let order_quence = new Queue();
         let xmin = 0;
         let xman = 400;
         let ymin = 0;
         let yman = 400;
         let resolution = 50;
         let is_running = false;
+        let mouse_flag = false;
+        let select_vehicle = ''
         let timer_draw_vehlice = setInterval(() => {
             clearInterval(timer_draw_vehlice);
         }, 500)
@@ -81,16 +111,158 @@
                     //放缩分辨率
                     if (deltaY > 0) {
                         resolution += 5;
-                        document.getElementById("resolution").setAttribute('value', resolution);
                         clicked();
 
                     } else if (deltaY < 0) {
                         resolution -= 5;
-                        document.getElementById("resolution").setAttribute('value', resolution);
                         clicked();
                     }
                 }
 
+            });
+        }
+        function format(date) {
+            if (!date) return;
+            var date2 = new Date(date);
+            var y = date2.getUTCFullYear();
+            var m = date2.getMonth() + 1;
+            m = m < 10 ? "θ" + m : m;
+            var d = date2.getDate();
+            d = d < 10 ? "θ" + d : d;
+            var h = date2.getHours();
+            h = h < 10 ? "θ" + h : h;
+            var minute = date2.getMinutes();
+            minute = minute < 10 ? "0" + minute : minute;
+            var sec = date2.getSeconds();
+            sec = sec < 10 ? "0" + sec : sec
+            var mseconds = date2.getMilliseconds(); //获取当前毫秒数（0 - 999）
+            mseconds = mseconds < 10 ? "0" + mseconds : mseconds;
+            return y + "-" + m + "-" + d + "T" + h + ":" + minute + ":" + sec + "." + mseconds + "Z";
+        }
+        function order(veh, dest, op) {
+            ord = {
+                "incompleteName": false,
+                "dispensable": false,
+                "deadline": "2028-01-31T18:42:40.396Z",
+                "intendedVehicle": veh,
+                "peripheralReservationToken": "Token-001",
+                "wrappingSequence": "OrderSequence-0001",
+                "type": op,
+                "destinations": [
+                    {
+                        "locationName": dest,
+                        "operation": op,
+                        "properties": [
+                        ]
+                    }
+                ],
+                "properties": [
+                ],
+                "dependencies": [
+                ]
+            }
+            return ord;
+        }
+        function add_mouse(ctx) {
+            let canvas = document.getElementById(ctx);
+            canvas.addEventListener('mouseup', (event) => {
+                if (!is_running) return
+                if (mouse_flag) {
+                    mouse_flag = false
+                    for (const point of points) {
+                        let x = (point.x - xmin) / resolution;
+                        let y = canvas.height - (point.y - ymin) / resolution;
+                        if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
+                            // console.log(order(select_vehicle, point.name, "MOVE"))
+                            let Http = new XMLHttpRequest();
+                            let ip = document.getElementById("ip_btn").value;
+                            Http.open('POST', 'http://' + ip + '/transportOrders/Torder_' + format(new Date().getTime()), true);
+                            Http.onload = function () {
+                                if (Http.readyState == 4 && Http.status == 200) {
+                                    console.log("send order ok");
+                                }
+                                else {
+                                    console.log("send order err");
+                                }
+                            }
+                            Http.send(JSON.stringify(order(select_vehicle, point.name, "MOVE")))
+                            return;
+                        }
+                    }
+                    for (const loc of locations) {
+                        let x = (loc.x - xmin) / resolution;
+                        let y = canvas.height - (loc.y - ymin) / resolution;
+                        if (Math.abs(x - event.offsetX) < 20 && Math.abs(y - event.offsetY) < 20) {
+                            let Http = new XMLHttpRequest();
+                            let ip = document.getElementById("ip_btn").value;
+                            Http.open('POST', 'http://' + ip + '/transportOrders/Torder_' + format(new Date().getTime()), true);
+                            Http.onload = function () {
+                                if (Http.readyState == 4 && Http.status == 200) {
+                                    console.log("send order ok");
+                                }
+                                else {
+                                    console.log("send order err");
+                                }
+                            }
+                            Http.send(JSON.stringify(order(select_vehicle, loc.name, "pick")))
+                            return;
+                        }
+                    }
+                    // console.log("-------", format(new Date().getTime()))
+                }
+            });
+            canvas.addEventListener('mousedown', (event) => {
+                if (!is_running) return
+                for (const veh of vehicles) {
+                    let x = (veh.x - xmin) / resolution;
+                    let y = canvas.height - (veh.y - ymin) / resolution;
+                    if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
+                        mouse_flag = true;
+                        select_vehicle = veh.name
+                        // console.log('□□□□□□□□')
+                        return
+                    }
+                }
+
+            });
+            canvas.addEventListener('mousemove', (event) => {
+                if (is_running) {
+                    let ctx = canvas.getContext("2d");
+                    for (const veh of vehicles) {
+                        let x = (veh.x - xmin) / resolution;
+                        let y = canvas.height - (veh.y - ymin) / resolution;
+                        if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
+                            ctx.font = '20px Arial';
+                            ctx.fillStyle = "red";
+                            ctx.textBaseline = "alphabetic";
+                            ctx.fillText(veh.name, x + 10, y + 23, veh.name.length * 20);
+                            return
+                        }
+                    }
+                    for (const point of points) {
+                        let x = (point.x - xmin) / resolution;
+                        let y = canvas.height - (point.y - ymin) / resolution;
+                        if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
+                            ctx.font = '20px Arial';
+                            ctx.fillStyle = "red";
+                            ctx.textBaseline = "alphabetic";
+                            ctx.fillText(point.name, x + 10, y + 23, point.name.length * 20);
+                            return;
+                        }
+                    }
+                    for (const loc of locations) {
+                        let x = (loc.x - xmin) / resolution;
+                        let y = canvas.height - (loc.y - ymin) / resolution;
+                        if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
+                            ctx.font = '20px Arial';
+                            ctx.fillStyle = "red";
+                            ctx.textBaseline = "alphabetic";
+                            ctx.fillText(loc.name, x + 10, y + 23, loc.name.length * 20);
+                            return;
+                        }
+                    }
+
+                }
             });
         }
         function get_img_limit() {
@@ -174,8 +346,6 @@
                 document.getElementById('ok_btn').style.display = '';
             }
             let Http = new XMLHttpRequest();
-            let res = document.getElementById('resolution');
-            resolution = parseFloat(res.value);
             let ip = document.getElementById("ip_btn").value;
             let pattern = new RegExp("^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d):([1-9]|[1-9]\\d{1,3}|[1-6][0-5][0-5][0-3][0-5])$")
             if (!pattern.test(ip)) {
@@ -183,6 +353,8 @@
                 // console.log(ip)
                 unconnect('map');
                 unconnect('Vehicle');
+                unconnect('Order');
+                orders.clear();
                 document.getElementById('ip_btn').value = "";
                 return
             }
@@ -194,6 +366,7 @@
                     points = [];
                     paths = [];
                     locations = []
+                    orders.clear();
                     let model = JSON.parse(Http.responseText);
                     // console.log(model);
                     for (let point of model["points"]) {
@@ -239,6 +412,8 @@
                     timer_draw_vehlice = setInterval(() => {
                         get_view();
                         draw_vehicle();
+                        get_order();
+                        draw_order();
                     }, 300)
                 }
                 else {
@@ -249,6 +424,8 @@
                 alert("请求失败,检查服务器地址和请求参数")
                 unconnect('map');
                 unconnect('Vehicle');
+                unconnect('Order');
+
             }
             Http.onloadstart = function () {
                 // console.log("start request")
@@ -262,8 +439,6 @@
             Http.send();
         }
         function get_view() {
-            let res = document.getElementById('resolution');
-            resolution = parseFloat(res.value);
             let Http = new XMLHttpRequest();
             let ip = document.getElementById("ip_btn").value;
             let pattern = new RegExp("^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d):([1-9]|[1-9]\\d{1,3}|[1-6][0-5][0-5][0-3][0-5])$")
@@ -302,6 +477,48 @@
             // }
             Http.send();
         }
+        function get_order() {
+            let Http = new XMLHttpRequest();
+            let ip = document.getElementById("ip_btn").value;
+
+            Http.open('GET', 'http://' + ip + '/transportOrders', true);
+            Http.withCredentials = true;
+            Http.onload = function () {
+                if (Http.readyState == 4 && Http.status == 200) {
+                    let model = JSON.parse(Http.responseText);
+                    for (let order of model) {
+                        if (orders.has(order["name"])) {
+                            // console.log(a, b, a === b)
+                            if (orders.get(order["name"]) != order["state"]) {
+                                //update
+                                console.log(orders.get(order["name"]), order["state"])
+                                orders.set(order["name"], order["state"]);
+                                for (let i = order_quence.headIndex; i < order_quence.tailIndex; i++) {
+                                    if (order_quence.items[i][0] == order["name"]) {
+                                        order_quence.items[i][1] = order["state"];
+                                        break
+                                    }
+                                }
+                                while (order_quence.length > 5) {
+                                    order_quence.dequeue();
+                                }
+                            } else { }
+                        }
+                        else {
+                            orders.set(order["name"], order["state"]);
+                            order_quence.enqueue([order["name"], order["state"]]);
+                            while (order_quence.length > 5) {
+                                order_quence.dequeue();
+                            }
+                        }
+                    }
+                }
+            }
+            Http.onerror = function (e) {
+                // console.log(e);
+            }
+            Http.send();
+        }
         function drawArrowhead(ctx, x1, y1, x2, y2, size, color) {
             let l = 10 * (50 / resolution); // 
             let a = Math.atan2((y2 - y1), (x2 - x1));
@@ -320,9 +537,11 @@
             ctx.stroke();
         }
         function start() {
-            add_wheel('map')
+            // add_wheel('map')
             add_wheel('Vehicle')
+            add_mouse('Vehicle')
             unconnect('map');
+            unconnect('Order');
             unconnect('Vehicle');
             document.getElementById('stop_btn').style.display = 'none';
             document.getElementById('ok_btn').style.display = '';
@@ -504,6 +723,29 @@
             }
         }
 
+        function draw_order() {
+            let canvas = document.getElementById("Order");
+            canvas.width = (xman - xmin) / resolution
+            canvas.height = (yman - ymin) / resolution
+            if (canvas.getContext) {
+                let ctx = canvas.getContext("2d");
+                let index = 20;
+                for (let i = order_quence.headIndex; i < order_quence.tailIndex; i++) {
+                    msg = order_quence.items[i][0] + " : [" + order_quence.items[i][1] + "]";
+                    ctx.fillStyle = "rgba(113, 125, 126,0.3)";;
+                    let font_size = (20 * (50 / resolution)).toFixed(0);
+                    if (font_size < 1) {
+                        font_size = 1;
+                    }
+                    let y = index;
+                    index += 25 * 50 / resolution;
+                    ctx.font = font_size.toString() + 'px Arial';
+                    ctx.textBaseline = "top";
+                    ctx.textAlign = 'right';
+                    ctx.fillText(msg, canvas.width - 5, y, ctx.measureText(msg).width);
+                }
+            }
+        }
         function draw_vehicle() {
             let canvas = document.getElementById("Vehicle");
             canvas.width = (xman - xmin) / resolution
@@ -622,16 +864,14 @@
             <input type="text" id="ip_btn" class="label" value="127.0.0.1:8080" placeholder="服务器地址：端口号">
             <h1></h1>
         </div>
-        <div class="resolution">
-            <input type="number" id="resolution" class="label" value="50" placeholder="显示分辨率(mm/px)">
-            <h1></h1>
-        </div>
         <div>
             <button class="button" id="ok_btn" onclick="clicked()">确定</button>
             <button class="button" id="stop_btn" onclick="stop_()">停止</button>
         </div>
         <div class="view">
             <canvas id="map" width="400" height="400">
+            </canvas>
+            <canvas id="Order" width="400" height="400">
             </canvas>
             <canvas id="Vehicle" width="400" height="400">
             </canvas>
@@ -694,6 +934,14 @@
         top: 0px;
         margin: 20px;
         background: #ffffff;
+        border: thin solid #1b7cdd;
+    }
+
+    #Order {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        margin: 20px;
         border: thin solid #1b7cdd;
     }
 

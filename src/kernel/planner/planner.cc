@@ -319,6 +319,9 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
   if (paths.empty() || begin == end) {
     CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
     return to_model_path(paths);
+  }
+  if (paths.size() > 1) {
+    return to_model_path({paths.front(), *(paths.begin() + 1)});
   } else {
     std::vector<std::pair<std::vector<VertexPtr>, double>> temp;
     // edges
@@ -361,7 +364,7 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
                                 return true;
                               });
       temp.erase(last, temp.end());
-      paths.insert(paths.end(), temp.begin(), temp.end());
+      paths.push_back(temp.front());
     }
     CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
     for (auto &x : paths) {
