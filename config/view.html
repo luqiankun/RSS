@@ -92,12 +92,19 @@
         let orders = new Map();
         let order_quence = new Queue();
         let xmin = 0;
-        let xman = 400;
+        let xman = 0;
         let ymin = 0;
-        let yman = 400;
+        let yman = 0;
+        let delta_x = 0;
+        let delta_y = 0;
         let resolution = 50;
         let is_running = false;
         let mouse_flag = false;
+        let mouse_2_flag = false;
+        let last_mouse_x = 0;
+        let last_mouse_y = 0;
+        let last_delta_x = 0;
+        let last_delta_y = 0;
         let select_vehicle = ''
         let timer_draw_vehlice = setInterval(() => {
             clearInterval(timer_draw_vehlice);
@@ -164,69 +171,96 @@
             return ord;
         }
         function add_mouse(ctx) {
+            document.querySelector("body").style.cursor = "grab"
             let canvas = document.getElementById(ctx);
+            canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            })
             canvas.addEventListener('mouseup', (event) => {
-                if (!is_running) return
                 if (mouse_flag) {
-                    mouse_flag = false
-                    for (const point of points) {
-                        let x = (point.x - xmin) / resolution;
-                        let y = canvas.height - (point.y - ymin) / resolution;
-                        if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
-                            // console.log(order(select_vehicle, point.name, "MOVE"))
-                            let Http = new XMLHttpRequest();
-                            let ip = document.getElementById("ip_btn").value;
-                            Http.open('POST', 'http://' + ip + '/transportOrders/Torder_' + format(new Date().getTime()), true);
-                            Http.onload = function () {
-                                if (Http.readyState == 4 && Http.status == 200) {
-                                    console.log("send order ok");
+                    if (event.button == 0) {
+                        mouse_flag = false
+                        document.querySelector("body").style.cursor = "grab"
+                        for (const point of points) {
+                            let x = (point.x - xmin) / resolution;
+                            let y = canvas.height - (point.y - ymin) / resolution;
+                            if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
+                                // console.log(order(select_vehicle, point.name, "MOVE"))
+                                let Http = new XMLHttpRequest();
+                                let ip = document.getElementById("ip_btn").value;
+                                Http.open('POST', 'http://' + ip + '/transportOrders/Torder_' + format(new Date().getTime()), true);
+                                Http.onload = function () {
+                                    if (Http.readyState == 4 && Http.status == 200) {
+                                        console.log("send order ok");
+                                    }
+                                    else {
+                                        console.log("send order err");
+                                    }
                                 }
-                                else {
-                                    console.log("send order err");
-                                }
+                                Http.send(JSON.stringify(order(select_vehicle, point.name, "MOVE")))
+                                return;
                             }
-                            Http.send(JSON.stringify(order(select_vehicle, point.name, "MOVE")))
-                            return;
                         }
-                    }
-                    for (const loc of locations) {
-                        let x = (loc.x - xmin) / resolution;
-                        let y = canvas.height - (loc.y - ymin) / resolution;
-                        if (Math.abs(x - event.offsetX) < 20 && Math.abs(y - event.offsetY) < 20) {
-                            let Http = new XMLHttpRequest();
-                            let ip = document.getElementById("ip_btn").value;
-                            Http.open('POST', 'http://' + ip + '/transportOrders/Torder_' + format(new Date().getTime()), true);
-                            Http.onload = function () {
-                                if (Http.readyState == 4 && Http.status == 200) {
-                                    console.log("send order ok");
+                        for (const loc of locations) {
+                            let x = (loc.x - xmin) / resolution;
+                            let y = canvas.height - (loc.y - ymin) / resolution;
+                            if (Math.abs(x - event.offsetX) < 20 && Math.abs(y - event.offsetY) < 20) {
+                                let Http = new XMLHttpRequest();
+                                let ip = document.getElementById("ip_btn").value;
+                                Http.open('POST', 'http://' + ip + '/transportOrders/Torder_' + format(new Date().getTime()), true);
+                                Http.onload = function () {
+                                    if (Http.readyState == 4 && Http.status == 200) {
+                                        console.log("send order ok");
+                                    }
+                                    else {
+                                        console.log("send order err");
+                                    }
                                 }
-                                else {
-                                    console.log("send order err");
-                                }
+                                Http.send(JSON.stringify(order(select_vehicle, loc.name, "pick")))
+                                return;
                             }
-                            Http.send(JSON.stringify(order(select_vehicle, loc.name, "pick")))
-                            return;
                         }
                     }
                     // console.log("-------", format(new Date().getTime()))
                 }
-            });
-            canvas.addEventListener('mousedown', (event) => {
-                if (!is_running) return
-                for (const veh of vehicles) {
-                    let x = (veh.x - xmin) / resolution;
-                    let y = canvas.height - (veh.y - ymin) / resolution;
-                    if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
-                        mouse_flag = true;
-                        select_vehicle = veh.name
-                        // console.log('□□□□□□□□')
-                        return
+                if (mouse_2_flag) {
+                    if (event.button == 2) {
+                        mouse_2_flag = false
+                        document.querySelector("body").style.cursor = "grab"
                     }
                 }
+            });
+            canvas.addEventListener('mousedown', (event) => {
+                if (event.button == 0) {
+                    //左键
+                    for (const veh of vehicles) {
+                        let x = (veh.x - xmin) / resolution;
+                        let y = canvas.height - (veh.y - ymin) / resolution;
+                        if (Math.abs(x - event.offsetX) < 15 && Math.abs(y - event.offsetY) < 15) {
+                            mouse_flag = true;
+                            select_vehicle = veh.name
+                            document.querySelector("body").style.cursor = "pointer"
 
+                            // console.log('□□□□□□□□')
+                            return
+                        }
+                    }
+                    document.querySelector("body").style.cursor = "crosshair"
+                } else if (event.button == 2) {
+                    //右键
+                    mouse_2_flag = true;
+                    last_mouse_x = event.offsetX
+                    last_mouse_y = event.offsetY
+                    last_delta_x = delta_x
+                    last_delta_y = delta_y
+                    document.querySelector("body").style.cursor = "grabbing"
+
+                }
             });
             canvas.addEventListener('mousemove', (event) => {
-                if (is_running) {
+                if (!is_running) return
+                if (!mouse_flag) {
                     let ctx = canvas.getContext("2d");
                     for (const veh of vehicles) {
                         let x = (veh.x - xmin) / resolution;
@@ -261,9 +295,100 @@
                             return;
                         }
                     }
-
                 }
+                if (mouse_2_flag) {
+                    //move
+                    let move_x = event.offsetX - last_mouse_x;
+                    let move_y = event.offsetY - last_mouse_y;
+                    delta_x = last_delta_x - resolution * move_x
+                    delta_y = last_delta_y + resolution * move_y
+                    clicked();
+                }
+
             });
+            canvas.addEventListener('dblclick', (event) => {
+                if (!is_running) return
+                if (event.button == 0) {
+                    let m_x = event.offsetX
+                    let m_y = event.offsetY
+                    for (const path of paths) {
+                        let st = get_point(path.start)
+                        let st_x = (st.x - xmin) / resolution
+                        let st_y = canvas.height - (st.y - ymin) / resolution
+                        let ed = get_point(path.end)
+                        let ed_x = (ed.x - xmin) / resolution
+                        let ed_y = canvas.height - (ed.y - ymin) / resolution
+                        let dist_st = Math.sqrt((m_x - st_x) * (m_x - st_x) + (m_y - st_y) * (m_y - st_y))
+                        let dist_ed = Math.sqrt((m_x - ed_x) * (m_x - ed_x) + (m_y - ed_y) * (m_y - ed_y))
+                        let dist_se = Math.sqrt((st_x - ed_x) * (st_x - ed_x) + (st_y - ed_y) * (st_y - ed_y))
+                        if (dist_ed > dist_se) {
+                            continue
+                        }
+                        if (dist_st > dist_se) {
+                            continue
+                        }
+                        //
+                        let p = (dist_se + dist_ed + dist_st) / 2;
+                        let S = Math.sqrt(p * (p - dist_ed) * (p - dist_se) * (p - dist_st));
+                        let h = 2 * S / dist_se;
+                        if (h < 5 && dist_st > 5 && dist_ed > 5) {
+                            let req = new XMLHttpRequest()
+                            let url = "/paths/" + path.name + "/locked?"
+                            let queryParams = "newValue=";
+                            if (path.locked) {
+                                queryParams += "false"
+                            } else {
+                                queryParams += "true"
+                            }
+                            url += queryParams;
+                            let ip = document.getElementById("ip_btn").value;
+                            req.open('PUT', "http://" + ip + url, true)
+                            req.onload = function () {
+                                if (req.readyState == 4 && req.status == 200) {
+                                    // console.log("send order ok");
+                                    clicked()
+                                }
+                                else {
+                                    console.log("send order err");
+                                }
+                            }
+                            req.send()
+                            // console.log('▲▲▲▲▲▲▲', path.name, dist_st, dist_ed, dist_se)
+                        }
+
+                    }
+                    for (const loc of locations) {
+                        let x = (loc.x - xmin) / resolution
+                        let y = canvas.height - (loc.y - ymin) / resolution
+                        let dist = Math.sqrt((x - m_x) * (x - m_x) + (y - m_y) * (y - m_y))
+                        if (dist < 5) {
+                            let req = new XMLHttpRequest()
+                            let url = "/locations/" + loc.name + "/locked?"
+                            let queryParams = "newValue=";
+                            if (loc.locked) {
+                                queryParams += "false"
+                            } else {
+                                queryParams += "true"
+                            }
+                            url += queryParams;
+                            let ip = document.getElementById("ip_btn").value;
+                            req.open('PUT', "http://" + ip + url, true)
+                            req.onload = function () {
+                                if (req.readyState == 4 && req.status == 200) {
+                                    // console.log("send order ok");
+                                    clicked()
+                                }
+                                else {
+                                    console.log("send order err");
+                                }
+                            }
+                            req.send()
+                        }
+
+                    }
+                    //TODO location
+                }
+            })
         }
         function get_img_limit() {
             let x_min = 9999999;
@@ -298,10 +423,10 @@
                     y_max = x.y;
                 }
             }
-            xmin = x_min - 5000;
-            xman = x_max + 5000;
-            ymin = y_min - 5000;
-            yman = y_max + 5000;
+            xmin = x_min - 5000 + delta_x;
+            xman = x_max + 5000 + delta_x;
+            ymin = y_min - 5000 + delta_y;
+            yman = y_max + 5000 + delta_y;
         }
 
         function get_block_path(name) {
@@ -360,7 +485,7 @@
             }
             Http.open('GET', 'http://' + ip + '/plantModel', true);
             // console.log('http://' + ip + '/plantModel')
-            Http.withCredentials = true;
+            Http.withCredentials = false;
             Http.onload = function () {
                 if (Http.readyState == 4 && Http.status == 200) {
                     points = [];
@@ -409,6 +534,8 @@
                     is_running = true
                     document.getElementById('stop_btn').style.display = '';
                     document.getElementById('ok_btn').style.display = 'none';
+                    document.getElementById('ip_btn').setAttribute('disabled', 'disabled')
+
                     timer_draw_vehlice = setInterval(() => {
                         get_view();
                         draw_vehicle();
@@ -448,7 +575,7 @@
                 return
             }
             Http.open('GET', 'http://' + ip + '/getView', true);
-            Http.withCredentials = true;
+            Http.withCredentials = false;
             Http.onload = function () {
                 if (Http.readyState == 4 && Http.status == 200) {
                     vehicles = [];
@@ -482,7 +609,7 @@
             let ip = document.getElementById("ip_btn").value;
 
             Http.open('GET', 'http://' + ip + '/transportOrders', true);
-            Http.withCredentials = true;
+            Http.withCredentials = false;
             Http.onload = function () {
                 if (Http.readyState == 4 && Http.status == 200) {
                     let model = JSON.parse(Http.responseText);
@@ -545,11 +672,17 @@
             unconnect('Vehicle');
             document.getElementById('stop_btn').style.display = 'none';
             document.getElementById('ok_btn').style.display = '';
+            window.onresize = (e) => {
+                if (is_running) { clicked(); }
+            }
         }
         function draw_map() {
             let canvas = document.getElementById("map");
-            canvas.width = (xman - xmin) / resolution
-            canvas.height = (yman - ymin) / resolution
+            // canvas.width = (xman - xmin) / resolution
+            // canvas.height = (yman - ymin) / resolution
+            canvas.width =
+                document.body.clientWidth - 40;
+            canvas.height = document.documentElement.clientHeight - 200
             if (canvas.getContext) {
                 let ctx = canvas.getContext("2d");
                 // console.log(canvas.width + " " + canvas.height + " " + points.length)
@@ -570,7 +703,7 @@
                     }
                     ctx.arc(x, y, radius, 0, 2 * Math.PI, true)
                     if (point.type == "PARK_POSITION") {
-                        ctx.arc(x, y, radius + 2, 0, 2 * Math.PI, true)
+                        ctx.arc(x, y, radius + 3, 0, 2 * Math.PI, true)
                     }
                     ctx.stroke()
                     let font_size = (13 * (50 / resolution)).toFixed(0);
@@ -580,11 +713,12 @@
                     ctx.font = font_size.toString() + 'px Arial';
                     ctx.fillStyle = "black";
                     ctx.textBaseline = "top";
-                    ctx.fillText(point.name, x + 10, y + 23, point.name.length * font_size);
+                    ctx.fillText(point.name, x + 10 * (50 / resolution), y + 23 * (50 / resolution), point.name.length * font_size);
                 }
                 for (let x of paths) {
+                    color = 'orange'
                     if (x.locked) {
-                        continue
+                        color = "rgba(102, 102, 102, 0.3)"
                     }
                     let start = get_point(x.start);
                     let end = get_point(x.end);
@@ -599,12 +733,12 @@
                     // console.log(len);
                     let norm_x = (end_x - start_x) / len;
                     let norm_y = (end_y - start_y) / len;
-                    start_x = start_x + norm_x * 15;
-                    start_y = start_y + norm_y * 15;
-                    end_x = end_x - norm_x * 15;
-                    end_y = end_y - norm_y * 15;
-                    if (x.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), 'orange'); }
-                    if (x.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), 'orange'); }
+                    start_x = start_x + norm_x * 15 * (50 / resolution);;
+                    start_y = start_y + norm_y * 15 * (50 / resolution);;
+                    end_x = end_x - norm_x * 15 * (50 / resolution);;
+                    end_y = end_y - norm_y * 15 * (50 / resolution);;
+                    if (x.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), color); }
+                    if (x.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), color); }
                 }
 
                 for (let x_ of blocks) {
@@ -613,7 +747,7 @@
                         if (point != null) {
                             let x = (point.x - xmin) / resolution;
                             let y = canvas.height - (point.y - ymin) / resolution;
-                            let radius = 8 * (50 / resolution);
+                            let radius = 5 * (50 / resolution);
                             ctx.beginPath()
                             ctx.fillStyle = x_.color;
                             ctx.strokeStyle = x_.color;
@@ -631,7 +765,7 @@
                             ctx.font = font_size.toString() + 'px Arial';
                             ctx.fillStyle = x_.color;
                             ctx.textBaseline = "top";
-                            ctx.fillText(point.name, x + 10, y + 23, point.name.length * font_size);
+                            ctx.fillText(point.name, x + 10 * (50 / resolution), y + 23 * (50 / resolution), point.name.length * font_size);
                         }
                         path = get_block_path(p['name']);
                         if (path != null) {
@@ -651,10 +785,10 @@
                             // console.log(len);
                             let norm_x = (end_x - start_x) / len;
                             let norm_y = (end_y - start_y) / len;
-                            start_x = start_x + norm_x * 15;
-                            start_y = start_y + norm_y * 15;
-                            end_x = end_x - norm_x * 15;
-                            end_y = end_y - norm_y * 15;
+                            start_x = start_x + norm_x * 15 * (50 / resolution);
+                            start_y = start_y + norm_y * 15 * (50 / resolution);
+                            end_x = end_x - norm_x * 15 * (50 / resolution);
+                            end_y = end_y - norm_y * 15 * (50 / resolution);
                             if (path.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), x_.color); }
                             if (path.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), x_.color); }
 
@@ -665,8 +799,9 @@
                 }
 
                 for (let loc of locations) {
+                    color = '#233bc2'
                     if (loc.locked) {
-                        continue
+                        color = "rgba(102, 102, 102, 0.3)"
                     }
                     let start_x = (loc.x - xmin) / resolution;
                     let start_y = canvas.height - (loc.y - ymin) / resolution;
@@ -679,15 +814,18 @@
                         ctx.lineWidth = 1;
                     }
                     let radius = 5 * (50 / resolution)
-                    ctx.strokeStyle = '#233bc2'
+                    ctx.strokeStyle = color
                     ctx.moveTo(start_x + radius, start_y);
                     ctx.arc(start_x, start_y, radius, 0, 2 * Math.PI, true)
+                    ctx.stroke()
+                    ctx.lineWidth = 2 * (50 / resolution);
                     if (loc.type == "charge") {
                         ctx.arc(start_x, start_y, radius + 3, 0, 2 * Math.PI, true)
-                    } else if (loc.type == "Door") {
+                    } else if (loc.type == "LIFT") {
                         ctx.strokeRect(start_x - 8, start_y - 8, 16, 16);
                     }
                     ctx.stroke()
+                    ctx.lineWidth = 1 * (50 / resolution);
                     ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
                     let len = Math.sqrt((link_x - start_x) * (link_x - start_x) + (link_y - start_y) * (link_y - start_y));
                     let norm_x = (link_x - start_x) / len;
@@ -705,40 +843,45 @@
                     ctx.font = font_size.toString() + 'px Arial';
                     ctx.fillStyle = "black";
                     ctx.textBaseline = "top";
-                    ctx.fillText(loc.name, start_x - 35, start_y - 43, loc.name.length * font_size);
+                    ctx.fillText(loc.name, start_x - 35 * (50 / resolution), start_y - 43 * (50 / resolution), loc.name.length * font_size);
                 }
             }
         }
 
         function unconnect(ctx) {
             let canvas = document.getElementById(ctx);
-            canvas.width = 400
-            canvas.height = 400
+            canvas.width =
+                document.body.clientWidth - 40;
+            canvas.height = document.documentElement.clientHeight - 200
             if (canvas.getContext) {
                 let context = canvas.getContext("2d");
                 context.font = '40px Arial';
                 context.fillStyle = '#04AA6D';
                 context.textBaseline = 'top';
-                context.fillText("未连接", 150, 200, 200);
+                context.textAlign = 'center'
+                context.fillText("未连接", canvas.width / 2, canvas.height / 2, 200);
             }
         }
 
         function draw_order() {
             let canvas = document.getElementById("Order");
-            canvas.width = (xman - xmin) / resolution
-            canvas.height = (yman - ymin) / resolution
+            // canvas.width = (xman - xmin) / resolution
+            // canvas.height = (yman - ymin) / resolution
+            canvas.width =
+                document.body.clientWidth - 40;
+            canvas.height = document.documentElement.clientHeight - 200
             if (canvas.getContext) {
                 let ctx = canvas.getContext("2d");
                 let index = 20;
                 for (let i = order_quence.headIndex; i < order_quence.tailIndex; i++) {
                     msg = order_quence.items[i][0] + " : [" + order_quence.items[i][1] + "]";
-                    ctx.fillStyle = "rgba(113, 125, 126,0.3)";;
-                    let font_size = (20 * (50 / resolution)).toFixed(0);
+                    ctx.fillStyle = "rgba(113, 125, 126,0.3)";
+                    let font_size = (20 * (resolution / 50)).toFixed(0);
                     if (font_size < 1) {
                         font_size = 1;
                     }
                     let y = index;
-                    index += 25 * 50 / resolution;
+                    index += 25 * resolution / 50;
                     ctx.font = font_size.toString() + 'px Arial';
                     ctx.textBaseline = "top";
                     ctx.textAlign = 'right';
@@ -748,8 +891,11 @@
         }
         function draw_vehicle() {
             let canvas = document.getElementById("Vehicle");
-            canvas.width = (xman - xmin) / resolution
-            canvas.height = (yman - ymin) / resolution
+            // canvas.width = (xman - xmin) / resolution
+            // canvas.height = (yman - ymin) / resolution
+            canvas.width =
+                document.body.clientWidth - 40;
+            canvas.height = document.documentElement.clientHeight - 200
             if (canvas.getContext) {
                 let ctx = canvas.getContext("2d");
 
@@ -852,6 +998,7 @@
                 clearInterval(timer_draw_vehlice);
                 document.getElementById('stop_btn').style.display = 'none';
                 document.getElementById('ok_btn').style.display = '';
+                document.getElementById('ip_btn').removeAttribute('disabled')
             }
         }
     </script>
@@ -869,11 +1016,11 @@
             <button class="button" id="stop_btn" onclick="stop_()">停止</button>
         </div>
         <div class="view">
-            <canvas id="map" width="400" height="400">
+            <canvas id="map" width="400" height="800">
             </canvas>
-            <canvas id="Order" width="400" height="400">
+            <canvas id="Order" width="400" height="800">
             </canvas>
-            <canvas id="Vehicle" width="400" height="400">
+            <canvas id="Vehicle" width="400" height="800">
             </canvas>
         </div>
     </div>
@@ -881,6 +1028,7 @@
 <style type="text/css">
     body {
         background: #ffffff;
+        height: 100%;
     }
 
     div {

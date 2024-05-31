@@ -54,9 +54,9 @@ std::string log(const httplib::Request &req, const httplib::Response &res) {
 HTTPServer::HTTPServer(const std::string &ip, int port) {
   this->ip = ip;
   this->port = port;
-  srv.set_default_headers({{"Access-Control-Allow-Origin", "null"},
-                           {"Access-Control-Allow-Credentials", "true"},
-                           {"Allow", "GET, POST, HEAD, OPTIONS"}});
+  srv.set_default_headers({{"Access-Control-Allow-Origin", "*"},
+                           {"Access-Control-Allow-Credentials", "false"},
+                           {"Allow", "GET, POST, HEAD, OPTIONS,PUT"}});
   srv.Get("/transportOrders",
           [=](const httplib::Request &req, httplib::Response &res) {
             //
@@ -186,6 +186,11 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
+  srv.Options(R"(/vehicles/([^/]+)/paused)",
+              [=](const httplib::Request &req, httplib::Response &res) {
+                res.set_header("Access-Control-Allow-Methods", "PUT");
+                res.status = 200;
+              });
   srv.Post(R"(/vehicles/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
              std::string name{""};
@@ -260,6 +265,11 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
+  srv.Options(R"(/paths/([^/]+)/locked)",
+              [=](const httplib::Request &req, httplib::Response &res) {
+                res.set_header("Access-Control-Allow-Methods", "PUT");
+                res.status = 200;
+              });
   srv.Put(R"(/locations/([^/]+)/locked)",
           [=](const httplib::Request &req, httplib::Response &res) {
             bool value{false};
@@ -275,6 +285,11 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
+  srv.Options(R"(/locations/([^/]+)/locked)",
+              [=](const httplib::Request &req, httplib::Response &res) {
+                res.set_header("Access-Control-Allow-Methods", "PUT");
+                res.status = 200;
+              });
   srv.Get("/getView", [=](const httplib::Request &req, httplib::Response &res) {
     auto ret = get_view();
     res.status = ret.first;
