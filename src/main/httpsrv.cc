@@ -235,6 +235,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             bool use_xml{false};
             if (req.has_param("type")) {
               use_xml = req.get_param_value("type") == "xml" ? true : false;
+              LOG(INFO) << "---------------------";
             }
             if (use_xml) {
               auto ret = put_model_xml(req.body);
@@ -250,6 +251,12 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               }
             }
           });
+  srv.Options(R"(/plantModel)",
+              [=](const httplib::Request &req, httplib::Response &res) {
+                res.set_header("Access-Control-Allow-Methods", "PUT");
+                res.set_header("Access-Control-Allow-Headers", "Content-Type");
+                res.status = 200;
+              });
   srv.Put(R"(/paths/([^/]+)/locked)",
           [=](const httplib::Request &req, httplib::Response &res) {
             bool value{false};

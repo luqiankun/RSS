@@ -3,18 +3,16 @@
 
 依赖：
 [Eclipse Paho MQTT C++ Client Library](https://github.com/eclipse/paho.mqtt.cpp)
-
+[Eigen3](https://eigen.tuxfamily.org/)
 ubuntu 安装依赖
 > sudo apt install libpaho-mqttpp-dev
+> sudo apt install libeigen3-dev
 
 > paho-mqttpp依赖eclipse-paho-mqtt-c和openssl,一般会自动安装
 
 
-添加test选项编译，编译车辆端模拟的代码
-注意修改test/kernel/driver/rabbit3_test.cc中的line537，改为自己的MQTT代理服务器的ip地址
-```cpp
-agv1.set_mqtt_ops(agv1.serial_number, "192.168.0.39");
-```
+添加test选项编译，编译车辆端模拟的代码和一些测试代码
+
 
 ```bash
 mkdir build
@@ -55,14 +53,25 @@ ls
 此时需要上传模型，否则其他请求都会返回失败
 
 
-### 使用api工具发送http请求
-config中有api接口定义文件
-> TCS.openapi.json
+### 使用网页查看
+用浏览器打开config中的view.html
+确认ip和端口
 
-发送上传模型请求：
-路由 /plantModel
-参数 type 设置为xml
-body config中的map.xml
+初始界面如下
+
+
+![view](imgs/init.png)
+
+##### 如果已经上传模型，或者调度系统启动时配置了自动加载某个文件，可以直接点击确定，此时会显示车辆列表和地图
+
+> <big>**<font color=#b04f61> 在地图上滚轮可以放大缩小地图，右键按住拖动可以地图,鼠标停在Point 或 Location 或 Vehicle上面可以大字号显示</font>**</big>
+
+粗圆环表示停靠点；双线圆环表示充电点；被禁用的道路和操作点会显示灰色
+带颜色的路径和点表示不同的block区域；正方形方框表示周边操作点
+![view](imgs/map.png)
+
+### 如果未上传模型文件，或者需要重新上传更改后的模型文件，点击选择模型文件
+直接选择config中的map.xml
 
 注意修改车辆属性中的MQTT代理的ip
 ```xml
@@ -82,6 +91,19 @@ body config中的map.xml
         <vehicleLayout color="#FFFF00" />
     </vehicle>
 ```
+
+![view](imgs/upload.png)
+
+#### 也可以使用api工具发送http请求
+config中有api接口定义文件
+> TCS.openapi.json
+
+发送上传模型请求：
+路由 /plantModel
+参数 type 设置为xml，如果要上传json文件，设置type为json或不设置该参数
+body config中的map.xml内容
+
+
 
 操作成功服务器会输出
 ```
@@ -113,27 +135,129 @@ body config中的map.xml
 车辆状态为broken,然后等待车辆连接
 
 可以多次重新上传模型，资源会清理然后重新创建
->**不要在车辆执行订单过程中重新上传**
+>**<font color=#b04f61>不要在车辆执行订单过程中重新上传！！！</font>**
+
+上传模型文件内容格式示例：
+- Point 路径点
+```xml
+ <point name="Point-0091" xPosition="77250" yPosition="-70950" zPosition="0"
+        vehicleOrientationAngle="NaN" type="HALT_POSITION">
+        <outgoingPath name="Point-0091 --- Point-0005" />
+        <pointLayout xPosition="77250" yPosition="-70950" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+ </point>
+```
+- Path 路径点组成的路线
+```xml
+ <path name="Point-0027 --- Point-0036" sourcePoint="Point-0027" destinationPoint="Point-0036"
+        length="10351" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+        <property name="vda5050:action.01" value="Door" />
+        <property name="vda5050:action.01.blockingType" value="SOFT" />
+        <property name="vda5050:action.01.parameter.script" value="robot_pose" />
+        <property name="vda5050:action.01.when" value="ORDER_START" />
+        <property name="vda5050:action.02" value="Door" />
+        <property name="vda5050:action.02.blockingType" value="NONE" />
+        <property name="vda5050:action.02.parameter.script" value="robot_pose" />
+        <property name="vda5050:action.02.when" value="ORDER_END" />
+    </path>
+     <path name="Point-0090 --- Point-0004" sourcePoint="Point-0090" destinationPoint="Point-0004"
+        length="7250" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+        <peripheralOperation completionRequired="true" executionTrigger="AFTER_ALLOCATION"
+            locationName="Location-0001" name="up" />
+        <peripheralOperation completionRequired="false" executionTrigger="AFTER_MOVEMENT"
+            locationName="Location-0001" name="down" />
+    </path>
+```
+- Location 操作点,停靠点
+```xml
+ <location name="Location-0001" xPosition="32600" yPosition="-57700" zPosition="0" locked="false"
+        type="LIFT">
+        <link point="Point-0038" />
+        <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
+        <locationLayout xPosition="32600" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+```
+- Vehicle 车辆
+```xml
+    <vehicle name="Vehicle-0003" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000" envelope="3A">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <property name="vda5050:ip" value="192.168.0.39" />
+        <property name="vda5050:port" value="1883" />
+        <vehicleLayout color="#00FFFF" />
+    </vehicle>
+```
+- Block 规则区域
+```xml
+ <block name="Block-0006" type="SINGLE_VEHICLE_ONLY">
+        <member name="Point-0079" />
+        <member name="Point-0079 --- Point-0080" />
+        <member name="Point-0080" />
+        <member name="Point-0085" />
+        <member name="Point-0085 --- Point-0079" />
+        <blockLayout color="#9900CC" />
+    </block>
+```
+- LocationType 操作点类型
+```xml
+ <locationType name="LIFT">
+        <allowedPeripheralOperation name="up" />
+        <allowedPeripheralOperation name="down" />
+        <property name="tcs:defaultLocationTypeSymbol" value="NONE" />
+        <locationTypeLayout locationRepresentation="NONE" />
+    </locationType>
+    <locationType name="Transfer">
+        <allowedOperation name="NOP" />
+        <allowedOperation name="pick" />
+        <allowedOperation name="drop" />
+        <property name="tcs:defaultLocationTypeSymbol" value="LOAD_TRANSFER_ALT_2" />
+        <property name="vda5050:destinationAction.drop.parameter.angle" value="1.57" />
+        <property name="vda5050:destinationAction.drop.parameter.script" value="robot_rotate" />
+        <property name="vda5050:destinationAction.pick.parameter.angle" value="1.57" />
+        <property name="vda5050:destinationAction.pick.parameter.script" value="robot_rotate" />
+        <locationTypeLayout locationRepresentation="LOAD_TRANSFER_ALT_2" />
+    </locationType>
+```
+- VehicleEnvelope 车辆轮廓
+```xml
+  <vehicleEnvelope name="3A" type="2D">
+        <vertex x="-1260" y="900" z="0"></vertex>
+        <vertex x="-1420" y="-860" z="0"></vertex>
+        <vertex x="1080" y="-880" z="0"></vertex>
+        <vertex x="1900" y="-280" z="0"></vertex>
+        <vertex x="940" y="920" z="0"></vertex>
+    </vehicleEnvelope>
+```
 
 
-### 使用网页查看模型
-用浏览器打开config中的view.html
-确认ip和端口后，确定
 如果操作成功会显示地图
->在地图上滚轮可以放大缩小地图，右键按住拖动可以地图,鼠标停在Point 或 Location 或 Vehicle上面可以大字号显示
 
-粗圆环表示停靠点；双线圆环表示充电点；被禁用的道路和操作点不会显示
-带颜色的路径和点表示不同的block区域；正方形方框表示周边操作点
 
-![view](imgs/view.png)
+![view](imgs/map.png)
 
 
 ### 打开车辆客户端
 
+
+单辆车
 ```
-./sim_agv_test
+./sim_agv_test 127.0.0.1
 ```
-代码里创建了四个模拟车辆，默认注释了3个
+如果模拟测试多辆车
+```
+./sim_agv_test 127.0.0.1 false
+```
 成功连接到代理后显示
 ```
 2024-04-30 13:36:23,770 INFO [default] tx1  ONLINE
@@ -143,7 +267,7 @@ body config中的map.xml
 [I 240430 13:36:23.7704 vehicle.cc:657] Vehicle-0001 tx1 ONLINE
 ```
 表示已经和车辆在正常通信了
-网页可以看到车辆id和电量
+网页可以看到车辆id和电量以及车辆的2D轮廓 
 ![view](imgs/normal.png)
 如果电量不足会先自动去最近的充电点充电，充电结束后自动去最近的停靠点
 
@@ -164,7 +288,10 @@ body config中的map.xml
 
 
 ### 新建运输订单
-使用api工具发送请求：
+#### 快速下单
+> <font color=#b04f61>简单测试可以用鼠标在车辆位置按下左键，然后拖动到Point或Location点口释放可以快捷下单，对应的动作为MOVE或NOP，pick或drop
+> 界面右上角显示最新的几条订单状态</font>
+#### 也使用api工具发送请求：
 路由 /transportOrders/{name}
 参数 name 订单编号，唯一
 body 订单具体内容
@@ -178,9 +305,7 @@ body 订单具体内容
 去停靠点或者充电的路径上（根据电量情况）新建订单会立即取消当前任务去执行新订单
 当前默认服务端会一次发送两个path(3个node)指令到车辆客户端，然后根据执行结果继续发送后续节点路径
 
-#### 快速下单
-> 简单测试可以用鼠标在车辆位置按下左键，然后拖动到Point或Location点口释放可以快捷下单，对应的动作为MOVE或NOP，pick或drop
-> 界面右上角显示最新的几条订单状态
+
 
 
 ### VDA动作

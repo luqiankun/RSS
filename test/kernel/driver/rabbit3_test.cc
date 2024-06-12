@@ -533,17 +533,39 @@ INITIALIZE_EASYLOGGINGPP
 
 int main(int argc, char** argv) {
   el::Loggers::getLogger("timer");
-  // SimRabbit3 agv1("uagv", "tx1", "2.0", "rw", "P1", 45150, -107450);
-  // agv1.set_mqtt_ops(agv1.serial_number, "192.168.0.39");
-  // agv1.start();
-  // SimRabbit3 agv2("uagv", "tx2", "2.0", "rw", "P4", 74475, -107450);
-  // agv2.set_mqtt_ops(agv2.serial_number, "192.168.0.39");
-  // agv2.start();
-  // SimRabbit3 agv3("uagv", "tx3", "2.0", "rw", "P5", 84087, -107450);
-  // agv3.set_mqtt_ops(agv3.serial_number, "192.168.0.39");
-  // agv3.start();
+  if (argc < 2) {
+    std::cerr << "usage: ./rabbit3_test ip only\n"
+              << "ip: ip"
+              << "\n"
+              << "only: true:one vehilce false:four vehilce\n";
+    return -1;
+  }
+  std::string ip;
+  bool only{true};
+  if (argc == 2) {
+    ip = std::string(argv[1]);
+  } else {
+    ip = std::string(argv[1]);
+    only = std::string(argv[2]) == "true" ? true : false;
+  }
+  LOG(INFO) << "ip: " << ip << "\t"
+            << "only: " << only << "\n";
+
+  SimRabbit3 agv1("uagv", "tx1", "2.0", "rw", "P1", 45150, -107450);
+  agv1.set_mqtt_ops(agv1.serial_number, ip);
+  SimRabbit3 agv2("uagv", "tx2", "2.0", "rw", "P4", 74475, -107450);
+  agv2.set_mqtt_ops(agv2.serial_number, ip);
+  SimRabbit3 agv3("uagv", "tx3", "2.0", "rw", "P5", 84087, -107450);
+  agv3.set_mqtt_ops(agv3.serial_number, ip);
   SimRabbit3 agv4("uagv", "tx4", "2.0", "rw", "P6", 93837, -107450);
-  agv4.set_mqtt_ops(agv4.serial_number, "192.168.0.39");
-  agv4.start();
+  agv4.set_mqtt_ops(agv4.serial_number, ip);
+  if (only) {
+    agv2.start();
+  } else {
+    agv1.start();
+    agv2.start();
+    agv3.start();
+    agv4.start();
+  }
   std::cin.get();
 }

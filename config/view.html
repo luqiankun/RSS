@@ -1001,6 +1001,34 @@
                 document.getElementById('ip_btn').removeAttribute('disabled')
             }
         }
+
+        function file_read() {
+            const ele = document.getElementById('model_file')
+            let file = ele.files[0];
+            // console.log(file)
+            const filereader = new FileReader()
+            filereader.onload = (e) => {
+                let xml = filereader.result;
+                let parser = new DOMParser();
+                let xmlDoc = parser.parseFromString(xml, "text/xml");
+                // console.log(xmlDoc)
+                let http = new XMLHttpRequest();
+                let ip = document.getElementById("ip_btn").value;
+                http.open("PUT", "http://" + ip + "/plantModel?type=xml", true);
+                http.onload = function () {
+                    if (http.readyState == 4 && http.status == 200) {
+                        // console.log("send order ok");
+                        clicked()
+                    }
+                    else {
+                        console.log("send order err");
+                    }
+                }
+                http.send(xmlDoc)
+                ele.value = ""
+            }
+            filereader.readAsText(file)
+        }
     </script>
 </head>
 
@@ -1009,12 +1037,17 @@
     <div class="main">
         <div class="ip">
             <input type="text" id="ip_btn" class="label" value="127.0.0.1:8080" placeholder="服务器地址：端口号">
-            <h1></h1>
         </div>
         <div>
             <button class="button" id="ok_btn" onclick="clicked()">确定</button>
             <button class="button" id="stop_btn" onclick="stop_()">停止</button>
+            <span class="upload-file">
+                <input type="file" class="input-file" accept=".xml" id="model_file" onchange="file_read()">
+                <span class="tip">选择模型文件</span>
+            </span>
         </div>
+
+
         <div class="view">
             <canvas id="map" width="400" height="800">
             </canvas>
@@ -1047,10 +1080,23 @@
         border-bottom-width: 5px;
         border-bottom-color: #58a689;
         outline: none;
+        text-align: center;
         /* background-color: #58a689; */
         /* background-color: #b4e3c6; */
     }
 
+    .ip input {
+        filter: alpha(opacity=0);
+        cursor: text;
+    }
+
+    .ip input:hover {
+        border-top: none;
+        border-left: none;
+        border-right: none;
+        border-bottom-width: 5px;
+        border-bottom-color: #c2324a;
+    }
 
     .label::placeholder {
         color: rgb(86, 132, 151);
@@ -1069,6 +1115,8 @@
 
     .button:hover {
         background-color: #e40f00;
+        font-size: 21px;
+
     }
 
     .button:disabled {
@@ -1099,6 +1147,44 @@
         top: 0px;
         margin: 20px;
         border: thin solid #1b7cdd;
+    }
+
+    .upload-file {
+        position: relative;
+        width: 100px;
+        padding: 10px 15px;
+        border: 1px solid rgb(119, 154, 80);
+        /* border-radius: 5px; */
+        background-color: #58a689;
+        color: #fffefe;
+        font-size: 24px;
+        text-align: center;
+        overflow: hidden;
+    }
+
+    .upload-file span {
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .upload-file:hover {
+        font-size: 25px;
+        border-color: rgb(39, 226, 81);
+        background-color: #c22439;
+
+    }
+
+
+    .upload-file input[type='file'] {
+        height: 100%;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        right: 0;
+        opacity: 0;
+        filter: alpha(opacity=0);
+        cursor: pointer;
     }
 </style>
 
