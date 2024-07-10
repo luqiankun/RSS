@@ -6,6 +6,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     MinSizeRel RelWithDebInfo)
 endif()
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
+message(STATUS "Install path: " ${CMAKE_INSTALL_PREFIX})
 # set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 # set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 add_compile_options(-std=c++17)
@@ -24,7 +25,6 @@ find_package(Threads REQUIRED)
 ################
 find_package (Eigen3 REQUIRED NO_MODULE)
 include_directories( ${EIGEN3_INCLUDE_DIR} )
-find_package(fcl REQUIRED)
 ################
 ##
 file(GLOB_RECURSE TOOLS_SRC 
@@ -46,7 +46,7 @@ ${TOOLS_SRC}
 ${MAIN_SRC}
 ${MQTT_SRC}
 )
-target_link_libraries(tcs PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen ${FCL_LIBRARIES})
+target_link_libraries(tcs PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen)
 
 
 #########

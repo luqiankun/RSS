@@ -43,7 +43,6 @@ void Planner::rebuild() {
       }
     }
     if (be != nullptr && en != nullptr) {
-      // TODO() 测试中权重写死了 应用时注意
       Edge::Access access{Edge::Access::Both};
       if (x->max_vel <= 0) {
         access = Edge::Access::Back;
@@ -255,7 +254,6 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
       cur_begin = st;
     }
     auto paths = solver->get_paths(ed);
-    CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
     if (paths.empty()) {
     } else {
       // 按转弯数量排序
@@ -282,11 +280,11 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
         ss << "]\n";
         if (x.back()->F != std::numeric_limits<float>::max()) {
           res.push_back(std::move(temp));
+          ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
+          CLOG(INFO, planner_log) << ss.str();
         } else {
           ss << "this path is not open";
         }
-        ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
-        CLOG(INFO, planner_log) << ss.str();
       }
     }
   }
@@ -296,6 +294,7 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
       x->set_type(AType::ATYPE_UNKNOWN);
     }
   }
+  CLOG(INFO, planner_log) << "find " << res.size() << " s paths\n";
   return res;
 }
 

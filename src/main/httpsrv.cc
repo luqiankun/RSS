@@ -54,10 +54,11 @@ std::string log(const httplib::Request &req, const httplib::Response &res) {
 HTTPServer::HTTPServer(const std::string &ip, int port) {
   this->ip = ip;
   this->port = port;
+  const std::string url_prefix = "/v1";
   srv.set_default_headers({{"Access-Control-Allow-Origin", "*"},
                            {"Access-Control-Allow-Credentials", "false"},
                            {"Allow", "GET, POST, HEAD, OPTIONS,PUT"}});
-  srv.Get("/transportOrders",
+  srv.Get(url_prefix + "/transportOrders",
           [=](const httplib::Request &req, httplib::Response &res) {
             //
             std::string veh{""};
@@ -70,7 +71,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Get(R"(/transportOrder/([^/]+))",
+  srv.Get(url_prefix + R"(/transportOrder/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
             auto m = req.matches.end() - 1;
             std::string ord_name = *m;
@@ -80,7 +81,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Post(R"(/transportOrders/([^/]+))",
+  srv.Post(url_prefix + R"(/transportOrders/([^/]+))",
            [=](const httplib::Request &req, httplib::Response &res) {
              auto m = req.matches.end() - 1;
              std::string ord_name = *m;
@@ -90,7 +91,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
                res.set_content(ret.second, "application/json");
              }
            });
-  srv.Post(R"(/transportOrders/([^/]+)/withdrawal)",
+  srv.Post(url_prefix + R"(/transportOrders/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
              auto m = req.matches.end() - 1;
              std::string ord_name = *m;
@@ -116,7 +117,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              }
            });
 
-  srv.Get(R"(/orderSequences)",
+  srv.Get(url_prefix + R"(/orderSequences)",
           [=](const httplib::Request &req, httplib::Response &res) {
             std::string veh{""};
             if (req.has_param("intendedVehicle")) {
@@ -128,7 +129,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Get(R"(/orderSequences/([^/]+))",
+  srv.Get(url_prefix + R"(/orderSequences/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
             std::string veh{""};
             auto m = req.matches.end() - 1;
@@ -139,7 +140,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Post(R"(/orderSequences/([^/]+))",
+  srv.Post(url_prefix + R"(/orderSequences/([^/]+))",
            [=](const httplib::Request &req, httplib::Response &res) {
              std::string veh{""};
              auto m = req.matches.end() - 1;
@@ -150,7 +151,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
                res.set_content(ret.second, "application/json");
              }
            });
-  srv.Get(R"(/vehicles)",
+  srv.Get(url_prefix + R"(/vehicles)",
           [=](const httplib::Request &req, httplib::Response &res) {
             std::string state{""};
             if (req.has_param("procState")) {
@@ -162,7 +163,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Get(R"(/vehicles/([^/]+))",
+  srv.Get(url_prefix + R"(/vehicles/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
             std::string state{""};
             state = *(req.matches.end() - 1);
@@ -172,7 +173,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Put(R"(/vehicles/([^/]+)/paused)",
+  srv.Put(url_prefix + R"(/vehicles/([^/]+)/paused)",
           [=](const httplib::Request &req, httplib::Response &res) {
             std::string name;
             name = *(req.matches.end() - 1);
@@ -186,12 +187,12 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Options(R"(/vehicles/([^/]+)/paused)",
+  srv.Options(url_prefix + R"(/vehicles/([^/]+)/paused)",
               [=](const httplib::Request &req, httplib::Response &res) {
                 res.set_header("Access-Control-Allow-Methods", "PUT");
                 res.status = 200;
               });
-  srv.Post(R"(/vehicles/([^/]+)/withdrawal)",
+  srv.Post(url_prefix + R"(/vehicles/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
              std::string name{""};
              name = *(req.matches.end() - 1);
@@ -222,7 +223,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
              }
            });
 
-  srv.Get(R"(/plantModel)",
+  srv.Get(url_prefix + R"(/plantModel)",
           [=](const httplib::Request &, httplib::Response &res) {
             auto ret = get_model();
             res.status = ret.first;
@@ -230,7 +231,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Put(R"(/plantModel)",
+  srv.Put(url_prefix + R"(/plantModel)",
           [=](const httplib::Request &req, httplib::Response &res) {
             bool use_xml{false};
             if (req.has_param("type")) {
@@ -251,13 +252,13 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               }
             }
           });
-  srv.Options(R"(/plantModel)",
+  srv.Options(url_prefix + R"(/plantModel)",
               [=](const httplib::Request &req, httplib::Response &res) {
                 res.set_header("Access-Control-Allow-Methods", "PUT");
                 res.set_header("Access-Control-Allow-Headers", "Content-Type");
                 res.status = 200;
               });
-  srv.Put(R"(/paths/([^/]+)/locked)",
+  srv.Put(url_prefix + R"(/paths/([^/]+)/locked)",
           [=](const httplib::Request &req, httplib::Response &res) {
             bool value{false};
             if (req.get_param_value("newValue") == "true" ||
@@ -272,12 +273,12 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Options(R"(/paths/([^/]+)/locked)",
+  srv.Options(url_prefix + R"(/paths/([^/]+)/locked)",
               [=](const httplib::Request &req, httplib::Response &res) {
                 res.set_header("Access-Control-Allow-Methods", "PUT");
                 res.status = 200;
               });
-  srv.Put(R"(/locations/([^/]+)/locked)",
+  srv.Put(url_prefix + R"(/locations/([^/]+)/locked)",
           [=](const httplib::Request &req, httplib::Response &res) {
             bool value{false};
             if (req.get_param_value("newValue") == "true" ||
@@ -292,18 +293,38 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Options(R"(/locations/([^/]+)/locked)",
+  srv.Options(url_prefix + R"(/locations/([^/]+)/locked)",
               [=](const httplib::Request &req, httplib::Response &res) {
                 res.set_header("Access-Control-Allow-Methods", "PUT");
                 res.status = 200;
               });
-  srv.Get("/getView", [=](const httplib::Request &req, httplib::Response &res) {
-    auto ret = get_view();
-    res.status = ret.first;
-    if (!ret.second.empty()) {
-      res.set_content(ret.second, "application/json");
-    }
-  });
+  srv.Get(url_prefix + "/getView",
+          [=](const httplib::Request &req, httplib::Response &res) {
+            auto ret = get_view();
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
+            }
+          });
+  srv.Post(url_prefix + "/plantModel/topologyUpdateRequest",
+           [=](const httplib::Request &req, httplib::Response &res) {
+             auto ret = post_reroute();
+             res.status = ret.first;
+             if (!ret.second.empty()) {
+               res.set_content(ret.second, "application/json");
+             }
+           });
+  srv.Post(url_prefix + R"(/vehicles/[^/]+)/rerouteRequest)",
+           [=](const httplib::Request &req, httplib::Response &res) {
+             bool forced =
+                 req.get_param_value("forced") == "true" ? true : false;
+             std::string name = *(req.matches.end() - 1);
+             auto ret = post_vheicle_reroute(name, forced);
+             res.status = ret.first;
+             if (!ret.second.empty()) {
+               res.set_content(ret.second, "application/json");
+             }
+           });
   // srv.set_logger([](const httplib::Request &req, const httplib::Response
   // &res) {
   //   // printf("%s", log(req, res).c_str());

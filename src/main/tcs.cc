@@ -10,6 +10,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
   init_dispatcher();
   this->resource =
       std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
+  this->resource->is_connected = std::bind(
+      &TCS::is_connect, this, std::placeholders::_1, std::placeholders::_2);
   auto control_rule =
       std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
   auto envelope_rule = std::make_shared<kernel::allocate::CollisionRule>(
@@ -40,33 +42,61 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
     }
     { resource->model_name = root.attribute("name").as_string(); }
     {
-      // envelope
-      auto envelope = root.find_child([](pugi::xml_node node) {
-        return std::string(node.name()) == "vehicleEnvelope";
+      // visulize
+      auto visual_layout = root.find_child([](pugi::xml_node node) {
+        return std::string(node.name()) == "visualLayout";
       });
-      while (envelope.type() != pugi::node_null) {
-        if (std::string(envelope.name()) != "vehicleEnvelope") {
+      while (visual_layout.type() != pugi::node_null) {
+        if (std::string(visual_layout.name()) != "visualLayout") {
           break;
         }
-        auto name = envelope.attribute("name").as_string();
-        auto type = envelope.attribute("type").as_string();
-        auto env = std::make_shared<data::model::Envelope>(name, type);
-        auto vertex = envelope.find_child([](pugi::xml_node node) {
-          return std::string(node.name()) == "vertex";
+        auto name = visual_layout.attribute("name").as_string();
+        double scale_x = visual_layout.attribute("scaleX").as_double();
+        double scale_y = visual_layout.attribute("scaleY").as_double();
+        auto visuallayout = std::make_shared<data::model::VisualLayout>(name);
+        visuallayout->scale_x = scale_x;
+        visuallayout->scale_y = scale_y;
+        auto layer = visual_layout.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "layer";
         });
-        while (vertex.type() != pugi::node_null) {
-          if (std::string(vertex.name()) != "vertex") {
+        while (layer.type() != pugi::node_null) {
+          if (std::string(layer.name()) != "layer") {
             break;
           }
-          auto x = vertex.attribute("x").as_double();
-          auto y = vertex.attribute("y").as_double();
-          auto z = vertex.attribute("z").as_double();
-          env->add_vertex(x, y, z);
-          vertex = vertex.next_sibling();
+          auto layer_id = layer.attribute("id").as_int();
+          auto ordinal = layer.attribute("ordinal").as_int();
+          auto name = layer.attribute("name").as_string();
+          auto group_id = layer.attribute("groupId").as_int();
+          auto layer_visible = layer.attribute("visible").as_bool();
+          auto ly = data::model::VisualLayout::Layer();
+          ly.id = layer_id;
+          ly.ordinal = ordinal;
+          ly.name = name;
+          ly.group_id = group_id;
+          ly.visible = layer_visible;
+          visuallayout->layers.push_back(ly);
+          layer = layer.next_sibling();
         }
-        env->compute_mesh();
-        resource->envelopes.push_back(env);
-        envelope = envelope.next_sibling();
+
+        auto layer_group = visual_layout.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "layerGroup";
+        });
+        while (layer_group.type() != pugi::node_null) {
+          if (std::string(layer_group.name()) != "layerGroup") {
+            break;
+          }
+          auto id = layer_group.attribute("id").as_int();
+          auto name = layer_group.attribute("name").as_string();
+          auto visible = layer_group.attribute("visible").as_bool();
+          auto layer_group_ = data::model::VisualLayout::LayerGroup();
+          layer_group_.id = id;
+          layer_group_.name = name;
+          layer_group_.visible = visible;
+          visuallayout->layer_groups.push_back(layer_group_);
+          layer_group = layer_group.next_sibling();
+        }
+        resource->visual_layout = visuallayout;
+        visual_layout = visual_layout.next_sibling();
       }
     }
     {  // point
@@ -79,6 +109,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         }
         std::string name = point.attribute("name").as_string();
         std::string type = point.attribute("type").as_string();
+        auto vehicle_orientation =
+            point.attribute("vehicleOrientation").as_double();
         int xPosition = point.attribute("xPosition").as_int();
         int yPosition = point.attribute("yPosition").as_int();
         int zPosition = point.attribute("zPosition").as_int();
@@ -100,6 +132,34 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         p->position.y = yPosition;
         p->layout = layout;
         p->type = data::model::Point::new_type(type);
+        p->vehicle_orientation = vehicle_orientation;
+        // envelope
+        auto envelope = point.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "vehicleEnvelope";
+        });
+        while (envelope.type() != pugi::node_null) {
+          if (std::string(envelope.name()) != "vehicleEnvelope") {
+            break;
+          }
+          auto name = envelope.attribute("key").as_string();
+          auto envl = std::make_shared<data::model::Envelope>(name);
+          auto vertex = envelope.find_child([](pugi::xml_node node) {
+            return std::string(node.name()) == "vertex";
+          });
+          while (vertex.type() != pugi::node_null) {
+            if (std::string(vertex.name()) != "vertex") {
+              break;
+            }
+            auto x = vertex.attribute("x").as_double();
+            auto y = vertex.attribute("y").as_double();
+            envl->add_vertex(x, y);
+            vertex = vertex.next_sibling();
+          }
+          p->envelopes.insert(
+              std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
+                  name, envl));
+          envelope = envelope.next_sibling();
+        }
         // pro
         auto property = point.find_child([](pugi::xml_node node) {
           return std::string(node.name()) == "property";
@@ -309,7 +369,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         p->layout = layout;
         p->source_point = source_point;
         p->destination_point = destination_point;
-        // TODO xmllength不准
+        //  xmllength不准
         p->length = Eigen::Vector2d(source_point.lock()->position.x -
                                         destination_point.lock()->position.x,
                                     source_point.lock()->position.y -
@@ -320,6 +380,33 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         p->locked = locked;
         p->source_point.lock()->incoming_paths.push_back(p);
         p->destination_point.lock()->outgoing_paths.push_back(p);
+        // envelope
+        auto envelope = path.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "vehicleEnvelope";
+        });
+        while (envelope.type() != pugi::node_null) {
+          if (std::string(envelope.name()) != "vehicleEnvelope") {
+            break;
+          }
+          auto name = envelope.attribute("key").as_string();
+          auto envl = std::make_shared<data::model::Envelope>(name);
+          auto vertex = envelope.find_child([](pugi::xml_node node) {
+            return std::string(node.name()) == "vertex";
+          });
+          while (vertex.type() != pugi::node_null) {
+            if (std::string(vertex.name()) != "vertex") {
+              break;
+            }
+            auto x = vertex.attribute("x").as_double();
+            auto y = vertex.attribute("y").as_double();
+            envl->add_vertex(x, y);
+            vertex = vertex.next_sibling();
+          }
+          p->envelopes.insert(
+              std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
+                  name, envl));
+          envelope = envelope.next_sibling();
+        }
         // pro
         auto property = path.find_child([](pugi::xml_node node) {
           return std::string(node.name()) == "property";
@@ -337,7 +424,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         //
         data::model::Actions acts(p->properties);
         {
-          // TODO perop
+          //  perop
           auto peripher_op = path.find_child([](pugi::xml_node node) {
             return std::string(node.name()) == "peripheralOperation";
           });
@@ -438,7 +525,6 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         block = block.next_sibling();
       }
     }
-
     //
     {
       auto vehicle = root.find_child([](pugi::xml_node node) {
@@ -462,65 +548,56 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
             vehicle.attribute("energyLevelFullyRecharged").as_int();
         int energyLevelSufficientlyRecharged =
             vehicle.attribute("energyLevelSufficientlyRecharged").as_int();
-        std::string init_p_name =
-            vehicle.child("initial_point").attribute("point").as_string();
-        std::string envelope = vehicle.attribute("envelope").as_string();
-        auto interfaceName =
-            vehicle
-                .find_child([](pugi::xml_node node) {
-                  return (std::string(node.name()) == "property" &&
-                          node.attribute("name").as_string() ==
-                              std::string("vda5050:interfaceName"));
-                })
-                .attribute("value")
-                .as_string();
-        auto manufacturer =
-            vehicle
-                .find_child([](pugi::xml_node node) {
-                  return (std::string(node.name()) == "property" &&
-                          node.attribute("name").as_string() ==
-                              std::string("vda5050:manufacturer"));
-                })
-                .attribute("value")
-                .as_string();
-        auto serialNumber =
-            vehicle
-                .find_child([](pugi::xml_node node) {
-                  return (std::string(node.name()) == "property" &&
-                          node.attribute("name").as_string() ==
-                              std::string("vda5050:serialNumber"));
-                })
-                .attribute("value")
-                .as_string();
-        auto version = vehicle
-                           .find_child([](pugi::xml_node node) {
-                             return (std::string(node.name()) == "property" &&
-                                     node.attribute("name").as_string() ==
-                                         std::string("vda5050:version"));
-                           })
-                           .attribute("value")
-                           .as_string();
-        auto ip = vehicle
-                      .find_child([](pugi::xml_node node) {
-                        return (std::string(node.name()) == "property" &&
-                                node.attribute("name").as_string() ==
-                                    std::string("vda5050:ip"));
-                      })
-                      .attribute("value")
-                      .as_string();
-        auto port = vehicle
-                        .find_child([](pugi::xml_node node) {
-                          return (std::string(node.name()) == "property" &&
-                                  node.attribute("name").as_string() ==
-                                      std::string("vda5050:port"));
-                        })
-                        .attribute("value")
-                        .as_string();
+        std::string envelope = vehicle.attribute("envelopeKey").as_string();
+        auto interfaceName = vehicle.find_child([](pugi::xml_node node) {
+          return (std::string(node.name()) == "property" &&
+                  node.attribute("name").as_string() ==
+                      std::string("vda5050:interfaceName"));
+        });
+        auto manufacturer = vehicle.find_child([](pugi::xml_node node) {
+          return (std::string(node.name()) == "property" &&
+                  node.attribute("name").as_string() ==
+                      std::string("vda5050:manufacturer"));
+        });
+
+        auto serialNumber = vehicle.find_child([](pugi::xml_node node) {
+          return (std::string(node.name()) == "property" &&
+                  node.attribute("name").as_string() ==
+                      std::string("vda5050:serialNumber"));
+        });
+        auto version = vehicle.find_child([](pugi::xml_node node) {
+          return (std::string(node.name()) == "property" &&
+                  node.attribute("name").as_string() ==
+                      std::string("vda5050:version"));
+        });
+
+        auto orderquence = vehicle.find_child([](pugi::xml_node node) {
+          return (std::string(node.name()) == "property" &&
+                  node.attribute("name").as_string() ==
+                      std::string("vda5050:orderQueueSize"));
+        });
+
         ///////////////////
         /// // 使用mqtt车辆
         //////////////////
+        auto vda_interfaceName =
+            interfaceName.type() == pugi::node_null
+                ? "virtual"
+                : interfaceName.attribute("value").as_string();
+        auto vda_serialNumber =
+            serialNumber.type() == pugi::node_null
+                ? "virtual"
+                : serialNumber.attribute("value").as_string();
+        auto vda_version = version.type() == pugi::node_null
+                               ? "1.0"
+                               : version.attribute("value").as_string();
+        auto vda_manufacturer =
+            manufacturer.type() == pugi::node_null
+                ? "virtual"
+                : manufacturer.attribute("value").as_string();
         auto veh = std::make_shared<kernel::driver::Rabbit3>(
-            name, interfaceName, serialNumber, version, manufacturer);
+            name, vda_interfaceName, vda_serialNumber, vda_version,
+            vda_manufacturer);
         veh->length = length;
         veh->width = 2.0 * length / 4;
         veh->max_reverse_vel = maxReverseVelocity;
@@ -532,14 +609,26 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         veh->engrgy_level_recharge = energyLevelFullyRecharged;
         veh->map_id = root.attribute("name").as_string();
         veh->broker_ip = ip;
-        veh->broker_port = std::stoi(port);
+        veh->broker_port = port;
+        veh->send_queue_size = orderquence.type() == pugi::node_null
+                                   ? 2
+                                   : orderquence.attribute("value").as_int();
+        veh->envelope_key = envelope;
 
-        for (auto &x : resource->envelopes) {
-          if (x->name == envelope) {
-            veh->envelope = x;
+        // pro
+        auto property = vehicle.find_child([](pugi::xml_node node) {
+          return std::string(node.name()) == "property";
+        });
+        while (property.type() != pugi::node_null) {
+          if (std::string(property.name()) != "property") {
+            break;
           }
+          auto name_ = property.attribute("name").as_string();
+          auto vlaue_ = property.attribute("value").as_string();
+          veh->properties.insert(
+              std::pair<std::string, std::string>(name_, vlaue_));
+          property = property.next_sibling();
         }
-
         ///////////////////////////
         dispatcher->vehicles.push_back(veh);
         ///////////////////////
@@ -625,9 +714,14 @@ void TCS::home_order(const std::string &name,
   ord->state = data::order::TransportOrder::State::RAW;
   CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
+  //  检查是否通路
+  auto home_point = resource->get_recent_park_point(v->last_point);
+  if (!home_point) {
+    CLOG(ERROR, tcs_log) << "home point not found";
+    return;
+  }
   auto destination = orderpool->res_to_destination(
-      resource->get_recent_park_point(v->last_point),
-      data::order::DriverOrder::Destination::OpType::MOVE);
+      home_point, data::order::DriverOrder::Destination::OpType::MOVE);
   auto dr =
       std::make_shared<data::order::DriverOrder>("driverorder_home_" + v->name);
   dr->destination = destination;
@@ -649,9 +743,13 @@ void TCS::charge_order(const std::string &name,
   ord->state = data::order::TransportOrder::State::RAW;
   CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
+  //  检查是否通路
+  auto park_point = resource->get_recent_charge_loc(v->last_point);
+  if (!park_point) {
+    CLOG(ERROR, tcs_log) << "park point not found";
+  }
   auto destination = orderpool->res_to_destination(
-      resource->get_recent_charge_loc(v->last_point),
-      data::order::DriverOrder::Destination::OpType::CHARGE);
+      park_point, data::order::DriverOrder::Destination::OpType::CHARGE);
   auto dr = std::make_shared<data::order::DriverOrder>("driverorder_charge_" +
                                                        v->name);
   dr->destination = destination;
@@ -841,7 +939,7 @@ std::pair<int, std::string> TCS::post_transport_order(
   }
   try {
     auto req = json::parse(body);
-    // TODO字段检查
+    // 字段检查
     auto ord = std::make_shared<data::order::TransportOrder>(ord_name);
     ord->create_time = std::chrono::system_clock::now();
     auto dt = get_time_from_str(req["deadline"].get<std::string>());
@@ -860,7 +958,7 @@ std::pair<int, std::string> TCS::post_transport_order(
       }
     }
     if (!quence) {
-      // TODO new orderquence
+      //  new orderquence
       auto new_orderquence = std::make_shared<data::order::OrderSequence>(
           req["wrappingSequence"].get<std::string>());
       new_orderquence->add_transport_ord(ord);
@@ -874,7 +972,7 @@ std::pair<int, std::string> TCS::post_transport_order(
       orderpool->ended_orderpool.push_back(ord);
     } else {
       for (auto &d : destinations) {
-        // TODO 操作类型判断
+        //  操作类型判断
         auto loc = d["locationName"].get<std::string>();
         auto check = resource->find(loc);
         if (check.first == kernel::allocate::ResourceManager::ResType::Err) {
@@ -1175,6 +1273,7 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["precisePosition"]["y"] = v->position.y;
   res["precisePosition"]["z"] = v->position.z;
   res["state"] = v->get_state();
+  res["procState"] = v->get_process_state();
   res["allocatedResources"] = json::array();
   for (auto &r : v->allocate_resources) {
     res["allocatedResources"].push_back(r->name);
@@ -1185,7 +1284,10 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   }
   // todo
   res["allowedOrderTypes"] = json::array();
-  res["envelopeKey"] = "";
+  for (auto &x : v->allowed_order_type) {
+    res["allowedOrderTypes"].push_back(x);
+  }
+  res["envelopeKey"] = v->envelope_key;
   return res;
 }
 
@@ -1321,9 +1423,11 @@ std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
       if (p) {
         paused_task->action_type =
             vda5050::instantaction::ActionType::startPause;
+        paused_vehicle(name);
       } else {
         paused_task->action_type =
             vda5050::instantaction::ActionType::stopPause;
+        recovery_vehicle(name);
       }
       paused_task->blocking_type =
           vda5050::instantaction::ActionBlockingType::HARD;
@@ -1347,6 +1451,30 @@ std::pair<int, std::string> TCS::get_model() {
   }
   json res;
   res["name"] = resource->model_name;
+  res["proerty"] = json::array();
+  // visuallayout
+  res["visualLayout"]["name"] = resource->visual_layout->name;
+  res["visualLayout"]["scaleX"] = resource->visual_layout->scale_x;
+  res["visualLayout"]["scaleY"] = resource->visual_layout->scale_y;
+  res["visualLayout"]["layers"] = json::array();
+  for (auto &x : resource->visual_layout->layers) {
+    json layer;
+    layer["id"] = x.id;
+    layer["ordinal"] = x.ordinal;
+    layer["visible"] = x.visible;
+    layer["name"] = x.name;
+    layer["groupId"] = x.group_id;
+    res["visualLayout"]["layers"].push_back(layer);
+  }
+  res["visualLayout"]["layerGroups"] = json::array();
+  for (auto &x : resource->visual_layout->layer_groups) {
+    json layer_group;
+    layer_group["id"] = x.id;
+    layer_group["name"] = x.name;
+    layer_group["visible"] = x.visible;
+    res["visualLayout"]["layerGroups"].push_back(layer_group);
+  }
+  res["visualLayout"]["properties"] = json::array();
   // point
   res["points"] = json::array();
   for (auto &p : resource->points) {
@@ -1370,6 +1498,20 @@ std::pair<int, std::string> TCS::get_model() {
       t["name"] = pro.first;
       t["value"] = pro.second;
       point["properties"].push_back(t);
+    }
+    point["vehicleEnvelope"] = json::array();
+    for (auto &x : p->envelopes) {
+      json t;
+      t["envelopeKey"] = x.first;
+      t["vertices"] = json::array();
+      auto v = std::dynamic_pointer_cast<data::model::Envelope>(x.second);
+      for (auto &v_ : v->vertexs) {
+        json ver;
+        ver["x"] = v_.x();
+        ver["y"] = v_.y();
+        t["vertices"].push_back(ver);
+      }
+      point["vehicleEnvelope"].push_back(t);
     }
     res["points"].push_back(point);
   }
@@ -1395,21 +1537,44 @@ std::pair<int, std::string> TCS::get_model() {
       t["value"] = pro.second;
       path["properties"].push_back(t);
     }
+    path["vehicleEnvelope"] = json::array();
+    for (auto &x : p->envelopes) {
+      json t;
+      t["envelopeKey"] = x.first;
+      t["vertices"] = json::array();
+      auto v = std::dynamic_pointer_cast<data::model::Envelope>(x.second);
+      for (auto &v_ : v->vertexs) {
+        json ver;
+        ver["x"] = v_.x();
+        ver["y"] = v_.y();
+        t["vertices"].push_back(ver);
+      }
+      path["vehicleEnvelope"].push_back(t);
+      path["peripherOperations"] = json::array();
+      for (auto &x : p->per_acts.acts) {
+        json t;
+        t["operation"] = x.op_name;
+        t["locationName"] = x.op_name;
+        t["completionRequired"] = x.completion_required;
+        t["executionTrigger"] = x.execution_trigger;
+        path["peripherOperations"].push_back(t);
+      }
+    }
     res["paths"].push_back(path);
   }
   // location type
   res["locationTypes"] = json::array();
   for (auto &type : resource->location_types) {
     json loc_type;
-    loc_type["typeName"] = type->name;
-    loc_type["allowedOperation"] = json::array();
-    loc_type["allowedPeripheralOperation"] = json::array();
+    loc_type["name"] = type->name;
+    loc_type["allowedOperations"] = json::array();
+    loc_type["allowedPeripheralOperations"] = json::array();
     loc_type["properties"] = json::array();
     for (auto &x : type->allowed_ops) {
-      loc_type["allowedOperation"].push_back(x.first);
+      loc_type["allowedOperations"].push_back(x.first);
     }
     for (auto &x : type->allowrd_per_ops) {
-      loc_type["allowedPeripheralOperation"].push_back(x.first);
+      loc_type["allowedPeripheralOperations"].push_back(x.first);
     }
     for (auto &pro : type->properties) {
       json t;
@@ -1426,12 +1591,14 @@ std::pair<int, std::string> TCS::get_model() {
   for (auto &loc : resource->locations) {
     json location;
     location["name"] = loc->name;
-    location["typeName"] = loc->type.lock()->name;  // TODO
+    location["typeName"] = loc->type.lock()->name;
     location["position"]["x"] = loc->position.x;
     location["position"]["y"] = loc->position.y;
     location["position"]["z"] = loc->position.z;
     location["links"] = json::array();
-    location["links"].push_back(loc->link.lock() ? loc->link.lock()->name : "");
+    if (loc->link.lock()) {
+      location["links"].push_back(loc->link.lock()->name);
+    }
     location["locked"] = loc->locked;
     location["layout"]["position"]["x"] = loc->layout.position.x;
     location["layout"]["position"]["y"] = loc->layout.position.y;
@@ -1463,15 +1630,13 @@ std::pair<int, std::string> TCS::get_model() {
       continue;
     }
     json block;
-    block["member"] = json::array();
+    block["memberNames"] = json::array();
     for (auto &p : it->occs) {
-      json v;
-      v["name"] = p->name;
-      block["member"].push_back(v);
+      block["memberNames"].push_back(p->name);
     }
     block["name"] = x->name;
     block["type"] = "SINGLE_VEHICLE_ONLY";
-    block["blockLayout"]["color"] = it->color;
+    block["layout"]["color"] = it->color;
     res["blocks"].push_back(block);
   }
   //  vehicles
@@ -1487,14 +1652,12 @@ std::pair<int, std::string> TCS::get_model() {
     vehicle["maxVelocity"] = v->max_vel;
     vehicle["maxReverseVelocity"] = v->max_reverse_vel;
     vehicle["layout"]["routeColor"] = v->color;
-    vehicle["envelope"]["type"] = v->envelope->name;
-    vehicle["envelope"]["vertex"] = json::array();
-    for (auto &vertex : v->envelope->vertexs) {
-      json ver;
-      ver["x"] = vertex.x() * 1000;
-      ver["y"] = vertex.y() * 1000;
-      ver["z"] = vertex.z() * 1000;
-      vehicle["envelope"]["vertex"].push_back(ver);
+    vehicle["properties"] = json::array();
+    for (auto &pro : v->properties) {
+      json t;
+      t["name"] = pro.first;
+      t["value"] = pro.second;
+      vehicle["properties"].push_back(t);
     }
     res["vehicles"].push_back(vehicle);
   }
@@ -1509,6 +1672,8 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     json model = json::parse(body);
     resource =
         std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
+    this->resource->is_connected = std::bind(
+        &TCS::is_connect, this, std::placeholders::_1, std::placeholders::_2);
     auto control_rule =
         std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
     resource->rules.push_back(control_rule);
@@ -1733,7 +1898,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     }
     // vehicle
     for (auto &v : model["vehicles"]) {
-      // TODO 工厂
+      //  工厂
       auto vehicle = std::make_shared<kernel::driver::SimVehicle>(
           v["name"].get<std::string>());
       vehicle->length = v["length"].get<int>();
@@ -1755,11 +1920,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       ///////////////////////////
       dispatcher->vehicles.push_back(vehicle);
     }
-    // TODO blocks
 
-    // for (auto &v : model["blocks"]) {
-    // }
-    //
     CLOG(INFO, tcs_log) << "init resource ok";
     init_planner();
     scheduler->resource = resource;
@@ -1822,15 +1983,22 @@ std::string TCS::get_vehicles_step() {
     veh["step"] = json::array();
     veh["position"]["x"] = v->position.x;
     veh["position"]["y"] = v->position.y;
-    veh["envelope"]["type"] = v->envelope->name;
+    veh["envelope"]["type"] = v->envelope_key;
     veh["envelope"]["vertex"] = json::array();
-    for (auto &vertex : v->envelope->vertexs) {
-      json ver;
-      ver["x"] = vertex.x() * 1000;
-      ver["y"] = vertex.y() * 1000;
-      ver["z"] = vertex.z() * 1000;
-      veh["envelope"]["vertex"].push_back(ver);
+    for (auto &p : resource->points) {
+      for (auto &key : p->envelopes) {
+        if (v->envelope_key == key.first) {
+          auto e = static_cast<data::model::Envelope *>(key.second.get());
+          for (auto &vertex : e->vertexs) {
+            json ver;
+            ver["x"] = vertex.x() * 1000;
+            ver["y"] = vertex.y() * 1000;
+            veh["envelope"]["vertex"].push_back(ver);
+          }
+        }
+      }
     }
+
     if (v->current_order) {
       if (v->current_order->state ==
           data::order::TransportOrder::State::BEING_PROCESSED) {
@@ -1916,6 +2084,7 @@ std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
       } else {
         planner->reset_edge(x->name);
       }
+      reroute();
       return std::pair<int, std::string>(200, "");
     }
   }
@@ -1943,4 +2112,43 @@ std::pair<int, std::string> TCS::put_location_locked(
   auto msg = "Could not find location  '" + loc_name + "'.";
   res.push_back(msg);
   return std::pair<int, std::string>(404, res.dump());
+}
+
+void TCS::reroute() {
+  for (auto &v : dispatcher->vehicles) {
+    if (v->current_order) {
+      v->reroute();
+    }
+  }
+}
+
+std::pair<int, std::string> TCS::post_reroute() {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
+  reroute();
+  return std::pair<int, std::string>(200, "");
+}
+bool TCS::is_connect(std::shared_ptr<data::model::Point> a,
+                     std::shared_ptr<data::model::Point> b) {
+  return planner->find_paths(a, b).size() > 0;
+}
+
+std::pair<int, std::string> TCS::post_vehicle_reroute(const std::string &name,
+                                                      bool f) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
+  for (auto &v : dispatcher->vehicles) {
+    if (v->name == name) {
+      v->reroute();
+    }
+  }
+  return std::pair<int, std::string>(200, "");
 }

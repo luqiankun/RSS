@@ -20,8 +20,9 @@ class Vehicle : public schedule::Client,
  public:
   Vehicle(const std::string& n) : schedule::Client(n) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
+  enum proState { AWAITING_ORDER, IDEL, PROCESSING_ORDER };
   std::string get_state();
-
+  std::string get_process_state();
   void receive_task(std::shared_ptr<data::order::TransportOrder>);
   void next_command();
   void execute_move(
@@ -32,6 +33,7 @@ class Vehicle : public schedule::Client,
   void execute_instatn_action(std::shared_ptr<vda5050::instantaction::Action>);
   void command_done();  // 命令完成回调
   void plan_route();
+  void reroute();
   void get_next_ord();
   void run();
   void cancel_all_order();
@@ -57,9 +59,11 @@ class Vehicle : public schedule::Client,
   int engrgy_level_full{90};      // 满电
   int engerg_level{100};
   bool process_chargeing{false};
+  bool reroute_flag{false};
   std::string integration_level;
   std::string color;
   State state{State::UNKNOWN};
+  proState process_state{proState::IDEL};
   bool paused{false};
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
@@ -81,6 +85,7 @@ class Vehicle : public schedule::Client,
   uint32_t send_queue_size{2};
   bool instanttask_run{false};
   std::chrono::system_clock::time_point idle_time;
+  std::vector<std::string> allowed_order_type;
 };
 class SimVehicle : public Vehicle {
  public:

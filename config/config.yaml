@@ -11,8 +11,11 @@ log:
   to_stdout: true
 httpserver:
   ip: "0.0.0.0" # 默认所有ip都可连接
-  port: 8080
+  port: 55200
 tcs:
   auto_init:
     enable: false # 启动时是否自动加载一个地图
     xml_path: "config/map.xml" #绝对目录或相对执行文件目录
+  mqtt_addr:
+    host: "127.0.0.1" # mqtt服务器地址
+    port: 1883 # mqtt服务器端口

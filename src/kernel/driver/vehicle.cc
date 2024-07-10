@@ -178,9 +178,8 @@ Vehicle::~Vehicle() {
   close();
   CLOG(INFO, driver_log) << name << " close";
 }
-
+void Vehicle::reroute() { reroute_flag = true; }
 void Vehicle::plan_route() {
-  // TODO  solver
   auto start_planner = last_point;
   std::shared_ptr<data::model::Point> end_planner;
   for (auto& op : current_order->driverorders) {
@@ -215,6 +214,7 @@ void Vehicle::plan_route() {
       auto driverorder = orderpool.lock()->route_to_driverorder(
           resource.lock()->paths_to_route(path.front()), destination);
       driverorder->transport_order = current_order;
+      driverorder->state = data::order::DriverOrder::State::PRISTINE;
       op = driverorder;
       able = true;
     }
@@ -233,9 +233,9 @@ void Vehicle::get_next_ord() {
     } else {
       current_order = orders.front();
       orders.pop_front();
-      // TODO  solver
       if (current_order->state !=
           data::order::TransportOrder::State::BEING_PROCESSED) {
+        if (process_chargeing) process_chargeing = false;
         current_order.reset();
         continue;
       }
@@ -243,6 +243,7 @@ void Vehicle::get_next_ord() {
       plan_route();
       if (current_order->state ==
           data::order::TransportOrder::State::UNROUTABLE) {
+        if (process_chargeing) process_chargeing = false;
         current_order.reset();
         continue;
       } else {
@@ -254,13 +255,13 @@ void Vehicle::get_next_ord() {
     // state = State::EXECUTING;
     next_command();
   } else {
-    // TODO
+    process_state = proState::IDEL;
     if (process_chargeing) {
-      state = State::CHARGING;
       CLOG_IF(state != State::CHARGING, INFO, driver_log)
           << name << " "
           << "state transform to : [" << vehicle_state_to_str(State::CHARGING)
           << "]";
+      state = State::CHARGING;
     } else {
       CLOG_IF(state != State::IDLE, INFO, driver_log)
           << name << " "
@@ -275,12 +276,32 @@ void Vehicle::get_next_ord() {
 }
 
 void Vehicle::command_done() {
+  process_state = proState::AWAITING_ORDER;
   bool ord_shutdown{false};
+  if (reroute_flag) {
+    plan_route();
+    reroute_flag = false;
+  }
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     // 订单取消
     future_claim_resources.clear();
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " withdrawl.";
+    if (process_chargeing) {
+      process_chargeing = false;
+    }
+    current_order.reset();
+    get_next_ord();
+    return;
+  }
+  if (current_order->state == data::order::TransportOrder::State::UNROUTABLE) {
+    // 订单不可达
+    future_claim_resources.clear();
+    CLOG(ERROR, driver_log)
+        << name << " " << current_order->name << " unrouteable.";
+    if (process_chargeing) {
+      process_chargeing = false;
+    }
     current_order.reset();
     get_next_ord();
     return;
@@ -345,13 +366,22 @@ std::string Vehicle::get_state() {
     return "UNKNOWN";
   }
 }
-
+std::string Vehicle::get_process_state() {
+  if (process_state == proState::AWAITING_ORDER) {
+    return "AWAITING_ORDER";
+  } else if (process_state == proState::PROCESSING_ORDER) {
+    return "PROCESSING_ORDER";
+  } else if (process_state == proState::IDEL) {
+    return "IDLE";
+  } else {
+    return "UNKNOWN";
+  }
+}
 void Vehicle::next_command() {
   if (!current_order) {
     if (orders.empty()) {
     } else {
       current_order = orders.front();
-      // TODO  solver
       orders.pop_front();
       plan_route();
     }
@@ -363,31 +393,34 @@ void Vehicle::next_command() {
   if (current_order->state !=
       data::order::TransportOrder::State::BEING_PROCESSED) {
     current_order.reset();
+    if (process_chargeing) {
+      process_chargeing = false;
+    }
     get_next_ord();
     return;
   }
   current_command = scheduler.lock()->new_command(shared_from_this());
   // run
   scheduler.lock()->add_command(current_command);
+  process_state = proState::PROCESSING_ORDER;
 }
 void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
   CLOG(INFO, driver_log) << name << " receive new order " << order->name
                          << "\n";
-  if (state == State::ERROR) {  // TODO
+  if (state == State::ERROR) {
     order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " " << order->name
                             << " failed : " << name << " state is ERROR";
   } else if (state == State::UNAVAILABLE) {
-    // TODO
     order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " " << order->name
                             << " failed : " << name << " state is UNAVAILABLE";
   } else if (state == State::IDLE) {
-    // TODO
     CLOG_IF(state != State::EXECUTING, INFO, driver_log)
         << name << " state transform to : ["
         << vehicle_state_to_str(State::EXECUTING) << "]";
     state = State::EXECUTING;
+    process_state = proState::AWAITING_ORDER;
     if (current_order) {
       current_order->state = data::order::TransportOrder::State::WITHDRAWL;
     }
@@ -405,7 +438,7 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
   } else if (state == State::CHARGING) {
     orders.push_back(order);
     if (engerg_level > energy_level_good) {
-      // TODO stop 充电
+      //  stop 充电
       CLOG_IF(state != State::EXECUTING, INFO, driver_log)
           << name << " "
           << "state transform to : [" << vehicle_state_to_str(State::EXECUTING)

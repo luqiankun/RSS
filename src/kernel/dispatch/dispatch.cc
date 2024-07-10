@@ -11,7 +11,6 @@ namespace dispatch {
 
 std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
     std::shared_ptr<data::model::Point> start) {
-  // TODO 距离判断
   if (vehicles.empty()) {
     return nullptr;
   }
@@ -189,7 +188,6 @@ void Dispatcher::dispatch_once() {
     return;
   } else {
     if (current->state == data::order::TransportOrder::State::RAW) {
-      // TODO
       CLOG(INFO, dispatch_log) << current->name << " status: [raw]";
       if (current->driverorders.empty()) {
         current->state = data::order::TransportOrder::State::FINISHED;
@@ -200,7 +198,6 @@ void Dispatcher::dispatch_once() {
       }
     }
     if (current->state == data::order::TransportOrder::State::ACTIVE) {
-      // TODO
       auto v = current->intended_vehicle.lock();
       if (v) {
         // 订单指定了车辆
@@ -277,20 +274,25 @@ void Dispatcher::brake_deadlock(
 void Dispatcher::run() {
   dispatch_th = std::thread([&] {
     CLOG(INFO, dispatch_log) << this->name << " run....";
+    int con = 0;
     while (!dispose) {
-      idle_detect();
-      dispatch_once();
-      auto loop = deadlock_loop();
-      if (!loop.empty()) {
-        std::stringstream ss;
-        ss << "[";
-        for (auto& v : loop) {
-          ss << v->name << " ,";
+      if (con == 100) {
+        idle_detect();
+        auto loop = deadlock_loop();
+        if (!loop.empty()) {
+          std::stringstream ss;
+          ss << "[";
+          for (auto& v : loop) {
+            ss << v->name << " ,";
+          }
+          ss << "]";
+          CLOG_EVERY_N(10, ERROR, dispatch_log) << "deadlock --> " << ss.str();
+          brake_deadlock(loop);
         }
-        ss << "]";
-        CLOG_EVERY_N(100, ERROR, dispatch_log) << "deadlock --> " << ss.str();
-        brake_deadlock(loop);
+        con = 0;
       }
+      dispatch_once();
+      con++;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   });

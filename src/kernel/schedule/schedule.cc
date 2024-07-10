@@ -37,7 +37,6 @@ void Scheduler::add_command(std::shared_ptr<driver::Command> cmd) {
 }
 std::shared_ptr<driver::Command> Scheduler::new_command(
     std::shared_ptr<driver::Vehicle> v) {
-  // TODO
   if (!v->current_order) {
     CLOG(WARNING, "schedule") << "no ord there";
     return nullptr;

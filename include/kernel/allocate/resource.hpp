@@ -2,6 +2,7 @@
 #define RESOURCE_HPP
 #include "../../component/data/model/location.hpp"
 #include "../../component/data/model/path.hpp"
+#include "../../component/data/model/visuallayout.hpp"
 #include "../../component/data/order/orderquence.hpp"
 #include "../../component/util/timer.hpp"
 #include "../rule/rule.hpp"
@@ -39,7 +40,10 @@ class ResourceManager : public TCSObject {
   std::vector<std::shared_ptr<data::model::Point>> points;
   std::vector<std::shared_ptr<data::model::Location>> locations;
   std::vector<std::shared_ptr<data::model::LocationType>> location_types;
-  std::vector<std::shared_ptr<data::model::Envelope>> envelopes;
+  std::shared_ptr<data::model::VisualLayout> visual_layout;
+  std::function<bool(std::shared_ptr<data::model::Point>,
+                     std::shared_ptr<data::model::Point>)>
+      is_connected;
 
  public:
   std::vector<std::shared_ptr<RuleBase>> rules;

@@ -92,8 +92,10 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
                             std::shared_ptr<schedule::Client> client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : rules) {
+    // LOG(INFO) << r->name;
     if (!r->pass(res, client)) {
-      CLOG(WARNING, allocate_log) << r->name << " not pass of " << client->name;
+      DCLOG(WARNING, allocate_log)
+          << r->name << " not pass of " << client->name;
       return false;
     }
   }
@@ -104,7 +106,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
-        p->envelopes[client->name] = client->envelope;
+        p->envelope_keys.insert(client->envelope_key);
         client->claim_resources.insert(p);
         break;
       }
@@ -113,7 +115,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
-        p->envelopes[client->name] = client->envelope;
+        p->envelope_keys.insert(client->envelope_key);
         client->claim_resources.insert(p);
         break;
       }
@@ -122,7 +124,6 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
-        p->envelopes[client->name] = client->envelope;
         client->claim_resources.insert(p);
         break;
       }
@@ -156,8 +157,9 @@ bool ResourceManager::unclaim(
       if (r.get() == (*it).get()) {
         it = client->claim_resources.erase(it);
         r->owner.reset();
-        if (r->envelopes.find(client->name) != r->envelopes.end()) {
-          r->envelopes.erase(client->name);
+        if (r->envelope_keys.find(client->envelope_key) !=
+            r->envelope_keys.end()) {
+          r->envelope_keys.erase(client->envelope_key);
         }
       } else {
         it++;
@@ -194,40 +196,50 @@ std::shared_ptr<data::model::Point> ResourceManager::get_recent_park_point(
     std::shared_ptr<data::model::Point> cur) {
   // CLOG(INFO, "allocate") << "now" << cur->name << " " << cur->position;
   std::vector<double> dis;
-  for (auto& x : points) {
-    if (x != cur) {
-      if (x->type == data::model::Point::Type::PARK_POSITION) {
-        double D = (cur->position - x->position).norm();
-        dis.push_back(D);
-        // CLOG(INFO, "allocate") << x->position << " " << x->name << " " << D;
-      } else {
-        dis.push_back(std::numeric_limits<double>::max());
-      }
-    } else {
-      dis.push_back(std::numeric_limits<double>::max());
+  std::sort(points.begin(), points.end(),
+            [&](std::shared_ptr<data::model::Point>& a,
+                std::shared_ptr<data::model::Point>& b) {
+              double d1 = std::numeric_limits<double>::max();
+              double d2 = std::numeric_limits<double>::max();
+              d1 = (cur->position - a->position).norm();
+              d2 = (cur->position - b->position).norm();
+              return d1 < d2;
+            });
+  for (int i = 0; i < points.size(); i++) {
+    if (points.at(i)->type != data::model::Point::Type::PARK_POSITION) {
+      continue;
+    }
+    if (is_connected(cur, points.at(i))) {
+      return points.at(i);
     }
   }
-  auto min = std::min_element(dis.begin(), dis.end());
-  return points.at(min - dis.begin());
+  return nullptr;
 }
 std::shared_ptr<data::model::Location> ResourceManager::get_recent_charge_loc(
     std::shared_ptr<data::model::Point> cur) {
   std::vector<double> dis;
-  for (auto& x : locations) {
-    if (x->link.lock() != cur) {
-      if (x->type.lock()->allowed_ops.find("Charge") !=
-          x->type.lock()->allowed_ops.end()) {
-        double D = (cur->position - x->position).norm();
-        dis.push_back(D);
-      } else {
-        dis.push_back(std::numeric_limits<double>::max());
-      }
-    } else {
-      dis.push_back(std::numeric_limits<double>::max());
+  std::sort(locations.begin(), locations.end(),
+            [&](std::shared_ptr<data::model::Location>& a,
+                std::shared_ptr<data::model::Location>& b) {
+              double d1 = std::numeric_limits<double>::max();
+              double d2 = std::numeric_limits<double>::max();
+              d1 = (cur->position - a->position).norm();
+              d2 = (cur->position - b->position).norm();
+              return d1 < d2;
+            });
+  for (int i = 0; i < locations.size(); i++) {
+    if (locations.at(i)->type.lock()->allowed_ops.find("Charge") ==
+        locations.at(i)->type.lock()->allowed_ops.end()) {
+      continue;
+    }
+    if (!locations.at(i)->link.lock()) {
+      continue;
+    }
+    if (is_connected(cur, locations.at(i)->link.lock())) {
+      return locations.at(i);
     }
   }
-  auto min = std::min_element(dis.begin(), dis.end());
-  return locations.at(min - dis.begin());
+  return nullptr;
 }
 
 }  // namespace allocate

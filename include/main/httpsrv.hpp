@@ -34,6 +34,9 @@ class HTTPServer {
   std::function<TCSRep(std::string, bool)> put_path_locked;
   std::function<TCSRep(std::string, bool)> put_location_locked;
   std::function<TCSRep()> get_view;
+  std::function<TCSRep()> post_reroute;
+  std::function<TCSRep(std::string, bool)> post_vheicle_reroute;
+  std::function<TCSRep(std::string, bool)> pug_vehicle_enabled;
 
  public:
   std::string ip{"0.0.0.0"};

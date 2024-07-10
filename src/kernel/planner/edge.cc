@@ -121,7 +121,7 @@ void Edge::set_head(const VertexPtr &vertex) {
 }
 void Edge::set_weight(int w) { this->weight = w; }
 bool Edge::operator==(const EdgePtr &edge) {
-  // TODO(unknown): 判断两个边是否为同一个或者等价
+  // 判断两个边是否为同一个或者等价
   if (edge->name == this->name) {
     if (edge->weight == this->weight) {
       auto head_ptr = head.lock();

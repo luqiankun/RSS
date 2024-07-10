@@ -75,9 +75,9 @@
         class Block {
             constructor(obj) {
                 this.name = obj["name"];
-                this.color = obj["blockLayout"]["color"];
+                this.color = obj["layout"]["color"];
                 this.member = [];
-                for (let x of obj['member']) {
+                for (let x of obj['memberNames']) {
                     let v = {};
                     v['name'] = x["name"];
                     this.member.push(v);
@@ -189,7 +189,7 @@
                                 // console.log(order(select_vehicle, point.name, "MOVE"))
                                 let Http = new XMLHttpRequest();
                                 let ip = document.getElementById("ip_btn").value;
-                                Http.open('POST', 'http://' + ip + '/transportOrders/Torder_' + format(new Date().getTime()), true);
+                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + format(new Date().getTime()), true);
                                 Http.onload = function () {
                                     if (Http.readyState == 4 && Http.status == 200) {
                                         console.log("send order ok");
@@ -208,7 +208,7 @@
                             if (Math.abs(x - event.offsetX) < 20 && Math.abs(y - event.offsetY) < 20) {
                                 let Http = new XMLHttpRequest();
                                 let ip = document.getElementById("ip_btn").value;
-                                Http.open('POST', 'http://' + ip + '/transportOrders/Torder_' + format(new Date().getTime()), true);
+                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + format(new Date().getTime()), true);
                                 Http.onload = function () {
                                     if (Http.readyState == 4 && Http.status == 200) {
                                         console.log("send order ok");
@@ -333,7 +333,7 @@
                         let h = 2 * S / dist_se;
                         if (h < 5 && dist_st > 5 && dist_ed > 5) {
                             let req = new XMLHttpRequest()
-                            let url = "/paths/" + path.name + "/locked?"
+                            let url = "/v1/paths/" + path.name + "/locked?"
                             let queryParams = "newValue=";
                             if (path.locked) {
                                 queryParams += "false"
@@ -363,7 +363,7 @@
                         let dist = Math.sqrt((x - m_x) * (x - m_x) + (y - m_y) * (y - m_y))
                         if (dist < 5) {
                             let req = new XMLHttpRequest()
-                            let url = "/locations/" + loc.name + "/locked?"
+                            let url = "/v1/locations/" + loc.name + "/locked?"
                             let queryParams = "newValue=";
                             if (loc.locked) {
                                 queryParams += "false"
@@ -483,7 +483,7 @@
                 document.getElementById('ip_btn').value = "";
                 return
             }
-            Http.open('GET', 'http://' + ip + '/plantModel', true);
+            Http.open('GET', 'http://' + ip + '/v1/plantModel', true);
             // console.log('http://' + ip + '/plantModel')
             Http.withCredentials = false;
             Http.onload = function () {
@@ -518,7 +518,7 @@
                         let y = loc["layout"]["position"]["y"];
                         let name = loc["name"];
                         let locked = loc["locked"];
-                        let link = loc["links"][0];
+                        let link = loc["links"][0] ? loc["links"][0] : null;
                         let type = loc["typeName"]
                         let p = new Location(name, x, y, link, type);
                         p.locked = locked;
@@ -574,7 +574,7 @@
                 document.getElementById('ip_btn').value = "";
                 return
             }
-            Http.open('GET', 'http://' + ip + '/getView', true);
+            Http.open('GET', 'http://' + ip + '/v1/getView', true);
             Http.withCredentials = false;
             Http.onload = function () {
                 if (Http.readyState == 4 && Http.status == 200) {
@@ -608,7 +608,7 @@
             let Http = new XMLHttpRequest();
             let ip = document.getElementById("ip_btn").value;
 
-            Http.open('GET', 'http://' + ip + '/transportOrders', true);
+            Http.open('GET', 'http://' + ip + '/v1/transportOrders', true);
             Http.withCredentials = false;
             Http.onload = function () {
                 if (Http.readyState == 4 && Http.status == 200) {
@@ -805,9 +805,6 @@
                     }
                     let start_x = (loc.x - xmin) / resolution;
                     let start_y = canvas.height - (loc.y - ymin) / resolution;
-                    let link = get_point(loc.link);
-                    let link_x = (link.x - xmin) / resolution;
-                    let link_y = canvas.height - (link.y - ymin) / resolution;
                     ctx.beginPath()
                     ctx.lineWidth = 1 * (50 / resolution);
                     if (ctx.lineWidth < 1) {
@@ -827,6 +824,12 @@
                     ctx.stroke()
                     ctx.lineWidth = 1 * (50 / resolution);
                     ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
+                    let link = get_point(loc.link);
+                    if (link == null) {
+                        continue
+                    }
+                    let link_x = (link.x - xmin) / resolution;
+                    let link_y = canvas.height - (link.y - ymin) / resolution;
                     let len = Math.sqrt((link_x - start_x) * (link_x - start_x) + (link_y - start_y) * (link_y - start_y));
                     let norm_x = (link_x - start_x) / len;
                     let norm_y = (link_y - start_y) / len;
@@ -1014,7 +1017,7 @@
                 // console.log(xmlDoc)
                 let http = new XMLHttpRequest();
                 let ip = document.getElementById("ip_btn").value;
-                http.open("PUT", "http://" + ip + "/plantModel?type=xml", true);
+                http.open("PUT", "http://" + ip + "/v1/plantModel?type=xml", true);
                 http.onload = function () {
                     if (http.readyState == 4 && http.status == 200) {
                         // console.log("send order ok");
@@ -1036,7 +1039,7 @@
 <body onload="start()">
     <div class="main">
         <div class="ip">
-            <input type="text" id="ip_btn" class="label" value="127.0.0.1:8080" placeholder="服务器地址：端口号">
+            <input type="text" id="ip_btn" class="label" value="127.0.0.1:55200" placeholder="服务器地址：端口号">
         </div>
         <div>
             <button class="button" id="ok_btn" onclick="clicked()">确定</button>

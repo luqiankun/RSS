@@ -12,7 +12,7 @@ class Client : public TCSObject {
   std::unordered_set<std::shared_ptr<TCSResource>> allocate_resources;
   std::unordered_set<std::shared_ptr<TCSResource>> claim_resources;
   std::unordered_set<std::shared_ptr<TCSResource>> future_claim_resources;
-  std::shared_ptr<data::model::Envelope> envelope;
+  std::string envelope_key;
 };
 class Scheduler : public TCSObject,
                   public std::enable_shared_from_this<Scheduler> {

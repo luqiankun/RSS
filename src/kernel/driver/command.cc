@@ -23,6 +23,18 @@ void Command::run_once() {
     if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
       state = State::EXECUTED;
     } else {
+      // TODO 预分配资源
+      auto driver_order = order->driverorders[order->current_driver_index];
+      std::vector<std::shared_ptr<TCSResource>> allocated;
+      allocated.push_back(driver_order->destination->destination.lock());
+      for (auto& x : driver_order->route->steps) {
+        allocated.push_back(x->path->source_point.lock());
+        allocated.push_back(x->path);
+      }
+      allocated.push_back(
+          (driver_order->route->steps[driver_order->route->steps.size() - 1])
+              ->path->destination_point.lock());
+      scheduler.lock()->resource.lock()->allocate(allocated, veh);
       state = State::CLAIMING;
     }
   } else if (state == State::CLAIMING) {
@@ -71,7 +83,7 @@ void Command::run_once() {
           }
         }
         if (scheduler.lock()->resource.lock()->claim(temp, veh)) {
-          // TODO 添加future_claim
+          //  添加future_claim
           for (auto& x : get_future(driver_order)) {
             bool has{false};
             for (auto& c : veh->claim_resources) {
@@ -166,6 +178,11 @@ void Command::vehicle_execute_cb(bool ret) {
       } else {
         driver_order->state = data::order::DriverOrder::State::FAILED;
       }
+      scheduler.lock()->resource.lock()->free(
+          std::vector<std::shared_ptr<TCSResource>>(
+              vehicle.lock()->allocate_resources.begin(),
+              vehicle.lock()->allocate_resources.end()),
+          vehicle.lock());
     }
     state = State::EXECUTED;
   }

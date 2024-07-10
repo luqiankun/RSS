@@ -24,11 +24,14 @@ uint32_t log_max_num{5};
 // auto init
 bool init_enable{false};
 std::string init_xml_path{""};
+// mqtt value
+std::string mqtt_ip{"127.0.0.1"};
+int mqtt_port{1883};
 
 // http value
 
 std::string http_ip{"0.0.0.0"};
-int http_port{8080};
+int http_port{55200};
 
 std::regex reg{R"(^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$)"};
 
@@ -68,6 +71,12 @@ void read_params(std::string path) {
     }
     if (!root["tcs"]["auto_init"]["xml_path"].IsNone()) {
       init_xml_path = root["tcs"]["auto_init"]["xml_path"].As<std::string>();
+    }
+    if (!root["tcs"]["mqtt_addr"]["host"].IsNone()) {
+      init_xml_path = root["tcs"]["mqtt_addr"]["host"].As<std::string>();
+    }
+    if (!root["tcs"]["mqtt_addr"]["port"].IsNone()) {
+      init_xml_path = root["tcs"]["mqtt_addr"]["port"].As<int>();
     }
     CLOG(INFO, tcs_log) << "read param success";
   } catch (Yaml::Exception& ec) {
@@ -145,7 +154,7 @@ int main(int argc, char** argv) {
           ghc::filesystem::remove(ghc::filesystem::path(log_path) / obj);
         }
       });
-  auto tcs = std::make_shared<TCS>();
+  auto tcs = std::make_shared<TCS>(mqtt_ip, mqtt_port);
   auto srv = std::make_shared<HTTPServer>();
   {
     std::smatch m;
@@ -195,6 +204,10 @@ int main(int argc, char** argv) {
     srv->get_view = std::bind(&TCS::get_view, tcs);
     srv->put_vehicle_paused =
         std::bind(&TCS::put_vehicle_paused, tcs, std::placeholders::_1,
+                  std::placeholders::_2);
+    srv->post_reroute = std::bind(&TCS::post_reroute, tcs);
+    srv->post_vheicle_reroute =
+        std::bind(&TCS::post_vehicle_reroute, tcs, std::placeholders::_1,
                   std::placeholders::_2);
   }
   std::thread th{[&] { srv->listen(); }};

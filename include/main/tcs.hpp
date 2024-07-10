@@ -23,6 +23,7 @@ inline std::string get_log_name(const std::string& path) {
 using json = nlohmann::json;
 class TCS : public std::enable_shared_from_this<TCS> {
  public:
+  TCS(const std::string& ip, int port) : ip(ip), port(port) {}
   // init
   // http interface
 
@@ -58,12 +59,16 @@ class TCS : public std::enable_shared_from_this<TCS> {
                                                   bool new_value);
   std::pair<int, std::string> put_model_xml(const std::string& body);
   std::pair<int, std::string> get_view();
+  std::pair<int, std::string> post_reroute();
+  std::pair<int, std::string> post_vehicle_reroute(const std::string&, bool);
 
  public:
   bool init_dispatcher();
   bool init_scheduler();
   bool init_orderpool();
   bool init_planner();
+  bool is_connect(std::shared_ptr<data::model::Point>,
+                  std::shared_ptr<data::model::Point>);
   void home_order(const std::string& name,
                   std::shared_ptr<kernel::driver::Vehicle> v);
   void charge_order(const std::string& name,
@@ -73,15 +78,18 @@ class TCS : public std::enable_shared_from_this<TCS> {
   void cancel_vehicle_all_order(
       const std::string& vehicle_name);  // 取消某辆车所有订单
   void run();
-  void add_vehicle(const std::string& type, const std::string& name);  // TODO
+  void add_vehicle(const std::string& type, const std::string& name);
   void paused_vehicle(const std::string& name);
   void recovery_vehicle(const std::string& name);
   std::string get_vehicles_step();
+  void reroute();
   void stop();
   ~TCS();
 
  public:
   bool is_run{false};
+  std::string ip;
+  int port;
   std::shared_ptr<kernel::allocate::ResourceManager> resource;
   std::shared_ptr<kernel::schedule::Scheduler> scheduler;
   std::shared_ptr<kernel::dispatch::Dispatcher> dispatcher;
