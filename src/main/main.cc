@@ -209,6 +209,15 @@ int main(int argc, char** argv) {
     srv->post_vheicle_reroute =
         std::bind(&TCS::post_vehicle_reroute, tcs, std::placeholders::_1,
                   std::placeholders::_2);
+    srv->put_vehicle_enabled =
+        std::bind(&::TCS::put_vehicle_enable, tcs, std::placeholders::_1,
+                  std::placeholders::_2);
+    srv->put_vehicle_integration_level =
+        std::bind(&::TCS::put_vehicle_integration_level, tcs,
+                  std::placeholders::_1, std::placeholders::_2);
+    srv->post_vehicle_path_to_point =
+        std::bind(&::TCS::post_vehicle_path_to_point, tcs,
+                  std::placeholders::_1, std::placeholders::_2);
   }
   std::thread th{[&] { srv->listen(); }};
   signal(SIGINT, signalHandler);

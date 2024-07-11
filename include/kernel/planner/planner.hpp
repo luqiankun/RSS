@@ -42,6 +42,10 @@ class Planner {
   find_second_paths(const std::shared_ptr<data::model::Point> &begin,
                     const std::shared_ptr<data::model::Point> &end);
 
+  //
+  std::vector<std::vector<std::shared_ptr<data::model::Point>>> to_model_path(
+      std::vector<std::pair<std::vector<VertexPtr>, double>> src);
+
  public:
   std::weak_ptr<allocate::ResourceManager> res;
   std::vector<VertexPtr> vertexs;    // 顶点

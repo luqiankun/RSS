@@ -36,7 +36,9 @@ class HTTPServer {
   std::function<TCSRep()> get_view;
   std::function<TCSRep()> post_reroute;
   std::function<TCSRep(std::string, bool)> post_vheicle_reroute;
-  std::function<TCSRep(std::string, bool)> pug_vehicle_enabled;
+  std::function<TCSRep(std::string, bool)> put_vehicle_enabled;
+  std::function<TCSRep(std::string, std::string)> put_vehicle_integration_level;
+  std::function<TCSRep(std::string, std::string)> post_vehicle_path_to_point;
 
  public:
   std::string ip{"0.0.0.0"};

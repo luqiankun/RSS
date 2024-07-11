@@ -236,7 +236,6 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
             bool use_xml{false};
             if (req.has_param("type")) {
               use_xml = req.get_param_value("type") == "xml" ? true : false;
-              LOG(INFO) << "---------------------";
             }
             if (use_xml) {
               auto ret = put_model_xml(req.body);
@@ -314,12 +313,47 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
                res.set_content(ret.second, "application/json");
              }
            });
-  srv.Post(url_prefix + R"(/vehicles/[^/]+)/rerouteRequest)",
+  srv.Post(url_prefix + R"(/vehicles/([^/]+)/rerouteRequest)",
            [=](const httplib::Request &req, httplib::Response &res) {
              bool forced =
                  req.get_param_value("forced") == "true" ? true : false;
              std::string name = *(req.matches.end() - 1);
              auto ret = post_vheicle_reroute(name, forced);
+             res.status = ret.first;
+             if (!ret.second.empty()) {
+               res.set_content(ret.second, "application/json");
+             }
+           });
+  srv.Put(url_prefix + R"(/vehicles/([^/]+)/commAdapter/enabled)",
+          [=](const httplib::Request &req, httplib::Response &res) {
+            bool f = req.get_param_value("newValue") == "true" ? true : false;
+            std::string name = *(req.matches.end() - 1);
+            auto ret = put_vehicle_enabled(name, f);
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
+            }
+          });
+  srv.Options(url_prefix + R"(/vehicles/([^/]+)/commAdapter/enabled)",
+              [=](const httplib::Request &req, httplib::Response &res) {
+                res.set_header("Access-Control-Allow-Methods", "PUT");
+                res.status = 200;
+              });
+  srv.Put(url_prefix + R"(/vehicles/([^/]+)/integrationLevel)",
+          [=](const httplib::Request &req, httplib::Response &res) {
+            std::string f = req.get_param_value("newValue");
+            std::string name = *(req.matches.end() - 1);
+            auto ret = put_vehicle_integration_level(name, f);
+            res.status = ret.first;
+            if (!ret.second.empty()) {
+              res.set_content(ret.second, "application/json");
+            }
+          });
+  srv.Post(url_prefix + R"(/vehicles/([^/]+)/routeComputationQuery)",
+           [=](const httplib::Request &req, httplib::Response &res) {
+             std::string f = req.body;
+             std::string name = *(req.matches.end() - 1);
+             auto ret = post_vehicle_path_to_point(name, f);
              res.status = ret.first;
              if (!ret.second.empty()) {
                res.set_content(ret.second, "application/json");

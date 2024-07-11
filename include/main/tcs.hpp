@@ -61,6 +61,11 @@ class TCS : public std::enable_shared_from_this<TCS> {
   std::pair<int, std::string> get_view();
   std::pair<int, std::string> post_reroute();
   std::pair<int, std::string> post_vehicle_reroute(const std::string&, bool);
+  std::pair<int, std::string> put_vehicle_enable(const std::string&, bool);
+  std::pair<int, std::string> put_vehicle_integration_level(const std::string&,
+                                                            const std::string&);
+  std::pair<int, std::string> post_vehicle_path_to_point(const std::string&,
+                                                         const std::string&);
 
  public:
   bool init_dispatcher();

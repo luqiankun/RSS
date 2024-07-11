@@ -19,7 +19,7 @@ class Vehicle : public schedule::Client,
                 public std::enable_shared_from_this<Vehicle> {
  public:
   Vehicle(const std::string& n) : schedule::Client(n) {}
-  enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
+  enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDEL, EXECUTING, CHARGING };
   enum proState { AWAITING_ORDER, IDEL, PROCESSING_ORDER };
   std::string get_state();
   std::string get_process_state();
@@ -65,6 +65,7 @@ class Vehicle : public schedule::Client,
   State state{State::UNKNOWN};
   proState process_state{proState::IDEL};
   bool paused{false};
+
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<allocate::ResourceManager> resource;

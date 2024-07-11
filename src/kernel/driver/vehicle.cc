@@ -38,7 +38,7 @@ std::string vehicle_state_to_str(Vehicle::State state) {
   } else if (state == Vehicle::State::ERROR) {
     res = "ERROR";
 
-  } else if (state == Vehicle::State::IDLE) {
+  } else if (state == Vehicle::State::IDEL) {
     res = "IDLE";
 
   } else if (state == Vehicle::State::EXECUTING) {
@@ -263,11 +263,11 @@ void Vehicle::get_next_ord() {
           << "]";
       state = State::CHARGING;
     } else {
-      CLOG_IF(state != State::IDLE, INFO, driver_log)
+      CLOG_IF(state != State::IDEL, INFO, driver_log)
           << name << " "
-          << "state transform to : [" << vehicle_state_to_str(State::IDLE)
+          << "state transform to : [" << vehicle_state_to_str(State::IDEL)
           << "]";
-      state = State::IDLE;
+      state = State::IDEL;
       idle_time = std::chrono::system_clock::now();
       CLOG(INFO, driver_log) << name << " "
                              << "now is idle " << get_time_fmt(idle_time);
@@ -348,7 +348,7 @@ void Vehicle::command_done() {
 }
 
 std::string Vehicle::get_state() {
-  if (state == State::IDLE) {
+  if (state == State::IDEL) {
     return "IDLE";
   } else if (state == State::EXECUTING) {
     return "EXECUTING";
@@ -415,7 +415,7 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
     order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " " << order->name
                             << " failed : " << name << " state is UNAVAILABLE";
-  } else if (state == State::IDLE) {
+  } else if (state == State::IDEL) {
     CLOG_IF(state != State::EXECUTING, INFO, driver_log)
         << name << " state transform to : ["
         << vehicle_state_to_str(State::EXECUTING) << "]";
@@ -642,7 +642,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       auto last_state = state;
       if (state == Vehicle::State::UNKNOWN) {
         if (veh_state == vda5050::VehicleMqttStatus::ONLINE) {
-          state = State::IDLE;
+          state = State::IDEL;
           idle_time = std::chrono::system_clock::now();
         }
       }
@@ -657,7 +657,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       if (process_chargeing) {
         if (engerg_level > engrgy_level_full &&
             state == Vehicle::State::CHARGING) {
-          state = Vehicle::State::IDLE;
+          state = Vehicle::State::IDEL;
           idle_time = std::chrono::system_clock::now();
           process_chargeing = false;
         }

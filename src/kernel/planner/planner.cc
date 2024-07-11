@@ -298,7 +298,8 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
   return res;
 }
 
-std::vector<std::vector<std::shared_ptr<data::model::Point>>> to_model_path(
+std::vector<std::vector<std::shared_ptr<data::model::Point>>>
+Planner::to_model_path(
     std::vector<std::pair<std::vector<VertexPtr>, double>> src) {
   std::vector<std::vector<std::shared_ptr<data::model::Point>>> res;
   for (auto &x : src) {

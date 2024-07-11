@@ -26,7 +26,7 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
     v_pos = v->position;
     // if (v->state == driver::Vehicle::State::IDLE &&
     //     v->proc_state == driver::Vehicle::ProcState::AWAITING_ORDER) {
-    if (v->state == driver::Vehicle::State::IDLE) {
+    if (v->state == driver::Vehicle::State::IDEL) {
       if (!v->paused) {
         idle_temp.push_back(std::pair(v_pos, v));
       }
@@ -160,14 +160,14 @@ void Dispatcher::idle_detect() {
                     "_" + v->name + "_goto_charge",
                 v);
     } else if (v->engerg_level <= v->energy_level_good) {
-      if (v->state == driver::Vehicle::State::IDLE) {
+      if (v->state == driver::Vehicle::State::IDEL) {
         go_charge("TOder_" + std::to_string(now.time_since_epoch().count()) +
                       "_" + v->name + "_goto_charge",
                   v);
       }
     } else {
       //
-      if (v->state == driver::Vehicle::State::IDLE) {
+      if (v->state == driver::Vehicle::State::IDEL) {
         auto dt = now - v->idle_time;
         auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
         if (dt_s.count() > 5) {

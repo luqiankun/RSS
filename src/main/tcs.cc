@@ -1308,7 +1308,7 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
     if (state == "IDLE") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
-        if (v->state == kernel::driver::Vehicle::State::IDLE) {
+        if (v->state == kernel::driver::Vehicle::State::IDEL) {
           res.push_back(vehicle_to_json(v));
         }
       }
@@ -1683,244 +1683,348 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     if (model.contains("name")) {
       resource->model_name = model["name"].get<std::string>();
     }
+    // visuallayout
+    {
+      auto visuallayout = std::make_shared<data::model::VisualLayout>(
+          model["visualLayout"]["name"].get<std::string>());
+      resource->visual_layout = visuallayout;
+      visuallayout->scale_x = model["visualLayout"]["scaleX"].get<double>();
+      visuallayout->scale_y = model["visualLayout"]["scaleY"].get<double>();
+      for (auto &x : model["visualLayout"]["layers"]) {
+        auto layer = data::model::VisualLayout::Layer();
+        layer.id = x["id"].get<int>();
+        layer.ordinal = x["ordinal"].get<int>();
+        layer.visible = x["visible"].get<bool>();
+        layer.name = x["name"].get<std::string>();
+        layer.group_id = x["groupId"].get<int>();
+        visuallayout->layers.push_back(layer);
+      }
+      for (auto &x : model["visualLayout"]["layerGroups"]) {
+        auto layer_group = data::model::VisualLayout::LayerGroup();
+        layer_group.id = x["id"].get<int>();
+        layer_group.name = x["name"].get<std::string>();
+        layer_group.visible = x["visible"].get<bool>();
+        visuallayout->layer_groups.push_back(layer_group);
+      }
+      for (auto &x : model["visualLayout"]["properties"]) {
+        visuallayout->properties.insert(std::pair<std::string, std::string>(
+            x["name"].get<std::string>(), x["value"].get<std::string>()));
+      }
+    }
     // point
-    for (auto &p : model["points"]) {
-      auto point =
-          std::make_shared<data::model::Point>(p["name"].get<std::string>());
-      point->position.x = p["position"]["x"].get<int>();
-      point->position.y = p["position"]["y"].get<int>();
-      point->position.z = p["position"]["z"].get<int>();
-      if (p.contains("vehicleOrientationAngle")) {
-        if (!p["vehicleOrientationAngle"].is_string())
-          point->client_angle = p["vehicleOrientationAngle"].get<int>();
-        else {
-          point->client_angle = 0;
-        }
-      }
-      point->type = data::model::Point::new_type(p["type"].get<std::string>());
-      point->layout.position.x = p["layout"]["position"]["x"].get<int>();
-      point->layout.position.y = p["layout"]["position"]["y"].get<int>();
-      point->layout.label_offset.x = p["layout"]["labelOffset"]["x"].get<int>();
-      point->layout.label_offset.y = p["layout"]["labelOffset"]["y"].get<int>();
-      point->layout.layer_id = p["layout"]["layerId"].get<int>();
-      if (p.contains("properties")) {
-        for (auto &pro : p["properties"]) {
-          std::string value;
-          if (pro["value"].is_boolean()) {
-            if (pro["value"].get<bool>()) {
-              value = "true";
-            } else {
-              value = "false";
-            }
-          } else {
-            value = pro["value"].get<std::string>();
+    {
+      for (auto &p : model["points"]) {
+        auto point =
+            std::make_shared<data::model::Point>(p["name"].get<std::string>());
+        point->position.x = p["position"]["x"].get<int>();
+        point->position.y = p["position"]["y"].get<int>();
+        point->position.z = p["position"]["z"].get<int>();
+        if (p.contains("vehicleOrientationAngle")) {
+          if (!p["vehicleOrientationAngle"].is_string())
+            point->client_angle = p["vehicleOrientationAngle"].get<int>();
+          else {
+            point->client_angle = 0;
           }
-          point->properties.insert(std::pair<std::string, std::string>(
-              pro["name"].get<std::string>(), value));
         }
+        point->type =
+            data::model::Point::new_type(p["type"].get<std::string>());
+        point->layout.position.x = p["layout"]["position"]["x"].get<int>();
+        point->layout.position.y = p["layout"]["position"]["y"].get<int>();
+        point->layout.label_offset.x =
+            p["layout"]["labelOffset"]["x"].get<int>();
+        point->layout.label_offset.y =
+            p["layout"]["labelOffset"]["y"].get<int>();
+        point->layout.layer_id = p["layout"]["layerId"].get<int>();
+        if (p.contains("properties")) {
+          for (auto &pro : p["properties"]) {
+            std::string value;
+            if (pro["value"].is_boolean()) {
+              if (pro["value"].get<bool>()) {
+                value = "true";
+              } else {
+                value = "false";
+              }
+            } else {
+              value = pro["value"].get<std::string>();
+            }
+            point->properties.insert(std::pair<std::string, std::string>(
+                pro["name"].get<std::string>(), value));
+          }
+        }
+        for (auto &x : p["vehicleEnvelope"]) {
+          auto envelope = std::make_shared<data::model::Envelope>(
+              x["envelopeKey"].get<std::string>());
+          for (auto &v : p["vehicleEnvelope"]["vertices"]) {
+            envelope->add_vertex(v["x"].get<double>(), v["y"].get<double>());
+          }
+          point->envelopes.insert(
+              std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
+                  x["envelopeKey"].get<std::string>(), envelope));
+        }
+        resource->points.push_back(point);
       }
-      resource->points.push_back(point);
+      CLOG(INFO, tcs_log) << "init point size " << resource->points.size();
     }
-    CLOG(INFO, tcs_log) << resource->points.size() << " point";
-
     // locationtype
-    for (auto &x : model["locationTypes"]) {
-      auto type = std::make_shared<data::model::LocationType>(
-          x["name"].get<std::string>());
-      type->layout.location_representation = data::model::new_location_type(
-          x["layout"]["locationRepresentation"].get<std::string>());
-      for (auto &pro : x["property"]) {
-        auto key = pro["name"].get<std::string>();
-        auto value = pro["value"].get<std::string>();
-        type->properties.insert(
-            std::pair<std::string, std::string>(key, value));
+    {
+      for (auto &x : model["locationTypes"]) {
+        auto type = std::make_shared<data::model::LocationType>(
+            x["name"].get<std::string>());
+        type->layout.location_representation = data::model::new_location_type(
+            x["layout"]["locationRepresentation"].get<std::string>());
+        for (auto &pro : x["property"]) {
+          auto key = pro["name"].get<std::string>();
+          auto value = pro["value"].get<std::string>();
+          type->properties.insert(
+              std::pair<std::string, std::string>(key, value));
+        }
+        for (auto &allow : x["allowedOperation"]) {
+          type->allowed_ops[allow] = std::map<std::string, std::string>();
+        }
+        for (auto &allow : x["allowedPeripheralOperation"]) {
+          type->allowrd_per_ops[allow] = std::map<std::string, std::string>();
+        }
+        type->get_param();
+        resource->location_types.push_back(type);
       }
-      for (auto &allow : x["allowedOperation"]) {
-        type->allowed_ops[allow] = std::map<std::string, std::string>();
-      }
-      for (auto &allow : x["allowedPeripheralOperation"]) {
-        type->allowrd_per_ops[allow] = std::map<std::string, std::string>();
-      }
-      type->get_param();
-      resource->location_types.push_back(type);
+      CLOG(INFO, tcs_log) << "init loc_type size "
+                          << resource->location_types.size();
     }
-    CLOG(INFO, tcs_log) << resource->location_types.size() << " locationtype";
     // location
-    for (auto &l : model["locations"]) {
-      auto loc =
-          std::make_shared<data::model::Location>(l["name"].get<std::string>());
-      loc->position.x = l["position"]["x"].get<int>();
-      loc->position.y = l["position"]["y"].get<int>();
-      loc->position.z = l["position"]["z"].get<int>();
-      if (!l["links"].empty()) {
-        auto p_name = l["links"].front()["pointName"].get<std::string>();
-        for (auto &x : resource->points) {
-          if (x->name == p_name) {
-            loc->link = x;
-          }
-        }
-      }
-      loc->locked = l["locked"].get<bool>();
-      loc->layout.position.x = l["layout"]["position"]["x"].get<int>();
-      loc->layout.position.y = l["layout"]["position"]["y"].get<int>();
-      loc->layout.label_offset.x = l["layout"]["labelOffset"]["x"].get<int>();
-      loc->layout.label_offset.y = l["layout"]["labelOffset"]["y"].get<int>();
-      loc->layout.layer_id = l["layout"]["layerId"].get<int>();
-      for (auto &x : resource->location_types) {
-        if (x->name == l["typeName"].get<std::string>()) {
-          loc->type = x;
-        }
-      }
-      // if (l["layout"].contains("locationRepresentation")) {
-      //   loc->type.layout.location_representation =
-      //       data::model::Location::new_location_type(
-      //           l["layout"]["locationRepresentation"].get<std::string>());
-      // }
-      resource->locations.push_back(loc);
-    }
-    CLOG(INFO, tcs_log) << resource->locations.size() << " location";
-    // path
-    for (auto &p : model["paths"]) {
-      auto path = std::make_shared<data::model::Path>(p["name"]);
-      path->max_vel = p["maxVelocity"].get<int>();
-      path->max_reverse_vel = p["maxReverseVelocity"].get<int>();
-      if (p.contains("locked")) {
-        path->locked = p["locked"].get<bool>();
-      }
-      for (auto &x : resource->points) {
-        if (x->name == p["srcPointName"].get<std::string>()) {
-          path->source_point = x;
-          x->incoming_paths.push_back(path);
-        }
-        if (x->name == p["destPointName"].get<std::string>()) {
-          path->destination_point = x;
-          x->outgoing_paths.push_back(path);
-        }
-      }
-      path->layout.layer_id = p["layout"]["layerId"].get<int>();
-      path->layout.connect_type =
-          data::model::Path::new_connect_type(p["layout"]["connectionType"]);
-      if (p.contains("properties")) {
-        for (auto &pro : p["properties"]) {
-          std::string value;
-          if (pro["value"].is_boolean()) {
-            if (pro["value"].get<bool>()) {
-              value = "true";
-            } else {
-              value = "false";
+    {
+      for (auto &l : model["locations"]) {
+        auto loc = std::make_shared<data::model::Location>(
+            l["name"].get<std::string>());
+        loc->position.x = l["position"]["x"].get<int>();
+        loc->position.y = l["position"]["y"].get<int>();
+        loc->position.z = l["position"]["z"].get<int>();
+        if (!l["links"].empty()) {
+          auto p_name = l["links"].front()["pointName"].get<std::string>();
+          for (auto &x : resource->points) {
+            if (x->name == p_name) {
+              loc->link = x;
             }
-          } else {
-            value = pro["value"].get<std::string>();
           }
-          path->properties.insert(std::pair<std::string, std::string>(
-              pro["name"].get<std::string>(), value));
         }
+        loc->locked = l["locked"].get<bool>();
+        loc->layout.position.x = l["layout"]["position"]["x"].get<int>();
+        loc->layout.position.y = l["layout"]["position"]["y"].get<int>();
+        loc->layout.label_offset.x = l["layout"]["labelOffset"]["x"].get<int>();
+        loc->layout.label_offset.y = l["layout"]["labelOffset"]["y"].get<int>();
+        loc->layout.layer_id = l["layout"]["layerId"].get<int>();
+        for (auto &x : resource->location_types) {
+          if (x->name == l["typeName"].get<std::string>()) {
+            loc->type = x;
+            for (auto &a_op : x->allowed_ops) {
+              for (auto &per : loc->properties) {
+                a_op.second.insert(per);
+              }
+            }
+            for (auto &a_op : x->allowrd_per_ops) {
+              for (auto &per : loc->properties) {
+                a_op.second.insert(per);
+              }
+            }
+          }
+        }
+        if (l["layout"].contains("locationRepresentation")) {
+          loc->type.lock()->layout.location_representation =
+              data::model::new_location_type(
+                  l["layout"]["locationRepresentation"].get<std::string>());
+        }
+        for (auto &pro : l["property"]) {
+          auto key = pro["name"].get<std::string>();
+          auto value = pro["value"].get<std::string>();
+          loc->properties.insert(
+              std::pair<std::string, std::string>(key, value));
+        }
+        resource->locations.push_back(loc);
       }
-      if (!p.contains("length")) {
-        path->length = (path->source_point.lock()->position -
-                        path->destination_point.lock()->position)
-                           .norm();
-      }
-      //
-      data::model::Actions acts(path->properties);
-      {
-        if (p.contains("peripheralOperation")) {
-          for (auto &op : p["peripheralOperation"]) {
-            auto per_op_name = op["name"].get<std::string>();
-            auto wait = op["completionRequired"].get<bool>() ? "SOFT" : "NONE";
-            auto when = op["executionTrigger"].get<std::string>();
-            auto link_loc_name = op["locationName"].get<std::string>();
-            for (auto &loc : resource->locations) {
-              if (loc->name == link_loc_name) {
-                if (loc->type.lock()->allowrd_per_ops.find(per_op_name) !=
-                    loc->type.lock()->allowrd_per_ops.end()) {
-                  // exist
-                  data::model::Actions::Action act;
-                  act.params.insert(loc->properties.begin(),
-                                    loc->properties.end());
-                  act.block_type = wait;
-                  act.when = when;
-                  act.vaild = true;
-                  act.id = path->name + "_action_" + per_op_name;
-                  act.name = loc->type.lock()->name;
-                  acts.append(act);
-                  break;
+      CLOG(INFO, tcs_log) << "init location size "
+                          << resource->locations.size();
+    }
+    // path
+    {
+      for (auto &p : model["paths"]) {
+        auto path = std::make_shared<data::model::Path>(p["name"]);
+        path->max_vel = p["maxVelocity"].get<int>();
+        path->max_reverse_vel = p["maxReverseVelocity"].get<int>();
+        if (p.contains("locked")) {
+          path->locked = p["locked"].get<bool>();
+        }
+        for (auto &x : resource->points) {
+          if (x->name == p["srcPointName"].get<std::string>()) {
+            path->source_point = x;
+            x->incoming_paths.push_back(path);
+          }
+          if (x->name == p["destPointName"].get<std::string>()) {
+            path->destination_point = x;
+            x->outgoing_paths.push_back(path);
+          }
+        }
+        path->layout.layer_id = p["layout"]["layerId"].get<int>();
+        path->layout.connect_type =
+            data::model::Path::new_connect_type(p["layout"]["connectionType"]);
+        if (p.contains("properties")) {
+          for (auto &pro : p["properties"]) {
+            std::string value;
+            if (pro["value"].is_boolean()) {
+              if (pro["value"].get<bool>()) {
+                value = "true";
+              } else {
+                value = "false";
+              }
+            } else {
+              value = pro["value"].get<std::string>();
+            }
+            path->properties.insert(std::pair<std::string, std::string>(
+                pro["name"].get<std::string>(), value));
+          }
+        }
+        if (!p.contains("length")) {
+          path->length = (path->source_point.lock()->position -
+                          path->destination_point.lock()->position)
+                             .norm();
+        }
+        //
+        data::model::Actions acts(path->properties);
+        {
+          if (p.contains("peripheralOperation")) {
+            for (auto &op : p["peripheralOperation"]) {
+              auto per_op_name = op["name"].get<std::string>();
+              auto wait =
+                  op["completionRequired"].get<bool>() ? "SOFT" : "NONE";
+              auto when = op["executionTrigger"].get<std::string>();
+              auto link_loc_name = op["locationName"].get<std::string>();
+              for (auto &loc : resource->locations) {
+                if (loc->name == link_loc_name) {
+                  if (loc->type.lock()->allowrd_per_ops.find(per_op_name) !=
+                      loc->type.lock()->allowrd_per_ops.end()) {
+                    // exist
+                    data::model::Actions::Action act;
+                    act.params.insert(loc->properties.begin(),
+                                      loc->properties.end());
+                    act.block_type = wait;
+                    act.when = when;
+                    act.vaild = true;
+                    act.id = path->name + "_action_" + per_op_name;
+                    act.name = loc->type.lock()->name;
+                    acts.append(act);
+                    break;
+                  }
                 }
               }
             }
           }
         }
+        path->acts = acts;
+        for (auto &x : p["vehicleEnvelope"]) {
+          auto envelope = std::make_shared<data::model::Envelope>(
+              x["envelopeKey"].get<std::string>());
+          for (auto &v : p["vehicleEnvelope"]["vertices"]) {
+            envelope->add_vertex(v["x"].get<double>(), v["y"].get<double>());
+          }
+          path->envelopes.insert(
+              std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
+                  x["envelopeKey"].get<std::string>(), envelope));
+        }
+        resource->paths.push_back(path);
       }
-      path->acts = acts;
-      resource->paths.push_back(path);
+      CLOG(INFO, tcs_log) << "init path size " << resource->paths.size();
     }
-    CLOG(INFO, tcs_log) << resource->paths.size() << " path";
     // block
-    for (auto &block : model["blocks"]) {
-      std::unordered_set<std::shared_ptr<TCSResource>> rs;
-      for (auto &ch : block["memberNames"]) {
-        for (auto &x : resource->points) {
-          if (x->name == ch) {
-            rs.insert(x);
+    {
+      for (auto &block : model["blocks"]) {
+        std::unordered_set<std::shared_ptr<TCSResource>> rs;
+        for (auto &ch : block["memberNames"]) {
+          for (auto &x : resource->points) {
+            if (x->name == ch) {
+              rs.insert(x);
+            }
+          }
+          for (auto &x : resource->paths) {
+            if (x->name == ch) {
+              rs.insert(x);
+            }
+          }
+          for (auto &x : resource->locations) {
+            if (x->name == ch) {
+              rs.insert(x);
+            }
           }
         }
-        for (auto &x : resource->paths) {
-          if (x->name == ch) {
-            rs.insert(x);
-          }
-        }
-        for (auto &x : resource->locations) {
-          if (x->name == ch) {
-            rs.insert(x);
-          }
-        }
-      }
-      if (block["type"] == "SINGLE_VEHICLE_ONLY") {
-        auto rule = std::make_shared<kernel::allocate::OnlyOneGatherRule>(
-            block["name"], resource);
-        rule->occs = rs;
-        rule->color = block["layout"]["color"];
-        resource->rules.push_back(rule);
-      } else if (block["type"] == "SAME_DIRECTION_ONLY") {
-        std::string direction = block["direct"];
-        for (auto &x : resource->paths) {
-          auto p = rs.find(x);
-          if (p != rs.end()) {
-            auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
-            if (direction == "FRONT") {
-              path->max_reverse_vel = 0;
-            } else if (direction == "BACK") {
-              path->max_vel = 0;
+        if (block["type"] == "SINGLE_VEHICLE_ONLY") {
+          auto rule = std::make_shared<kernel::allocate::OnlyOneGatherRule>(
+              block["name"], resource);
+          rule->occs = rs;
+          rule->color = block["layout"]["color"];
+          resource->rules.push_back(rule);
+        } else if (block["type"] == "SAME_DIRECTION_ONLY") {
+          std::string direction = block["direct"];
+          for (auto &x : resource->paths) {
+            auto p = rs.find(x);
+            if (p != rs.end()) {
+              auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
+              if (direction == "FRONT") {
+                path->max_reverse_vel = 0;
+              } else if (direction == "BACK") {
+                path->max_vel = 0;
+              }
             }
           }
         }
       }
     }
     // vehicle
-    for (auto &v : model["vehicles"]) {
-      //  工厂
-      auto vehicle = std::make_shared<kernel::driver::SimVehicle>(
-          v["name"].get<std::string>());
-      vehicle->length = v["length"].get<int>();
-      vehicle->energy_level_critical = v["energyLevelCritical"].get<int>();
-      vehicle->energy_level_good = v["energyLevelGood"].get<int>();
-      vehicle->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
-      vehicle->engrgy_level_recharge =
-          v["energyLevelSufficientlyRecharged"].get<int>();
-      vehicle->max_vel = v["maxVelocity"].get<int>();
-      vehicle->max_reverse_vel = v["maxReverseVelocity"].get<int>();
-      vehicle->color = v["layout"]["routeColor"].get<std::string>();
-      vehicle->width = 2.0 * vehicle->length / 4;
-      //////////仿真 假定在第一个点
-      vehicle->position.x = resource->points.front()->position.x;
-      vehicle->position.y = resource->points.front()->position.y;
-      vehicle->current_point = resource->points.front();  // 当前点
-      vehicle->last_point = vehicle->current_point;
-      vehicle->state = kernel::driver::Vehicle::State::IDLE;
-      ///////////////////////////
-      dispatcher->vehicles.push_back(vehicle);
-    }
+    {
+      std::string vda_interfaceName{"virtual"};
+      std::string vda_serialNumber{"virtual"};
+      std::string vda_version{"1.0"};
+      std::string vda_manufacturer{"virtual"};
+      int orderquence{2};
+      for (auto &v : model["vehicles"]) {
+        for (auto &pro : v["properties"]) {
+          if (pro["name"] == "vda5050:interfaceName") {
+            vda_interfaceName = pro["value"];
+          } else if (pro["name"] == "vda5050:manufacturer") {
+            vda_manufacturer = pro["value"];
+          } else if (pro["name"] == "vda5050:serialNumber") {
+            vda_serialNumber = pro["value"];
 
+          } else if (pro["name"] == "vda5050:version") {
+            vda_version = pro["value"];
+
+          } else if (pro["name"] == "vda5050:orderQueueSize") {
+            orderquence = pro["value"].get<int>();
+          }
+        }
+        auto veh = std::make_shared<kernel::driver::Rabbit3>(
+            v["name"], vda_interfaceName, vda_serialNumber, vda_version,
+            vda_manufacturer);
+        veh->length = v["length"].get<int>();
+        veh->max_reverse_vel = v["maxReverseVelocity"].get<int>();
+        veh->max_vel = v["maxVelocity"].get<int>();
+        veh->map_id = model["name"];
+        veh->color = v["layout"]["routeColor"];
+        veh->energy_level_critical = v["energyLevelCritical"].get<int>();
+        veh->energy_level_good = v["energyLevelGood"].get<int>();
+        veh->engrgy_level_full = v["energyLevelFullRecharge"].get<int>();
+        veh->engrgy_level_recharge =
+            v["energyLevelSufficientlyRecharged"].get<int>();
+        veh->broker_ip = ip;
+        veh->broker_port = port;
+        veh->send_queue_size = orderquence;
+        veh->envelope_key = v["envelopeKey"];
+        for (auto &pro : v["properties"]) {
+          veh->properties.insert(std::pair<std::string, std::string>(
+              pro["name"].get<std::string>(), pro["value"].get<std::string>()));
+        }
+        ///////////////////////////
+        dispatcher->vehicles.push_back(veh);
+      }
+      CLOG(INFO, tcs_log) << "init vehicle size "
+                          << dispatcher->vehicles.size();
+    }
     CLOG(INFO, tcs_log) << "init resource ok";
     init_planner();
     scheduler->resource = resource;
@@ -1939,7 +2043,10 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       v->orderpool = orderpool;
       v->resource = resource;
     }
+    assert(dispatcher);
+    CLOG(INFO, tcs_log) << "run all ...";
     run();
+    CLOG(INFO, tcs_log) << "run all ok";
     return std::pair<int, std::string>(200, "");
   } catch (json::parse_error ec) {
     CLOG(ERROR, tcs_log) << "parse error: " << ec.what();
@@ -2151,4 +2258,114 @@ std::pair<int, std::string> TCS::post_vehicle_reroute(const std::string &name,
     }
   }
   return std::pair<int, std::string>(200, "");
+}
+
+std::pair<int, std::string> TCS::put_vehicle_enable(const std::string &name,
+                                                    bool p) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
+  for (auto &v : dispatcher->vehicles) {
+    if (v->name == name) {
+      if (!p) {
+        v->state = kernel::driver::Vehicle::State::UNAVAILABLE;
+      } else {
+        v->state = kernel::driver::Vehicle::State::UNKNOWN;
+      }
+    }
+  }
+  return std::pair<int, std::string>(200, "");
+}
+
+std::pair<int, std::string> TCS::put_vehicle_integration_level(
+    const std::string &name, const std::string &p) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
+  for (auto &v : dispatcher->vehicles) {
+    if (v->name == name) {
+      v->integration_level = p;
+    }
+  }
+  return std::pair<int, std::string>(200, "");
+}
+
+std::pair<int, std::string> TCS::post_vehicle_path_to_point(
+    const std::string &name, const std::string &p_) {
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(404, res.dump());
+  }
+  json body = json::parse(p_);
+  for (auto &v : dispatcher->vehicles) {
+    if (v->name == name) {
+      json res;
+      res["routes"] = json::array();
+      std::shared_ptr<data::model::Point> s_p;
+      if (body.contains("sourcePoint")) {
+        for (auto &p : resource->points) {
+          if (p->name == body["sourcePoint"]) {
+            s_p = p;
+          }
+        }
+      } else {
+        s_p = v->current_point;
+      }
+      for (auto &e_p : body["destinationPoints"]) {
+        std::shared_ptr<data::model::Point> d_p;
+        for (auto &p : resource->points) {
+          if (p->name == e_p) {
+            d_p = p;
+          }
+        }
+        // path
+        if (d_p) {
+          auto path = planner->find_paths_with_vertex(s_p, d_p);
+          if (path.empty()) {
+            res["routes"].push_back("");
+          } else {
+            auto min_path = path.front().first;
+            auto cost = path.front().second;
+            json route;
+            route["destinationPoint"] = e_p;
+            route["costs"] = static_cast<int>(cost);
+            auto paths = planner->to_model_path(path);
+            auto rou = resource->paths_to_route(paths.front());
+            route["steps"] = json::array();
+            for (auto &r : rou->steps) {
+              json step;
+              step["path"] = r->path->name;
+              step["sourcePoint"] = r->path->source_point.lock()->name;
+              step["destinationPoint"] =
+                  r->path->destination_point.lock()->name;
+              std::string ori;
+              if (r->vehicle_orientation ==
+                  data::order::Step::Orientation::FORWARD) {
+                ori = "FORWARD";
+              } else if (r->vehicle_orientation ==
+                         data::order::Step::Orientation::BACKWARD) {
+                ori = "BACKWARD";
+              } else {
+                ori = "UNDEFINED";
+              }
+              step["vehliceOrientation"] = ori;
+            }
+            res["routes"].push_back(route);
+          }
+        } else {
+          res["routes"].push_back("");
+        }
+      }
+      return std::pair<int, std::string>(200, res.dump());
+    }
+  }
+  return std::pair<int, std::string>(400, "the vehicle does not exist");
 }
