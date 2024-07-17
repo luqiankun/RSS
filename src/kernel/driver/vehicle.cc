@@ -1205,7 +1205,7 @@ bool Rabbit3::instant_action(
 }
 
 Rabbit3::~Rabbit3() {
-  if (mqtt_cli->mqtt_client->is_connected()) {
+  if (mqtt_cli->mqtt_client && mqtt_cli->mqtt_client->is_connected()) {
     mqtt_cli->mqtt_client->disable_callbacks();
     mqtt_cli->mqtt_client->unsubscribe("#");
     mqtt_cli->mqtt_client->disconnect()->wait();

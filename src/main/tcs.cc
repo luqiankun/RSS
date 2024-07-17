@@ -3,6 +3,8 @@
 #include "../../include/kernel/driver/vehicle.hpp"
 
 std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
+  std::unique_lock<std::shared_mutex> lock(mutex);
+  // TODO 判断是否有正在执行的订单
   stop();
   init_orderpool();
   init_planner();
@@ -851,6 +853,7 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
 
 std::pair<int, std::string> TCS::get_transport_orders(
     const std::string &vehicle) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -888,6 +891,7 @@ std::pair<int, std::string> TCS::get_transport_orders(
 
 std::pair<int, std::string> TCS::get_transport_order(
     const std::string &ord_name) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -913,6 +917,7 @@ std::pair<int, std::string> TCS::get_transport_order(
 }
 std::pair<int, std::string> TCS::post_transport_order(
     const std::string &ord_name, const std::string &body) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1089,6 +1094,7 @@ std::pair<int, std::string> TCS::post_transport_order(
 
 std::pair<int, std::string> TCS::post_transport_order_withdrawl(
     const std::string &ord_name, bool immediate, bool) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1142,6 +1148,7 @@ json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
 }
 std::pair<int, std::string> TCS::get_ordersequences(
     const std::string &vehicle) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1175,6 +1182,7 @@ std::pair<int, std::string> TCS::get_ordersequences(
 
 std::pair<int, std::string> TCS::get_ordersequence(
     const std::string &sequence_name) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1195,6 +1203,7 @@ std::pair<int, std::string> TCS::get_ordersequence(
 
 std::pair<int, std::string> TCS::post_ordersequence(
     const std::string &sequence_name, const std::string &body) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1292,6 +1301,7 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
 }
 
 std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1363,6 +1373,7 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
 }
 
 std::pair<int, std::string> TCS::get_vehicle(const std::string &vehicle) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1383,6 +1394,7 @@ std::pair<int, std::string> TCS::get_vehicle(const std::string &vehicle) {
 
 std::pair<int, std::string> TCS::post_vehicle_withdrawl(
     const std::string &vehicle, bool, bool) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1408,6 +1420,8 @@ std::pair<int, std::string> TCS::post_vehicle_withdrawl(
 
 std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
                                                     bool p) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
+
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1443,6 +1457,7 @@ std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
 }
 
 std::pair<int, std::string> TCS::get_model() {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1490,7 +1505,7 @@ std::pair<int, std::string> TCS::get_model() {
     layout["position"]["y"] = p->layout.position.y;
     layout["labelOffset"]["x"] = p->layout.label_offset.x;
     layout["labelOffset"]["y"] = p->layout.label_offset.y;
-    layout["layerId"]["y"] = p->layout.layer_id;
+    layout["layerId"] = p->layout.layer_id;
     point["layout"] = layout;
     point["properties"] = json::array();
     for (auto &pro : p->properties) {
@@ -1499,7 +1514,7 @@ std::pair<int, std::string> TCS::get_model() {
       t["value"] = pro.second;
       point["properties"].push_back(t);
     }
-    point["vehicleEnvelope"] = json::array();
+    point["vehicleEnvelopes"] = json::array();
     for (auto &x : p->envelopes) {
       json t;
       t["envelopeKey"] = x.first;
@@ -1511,7 +1526,7 @@ std::pair<int, std::string> TCS::get_model() {
         ver["y"] = v_.y();
         t["vertices"].push_back(ver);
       }
-      point["vehicleEnvelope"].push_back(t);
+      point["vehicleEnvelopes"].push_back(t);
     }
     res["points"].push_back(point);
   }
@@ -1550,15 +1565,15 @@ std::pair<int, std::string> TCS::get_model() {
         t["vertices"].push_back(ver);
       }
       path["vehicleEnvelope"].push_back(t);
-      path["peripherOperations"] = json::array();
-      for (auto &x : p->per_acts.acts) {
-        json t;
-        t["operation"] = x.op_name;
-        t["locationName"] = x.op_name;
-        t["completionRequired"] = x.completion_required;
-        t["executionTrigger"] = x.execution_trigger;
-        path["peripherOperations"].push_back(t);
-      }
+    }
+    path["peripheralOperations"] = json::array();
+    for (auto &x : p->per_acts.acts) {
+      json t;
+      t["operation"] = x.op_name;
+      t["locationName"] = x.op_name;
+      t["completionRequired"] = x.completion_required;
+      t["executionTrigger"] = x.execution_trigger;
+      path["peripheralOperations"].push_back(t);
     }
     res["paths"].push_back(path);
   }
@@ -1597,7 +1612,13 @@ std::pair<int, std::string> TCS::get_model() {
     location["position"]["z"] = loc->position.z;
     location["links"] = json::array();
     if (loc->link.lock()) {
-      location["links"].push_back(loc->link.lock()->name);
+      json link;
+      link["pointName"] = loc->link.lock()->name;
+      link["allowedOperations"] = json::array();
+      for (auto &op : loc->type.lock()->allowed_ops) {
+        link["allowedOperations"].push_back(op.first);
+      }
+      location["links"].push_back(link);
     }
     location["locked"] = loc->locked;
     location["layout"]["position"]["x"] = loc->layout.position.x;
@@ -1664,6 +1685,7 @@ std::pair<int, std::string> TCS::get_model() {
   return std::pair<int, std::string>(200, res.dump());
 }
 std::pair<int, std::string> TCS::put_model(const std::string &body) {
+  std::unique_lock<std::shared_mutex> lk(mutex);
   stop();
   init_orderpool();
   init_scheduler();
@@ -2008,13 +2030,15 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         veh->color = v["layout"]["routeColor"];
         veh->energy_level_critical = v["energyLevelCritical"].get<int>();
         veh->energy_level_good = v["energyLevelGood"].get<int>();
-        veh->engrgy_level_full = v["energyLevelFullRecharge"].get<int>();
+        veh->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
         veh->engrgy_level_recharge =
             v["energyLevelSufficientlyRecharged"].get<int>();
         veh->broker_ip = ip;
         veh->broker_port = port;
         veh->send_queue_size = orderquence;
-        veh->envelope_key = v["envelopeKey"];
+        veh->envelope_key = v.contains("envelopeKey")
+                                ? v["envelopeKey"].get<std::string>()
+                                : "";
         for (auto &pro : v["properties"]) {
           veh->properties.insert(std::pair<std::string, std::string>(
               pro["name"].get<std::string>(), pro["value"].get<std::string>()));
@@ -2070,6 +2094,8 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
 }
 
 std::pair<int, std::string> TCS::get_view() {
+  std::shared_lock<std::shared_mutex> lk(mutex);
+
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2177,6 +2203,7 @@ std::string TCS::get_vehicles_step() {
 
 std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
                                                  bool new_value) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2203,6 +2230,7 @@ std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
 
 std::pair<int, std::string> TCS::put_location_locked(
     const std::string &loc_name, bool new_value) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2230,6 +2258,7 @@ void TCS::reroute() {
 }
 
 std::pair<int, std::string> TCS::post_reroute() {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2246,6 +2275,7 @@ bool TCS::is_connect(std::shared_ptr<data::model::Point> a,
 
 std::pair<int, std::string> TCS::post_vehicle_reroute(const std::string &name,
                                                       bool f) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2255,13 +2285,18 @@ std::pair<int, std::string> TCS::post_vehicle_reroute(const std::string &name,
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
       v->reroute();
+      return std::pair<int, std::string>(200, "");
     }
   }
-  return std::pair<int, std::string>(200, "");
+  json res = json::array();
+  auto msg = "no vehicle named '" + name + "'.";
+  res.push_back(msg);
+  return std::pair<int, std::string>(404, res.dump());
 }
 
 std::pair<int, std::string> TCS::put_vehicle_enable(const std::string &name,
                                                     bool p) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2275,13 +2310,18 @@ std::pair<int, std::string> TCS::put_vehicle_enable(const std::string &name,
       } else {
         v->state = kernel::driver::Vehicle::State::UNKNOWN;
       }
+      return std::pair<int, std::string>(200, "");
     }
   }
-  return std::pair<int, std::string>(200, "");
+  json res = json::array();
+  auto msg = "no vehicle named '" + name + "'.";
+  res.push_back(msg);
+  return std::pair<int, std::string>(404, res.dump());
 }
 
 std::pair<int, std::string> TCS::put_vehicle_integration_level(
     const std::string &name, const std::string &p) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2298,6 +2338,7 @@ std::pair<int, std::string> TCS::put_vehicle_integration_level(
 
 std::pair<int, std::string> TCS::post_vehicle_path_to_point(
     const std::string &name, const std::string &p_) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2368,4 +2409,11 @@ std::pair<int, std::string> TCS::post_vehicle_path_to_point(
     }
   }
   return std::pair<int, std::string>(400, "the vehicle does not exist");
+}
+bool TCS::is_exist_active_order() {
+  for (auto &x : orderpool->ended_orderpool) {
+    if (x->state == data::order::TransportOrder::State::BEING_PROCESSED)
+      return true;
+  }
+  return false;
 }

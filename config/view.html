@@ -518,7 +518,7 @@
                         let y = loc["layout"]["position"]["y"];
                         let name = loc["name"];
                         let locked = loc["locked"];
-                        let link = loc["links"][0] ? loc["links"][0] : null;
+                        let link = loc["links"][0] ? loc["links"][0]["pointName"] : null
                         let type = loc["typeName"]
                         let p = new Location(name, x, y, link, type);
                         p.locked = locked;

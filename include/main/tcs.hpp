@@ -1,5 +1,7 @@
 #ifndef TCS_HPP
 #define TCS_HPP
+#include <shared_mutex>
+
 #include "../component/tools/json/json.hpp"
 #include "../component/tools/xml/pugixml.hpp"
 #include "../kernel/dispatch/dispatch.hpp"
@@ -89,6 +91,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
   std::string get_vehicles_step();
   void reroute();
   void stop();
+  bool is_exist_active_order();
   ~TCS();
 
  public:
@@ -100,5 +103,6 @@ class TCS : public std::enable_shared_from_this<TCS> {
   std::shared_ptr<kernel::dispatch::Dispatcher> dispatcher;
   std::shared_ptr<kernel::allocate::OrderPool> orderpool;
   std::shared_ptr<kernel::planner::Planner> planner;
+  mutable std::shared_mutex mutex;
 };
 #endif

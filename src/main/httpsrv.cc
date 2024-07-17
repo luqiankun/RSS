@@ -34,9 +34,9 @@ std::string log(const httplib::Request &req, const httplib::Response &res) {
 
   s += dump_headers(req.headers);
   s += "\n";
-  // if (!req.body.empty()) {
-  //   s += req.body;
-  // }
+  if (!req.body.empty()) {
+    s += req.body;
+  }
   s += "\n";
   s += "--------------------------------\n";
 
@@ -44,9 +44,9 @@ std::string log(const httplib::Request &req, const httplib::Response &res) {
   s += buf;
   s += dump_headers(res.headers);
   s += "\n";
-  // if (!res.body.empty()) {
-  //   s += res.body;
-  // }
+  if (!res.body.empty()) {
+    s += res.body;
+  }
   s += "\n";
 
   return s;
@@ -359,13 +359,12 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
                res.set_content(ret.second, "application/json");
              }
            });
-  // srv.set_logger([](const httplib::Request &req, const httplib::Response
-  // &res) {
-  //   // printf("%s", log(req, res).c_str());
-  //   CLOG(INFO, "http") << req.method << ": " << req.path
-  //                      << "  Res Code: " << res.status;
-  //   // CLOG(INFO, "http") << "http req and rep\n" << log(req, res);
-  // });
+  srv.set_logger([](const httplib::Request &req, const httplib::Response &res) {
+    // printf("%s", log(req, res).c_str());
+    CLOG(INFO, "http") << req.method << ": " << req.path
+                       << "  Res Code: " << res.status;
+    CLOG(INFO, "http") << "http req and rep\n" << log(req, res);
+  });
 }
 
 void HTTPServer::listen() {

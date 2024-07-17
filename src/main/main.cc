@@ -73,10 +73,10 @@ void read_params(std::string path) {
       init_xml_path = root["tcs"]["auto_init"]["xml_path"].As<std::string>();
     }
     if (!root["tcs"]["mqtt_addr"]["host"].IsNone()) {
-      init_xml_path = root["tcs"]["mqtt_addr"]["host"].As<std::string>();
+      mqtt_ip = root["tcs"]["mqtt_addr"]["host"].As<std::string>();
     }
     if (!root["tcs"]["mqtt_addr"]["port"].IsNone()) {
-      init_xml_path = root["tcs"]["mqtt_addr"]["port"].As<int>();
+      mqtt_port = root["tcs"]["mqtt_addr"]["port"].As<int>();
     }
     CLOG(INFO, tcs_log) << "read param success";
   } catch (Yaml::Exception& ec) {

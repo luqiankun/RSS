@@ -176,7 +176,6 @@ bool ResourceManager::free(const std::vector<std::shared_ptr<TCSResource>>& res,
     for (auto it = client->allocate_resources.begin();
          it != client->allocate_resources.end();) {
       if (r.get() == (*it).get()) {
-        it = client->allocate_resources.erase(it);
         for (auto x = (*it)->future_owner.begin();
              x != (*it)->future_owner.end();) {
           if ((*x).lock() == client) {
@@ -185,6 +184,7 @@ bool ResourceManager::free(const std::vector<std::shared_ptr<TCSResource>>& res,
             x++;
           }
         }
+        it = client->allocate_resources.erase(it);
       } else {
         it++;
       }
