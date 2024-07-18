@@ -4,13 +4,16 @@
 namespace kernel {
 namespace driver {
 void Command::run_once() {
-  if (!vehicle.lock()) {
-    return;
-  }
-  if (vehicle.lock()->paused) {
-    return;
-  }
   auto veh = vehicle.lock();
+  auto scheduler = veh->scheduler.lock();
+  auto res = scheduler->resource.lock();
+  if (!veh || !scheduler || !res) {
+    return;
+  }
+
+  if (veh->paused) {
+    return;
+  }
   for (auto& x : order->dependencies) {
     auto dep = x.lock();
     if (dep) {
@@ -34,7 +37,7 @@ void Command::run_once() {
       allocated.push_back(
           (driver_order->route->steps[driver_order->route->steps.size() - 1])
               ->path->destination_point.lock());
-      scheduler.lock()->resource.lock()->allocate(allocated, veh);
+      res->allocate(allocated, veh);
       state = State::CLAIMING;
     }
   } else if (state == State::CLAIMING) {
@@ -82,7 +85,7 @@ void Command::run_once() {
             x++;
           }
         }
-        if (scheduler.lock()->resource.lock()->claim(temp, veh)) {
+        if (res->claim(temp, veh)) {
           //  添加future_claim
           for (auto& x : get_future(driver_order)) {
             bool has{false};
@@ -115,7 +118,7 @@ void Command::run_once() {
       auto dest = get_dest(driver_order);
       std::vector<std::shared_ptr<TCSResource>> temp;
       temp.push_back(dest->destination.lock());
-      if (scheduler.lock()->resource.lock()->claim(temp, veh)) {
+      if (res->claim(temp, veh)) {
         state = State::CLAIMED;
       }
     }
@@ -160,7 +163,7 @@ void Command::run_once() {
         ss << x->name << " ";
       }
     }
-    if (scheduler.lock()->resource.lock()->unclaim(temp, veh)) {
+    if (res->unclaim(temp, veh)) {
       state = State::END;
       CLOG_IF(!ss.str().empty(), INFO, driver_log) << ss.str() << "\n";
     }
@@ -170,6 +173,12 @@ void Command::run_once() {
   }
 }
 void Command::vehicle_execute_cb(bool ret) {
+  auto veh = vehicle.lock();
+  auto scheduler = veh->scheduler.lock();
+  auto res = scheduler->resource.lock();
+  if (!veh || !scheduler || !res) {
+    state = State::DISPOSABLE;
+  }
   if (state == State::EXECUTING) {
     auto& driver_order = order->driverorders[order->current_driver_index];
     if (driver_order->state == data::order::DriverOrder::State::OPERATING) {
@@ -178,11 +187,10 @@ void Command::vehicle_execute_cb(bool ret) {
       } else {
         driver_order->state = data::order::DriverOrder::State::FAILED;
       }
-      scheduler.lock()->resource.lock()->free(
+      res->free(
           std::vector<std::shared_ptr<TCSResource>>(
-              vehicle.lock()->allocate_resources.begin(),
-              vehicle.lock()->allocate_resources.end()),
-          vehicle.lock());
+              veh->allocate_resources.begin(), veh->allocate_resources.end()),
+          veh);
     }
     state = State::EXECUTED;
   }

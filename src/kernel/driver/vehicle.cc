@@ -583,6 +583,8 @@ void Rabbit3::init() {
 
 void Rabbit3::onstate(mqtt::const_message_ptr msg) {
   // cpu_timer t;
+  auto res = resource.lock();
+  if (!res) return;
   auto m = msg->get_payload();
   jsoncons::json v;
   try {
@@ -617,7 +619,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       if (v["lastNodeId"].as_string().empty()) {
         current_point.reset();
       } else {
-        for (auto& x : resource.lock()->points) {
+        for (auto& x : res->points) {
           if (x->name == v["lastNodeId"].as_string()) {
             last_point = x;
             current_point = last_point;
@@ -625,9 +627,9 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
               this->position = current_point->position;
               init_pos = true;
               idle_time = std::chrono::system_clock::now();
-              std::vector<std::shared_ptr<TCSResource>> res;
-              res.push_back(x);
-              resource.lock()->claim(res, shared_from_this());
+              std::vector<std::shared_ptr<TCSResource>> ress;
+              ress.push_back(x);
+              res->claim(ress, shared_from_this());
             }
           }
         }

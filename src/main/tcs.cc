@@ -690,15 +690,15 @@ void TCS::recovery_vehicle(const std::string &name) {
 }
 
 void TCS::stop() {
-  if (dispatcher) {
-    dispatcher->stop();
-    dispatcher.reset();
+  if (orderpool) {
+    orderpool.reset();
   }
   if (scheduler) {
     scheduler.reset();
   }
-  if (orderpool) {
-    orderpool.reset();
+  if (dispatcher) {
+    dispatcher->stop();
+    dispatcher.reset();
   }
   if (resource) {
     resource.reset();
