@@ -16,14 +16,14 @@ class ResourceManager : public TCSObject {
   using TCSObject::TCSObject;
   enum class ResType { Point = 0, Location = 1, Err = 2 };
   ~ResourceManager() { CLOG(INFO, allocate_log) << name << " close"; }
-  bool allocate(const std::vector<std::shared_ptr<TCSResource>>&,
-                const std::shared_ptr<schedule::Client>&);
-  bool claim(std::vector<std::shared_ptr<TCSResource>>,
-             std::shared_ptr<schedule::Client>);
-  bool free(const std::vector<std::shared_ptr<TCSResource>>&,
-            const std::shared_ptr<schedule::Client>&);
+  bool claim(const std::vector<std::shared_ptr<TCSResource>>&,
+             const std::shared_ptr<schedule::Client>&);
+  bool allocate(std::vector<std::shared_ptr<TCSResource>>,
+                std::shared_ptr<schedule::Client>);
   bool unclaim(const std::vector<std::shared_ptr<TCSResource>>&,
                const std::shared_ptr<schedule::Client>&);
+  bool free(const std::vector<std::shared_ptr<TCSResource>>&,
+            const std::shared_ptr<schedule::Client>&);
   std::shared_ptr<data::model::Point> get_recent_park_point(
       std::shared_ptr<data::model::Point>);
   std::shared_ptr<data::model::Location> get_recent_charge_loc(

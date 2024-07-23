@@ -13,8 +13,8 @@ class Command : public TCSObject {
   using TCSObject::TCSObject;
   enum class State {
     INIT,
-    CLAIMING,
-    CLAIMED,
+    ALLOCATING,
+    ALLOCATED,
     EXECUTING,
     EXECUTED,
     END,

@@ -26,21 +26,9 @@ void Command::run_once() {
     if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
       state = State::EXECUTED;
     } else {
-      // TODO 预分配资源
-      auto driver_order = order->driverorders[order->current_driver_index];
-      std::vector<std::shared_ptr<TCSResource>> allocated;
-      allocated.push_back(driver_order->destination->destination.lock());
-      for (auto& x : driver_order->route->steps) {
-        allocated.push_back(x->path->source_point.lock());
-        allocated.push_back(x->path);
-      }
-      allocated.push_back(
-          (driver_order->route->steps[driver_order->route->steps.size() - 1])
-              ->path->destination_point.lock());
-      res->allocate(allocated, veh);
-      state = State::CLAIMING;
+      state = State::ALLOCATING;
     }
-  } else if (state == State::CLAIMING) {
+  } else if (state == State::ALLOCATING) {
     if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
       state = State::EXECUTED;
       return;
@@ -73,7 +61,7 @@ void Command::run_once() {
         }
         for (auto x = temp.begin(); x != temp.end();) {
           bool has{false};
-          for (auto& c : veh->claim_resources) {
+          for (auto& c : veh->allocated_resources) {
             if (c == *x) {
               has = true;
               break;
@@ -85,11 +73,14 @@ void Command::run_once() {
             x++;
           }
         }
-        if (res->claim(temp, veh)) {
+        // claim
+        veh->claim_resources.insert(temp.begin(), temp.end());
+        // allcoate
+        if (res->allocate(temp, veh)) {
           //  添加future_claim
           for (auto& x : get_future(driver_order)) {
             bool has{false};
-            for (auto& c : veh->claim_resources) {
+            for (auto& c : veh->allocated_resources) {
               if (c == x) {
                 has = true;
               }
@@ -98,11 +89,11 @@ void Command::run_once() {
               veh->future_claim_resources.insert(x);
             }
           }
-          state = State::CLAIMED;
+          state = State::ALLOCATED;
         } else {
           for (auto& x : temp) {
             bool has{false};
-            for (auto& c : veh->claim_resources) {
+            for (auto& c : veh->allocated_resources) {
               if (c == x) {
                 has = true;
               }
@@ -118,11 +109,11 @@ void Command::run_once() {
       auto dest = get_dest(driver_order);
       std::vector<std::shared_ptr<TCSResource>> temp;
       temp.push_back(dest->destination.lock());
-      if (res->claim(temp, veh)) {
-        state = State::CLAIMED;
+      if (res->allocate(temp, veh)) {
+        state = State::ALLOCATED;
       }
     }
-  } else if (state == State::CLAIMED) {
+  } else if (state == State::ALLOCATED) {
     if (order->state == data::order::TransportOrder::State::WITHDRAWL) {
       state = State::EXECUTED;
       return;
@@ -152,18 +143,18 @@ void Command::run_once() {
     // wait  do nothing
   } else if (state == State::EXECUTED) {
     auto& driver_order = order->driverorders[order->current_driver_index];
-    // unclaim
+    // free
     std::stringstream ss;
-    ss << veh->name << " unclaim ";
+    ss << veh->name << " free ";
     std::vector<std::shared_ptr<TCSResource>> temp;
-    for (auto& x : veh->claim_resources) {
+    for (auto& x : veh->allocated_resources) {
       if (x != veh->current_point &&
           x != get_dest(driver_order)->destination.lock()) {
         temp.push_back(x);
         ss << x->name << " ";
       }
     }
-    if (res->unclaim(temp, veh)) {
+    if (res->free(temp, veh)) {
       state = State::END;
       CLOG_IF(!ss.str().empty(), INFO, driver_log) << ss.str() << "\n";
     }
@@ -187,10 +178,7 @@ void Command::vehicle_execute_cb(bool ret) {
       } else {
         driver_order->state = data::order::DriverOrder::State::FAILED;
       }
-      res->free(
-          std::vector<std::shared_ptr<TCSResource>>(
-              veh->allocate_resources.begin(), veh->allocate_resources.end()),
-          veh);
+      veh->claim_resources.clear();
     }
     state = State::EXECUTED;
   }
@@ -245,7 +233,7 @@ std::vector<std::shared_ptr<TCSResource>> Command::get_future(
     auto path = next->path;
     auto beg = next->path->destination_point.lock();
     auto end = next->path->source_point.lock();
-    for (auto& x : veh->claim_resources) {
+    for (auto& x : veh->allocated_resources) {
       if (x == beg) {
         beg = nullptr;
       }

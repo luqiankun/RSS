@@ -1284,7 +1284,7 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["state"] = v->get_state();
   res["procState"] = v->get_process_state();
   res["allocatedResources"] = json::array();
-  for (auto &r : v->allocate_resources) {
+  for (auto &r : v->allocated_resources) {
     res["allocatedResources"].push_back(r->name);
   }
   res["claimedResources"] = json::array();
@@ -1742,7 +1742,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         point->position.y = p["position"]["y"].get<int>();
         point->position.z = p["position"]["z"].get<int>();
         if (p.contains("vehicleOrientationAngle")) {
-          if (!p["vehicleOrientationAngle"].is_string())
+          if (p["vehicleOrientationAngle"].is_number())
             point->client_angle = p["vehicleOrientationAngle"].get<int>();
           else {
             point->client_angle = 0;

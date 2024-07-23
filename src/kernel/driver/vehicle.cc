@@ -629,7 +629,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
               idle_time = std::chrono::system_clock::now();
               std::vector<std::shared_ptr<TCSResource>> ress;
               ress.push_back(x);
-              res->claim(ress, shared_from_this());
+              res->allocate(ress, shared_from_this());
             }
           }
         }

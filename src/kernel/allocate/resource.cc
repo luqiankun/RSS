@@ -61,26 +61,26 @@ ResourceManager::find(const std::string& name) {
   return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Err, res);
 }
 
-bool ResourceManager::allocate(
+bool ResourceManager::claim(
     const std::vector<std::shared_ptr<TCSResource>>& res,
     const std::shared_ptr<schedule::Client>& client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
     for (auto& p : points) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
-        client->allocate_resources.insert(p);
+        client->claim_resources.insert(p);
         p->future_owner.push_back(client);
       }
     }
     for (auto& p : paths) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
-        client->allocate_resources.insert(p);
+        client->claim_resources.insert(p);
         p->future_owner.push_back(client);
       }
     }
     for (auto& p : locations) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
-        client->allocate_resources.insert(p);
+        client->claim_resources.insert(p);
         p->future_owner.push_back(client);
       }
     }
@@ -88,8 +88,8 @@ bool ResourceManager::allocate(
   return true;
 }
 
-bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
-                            std::shared_ptr<schedule::Client> client) {
+bool ResourceManager::allocate(std::vector<std::shared_ptr<TCSResource>> res,
+                               std::shared_ptr<schedule::Client> client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : rules) {
     // LOG(INFO) << r->name;
@@ -100,14 +100,14 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
     }
   }
   std::stringstream ss;
-  ss << client->name << " claim ";
+  ss << client->name << " allocate ";
   for (auto& r : res) {
     for (auto& p : points) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
         p->envelope_keys.insert(client->envelope_key);
-        client->claim_resources.insert(p);
+        client->allocated_resources.insert(p);
         break;
       }
     }
@@ -116,7 +116,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
         ss << p->name << " ";
         p->owner = client;
         p->envelope_keys.insert(client->envelope_key);
-        client->claim_resources.insert(p);
+        client->allocated_resources.insert(p);
         break;
       }
     }
@@ -124,7 +124,7 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
-        client->claim_resources.insert(p);
+        client->allocated_resources.insert(p);
         break;
       }
     }
@@ -136,8 +136,8 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
       if (*x == r) {
         x = client->future_claim_resources.erase(x);
         CLOG(INFO, allocate_log)
-            << r->name << " from future_claim move to claim of " << client->name
-            << "\n";
+            << r->name << " from future_claim move to allocate of "
+            << client->name << "\n";
       } else {
         x++;
       }
@@ -147,15 +147,14 @@ bool ResourceManager::claim(std::vector<std::shared_ptr<TCSResource>> res,
   return true;
 }
 
-bool ResourceManager::unclaim(
-    const std::vector<std::shared_ptr<TCSResource>>& res,
-    const std::shared_ptr<schedule::Client>& client) {
+bool ResourceManager::free(const std::vector<std::shared_ptr<TCSResource>>& res,
+                           const std::shared_ptr<schedule::Client>& client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
-    for (auto it = client->claim_resources.begin();
-         it != client->claim_resources.end();) {
+    for (auto it = client->allocated_resources.begin();
+         it != client->allocated_resources.end();) {
       if (r.get() == (*it).get()) {
-        it = client->claim_resources.erase(it);
+        it = client->allocated_resources.erase(it);
         r->owner.reset();
         if (r->envelope_keys.find(client->envelope_key) !=
             r->envelope_keys.end()) {
@@ -169,12 +168,13 @@ bool ResourceManager::unclaim(
   return true;
 }
 
-bool ResourceManager::free(const std::vector<std::shared_ptr<TCSResource>>& res,
-                           const std::shared_ptr<schedule::Client>& client) {
+bool ResourceManager::unclaim(
+    const std::vector<std::shared_ptr<TCSResource>>& res,
+    const std::shared_ptr<schedule::Client>& client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
-    for (auto it = client->allocate_resources.begin();
-         it != client->allocate_resources.end();) {
+    for (auto it = client->claim_resources.begin();
+         it != client->claim_resources.end();) {
       if (r.get() == (*it).get()) {
         for (auto x = (*it)->future_owner.begin();
              x != (*it)->future_owner.end();) {
@@ -184,7 +184,7 @@ bool ResourceManager::free(const std::vector<std::shared_ptr<TCSResource>>& res,
             x++;
           }
         }
-        it = client->allocate_resources.erase(it);
+        it = client->claim_resources.erase(it);
       } else {
         it++;
       }
