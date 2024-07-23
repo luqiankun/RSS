@@ -503,10 +503,24 @@ bool SimVehicle::action(
   return true;
 }
 bool SimVehicle::instant_action(
-    std::shared_ptr<vda5050::instantaction::Action>) {
+    std::shared_ptr<vda5050::instantaction::Action> act) {
+  CLOG(INFO, driver_log) << act->action_id << " ok";
   return true;
 };
-
+void SimVehicle::init() {
+  state = State::IDEL;
+  current_point = last_point;
+  this->position = current_point->position;
+  if (integration_level == integrationLevel::TO_BE_IGNORED ||
+      integration_level == integrationLevel::TO_BE_NOTICED) {
+  } else {
+    idle_time = std::chrono::system_clock::now();
+    std::vector<std::shared_ptr<TCSResource>> ress;
+    ress.push_back(current_point);
+    resource.lock()->claim(ress, shared_from_this());
+    resource.lock()->allocate(ress, shared_from_this());
+  }
+}
 bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   std::vector<int> res;
   for (auto& step : steps) {
@@ -531,6 +545,7 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       position.x = end->position.x;
       position.y = end->position.y;
       last_point = end;
+      current_point = last_point;
       CLOG(INFO, driver_log)
           << name << " now at (" << position.x << " , " << position.y << ")";
       res.push_back(1);
@@ -551,6 +566,7 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       position.x = end->position.x;
       position.y = end->position.y;
       last_point = end;
+      current_point = last_point;
       CLOG(INFO, driver_log)
           << name << " now at (" << position.x << " , " << position.y << ")";
       res.push_back(1);
@@ -629,6 +645,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
               idle_time = std::chrono::system_clock::now();
               std::vector<std::shared_ptr<TCSResource>> ress;
               ress.push_back(x);
+              res->claim(ress, shared_from_this());
               res->allocate(ress, shared_from_this());
             }
           }

@@ -23,6 +23,7 @@ std::string log_size{"10485760"};
 uint32_t log_max_num{5};
 // auto init
 bool init_enable{false};
+std::string log_debug{true};
 std::string init_xml_path{""};
 // mqtt value
 std::string mqtt_ip{"127.0.0.1"};
@@ -47,6 +48,9 @@ void read_params(std::string path) {
     }
     if (!root["log"]["enable"].IsNone()) {
       log_enable = root["log"]["enable"].As<bool>() ? "true" : "false";
+    }
+    if (!root["log"]["debug"].IsNone()) {
+      log_debug = root["log"]["debug"].As<bool>() ? "true" : "false";
     }
     if (!root["log"]["max_num"].IsNone()) {
       log_max_num = root["log"]["max_num"].As<uint32_t>();
@@ -114,6 +118,7 @@ int main(int argc, char** argv) {
   conf.setGlobally(el ::ConfigurationType ::MaxLogFileSize, log_size);
   conf.set(el ::Level ::Debug, el ::ConfigurationType ::Format,
            "%datetime{%d/%M} %func [%fbase:%line] %msg");
+  conf.set(el::Level::Debug, el ::ConfigurationType ::Enabled, log_debug);
   el ::Loggers ::reconfigureAllLoggers(conf);
   std::deque<std::string> logs_name;
   {

@@ -48,6 +48,13 @@ ResourceManager::find(const std::string& name) {
                                                               res);
     }
   }
+  for (auto& p : paths) {
+    if (p->name == name) {
+      res = p;
+      return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Path,
+                                                              res);
+    }
+  }
   for (auto& l : locations) {
     if (l->name == name) {
       if (l->locked) {

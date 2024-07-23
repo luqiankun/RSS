@@ -14,7 +14,7 @@ namespace allocate {
 class ResourceManager : public TCSObject {
  public:
   using TCSObject::TCSObject;
-  enum class ResType { Point = 0, Location = 1, Err = 2 };
+  enum class ResType { Point = 0, Location = 1, Err = 2, Path = 3 };
   ~ResourceManager() { CLOG(INFO, allocate_log) << name << " close"; }
   bool claim(const std::vector<std::shared_ptr<TCSResource>>&,
              const std::shared_ptr<schedule::Client>&);

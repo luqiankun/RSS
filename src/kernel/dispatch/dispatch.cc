@@ -203,7 +203,11 @@ void Dispatcher::dispatch_once() {
         // 订单指定了车辆
         current->state = data::order::TransportOrder::State::DISPATCHABLE;
         CLOG(INFO, dispatch_log) << current->name << " status: [dispatchable]";
-
+        if (v->integration_level !=
+            driver::Vehicle::integrationLevel::TO_BE_UTILIZED) {
+          current->state = data::order::TransportOrder::State::FAILED;
+          CLOG(INFO, dispatch_log) << current->name << " status: [failed]";
+        }
       } else {
         if (auto_select) {  // 自动分配车辆
           auto dest = current->driverorders[current->current_driver_index]
@@ -238,6 +242,7 @@ void Dispatcher::dispatch_once() {
     if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
       current->state = data::order::TransportOrder::State::BEING_PROCESSED;
       CLOG(INFO, dispatch_log) << current->name << " status: [being_processed]";
+      // TODO
       if (current->intended_vehicle.lock()->state ==
           driver::Vehicle::State::UNAVAILABLE) {
         current->state = data::order::TransportOrder::State::FAILED;

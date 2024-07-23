@@ -74,6 +74,7 @@ void Command::run_once() {
           }
         }
         // claim
+        veh->claim_resources.clear();
         veh->claim_resources.insert(temp.begin(), temp.end());
         // allcoate
         if (res->allocate(temp, veh)) {

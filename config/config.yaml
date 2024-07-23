@@ -9,6 +9,7 @@ log:
   enable: true
   to_file: true
   to_stdout: true
+  debug: false
 httpserver:
   ip: "0.0.0.0" # 默认所有ip都可连接
   port: 55200

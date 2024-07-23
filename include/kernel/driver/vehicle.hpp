@@ -21,6 +21,12 @@ class Vehicle : public schedule::Client,
   Vehicle(const std::string& n) : schedule::Client(n) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDEL, EXECUTING, CHARGING };
   enum proState { AWAITING_ORDER, IDEL, PROCESSING_ORDER };
+  enum integrationLevel {
+    TO_BE_IGNORED,
+    TO_BE_NOTICED,
+    TO_BE_RESPECTED,
+    TO_BE_UTILIZED
+  };
   std::string get_state();
   std::string get_process_state();
   void receive_task(std::shared_ptr<data::order::TransportOrder>);
@@ -60,7 +66,7 @@ class Vehicle : public schedule::Client,
   int engerg_level{100};
   bool process_chargeing{false};
   bool reroute_flag{false};
-  std::string integration_level;
+  integrationLevel integration_level{TO_BE_UTILIZED};
   std::string color;
   State state{State::UNKNOWN};
   proState process_state{proState::IDEL};
@@ -76,6 +82,7 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::model::Point> current_point;
   std::shared_ptr<data::model::Point> last_point;
   std::shared_ptr<vda5050::instantaction::Action> current_action;
+  std::shared_ptr<data::model::Point> park_point;
   std::thread run_th;
   data::Vector3i position;
   float angle{0};
@@ -91,9 +98,11 @@ class Vehicle : public schedule::Client,
 class SimVehicle : public Vehicle {
  public:
   using Vehicle::Vehicle;
+  SimVehicle(int rate, std::string name) : rate(rate), Vehicle(name) {}
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
   bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
   bool instant_action(std::shared_ptr<vda5050::instantaction::Action>) override;
+  void init() override;
 
  public:
   int rate{5};  // 时间快进比例

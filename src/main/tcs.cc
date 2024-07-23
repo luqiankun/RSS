@@ -551,88 +551,184 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         int energyLevelSufficientlyRecharged =
             vehicle.attribute("energyLevelSufficientlyRecharged").as_int();
         std::string envelope = vehicle.attribute("envelopeKey").as_string();
-        auto interfaceName = vehicle.find_child([](pugi::xml_node node) {
+        //
+        auto init_pos = vehicle.find_child([](pugi::xml_node node) {
           return (std::string(node.name()) == "property" &&
                   node.attribute("name").as_string() ==
-                      std::string("vda5050:interfaceName"));
+                      std::string("loopback:initialPosition"));
         });
-        auto manufacturer = vehicle.find_child([](pugi::xml_node node) {
+        auto park_pos = vehicle.find_child([](pugi::xml_node node) {
           return (std::string(node.name()) == "property" &&
                   node.attribute("name").as_string() ==
-                      std::string("vda5050:manufacturer"));
+                      std::string("tcs:preferredParkingPosition"));
         });
-
-        auto serialNumber = vehicle.find_child([](pugi::xml_node node) {
+        auto adapter = vehicle.find_child([](pugi::xml_node node) {
           return (std::string(node.name()) == "property" &&
                   node.attribute("name").as_string() ==
-                      std::string("vda5050:serialNumber"));
+                      std::string("tcs:preferredAdapterClass"));
         });
-        auto version = vehicle.find_child([](pugi::xml_node node) {
-          return (std::string(node.name()) == "property" &&
-                  node.attribute("name").as_string() ==
-                      std::string("vda5050:version"));
-        });
-
-        auto orderquence = vehicle.find_child([](pugi::xml_node node) {
-          return (std::string(node.name()) == "property" &&
-                  node.attribute("name").as_string() ==
-                      std::string("vda5050:orderQueueSize"));
-        });
-
-        ///////////////////
-        /// // 使用mqtt车辆
-        //////////////////
-        auto vda_interfaceName =
-            interfaceName.type() == pugi::node_null
-                ? "virtual"
-                : interfaceName.attribute("value").as_string();
-        auto vda_serialNumber =
-            serialNumber.type() == pugi::node_null
-                ? "virtual"
-                : serialNumber.attribute("value").as_string();
-        auto vda_version = version.type() == pugi::node_null
-                               ? "1.0"
-                               : version.attribute("value").as_string();
-        auto vda_manufacturer =
-            manufacturer.type() == pugi::node_null
-                ? "virtual"
-                : manufacturer.attribute("value").as_string();
-        auto veh = std::make_shared<kernel::driver::Rabbit3>(
-            name, vda_interfaceName, vda_serialNumber, vda_version,
-            vda_manufacturer);
-        veh->length = length;
-        veh->width = 2.0 * length / 4;
-        veh->max_reverse_vel = maxReverseVelocity;
-        veh->max_vel = maxVelocity;
-        veh->color = color;
-        veh->energy_level_critical = energyLevelCritical;
-        veh->energy_level_good = energyLevelGood;
-        veh->engrgy_level_full = energyLevelSufficientlyRecharged;
-        veh->engrgy_level_recharge = energyLevelFullyRecharged;
-        veh->map_id = root.attribute("name").as_string();
-        veh->broker_ip = ip;
-        veh->broker_port = port;
-        veh->send_queue_size = orderquence.type() == pugi::node_null
-                                   ? 2
-                                   : orderquence.attribute("value").as_int();
-        veh->envelope_key = envelope;
-
-        // pro
-        auto property = vehicle.find_child([](pugi::xml_node node) {
-          return std::string(node.name()) == "property";
-        });
-        while (property.type() != pugi::node_null) {
-          if (std::string(property.name()) != "property") {
-            break;
-          }
-          auto name_ = property.attribute("name").as_string();
-          auto vlaue_ = property.attribute("value").as_string();
-          veh->properties.insert(
-              std::pair<std::string, std::string>(name_, vlaue_));
-          property = property.next_sibling();
+        if (adapter.type() == pugi::node_null) {
+          vehicle = vehicle.next_sibling();
+          continue;
         }
-        ///////////////////////////
-        dispatcher->vehicles.push_back(veh);
+        std::string adapter_class = adapter.attribute("value").as_string();
+        if (adapter_class.find("virtual") != std::string::npos) {
+          ///////////////////
+          /// // 使用虚拟车辆
+          //////////////////
+          auto veh = std::make_shared<kernel::driver::SimVehicle>(5, name);
+          if (init_pos.type() != pugi::node_null) {
+            auto init_pos_ = init_pos.attribute("value").as_string();
+            auto p = resource->find(init_pos_);
+            if (p.first == kernel::allocate::ResourceManager::ResType::Point) {
+              veh->last_point =
+                  std::dynamic_pointer_cast<data::model::Point>(p.second);
+            }
+          } else {
+            CLOG(ERROR, tcs_log) << "vehicle " << name << " no init_pos";
+            vehicle = vehicle.next_sibling();
+            continue;
+          }
+          veh->length = length;
+          veh->width = 2.0 * length / 4;
+          veh->max_reverse_vel = maxReverseVelocity;
+          veh->max_vel = maxVelocity;
+          veh->color = color;
+          veh->energy_level_critical = energyLevelCritical;
+          veh->energy_level_good = energyLevelGood;
+          veh->engrgy_level_full = energyLevelSufficientlyRecharged;
+          veh->engrgy_level_recharge = energyLevelFullyRecharged;
+          veh->send_queue_size = 2;
+          veh->envelope_key = envelope;
+          // pro
+          auto property = vehicle.find_child([](pugi::xml_node node) {
+            return std::string(node.name()) == "property";
+          });
+          while (property.type() != pugi::node_null) {
+            if (std::string(property.name()) != "property") {
+              break;
+            }
+            auto name_ = property.attribute("name").as_string();
+            auto vlaue_ = property.attribute("value").as_string();
+            veh->properties.insert(
+                std::pair<std::string, std::string>(name_, vlaue_));
+            property = property.next_sibling();
+          }
+          ///////////////////////////
+
+          if (park_pos.type() != pugi::node_null) {
+            auto park_pos_ = park_pos.attribute("value").as_string();
+            auto p = resource->find(park_pos_);
+            if (p.first == kernel::allocate::ResourceManager::ResType::Point) {
+              veh->park_point =
+                  std::dynamic_pointer_cast<data::model::Point>(p.second);
+            }
+          }
+          dispatcher->vehicles.push_back(veh);
+
+        } else if (adapter_class.find("vda") != std::string::npos) {
+          //
+          auto interfaceName = vehicle.find_child([](pugi::xml_node node) {
+            return (std::string(node.name()) == "property" &&
+                    node.attribute("name").as_string() ==
+                        std::string("vda5050:interfaceName"));
+          });
+          auto manufacturer = vehicle.find_child([](pugi::xml_node node) {
+            return (std::string(node.name()) == "property" &&
+                    node.attribute("name").as_string() ==
+                        std::string("vda5050:manufacturer"));
+          });
+
+          auto serialNumber = vehicle.find_child([](pugi::xml_node node) {
+            return (std::string(node.name()) == "property" &&
+                    node.attribute("name").as_string() ==
+                        std::string("vda5050:serialNumber"));
+          });
+          auto version = vehicle.find_child([](pugi::xml_node node) {
+            return (std::string(node.name()) == "property" &&
+                    node.attribute("name").as_string() ==
+                        std::string("vda5050:version"));
+          });
+
+          auto orderquence = vehicle.find_child([](pugi::xml_node node) {
+            return (std::string(node.name()) == "property" &&
+                    node.attribute("name").as_string() ==
+                        std::string("vda5050:orderQueueSize"));
+          });
+
+          ///////////////////
+          /// // 使用mqtt车辆
+          //////////////////
+          auto vda_interfaceName =
+              interfaceName.type() == pugi::node_null
+                  ? "virtual"
+                  : interfaceName.attribute("value").as_string();
+          auto vda_serialNumber =
+              serialNumber.type() == pugi::node_null
+                  ? "virtual"
+                  : serialNumber.attribute("value").as_string();
+          auto vda_version = version.type() == pugi::node_null
+                                 ? "1.0"
+                                 : version.attribute("value").as_string();
+          auto vda_manufacturer =
+              manufacturer.type() == pugi::node_null
+                  ? "virtual"
+                  : manufacturer.attribute("value").as_string();
+          auto veh = std::make_shared<kernel::driver::Rabbit3>(
+              name, vda_interfaceName, vda_serialNumber, vda_version,
+              vda_manufacturer);
+          if (init_pos.type() != pugi::node_null) {
+            auto init_pos_ = init_pos.attribute("value").as_string();
+            auto p = resource->find(init_pos_);
+            if (p.first == kernel::allocate::ResourceManager::ResType::Point) {
+              veh->init_pos = true;
+              veh->last_point =
+                  std::dynamic_pointer_cast<data::model::Point>(p.second);
+            }
+          }
+          if (park_pos.type() != pugi::node_null) {
+            auto park_pos_ = park_pos.attribute("value").as_string();
+            auto p = resource->find(park_pos_);
+            if (p.first == kernel::allocate::ResourceManager::ResType::Point) {
+              veh->park_point =
+                  std::dynamic_pointer_cast<data::model::Point>(p.second);
+            }
+          }
+          veh->length = length;
+          veh->width = 2.0 * length / 4;
+          veh->max_reverse_vel = maxReverseVelocity;
+          veh->max_vel = maxVelocity;
+          veh->color = color;
+          veh->energy_level_critical = energyLevelCritical;
+          veh->energy_level_good = energyLevelGood;
+          veh->engrgy_level_full = energyLevelSufficientlyRecharged;
+          veh->engrgy_level_recharge = energyLevelFullyRecharged;
+          veh->map_id = root.attribute("name").as_string();
+          veh->broker_ip = ip;
+          veh->broker_port = port;
+          veh->send_queue_size = orderquence.type() == pugi::node_null
+                                     ? 2
+                                     : orderquence.attribute("value").as_int();
+          veh->envelope_key = envelope;
+
+          // pro
+          auto property = vehicle.find_child([](pugi::xml_node node) {
+            return std::string(node.name()) == "property";
+          });
+          while (property.type() != pugi::node_null) {
+            if (std::string(property.name()) != "property") {
+              break;
+            }
+            auto name_ = property.attribute("name").as_string();
+            auto vlaue_ = property.attribute("value").as_string();
+            veh->properties.insert(
+                std::pair<std::string, std::string>(name_, vlaue_));
+            property = property.next_sibling();
+          }
+          ///////////////////////////
+          dispatcher->vehicles.push_back(veh);
+        }
+
         ///////////////////////
         vehicle = vehicle.next_sibling();
       }
@@ -717,7 +813,10 @@ void TCS::home_order(const std::string &name,
   CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   //  检查是否通路
-  auto home_point = resource->get_recent_park_point(v->last_point);
+
+  auto home_point = v->park_point
+                        ? v->park_point
+                        : resource->get_recent_park_point(v->last_point);
   if (!home_point) {
     CLOG(ERROR, tcs_log) << "home point not found";
     return;
@@ -835,7 +934,7 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
     for (auto &dest : v->driverorders) {
       json dest_v;
       auto dest_ = dest->destination->destination.lock();
-      dest_v["destinations"] = dest_ ? dest_->name : "";
+      dest_v["locationName"] = dest_ ? dest_->name : "";
       dest_v["operation"] = dest->destination->get_type();
       dest_v["state"] = dest->get_state();
       dest_v["properties"] = json::array();
@@ -1268,13 +1367,26 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["name"] = v->name;
   res["length"] = v->length;
   for (auto &pro : v->properties) {
-    json t;
-    t[pro.first] = pro.second;
-    res["properties"].push_back(t);
+    res["properties"][pro.first] = pro.second;
   }
   res["energyLevel"] = v->engerg_level;
   res["energyLevelGood"] = v->energy_level_good;
-  res["integrationLevel"] = v->integration_level;
+  std::string integrationlevel;
+  if (v->integration_level ==
+      kernel::driver::Vehicle::integrationLevel::TO_BE_IGNORED) {
+    integrationlevel = "TO_BE_IGNORED";
+  } else if (v->integration_level ==
+             kernel::driver::Vehicle::integrationLevel::TO_BE_NOTICED) {
+    integrationlevel = "TO_BE_NOTICED";
+  } else if (v->integration_level ==
+             kernel::driver::Vehicle::integrationLevel::TO_BE_RESPECTED) {
+    integrationlevel = "TO_BE_RESPECTED";
+  } else {
+    integrationlevel = "TO_BE_UTILIZED";
+  }
+
+  res["integrationLevel"] = integrationlevel;
+  res["energyLevelCritical"] = v->energy_level_critical;
   res["paused"] = v->paused;
   res["transportOrder"] = v->current_order ? v->current_order->name : "";
   res["currentPosition"] = v->current_point ? v->current_point->name : "";
@@ -1284,13 +1396,17 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["state"] = v->get_state();
   res["procState"] = v->get_process_state();
   res["allocatedResources"] = json::array();
+  json alloc_res = json::array();
   for (auto &r : v->allocated_resources) {
-    res["allocatedResources"].push_back(r->name);
+    alloc_res.push_back(r->name);
   }
+  res["allocatedResources"].push_back(alloc_res);
   res["claimedResources"] = json::array();
+  alloc_res.clear();
   for (auto &r : v->claim_resources) {
-    res["claimedResources"].push_back(r->name);
+    alloc_res.push_back(r->name);
   }
+  res["claimedResources"].push_back(alloc_res);
   // todo
   res["allowedOrderTypes"] = json::array();
   for (auto &x : v->allowed_order_type) {
@@ -1673,6 +1789,7 @@ std::pair<int, std::string> TCS::get_model() {
     vehicle["maxVelocity"] = v->max_vel;
     vehicle["maxReverseVelocity"] = v->max_reverse_vel;
     vehicle["layout"]["routeColor"] = v->color;
+    vehicle["paused"] = v->paused;
     vehicle["properties"] = json::array();
     for (auto &pro : v->properties) {
       json t;
@@ -2330,7 +2447,21 @@ std::pair<int, std::string> TCS::put_vehicle_integration_level(
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
-      v->integration_level = p;
+      if (p == "TO_BE_UTILIZED") {
+        v->integration_level =
+            kernel::driver::Vehicle::integrationLevel::TO_BE_UTILIZED;
+      } else if (p == "TO_BE_RESPECTED") {
+        v->integration_level =
+            kernel::driver::Vehicle::integrationLevel::TO_BE_RESPECTED;
+
+      } else if (p == "TO_BE_NOTICED") {
+        v->integration_level =
+            kernel::driver::Vehicle::integrationLevel::TO_BE_NOTICED;
+
+      } else {
+        v->integration_level =
+            kernel::driver::Vehicle::integrationLevel::TO_BE_IGNORED;
+      }
     }
   }
   return std::pair<int, std::string>(200, "");
