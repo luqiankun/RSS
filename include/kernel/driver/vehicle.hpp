@@ -137,7 +137,25 @@ class Rabbit3 : public Vehicle {
   bool init_pos{false};
   int rece_header_id{-1};
 };
-
+class InvalidVehicle : public Vehicle {
+ public:
+  InvalidVehicle(const std::string& name) : Vehicle(name) {}
+  bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override {
+    return false;
+  }
+  bool move(std::vector<std::shared_ptr<data::order::Step>>) override {
+    return false;
+  }
+  bool instant_action(
+      std::shared_ptr<vda5050::instantaction::Action>) override {
+    return false;
+  }
+  void init() override {
+    state = State::ERROR;
+    process_state = proState::IDEL;
+    integration_level = integrationLevel::TO_BE_IGNORED;
+  }
+};
 // TODO 工厂
 }  // namespace driver
 }  // namespace kernel

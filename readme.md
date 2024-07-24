@@ -23,7 +23,7 @@ make install -j4
 ```
 
 
-### 配置MQTT代理服务器
+### 配置MQTT代理服务器(如果使用vda车辆)
 我用的 **Eclipse Mosquitto**
 安装后配置端口和ip
 默认配置文件路径在 **/etc/mosquitto/mosquitto.conf**
@@ -73,7 +73,7 @@ ls
 ### 如果未上传模型文件，或者需要重新上传更改后的模型文件，点击选择模型文件
 直接选择config中的map.xml
 
-注意修改车辆属性中的MQTT代理的ip
+注意修改车辆属性中的MQTT代理的ip(暂定)
 ```xml
  <vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
@@ -229,17 +229,6 @@ body config中的map.xml内容
         <locationTypeLayout locationRepresentation="LOAD_TRANSFER_ALT_2" />
     </locationType>
 ```
-- VehicleEnvelope 车辆轮廓
-```xml
-  <vehicleEnvelope name="3A" type="2D">
-        <vertex x="-1260" y="900" z="0"></vertex>
-        <vertex x="-1420" y="-860" z="0"></vertex>
-        <vertex x="1080" y="-880" z="0"></vertex>
-        <vertex x="1900" y="-280" z="0"></vertex>
-        <vertex x="940" y="920" z="0"></vertex>
-    </vehicleEnvelope>
-```
-
 
 如果操作成功会显示地图
 
@@ -249,7 +238,13 @@ body config中的map.xml内容
 
 ### 打开车辆客户端
 
+#### 虚拟车辆
+ 通过配置模型文件车辆“intendedVehicle”属性
+ 上传模型后自动加载虚拟车辆
+ 虚拟车辆可以下单
 
+#### vda模拟车辆 
+需要另外开启测试车辆客户端
 单辆车
 ```
 ./sim_agv_test 127.0.0.1

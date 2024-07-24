@@ -727,6 +727,34 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
           }
           ///////////////////////////
           dispatcher->vehicles.push_back(veh);
+        } else {
+          auto veh = std::make_shared<kernel::driver::InvalidVehicle>(name);
+          veh->length = length;
+          veh->width = 2.0 * length / 4;
+          veh->max_reverse_vel = maxReverseVelocity;
+          veh->max_vel = maxVelocity;
+          veh->color = color;
+          veh->energy_level_critical = energyLevelCritical;
+          veh->energy_level_good = energyLevelGood;
+          veh->engrgy_level_full = energyLevelSufficientlyRecharged;
+          veh->engrgy_level_recharge = energyLevelFullyRecharged;
+          veh->send_queue_size = 2;
+          veh->envelope_key = envelope;
+          // pro
+          auto property = vehicle.find_child([](pugi::xml_node node) {
+            return std::string(node.name()) == "property";
+          });
+          while (property.type() != pugi::node_null) {
+            if (std::string(property.name()) != "property") {
+              break;
+            }
+            auto name_ = property.attribute("name").as_string();
+            auto vlaue_ = property.attribute("value").as_string();
+            veh->properties.insert(
+                std::pair<std::string, std::string>(name_, vlaue_));
+            property = property.next_sibling();
+          }
+          dispatcher->vehicles.push_back(veh);
         }
 
         ///////////////////////
@@ -1046,8 +1074,12 @@ std::pair<int, std::string> TCS::post_transport_order(
     // 字段检查
     auto ord = std::make_shared<data::order::TransportOrder>(ord_name);
     ord->create_time = std::chrono::system_clock::now();
-    auto dt = get_time_from_str(req["deadline"].get<std::string>());
-    ord->dead_time = dt.value_or(ord->create_time + std::chrono::minutes(60));
+    if (req.contains("deadline") && !req["deadline"].empty()) {
+      auto dt = get_time_from_str(req["deadline"].get<std::string>());
+      ord->dead_time = dt.value_or(ord->create_time + std::chrono::minutes(60));
+    } else {
+      ord->dead_time = ord->create_time + std::chrono::hours(1000000);
+    }
     for (auto &v : dispatcher->vehicles) {
       if (v->name == req["intendedVehicle"].get<std::string>()) {
         ord->intended_vehicle = v;
@@ -1106,6 +1138,14 @@ std::pair<int, std::string> TCS::post_transport_order(
 
             auto destination =
                 orderpool->res_to_destination(check.second, op_.value());
+            if (d.contains("properties")) {
+              for (auto &pro : d["properties"]) {
+                destination->properties.insert(
+                    std::pair<std::string, std::string>(
+                        pro["key"].get<std::string>(),
+                        pro["value"].get<std::string>()));
+              }
+            }
             auto dr = std::make_shared<data::order::DriverOrder>(
                 "driverorder_" + loc);
             dr->destination = destination;
@@ -1852,7 +1892,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       }
       for (auto &x : model["visualLayout"]["properties"]) {
         visuallayout->properties.insert(std::pair<std::string, std::string>(
-            x["name"].get<std::string>(), x["value"].get<std::string>()));
+            x["key"].get<std::string>(), x["value"].get<std::string>()));
       }
     }
     // point
@@ -1892,7 +1932,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
               value = pro["value"].get<std::string>();
             }
             point->properties.insert(std::pair<std::string, std::string>(
-                pro["name"].get<std::string>(), value));
+                pro["key"].get<std::string>(), value));
           }
         }
         for (auto &x : p["vehicleEnvelope"]) {
@@ -1917,7 +1957,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         type->layout.location_representation = data::model::new_location_type(
             x["layout"]["locationRepresentation"].get<std::string>());
         for (auto &pro : x["property"]) {
-          auto key = pro["name"].get<std::string>();
+          auto key = pro["key"].get<std::string>();
           auto value = pro["value"].get<std::string>();
           type->properties.insert(
               std::pair<std::string, std::string>(key, value));
@@ -1977,7 +2017,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
                   l["layout"]["locationRepresentation"].get<std::string>());
         }
         for (auto &pro : l["property"]) {
-          auto key = pro["name"].get<std::string>();
+          auto key = pro["key"].get<std::string>();
           auto value = pro["value"].get<std::string>();
           loc->properties.insert(
               std::pair<std::string, std::string>(key, value));
@@ -2022,7 +2062,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
               value = pro["value"].get<std::string>();
             }
             path->properties.insert(std::pair<std::string, std::string>(
-                pro["name"].get<std::string>(), value));
+                pro["key"].get<std::string>(), value));
           }
         }
         if (!p.contains("length")) {
@@ -2121,52 +2161,113 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     }
     // vehicle
     {
-      std::string vda_interfaceName{"virtual"};
-      std::string vda_serialNumber{"virtual"};
-      std::string vda_version{"1.0"};
-      std::string vda_manufacturer{"virtual"};
       int orderquence{2};
       for (auto &v : model["vehicles"]) {
-        for (auto &pro : v["properties"]) {
-          if (pro["name"] == "vda5050:interfaceName") {
-            vda_interfaceName = pro["value"];
-          } else if (pro["name"] == "vda5050:manufacturer") {
-            vda_manufacturer = pro["value"];
-          } else if (pro["name"] == "vda5050:serialNumber") {
-            vda_serialNumber = pro["value"];
-
-          } else if (pro["name"] == "vda5050:version") {
-            vda_version = pro["value"];
-
-          } else if (pro["name"] == "vda5050:orderQueueSize") {
-            orderquence = pro["value"].get<int>();
+        std::string address =
+            v["properties"]["tcs:preferredAdapterClass"].get<std::string>();
+        if (address.find("virtual") != std::string::npos) {
+          ///////////////////
+          /// // 使用虚拟车辆
+          //////////////////
+          auto veh = std::make_shared<kernel::driver::SimVehicle>(5, v["name"]);
+          veh->length = v["length"].get<int>();
+          veh->max_reverse_vel = v["maxReverseVelocity"].get<int>();
+          veh->max_vel = v["maxVelocity"].get<int>();
+          veh->color = v["layout"]["routeColor"];
+          veh->energy_level_critical = v["energyLevelCritical"].get<int>();
+          veh->energy_level_good = v["energyLevelGood"].get<int>();
+          veh->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
+          veh->engrgy_level_recharge =
+              v["energyLevelSufficientlyRecharged"].get<int>();
+          veh->send_queue_size = orderquence;
+          veh->envelope_key = v.contains("envelopeKey")
+                                  ? v["envelopeKey"].get<std::string>()
+                                  : "";
+          for (auto &pro : v["properties"]) {
+            veh->properties.insert(std::pair<std::string, std::string>(
+                pro["key"].get<std::string>(),
+                pro["value"].get<std::string>()));
+            if (pro["key"] == "loopback:initialPosition") {
+              for (auto &x : resource->points) {
+                if (x->name == pro["value"].get<std::string>()) {
+                  veh->last_point = x;
+                }
+              }
+            }
+            if (pro["key"] == "tcs:preferredParkingPosition") {
+              for (auto &x : resource->points) {
+                if (x->name == pro["value"].get<std::string>()) {
+                  veh->park_point = x;
+                }
+              }
+            }
           }
+          dispatcher->vehicles.push_back(veh);
+
+        } else if (address.find("vda") != std::string::npos) {
+          std::string vda_interfaceName{"rw"};
+          std::string vda_serialNumber{"rw"};
+          std::string vda_version{"1.0"};
+          std::string vda_manufacturer{"rw"};
+          for (auto &pro : v["properties"]) {
+            if (pro["key"] == "vda5050:interfaceName") {
+              vda_interfaceName = pro["value"];
+            } else if (pro["key"] == "vda5050:manufacturer") {
+              vda_manufacturer = pro["value"];
+            } else if (pro["key"] == "vda5050:serialNumber") {
+              vda_serialNumber = pro["value"];
+
+            } else if (pro["key"] == "vda5050:version") {
+              vda_version = pro["value"];
+
+            } else if (pro["key"] == "vda5050:orderQueueSize") {
+              orderquence = pro["value"].get<int>();
+            }
+          }
+          auto veh = std::make_shared<kernel::driver::Rabbit3>(
+              v["name"], vda_interfaceName, vda_serialNumber, vda_version,
+              vda_manufacturer);
+          veh->length = v["length"].get<int>();
+          veh->max_reverse_vel = v["maxReverseVelocity"].get<int>();
+          veh->max_vel = v["maxVelocity"].get<int>();
+          veh->map_id = model["name"];
+          veh->color = v["layout"]["routeColor"];
+          veh->energy_level_critical = v["energyLevelCritical"].get<int>();
+          veh->energy_level_good = v["energyLevelGood"].get<int>();
+          veh->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
+          veh->engrgy_level_recharge =
+              v["energyLevelSufficientlyRecharged"].get<int>();
+          veh->broker_ip = ip;
+          veh->broker_port = port;
+          veh->send_queue_size = orderquence;
+          veh->envelope_key = v.contains("envelopeKey")
+                                  ? v["envelopeKey"].get<std::string>()
+                                  : "";
+          for (auto &pro : v["properties"]) {
+            veh->properties.insert(std::pair<std::string, std::string>(
+                pro["key"].get<std::string>(),
+                pro["value"].get<std::string>()));
+          }
+          ///////////////////////////
+          dispatcher->vehicles.push_back(veh);
+        } else {
+          auto veh =
+              std::make_shared<kernel::driver::InvalidVehicle>(v["name"]);
+          veh->length = v["length"].get<int>();
+          veh->max_reverse_vel = v["maxReverseVelocity"].get<int>();
+          veh->max_vel = v["maxVelocity"].get<int>();
+          veh->color = v["layout"]["routeColor"];
+          veh->energy_level_critical = v["energyLevelCritical"].get<int>();
+          veh->energy_level_good = v["energyLevelGood"].get<int>();
+          veh->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
+          veh->engrgy_level_recharge =
+              v["energyLevelSufficientlyRecharged"].get<int>();
+          veh->send_queue_size = orderquence;
+          veh->envelope_key = v.contains("envelopeKey")
+                                  ? v["envelopeKey"].get<std::string>()
+                                  : "";
+          dispatcher->vehicles.push_back(veh);
         }
-        auto veh = std::make_shared<kernel::driver::Rabbit3>(
-            v["name"], vda_interfaceName, vda_serialNumber, vda_version,
-            vda_manufacturer);
-        veh->length = v["length"].get<int>();
-        veh->max_reverse_vel = v["maxReverseVelocity"].get<int>();
-        veh->max_vel = v["maxVelocity"].get<int>();
-        veh->map_id = model["name"];
-        veh->color = v["layout"]["routeColor"];
-        veh->energy_level_critical = v["energyLevelCritical"].get<int>();
-        veh->energy_level_good = v["energyLevelGood"].get<int>();
-        veh->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
-        veh->engrgy_level_recharge =
-            v["energyLevelSufficientlyRecharged"].get<int>();
-        veh->broker_ip = ip;
-        veh->broker_port = port;
-        veh->send_queue_size = orderquence;
-        veh->envelope_key = v.contains("envelopeKey")
-                                ? v["envelopeKey"].get<std::string>()
-                                : "";
-        for (auto &pro : v["properties"]) {
-          veh->properties.insert(std::pair<std::string, std::string>(
-              pro["name"].get<std::string>(), pro["value"].get<std::string>()));
-        }
-        ///////////////////////////
-        dispatcher->vehicles.push_back(veh);
       }
       CLOG(INFO, tcs_log) << "init vehicle size "
                           << dispatcher->vehicles.size();
