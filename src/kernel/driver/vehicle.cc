@@ -284,7 +284,7 @@ void Vehicle::command_done() {
   }
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     // 订单取消
-    future_claim_resources.clear();
+    future_allocate_resources.clear();
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " withdrawl.";
     if (process_chargeing) {
@@ -296,7 +296,7 @@ void Vehicle::command_done() {
   }
   if (current_order->state == data::order::TransportOrder::State::UNROUTABLE) {
     // 订单不可达
-    future_claim_resources.clear();
+    future_allocate_resources.clear();
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " unrouteable.";
     if (process_chargeing) {
@@ -313,7 +313,7 @@ void Vehicle::command_done() {
   }
   if (current_order->state == data::order::TransportOrder::State::FAILED) {
     // 订单失败
-    future_claim_resources.clear();
+    future_allocate_resources.clear();
     current_order.reset();
     get_next_ord();
     return;
@@ -332,7 +332,7 @@ void Vehicle::command_done() {
     current_order->end_time = std::chrono::system_clock::now();
     current_order.reset();
     current_command.reset();
-    future_claim_resources.clear();
+    future_allocate_resources.clear();
     get_next_ord();
   } else {
     // 继续执行订单

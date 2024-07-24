@@ -43,7 +43,9 @@ void Command::run_once() {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
       } else {
         std::vector<std::shared_ptr<TCSResource>> temp;
+        veh->claim_resources.clear();
         for (auto& x : steps) {
+          std::vector<std::shared_ptr<TCSResource>> step_res;
           bool has_1{false}, has_2{false};
           auto s_p = x->path->source_point.lock();
           auto e_p = x->path->destination_point.lock();
@@ -55,61 +57,88 @@ void Command::run_once() {
               has_2 = true;
             }
           }
-          if (!has_1) temp.push_back(x->path->source_point.lock());
-          if (!has_2) temp.push_back(x->path->destination_point.lock());
+          if (!has_1) {
+            temp.push_back(x->path->source_point.lock());
+            step_res.push_back(x->path->source_point.lock());
+          }
+          if (!has_2) {
+            temp.push_back(x->path->destination_point.lock());
+            step_res.push_back(x->path->destination_point.lock());
+          }
           temp.push_back(x->path);
+          step_res.push_back(x->path);
+          for (auto x = step_res.begin(); x != step_res.end();) {
+            bool has{false};
+            for (auto& allocate_list : veh->allocated_resources) {
+              for (auto& temo_res : allocate_list) {
+                if (temo_res == *x) {
+                  has = true;
+                  break;
+                }
+              }
+            }
+            if (has) {
+              x = step_res.erase(x);
+            } else {
+              x++;
+            }
+          }
+          // allocate
+          veh->claim_resources.push_back(
+              std::unordered_set<std::shared_ptr<TCSResource>>{step_res.begin(),
+                                                               step_res.end()});
+          if (!res->allocate(step_res, veh)) {
+            // future_claim
+            for (auto& x : step_res) {
+              bool has{false};
+              for (auto& t : veh->allocated_resources) {
+                for (auto& c : t) {
+                  if (c == x) {
+                    has = true;
+                  }
+                }
+              }
+              if (!has) {
+                veh->future_allocate_resources.insert(x);
+              }
+            }
+            //
+            return;
+          }
         }
-        for (auto x = temp.begin(); x != temp.end();) {
+        // future_claim
+        for (auto& x : get_future(driver_order)) {
           bool has{false};
-          for (auto& c : veh->allocated_resources) {
-            if (c == *x) {
-              has = true;
-              break;
-            }
-          }
-          if (has) {
-            x = temp.erase(x);
-          } else {
-            x++;
-          }
-        }
-        // claim
-        veh->claim_resources.clear();
-        veh->claim_resources.insert(temp.begin(), temp.end());
-        // allcoate
-        if (res->allocate(temp, veh)) {
-          //  添加future_claim
-          for (auto& x : get_future(driver_order)) {
-            bool has{false};
-            for (auto& c : veh->allocated_resources) {
+          for (auto& t : veh->allocated_resources) {
+            for (auto& c : t) {
               if (c == x) {
                 has = true;
               }
             }
-            if (!has) {
-              veh->future_claim_resources.insert(x);
-            }
           }
-          state = State::ALLOCATED;
-        } else {
-          for (auto& x : temp) {
-            bool has{false};
-            for (auto& c : veh->allocated_resources) {
-              if (c == x) {
-                has = true;
-              }
-            }
-            if (!has) {
-              veh->future_claim_resources.insert(x);
-            }
+          if (!has) {
+            veh->future_allocate_resources.insert(x);
           }
         }
+        state = State::ALLOCATED;
       }
     }
     if (driver_order->state == data::order::DriverOrder::State::OPERATING) {
       auto dest = get_dest(driver_order);
       std::vector<std::shared_ptr<TCSResource>> temp;
       temp.push_back(dest->destination.lock());
+      veh->claim_resources.clear();
+      veh->claim_resources.push_back(
+          std::unordered_set<std::shared_ptr<TCSResource>>{temp.begin(),
+                                                           temp.end()});
+      for (auto& r : veh->allocated_resources) {
+        for (auto& x : r) {
+          if (x == dest->destination.lock()) {
+            state = State::ALLOCATED;
+            return;
+          }
+        }
+      }
       if (res->allocate(temp, veh)) {
         state = State::ALLOCATED;
       }
@@ -148,17 +177,21 @@ void Command::run_once() {
     std::stringstream ss;
     ss << veh->name << " free ";
     std::vector<std::shared_ptr<TCSResource>> temp;
-    for (auto& x : veh->allocated_resources) {
-      if (x != veh->current_point &&
-          x != get_dest(driver_order)->destination.lock()) {
-        temp.push_back(x);
-        ss << x->name << " ";
+    LOG(INFO) << veh->allocated_resources.size() << "\n";
+    for (auto& a : veh->allocated_resources) {
+      for (auto& x : a) {
+        if (x != veh->current_point &&
+            x != get_dest(driver_order)->destination.lock()) {
+          temp.push_back(x);
+          ss << x->name << " ";
+        }
       }
     }
-    if (res->free(temp, veh)) {
-      state = State::END;
-      CLOG_IF(!ss.str().empty(), INFO, driver_log) << ss.str() << "\n";
+    if (!res->free(temp, veh)) {
+      return;
     }
+    state = State::END;
+    CLOG_IF(!ss.str().empty(), INFO, driver_log) << ss.str() << "\n";
   } else if (state == State::END) {
     veh->command_done();
     state = State::DISPOSABLE;
@@ -234,15 +267,17 @@ std::vector<std::shared_ptr<TCSResource>> Command::get_future(
     auto path = next->path;
     auto beg = next->path->destination_point.lock();
     auto end = next->path->source_point.lock();
-    for (auto& x : veh->allocated_resources) {
-      if (x == beg) {
-        beg = nullptr;
-      }
-      if (x == end) {
-        end = nullptr;
-      }
-      if (x == path) {
-        path = nullptr;
+    for (auto& r : veh->allocated_resources) {
+      for (auto& x : r) {
+        if (x == beg) {
+          beg = nullptr;
+        }
+        if (x == end) {
+          end = nullptr;
+        }
+        if (x == path) {
+          path = nullptr;
+        }
       }
     }
     if (beg) {

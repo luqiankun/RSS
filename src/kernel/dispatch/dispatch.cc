@@ -119,7 +119,7 @@ std::vector<std::shared_ptr<driver::Vehicle>> Dispatcher::deadlock_loop() {
 std::set<std::shared_ptr<driver::Vehicle>> Dispatcher::find_owners(
     const std::shared_ptr<driver::Vehicle>& vs) {
   std::set<std::shared_ptr<driver::Vehicle>> res;
-  for (auto& f : vs->future_claim_resources) {
+  for (auto& f : vs->future_allocate_resources) {
     auto f_veh = f->owner.lock();
     if (f_veh) {
       auto veh = std::dynamic_pointer_cast<driver::Vehicle>(f_veh);

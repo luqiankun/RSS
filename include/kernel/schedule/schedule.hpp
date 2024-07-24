@@ -9,9 +9,10 @@ class Client : public TCSObject {
  public:
   virtual ~Client() = default;
   using TCSObject::TCSObject;
-  std::unordered_set<std::shared_ptr<TCSResource>> claim_resources;
-  std::unordered_set<std::shared_ptr<TCSResource>> allocated_resources;
-  std::unordered_set<std::shared_ptr<TCSResource>> future_claim_resources;
+  std::list<std::unordered_set<std::shared_ptr<TCSResource>>> claim_resources;
+  std::list<std::unordered_set<std::shared_ptr<TCSResource>>>
+      allocated_resources;
+  std::unordered_set<std::shared_ptr<TCSResource>> future_allocate_resources;
   std::string envelope_key;
 };
 class Scheduler : public TCSObject,

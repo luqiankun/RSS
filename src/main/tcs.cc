@@ -1396,17 +1396,21 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["state"] = v->get_state();
   res["procState"] = v->get_process_state();
   res["allocatedResources"] = json::array();
-  json alloc_res = json::array();
   for (auto &r : v->allocated_resources) {
-    alloc_res.push_back(r->name);
+    json ls = json::array();
+    for (auto &x : r) {
+      ls.push_back(x->name);
+    }
+    res["allocatedResources"].push_back(ls);
   }
-  res["allocatedResources"].push_back(alloc_res);
   res["claimedResources"] = json::array();
-  alloc_res.clear();
   for (auto &r : v->claim_resources) {
-    alloc_res.push_back(r->name);
+    json ls = json::array();
+    for (auto &x : r) {
+      ls.push_back(x->name);
+    }
+    res["claimedResources"].push_back(ls);
   }
-  res["claimedResources"].push_back(alloc_res);
   // todo
   res["allowedOrderTypes"] = json::array();
   for (auto &x : v->allowed_order_type) {
@@ -1582,7 +1586,7 @@ std::pair<int, std::string> TCS::get_model() {
   }
   json res;
   res["name"] = resource->model_name;
-  res["proerty"] = json::array();
+  res["properties"] = json::array();
   // visuallayout
   res["visualLayout"]["name"] = resource->visual_layout->name;
   res["visualLayout"]["scaleX"] = resource->visual_layout->scale_x;
@@ -1626,7 +1630,7 @@ std::pair<int, std::string> TCS::get_model() {
     point["properties"] = json::array();
     for (auto &pro : p->properties) {
       json t;
-      t["name"] = pro.first;
+      t["key"] = pro.first;
       t["value"] = pro.second;
       point["properties"].push_back(t);
     }
@@ -1664,7 +1668,7 @@ std::pair<int, std::string> TCS::get_model() {
     path["properties"] = json::array();
     for (auto &pro : p->properties) {
       json t;
-      t["name"] = pro.first;
+      t["key"] = pro.first;
       t["value"] = pro.second;
       path["properties"].push_back(t);
     }
@@ -1709,7 +1713,7 @@ std::pair<int, std::string> TCS::get_model() {
     }
     for (auto &pro : type->properties) {
       json t;
-      t["name"] = pro.first;
+      t["key"] = pro.first;
       t["value"] = pro.second;
       loc_type["properties"].push_back(t);
     }
@@ -1748,7 +1752,7 @@ std::pair<int, std::string> TCS::get_model() {
     location["properties"] = json::array();
     for (auto &pro : loc->properties) {
       json t;
-      t["name"] = pro.first;
+      t["key"] = pro.first;
       t["value"] = pro.second;
       location["properties"].push_back(t);
     }
@@ -1774,6 +1778,7 @@ std::pair<int, std::string> TCS::get_model() {
     block["name"] = x->name;
     block["type"] = "SINGLE_VEHICLE_ONLY";
     block["layout"]["color"] = it->color;
+    block["properties"] = json::array();
     res["blocks"].push_back(block);
   }
   //  vehicles
