@@ -22,6 +22,7 @@ class Dispatcher : public TCSObject {
   void idle_detect();
   void run();
   void stop();
+  void notify() { cv.notify_all(); }
   ~Dispatcher();
 
  public:
@@ -29,6 +30,8 @@ class Dispatcher : public TCSObject {
   bool dispose{false};
   bool auto_select{true};  // 没有指定车辆时自动选择
   std::vector<std::shared_ptr<driver::Vehicle>> vehicles;
+  std::mutex mut;
+  std::condition_variable cv;
   /// signals
   std::function<std::pair<allocate::ResourceManager::ResType,
                           std::shared_ptr<TCSResource>>(const std::string&)>
@@ -38,6 +41,7 @@ class Dispatcher : public TCSObject {
   std::function<void(const std::string&, std::shared_ptr<driver::Vehicle>)>
       go_charge;
   std::function<std::shared_ptr<data::order::TransportOrder>()> get_next_ord;
+  std::function<bool()> order_empty;
 };
 }  // namespace dispatch
 }  // namespace kernel

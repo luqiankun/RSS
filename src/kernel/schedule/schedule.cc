@@ -7,7 +7,7 @@
 namespace kernel {
 namespace schedule {
 void Scheduler::run() {
-  CLOG(INFO, "schedule") << this->name << " run....";
+  CLOG(INFO, "schedule") << this->name << " run....\n";
   schedule_th = std::thread([&] {
     while (!dispose) {
       std::unique_lock<std::mutex> lock(mut);

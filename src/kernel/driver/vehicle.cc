@@ -176,7 +176,7 @@ void Vehicle::close() {
 }
 Vehicle::~Vehicle() {
   close();
-  CLOG(INFO, driver_log) << name << " close";
+  CLOG(INFO, driver_log) << name << " close\n";
 }
 void Vehicle::reroute() { reroute_flag = true; }
 void Vehicle::plan_route() {
@@ -266,11 +266,12 @@ void Vehicle::get_next_ord() {
       CLOG_IF(state != State::IDEL, INFO, driver_log)
           << name << " "
           << "state transform to : [" << vehicle_state_to_str(State::IDEL)
-          << "]";
+          << "]\n";
       state = State::IDEL;
       idle_time = std::chrono::system_clock::now();
-      CLOG(INFO, driver_log) << name << " "
-                             << "now is idle " << get_time_fmt(idle_time);
+      CLOG(INFO, driver_log)
+          << name << " "
+          << "now is idle " << get_time_fmt(idle_time) << "\n";
     }
   }
 }
@@ -418,7 +419,7 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
   } else if (state == State::IDEL) {
     CLOG_IF(state != State::EXECUTING, INFO, driver_log)
         << name << " state transform to : ["
-        << vehicle_state_to_str(State::EXECUTING) << "]";
+        << vehicle_state_to_str(State::EXECUTING) << "]\n";
     state = State::EXECUTING;
     process_state = proState::AWAITING_ORDER;
     if (current_order) {
@@ -471,13 +472,13 @@ bool SimVehicle::action(
     position = t->position;
     last_point = t->link.lock();
     CLOG(INFO, driver_log) << name << " now at (" << position.x << " , "
-                           << position.y << ")";
+                           << position.y << ")\n";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position.x = t->link.lock()->position.x;
     position.y = t->link.lock()->position.y;
     last_point = t->link.lock();
     CLOG(INFO, driver_log) << name << " now at (" << position.x << " , "
-                           << position.y << ")";
+                           << position.y << ")\n";
     return true;
   } else if (dest->operation ==
              data::order::DriverOrder::Destination::OpType::UNLOAD) {
@@ -547,7 +548,7 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       last_point = end;
       current_point = last_point;
       CLOG(INFO, driver_log)
-          << name << " now at (" << position.x << " , " << position.y << ")";
+          << name << " now at (" << position.x << " , " << position.y << ")\n";
       res.push_back(1);
       continue;
     } else if (step->vehicle_orientation ==
@@ -568,7 +569,7 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       last_point = end;
       current_point = last_point;
       CLOG(INFO, driver_log)
-          << name << " now at (" << position.x << " , " << position.y << ")";
+          << name << " now at (" << position.x << " , " << position.y << ")\n";
       res.push_back(1);
       continue;
     } else {

@@ -175,9 +175,7 @@ void Command::run_once() {
     auto& driver_order = order->driverorders[order->current_driver_index];
     // free
     std::stringstream ss;
-    ss << veh->name << " free ";
     std::vector<std::shared_ptr<TCSResource>> temp;
-    LOG(INFO) << veh->allocated_resources.size() << "\n";
     for (auto& a : veh->allocated_resources) {
       for (auto& x : a) {
         if (x != veh->current_point &&
@@ -191,7 +189,8 @@ void Command::run_once() {
       return;
     }
     state = State::END;
-    CLOG_IF(!ss.str().empty(), INFO, driver_log) << ss.str() << "\n";
+    CLOG_IF(!ss.str().empty(), INFO, driver_log)
+        << veh->name << " free " << ss.str() << "\n";
   } else if (state == State::END) {
     veh->command_done();
     state = State::DISPOSABLE;
@@ -228,8 +227,6 @@ std::vector<std::shared_ptr<data::order::Step>> Command::get_step(
     return std::vector<std::shared_ptr<data::order::Step>>();
   }
   order->route->current_steps.clear();
-  auto step = order->route->steps.front();
-  order->route->current_steps.push_back(step);
   auto res = std::vector<std::shared_ptr<data::order::Step>>();
   auto len =
       size >= order->route->steps.size() ? order->route->steps.size() : size;

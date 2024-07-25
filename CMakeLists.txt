@@ -1,5 +1,5 @@
 ﻿cmake_minimum_required(VERSION 3.10)
-project(TCS)
+project(TCS VERSION 1.0.0)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release
@@ -11,6 +11,8 @@ message(STATUS "Install path: " ${CMAKE_INSTALL_PREFIX})
 # set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 add_compile_options(-std=c++17)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3 -DNDEBUG")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(TEST "Build test " OFF)
 if(DEFINED TEST)
@@ -49,6 +51,7 @@ ${MQTT_SRC}
 target_link_libraries(tcs PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen)
 
 
+
 #########
 #install#
 #########
@@ -56,7 +59,6 @@ install(TARGETS tcs
 RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}
 )
 install(DIRECTORY config DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
-
 
 ########
 ##test##
@@ -83,10 +85,31 @@ if(TEST)
     add_executable(sim_agv_test test/kernel/driver/rabbit3_test.cc  ${MQTT_SRC} ${TOOLS_SRC} )
     target_link_libraries(sim_agv_test  PahoMqttCpp::paho-mqttpp3 Threads::Threads)
     install(TARGETS test_event log_event xml_test http_test json_test sim_agv_test mqtt_test
-    RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}
+    RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/bin/${PROJECT_NAME}
     )
   
 endif()
+
+
+#######
+###cpack
+#######
+# include(InstallRequiredSystemLibraries)
+# set(CPACK_SOURCE_IGNORE_FILES build)
+# set(CPACK_GENERATOR "DEB")
+# set(CPACK_PACKAGE_CONTACT "lqk1949@foxmail.com")
+# set(CPACK_DEBIAN_PACKAGE_DEPENDS "libpaho-mqttpp-dev")
+# set(CPACK_DEBIAN_PACKAGE_DEPENDS "libeigen3-dev")
+# set(CPACK_PACKAGE_DESCRIPTION "lqk1949")
+# set(CPACK_DEBIAN_PACKAGE_NAME "tcs")
+# #########
+# #install#
+# #########
+# install(TARGETS tcs
+# RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/bin
+# )
+# install(DIRECTORY config DESTINATION  ${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME})
+# include(CPack)
 
 
 

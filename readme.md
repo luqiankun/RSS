@@ -6,12 +6,14 @@
 [Eigen3](https://eigen.tuxfamily.org/)
 ubuntu 安装依赖
 > sudo apt install libpaho-mqttpp-dev
+>  (ubuntu18.04及以下可能需要源码编译，20.04以上可以apt安装，windows可以源码编译或者用vcpkg)
+
 > sudo apt install libeigen3-dev
 
 > paho-mqttpp依赖eclipse-paho-mqtt-c和openssl,一般会自动安装
 
 
-添加test选项编译，编译车辆端模拟的代码和一些测试代码
+如果要测试vda,添加test选项编译，编译车辆端模拟的代码和一些测试代码,如果使用虚拟车辆则无须编译test
 
 
 ```bash
@@ -72,8 +74,20 @@ ls
 
 ### 如果未上传模型文件，或者需要重新上传更改后的模型文件，点击选择模型文件
 直接选择config中的map.xml
-
-注意修改车辆属性中的MQTT代理的ip(暂定)
+不同的tcs:preferredAdapterClass对应不同的车辆模型
+使用虚拟车辆注意修改初始点和停靠点
+```xml
+    <vehicle name="Vehicle-0005" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="loopback:initialPosition" value="P7" />
+        <property name="tcs:preferredParkingPosition" value="P7" />
+        <vehicleLayout color="#FF00FF" />
+    </vehicle>
+```
+使用vda车辆注意修改车辆属性中的MQTT代理的ip(暂定)
 ```xml
  <vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
@@ -135,7 +149,6 @@ body config中的map.xml内容
 车辆状态为broken,然后等待车辆连接
 
 可以多次重新上传模型，资源会清理然后重新创建
->**<font color=#b04f61>不要在车辆执行订单过程中重新上传！！！</font>**
 
 上传模型文件内容格式示例：
 - Point 路径点
@@ -240,7 +253,7 @@ body config中的map.xml内容
 
 #### 虚拟车辆
  通过配置模型文件车辆“intendedVehicle”属性
- 上传模型后自动加载虚拟车辆
+ 上传模型后自动加载虚拟车辆，不需要另外开启客户端
  虚拟车辆可以下单
 
 #### vda模拟车辆 
@@ -262,7 +275,7 @@ body config中的map.xml内容
 [I 240430 13:36:23.7704 vehicle.cc:657] Vehicle-0001 tx1 ONLINE
 ```
 表示已经和车辆在正常通信了
-网页可以看到车辆id和电量以及车辆的2D轮廓 
+网页可以看到车辆id和电量
 ![view](imgs/normal.png)
 如果电量不足会先自动去最近的充电点充电，充电结束后自动去最近的停靠点
 
@@ -337,7 +350,7 @@ body 订单具体内容
 [I 240430 13:51:55.9563 vehicle.cc:1075] Vehicle-0001 all actions ok
 ```
 
-### 周边操作
+### 外围操作
 电梯等其他外设，由服务器直接执行的动作，具体操作目前留空，用打印来模拟
 如果路径点上定义了相应的动作，根据触发时机会去调用
 例如 point-0090 --- point-0004上的定义了电梯操作

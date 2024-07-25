@@ -14,7 +14,6 @@ namespace planner {
 #undef min
 #endif
 void Solver::solver(const VertexPtr& begin) {
-  cpu_timer t("solver paths");
   this->begin_node = begin;
   if (begin_node == nullptr) {
     return;
@@ -63,11 +62,10 @@ void Solver::solver(const VertexPtr& begin) {
         }
       }
     } while (!open_list.empty());
-    CLOG(INFO, planner_log) << "planner solver path end";
+    // CLOG(INFO, planner_log) << "planner solver path end";
   }
 }
 std::vector<std::vector<VertexPtr>> Solver::get_paths(const VertexPtr& end) {
-  cpu_timer t("find paths");
   end_node = end;
   std::stack<VertexPtr> stack;
   stack.push(end_node);

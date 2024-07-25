@@ -30,7 +30,7 @@ class Scheduler : public TCSObject,
     if (schedule_th.joinable()) {
       schedule_th.join();
     }
-    CLOG(INFO, "schedule") << name << " close";
+    CLOG(INFO, "schedule") << name << " close\n";
   }
 
  public:

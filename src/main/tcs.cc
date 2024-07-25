@@ -764,7 +764,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
                           << dispatcher->vehicles.size();
     }
     ///
-    CLOG(INFO, tcs_log) << "init resource ok";
+    CLOG(INFO, tcs_log) << "init resource ok\n";
     init_planner();
     scheduler->resource = resource;
     // connect signals
@@ -772,6 +772,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
                                      resource, std::placeholders::_1);
     dispatcher->go_home = std::bind(
         &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2);
+    dispatcher->order_empty =
+        std::bind(&kernel::allocate::OrderPool::is_empty, orderpool);
     dispatcher->go_charge = std::bind(
         &TCS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->get_next_ord =
@@ -783,9 +785,9 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       v->resource = resource;
     }
     assert(dispatcher);
-    CLOG(INFO, tcs_log) << "run all ...";
+    CLOG(INFO, tcs_log) << "run all ...\n";
     run();
-    CLOG(INFO, tcs_log) << "run all ok";
+    CLOG(INFO, tcs_log) << "run all ok\n";
     return std::pair<int, std::string>(200, "");
   } catch (pugi::xpath_exception ec) {
     CLOG(ERROR, tcs_log) << "parse error: " << ec.what();
@@ -888,23 +890,23 @@ void TCS::charge_order(const std::string &name,
   orderpool->orderpool.push_back(ord);
 }
 TCS::~TCS() {
-  CLOG(INFO, tcs_log) << "TCS  stop";
+  CLOG(INFO, tcs_log) << "TCS  stop\n";
   stop();
 }
 
 bool TCS::init_dispatcher() {
   dispatcher = std::make_shared<kernel::dispatch::Dispatcher>("Dispatcher");
-  CLOG(INFO, tcs_log) << "init dispatcher ok";
+  CLOG(INFO, tcs_log) << "init dispatcher ok\n";
   return true;
 }
 bool TCS::init_orderpool() {
   orderpool = std::make_shared<kernel::allocate::OrderPool>("OrderPool");
-  CLOG(INFO, tcs_log) << "init orderpool ok";
+  CLOG(INFO, tcs_log) << "init orderpool ok\n";
   return true;
 }
 bool TCS::init_scheduler() {
   this->scheduler = std::make_shared<kernel::schedule::Scheduler>("Scheduler");
-  CLOG(INFO, tcs_log) << "init scheduler ok";
+  CLOG(INFO, tcs_log) << "init scheduler ok\n";
   return true;
 }
 bool TCS::init_planner() {
@@ -912,7 +914,7 @@ bool TCS::init_planner() {
     return false;
   }
   this->planner = std::make_shared<kernel::planner::Planner>(this->resource);
-  CLOG(INFO, tcs_log) << "init planner ok";
+  CLOG(INFO, tcs_log) << "init planner ok\n";
   return true;
 }
 void TCS::cancel_all_order() { orderpool->cancel_all_order(); }
@@ -1180,6 +1182,7 @@ std::pair<int, std::string> TCS::post_transport_order(
     }
     ord->state = data::order::TransportOrder::State::RAW;
     orderpool->orderpool.push_back(ord);
+    dispatcher->notify();
     // return
     json res;
     res["dispensable"] = ord->dispensable;
@@ -2280,6 +2283,8 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
                                      resource, std::placeholders::_1);
     dispatcher->go_home = std::bind(
         &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2);
+    dispatcher->order_empty =
+        std::bind(&kernel::allocate::OrderPool::is_empty, orderpool);
     dispatcher->get_next_ord =
         std::bind(&kernel::allocate::OrderPool::pop, orderpool);
     dispatcher->go_charge = std::bind(

@@ -12,7 +12,7 @@ Planner::Planner(const std::shared_ptr<allocate::ResourceManager> &manager) {
   this->res = manager;
   rebuild();
 }
-Planner::~Planner() { CLOG(INFO, planner_log) << "Planner close"; }
+Planner::~Planner() { CLOG(INFO, planner_log) << "Planner close\n"; }
 
 void Planner::rebuild() {
   cpu_timer t("generate map");
@@ -315,12 +315,34 @@ Planner::to_model_path(
 std::vector<std::vector<std::shared_ptr<data::model::Point>>>
 Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
                            const std::shared_ptr<data::model::Point> &end) {
+  cpu_timer t("try to find two paths");
   auto paths = find_paths_with_vertex(begin, end);
   if (paths.empty() || begin == end) {
     CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
     return to_model_path(paths);
   }
   if (paths.size() > 1) {
+    for (auto &x : paths) {
+      std::stringstream ss;
+      ss << "\n.- - - - - - - - - - - - - - - - - - - - - - -.\n"
+         << "| turns : " << calculate_turns(x.first) << " cost : " << x.second
+         << " vertex number : " << x.first.size() << "\n";
+      ss << "| path:[";
+      for (auto &p : x.first) {
+        if (p == *(x.first.end() - 1)) {
+          ss << p->name << "";
+        } else {
+          ss << p->name << " -> ";
+        }
+      }
+      ss << "]\n";
+      if (x.second != std::numeric_limits<float>::max()) {
+      } else {
+        ss << "this path is not open";
+      }
+      ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
+      CLOG(INFO, planner_log) << ss.str();
+    }
     return to_model_path({paths.front(), *(paths.begin() + 1)});
   } else {
     std::vector<std::pair<std::vector<VertexPtr>, double>> temp;

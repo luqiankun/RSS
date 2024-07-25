@@ -253,9 +253,9 @@ int main(int argc, char** argv) {
     }
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  CLOG(INFO, tcs_log) << "service start, press 'Ctrl + C' to exit.";
+  CLOG(INFO, tcs_log) << "service start, press 'Ctrl + C' to exit.\n";
   if (th_wait.joinable()) {
     th_wait.join();
   }
-  CLOG(INFO, tcs_log) << "service shutdown";
+  CLOG(INFO, tcs_log) << "service shutdown\n";
 }

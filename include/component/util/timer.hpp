@@ -23,7 +23,7 @@ class cpu_timer {
     uint32_t ms = dur.count() / 1000;
     uint32_t us = dur.count() % 1000;
     CLOG(INFO, timer_log) << name << " use time: " << s << "(s) " << ms
-                          << "(ms) " << us << "(us)";
+                          << "(ms) " << us << "(us)\n";
   }
 
  private:
