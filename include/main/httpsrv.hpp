@@ -1,5 +1,6 @@
 #ifndef HTTPSERVER_HPP
 #define HTTPSERVER_HPP
+#define CPPHTTPLIB_THREAD_POOL_COUNT 12
 #include "../component/tools/http/httplib.h"
 #include "../component/tools/json/json.hpp"
 #include "../component/util/timer.hpp"

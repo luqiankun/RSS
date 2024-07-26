@@ -171,7 +171,12 @@ void Dispatcher::idle_detect() {
         auto dt = now - v->idle_time;
         auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
         if (dt_s.count() > 5) {
-          if (v->last_point->type != data::model::Point::Type::PARK_POSITION) {
+          if (v->park_point && v->park_point != v->last_point) {
+            go_home("TOder_" + std::to_string(now.time_since_epoch().count()) +
+                        "_" + v->name + "_goto_park",
+                    v);
+          } else if (v->last_point->type !=
+                     data::model::Point::Type::PARK_POSITION) {
             go_home("TOder_" + std::to_string(now.time_since_epoch().count()) +
                         "_" + v->name + "_goto_park",
                     v);
