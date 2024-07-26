@@ -217,7 +217,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
           if (std::string(envelope.name()) != "vehicleEnvelope") {
             break;
           }
-          auto name = envelope.attribute("key").as_string();
+          auto name = envelope.attribute("name").as_string();
           auto envl = std::make_shared<data::model::Envelope>(name);
           auto vertex = envelope.find_child([](pugi::xml_node node) {
             return std::string(node.name()) == "vertex";
@@ -464,7 +464,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
           if (std::string(envelope.name()) != "vehicleEnvelope") {
             break;
           }
-          auto name = envelope.attribute("key").as_string();
+          auto name = envelope.attribute("name").as_string();
           auto envl = std::make_shared<data::model::Envelope>(name);
           auto vertex = envelope.find_child([](pugi::xml_node node) {
             return std::string(node.name()) == "vertex";
@@ -1031,7 +1031,7 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
         v->intended_vehicle.lock() ? v->intended_vehicle.lock()->name : "";
     value["processingVehicle"] =
         v->processing_vehicle.lock() ? v->processing_vehicle.lock()->name : "";
-    value["peripheralReservationToken"] = "";
+    value["peripheralReservationToken"] = v->peripheral_reservation_token;
     value["wrappingSequence"] =
         v->ordersequence.lock() ? v->ordersequence.lock()->name : "";
     value["destinations"] = json::array();
@@ -1208,7 +1208,11 @@ std::pair<int, std::string> TCS::post_transport_order(
                 CLOG(ERROR, driver_log) << op << "type is err";
                 ord->state = data::order::TransportOrder::State::FAILED;
                 orderpool->ended_orderpool.push_back(ord);
-                break;
+                json res = json::array();
+                auto msg = "Could not find type '" + op + "'.";
+                res.push_back(msg);
+                return std::pair<int, std::string>(httplib::NotFound_404,
+                                                   res.dump());
               }
             }
 
@@ -1232,13 +1236,16 @@ std::pair<int, std::string> TCS::post_transport_order(
                 << "op type '" + std::string(op) + "' is not support";
             ord->state = data::order::TransportOrder::State::FAILED;
             orderpool->ended_orderpool.push_back(ord);
-            break;
+            json res = json::array();
+            auto msg = "Could not support type '" + op + "'.";
+            res.push_back(msg);
+            return std::pair<int, std::string>(httplib::NotFound_404,
+                                               res.dump());
           }
         }
       }
     }
-    auto properties = req["properties"];
-    for (auto &pro : properties) {
+    for (auto &pro : req["properties"]) {
       ord->properties.insert(std::pair<std::string, std::string>(
           pro["key"].get<std::string>(), pro["value"].get<std::string>()));
     }
@@ -1254,6 +1261,8 @@ std::pair<int, std::string> TCS::post_transport_order(
         }
       }
     }
+    ord->peripheral_reservation_token =
+        req["peripheralReservationToken"].get<std::string>();
     ord->state = data::order::TransportOrder::State::RAW;
     orderpool->orderpool.push_back(ord);
     dispatcher->notify();
@@ -1268,7 +1277,7 @@ std::pair<int, std::string> TCS::post_transport_order(
     res["processingVehicle"] = ord->processing_vehicle.lock()
                                    ? ord->processing_vehicle.lock()->name
                                    : "";
-    res["peripheralReservationToken"] = req["peripheralReservationToken"];
+    res["peripheralReservationToken"] = ord->peripheral_reservation_token;
     res["wrappingSequence"] =
         ord->ordersequence.lock() ? ord->ordersequence.lock()->name : "";
     res["destinations"] = json::array();
@@ -1280,7 +1289,7 @@ std::pair<int, std::string> TCS::post_transport_order(
       value["properties"] = json::array();
       for (auto &pro : dest->properties) {
         json p;
-        p["key"] = pro.first;
+        p["name"] = pro.first;
         p["value"] = pro.second;
         value["properties"].push_back(p);
       }
@@ -1356,7 +1365,7 @@ json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
   res["properties"] = json::array();
   for (auto &pro : quence->properties) {
     json p;
-    p["key"] = pro.first;
+    p["name"] = pro.first;
     p["value"] = pro.second;
     res["properties"].push_back(p);
   }
@@ -1445,7 +1454,7 @@ std::pair<int, std::string> TCS::post_ordersequence(
         new_orderquence->failure_fatal = req["failureFatal"].get<bool>();
         new_orderquence->complete = req["incompleteName"].get<bool>();
         for (auto &pro : req["properties"]) {
-          new_orderquence->properties[pro["key"].get<std::string>()] =
+          new_orderquence->properties[pro["name"].get<std::string>()] =
               pro["value"].get<std::string>();
         }
         // return
@@ -1747,7 +1756,7 @@ std::pair<int, std::string> TCS::get_model() {
     point["properties"] = json::array();
     for (auto &pro : p->properties) {
       json t;
-      t["key"] = pro.first;
+      t["name"] = pro.first;
       t["value"] = pro.second;
       point["properties"].push_back(t);
     }
@@ -1785,7 +1794,7 @@ std::pair<int, std::string> TCS::get_model() {
     path["properties"] = json::array();
     for (auto &pro : p->properties) {
       json t;
-      t["key"] = pro.first;
+      t["name"] = pro.first;
       t["value"] = pro.second;
       path["properties"].push_back(t);
     }
@@ -1830,7 +1839,7 @@ std::pair<int, std::string> TCS::get_model() {
     }
     for (auto &pro : type->properties) {
       json t;
-      t["key"] = pro.first;
+      t["name"] = pro.first;
       t["value"] = pro.second;
       loc_type["properties"].push_back(t);
     }
@@ -1869,7 +1878,7 @@ std::pair<int, std::string> TCS::get_model() {
     location["properties"] = json::array();
     for (auto &pro : loc->properties) {
       json t;
-      t["key"] = pro.first;
+      t["name"] = pro.first;
       t["value"] = pro.second;
       location["properties"].push_back(t);
     }
@@ -1969,7 +1978,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       }
       for (auto &x : model["visualLayout"]["properties"]) {
         visuallayout->properties.insert(std::pair<std::string, std::string>(
-            x["key"].get<std::string>(), x["value"].get<std::string>()));
+            x["name"].get<std::string>(), x["value"].get<std::string>()));
       }
     }
     // point
@@ -2009,7 +2018,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
               value = pro["value"].get<std::string>();
             }
             point->properties.insert(std::pair<std::string, std::string>(
-                pro["key"].get<std::string>(), value));
+                pro["name"].get<std::string>(), value));
           }
         }
         for (auto &x : p["vehicleEnvelope"]) {
@@ -2034,15 +2043,15 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         type->layout.location_representation = data::model::new_location_type(
             x["layout"]["locationRepresentation"].get<std::string>());
         for (auto &pro : x["property"]) {
-          auto key = pro["key"].get<std::string>();
+          auto name = pro["name"].get<std::string>();
           auto value = pro["value"].get<std::string>();
           type->properties.insert(
-              std::pair<std::string, std::string>(key, value));
+              std::pair<std::string, std::string>(name, value));
         }
-        for (auto &allow : x["allowedOperation"]) {
+        for (auto &allow : x["allowedOperations"]) {
           type->allowed_ops[allow] = std::map<std::string, std::string>();
         }
-        for (auto &allow : x["allowedPeripheralOperation"]) {
+        for (auto &allow : x["allowedPeripheralOperations"]) {
           type->allowrd_per_ops[allow] = std::map<std::string, std::string>();
         }
         type->get_param();
@@ -2094,10 +2103,10 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
                   l["layout"]["locationRepresentation"].get<std::string>());
         }
         for (auto &pro : l["property"]) {
-          auto key = pro["key"].get<std::string>();
+          auto name = pro["name"].get<std::string>();
           auto value = pro["value"].get<std::string>();
           loc->properties.insert(
-              std::pair<std::string, std::string>(key, value));
+              std::pair<std::string, std::string>(name, value));
         }
         resource->locations.push_back(loc);
       }
@@ -2139,7 +2148,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
               value = pro["value"].get<std::string>();
             }
             path->properties.insert(std::pair<std::string, std::string>(
-                pro["key"].get<std::string>(), value));
+                pro["name"].get<std::string>(), value));
           }
         }
         if (!p.contains("length")) {
@@ -2240,9 +2249,13 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     {
       int orderquence{2};
       for (auto &v : model["vehicles"]) {
-        std::string address =
-            v["properties"]["tcs:preferredAdapterClass"].get<std::string>();
-        if (address.find("virtual") != std::string::npos) {
+        std::string adapter;
+        for (auto &x : v["properties"]) {
+          if (x["name"] == "tcs:preferredAdapterClass") {
+            adapter = x["value"].get<std::string>();
+          }
+        }
+        if (adapter.find("virtual") != std::string::npos) {
           ///////////////////
           /// // 使用虚拟车辆
           //////////////////
@@ -2262,16 +2275,16 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
                                   : "";
           for (auto &pro : v["properties"]) {
             veh->properties.insert(std::pair<std::string, std::string>(
-                pro["key"].get<std::string>(),
+                pro["name"].get<std::string>(),
                 pro["value"].get<std::string>()));
-            if (pro["key"] == "loopback:initialPosition") {
+            if (pro["name"] == "loopback:initialPosition") {
               for (auto &x : resource->points) {
                 if (x->name == pro["value"].get<std::string>()) {
                   veh->last_point = x;
                 }
               }
             }
-            if (pro["key"] == "tcs:preferredParkingPosition") {
+            if (pro["name"] == "tcs:preferredParkingPosition") {
               for (auto &x : resource->points) {
                 if (x->name == pro["value"].get<std::string>()) {
                   veh->park_point = x;
@@ -2281,23 +2294,23 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           }
           dispatcher->vehicles.push_back(veh);
 
-        } else if (address.find("vda") != std::string::npos) {
+        } else if (adapter.find("vda") != std::string::npos) {
           std::string vda_interfaceName{"rw"};
           std::string vda_serialNumber{"rw"};
           std::string vda_version{"1.0"};
           std::string vda_manufacturer{"rw"};
           for (auto &pro : v["properties"]) {
-            if (pro["key"] == "vda5050:interfaceName") {
+            if (pro["name"] == "vda5050:interfaceName") {
               vda_interfaceName = pro["value"];
-            } else if (pro["key"] == "vda5050:manufacturer") {
+            } else if (pro["name"] == "vda5050:manufacturer") {
               vda_manufacturer = pro["value"];
-            } else if (pro["key"] == "vda5050:serialNumber") {
+            } else if (pro["name"] == "vda5050:serialNumber") {
               vda_serialNumber = pro["value"];
 
-            } else if (pro["key"] == "vda5050:version") {
+            } else if (pro["name"] == "vda5050:version") {
               vda_version = pro["value"];
 
-            } else if (pro["key"] == "vda5050:orderQueueSize") {
+            } else if (pro["name"] == "vda5050:orderQueueSize") {
               orderquence = pro["value"].get<int>();
             }
           }
@@ -2322,7 +2335,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
                                   : "";
           for (auto &pro : v["properties"]) {
             veh->properties.insert(std::pair<std::string, std::string>(
-                pro["key"].get<std::string>(),
+                pro["name"].get<std::string>(),
                 pro["value"].get<std::string>()));
           }
           ///////////////////////////

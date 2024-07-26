@@ -64,6 +64,7 @@ class TransportOrder : public TCSObject {
   std::chrono::system_clock::time_point end_time;
   std::chrono::system_clock::time_point dead_time;
   std::string type;
+  std::string peripheral_reservation_token;
   State state{State::RAW};
   std::deque<std::weak_ptr<TransportOrder>> dependencies;
   std::deque<std::shared_ptr<DriverOrder>> driverorders;

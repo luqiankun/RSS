@@ -71,7 +71,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               res.set_content(ret.second, "application/json");
             }
           });
-  srv.Get(url_prefix + R"(/transportOrder/([^/]+))",
+  srv.Get(url_prefix + R"(/transportOrders/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
             auto m = req.matches.end() - 1;
             std::string ord_name = *m;
