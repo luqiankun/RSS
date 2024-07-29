@@ -1034,6 +1034,7 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
     value["peripheralReservationToken"] = v->peripheral_reservation_token;
     value["wrappingSequence"] =
         v->ordersequence.lock() ? v->ordersequence.lock()->name : "";
+    value["createTime"] = get_time_fmt(v->create_time);
     value["destinations"] = json::array();
     for (auto &dest : v->driverorders) {
       json dest_v;
@@ -1197,7 +1198,7 @@ std::pair<int, std::string> TCS::post_transport_order(
           return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
         } else {
           auto op = d["operation"].get<std::string>();
-          auto op_ = data::order::DriverOrder::Destination::get_optype(op);
+          auto op_ = data::model::Actions::get_optype(op);
           if (op_.has_value()) {
             if (check.first ==
                 kernel::allocate::ResourceManager::ResType::Location) {
@@ -1205,11 +1206,12 @@ std::pair<int, std::string> TCS::post_transport_order(
                   check.second);
               auto it = t1->type.lock()->allowed_ops.find(op);
               if (it == t1->type.lock()->allowed_ops.end()) {
-                CLOG(ERROR, driver_log) << op << "type is err";
+                CLOG(ERROR, driver_log)
+                    << t1->name << " not support <" << op << "> type";
                 ord->state = data::order::TransportOrder::State::FAILED;
                 orderpool->ended_orderpool.push_back(ord);
                 json res = json::array();
-                auto msg = "Could not find type '" + op + "'.";
+                auto msg = "not support type '" + op + "'.";
                 res.push_back(msg);
                 return std::pair<int, std::string>(httplib::NotFound_404,
                                                    res.dump());
@@ -1233,7 +1235,7 @@ std::pair<int, std::string> TCS::post_transport_order(
             ord->driverorders.push_back(dr);
           } else {
             CLOG(ERROR, tcs_log)
-                << "op type '" + std::string(op) + "' is not support";
+                << "op type <" + std::string(op) + "> is not support";
             ord->state = data::order::TransportOrder::State::FAILED;
             orderpool->ended_orderpool.push_back(ord);
             json res = json::array();
@@ -2172,12 +2174,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
                       loc->type.lock()->allowrd_per_ops.end()) {
                     // exist
                     data::model::Actions::Action act;
-                    act.params.insert(loc->properties.begin(),
-                                      loc->properties.end());
-                    act.block_type = wait;
-                    act.when = when;
-                    act.vaild = true;
-                    act.id = path->name + "_action_" + per_op_name;
+                    act.action_id = path->name + "_action_" + per_op_name;
                     act.name = loc->type.lock()->name;
                     acts.append(act);
                     break;
@@ -2383,9 +2380,9 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       v->resource = resource;
     }
     assert(dispatcher);
-    CLOG(INFO, tcs_log) << "run all ...";
+    CLOG(INFO, tcs_log) << "run all ...\n";
     run();
-    CLOG(INFO, tcs_log) << "run all ok";
+    CLOG(INFO, tcs_log) << "run all ok\n";
     return std::pair<int, std::string>(httplib::OK_200, "");
   } catch (json::parse_error ec) {
     CLOG(ERROR, tcs_log) << "parse error: " << ec.what();
@@ -2490,18 +2487,10 @@ std::string TCS::get_vehicles_step() {
               veh["step"].push_back(step);
             }
             // location
-            if (dr->destination->operation ==
-                data::order::DriverOrder::Destination::OpType::NOP) {
-              // TODO
-            } else if (dr->destination->operation ==
-                       data::order::DriverOrder::Destination::OpType::LOAD) {
-              veh["destination"]["op"] = "LOAD";
-              auto loction = std::dynamic_pointer_cast<data::model::Location>(
-                  dr->destination->destination.lock());
-              veh["destination"]["dest"] = loction->name;
-            } else if (dr->destination->operation ==
-                       data::order::DriverOrder::Destination::OpType::UNLOAD) {
-              veh["destination"]["op"] = "UNLOAD";
+            auto t = resource->find(dr->destination->destination.lock()->name);
+            if (t.first ==
+                kernel::allocate::ResourceManager::ResType::Location) {
+              veh["destination"]["op"] = dr->destination->get_type();
               auto loction = std::dynamic_pointer_cast<data::model::Location>(
                   dr->destination->destination.lock());
               veh["destination"]["dest"] = loction->name;

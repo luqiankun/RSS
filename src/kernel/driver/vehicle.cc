@@ -8,29 +8,6 @@
 namespace kernel {
 namespace driver {
 
-vda5050::order::ActionType driverorder_dest_optype_to_vda5050_type(
-    data::order::DriverOrder::Destination::OpType t) {
-  vda5050::order::ActionType res{vda5050::order::ActionType::NOP};
-  if (t == data::order::DriverOrder::Destination::OpType::LOAD) {
-    res = vda5050::order::ActionType::LOAD;
-  } else if (t == data::order::DriverOrder::Destination::OpType::UNLOAD) {
-    res = vda5050::order::ActionType::UNLOAD;
-  } else if (t == data::order::DriverOrder::Destination::OpType::MOVE) {
-    res = vda5050::order::ActionType::MOVE;
-  } else if (t == data::order::DriverOrder::Destination::OpType::CHARGE) {
-    res = vda5050::order::ActionType::CHARGE;
-  } else if (t == data::order::DriverOrder::Destination::OpType::OPEN) {
-    res = vda5050::order::ActionType::CLOSE;
-  } else if (t == data::order::DriverOrder::Destination::OpType::CLOSE) {
-    res = vda5050::order::ActionType::OPEN;
-  } else if (t == data::order::DriverOrder::Destination::OpType::LIFT) {
-    res = vda5050::order::ActionType::LIFT;
-  } else {
-    res = vda5050::order::ActionType::NOP;
-  }
-  return res;
-}
-
 std::string vehicle_state_to_str(Vehicle::State state) {
   std::string res{"UNKNOWN"};
   if (state == Vehicle::State::UNAVAILABLE) {
@@ -48,40 +25,6 @@ std::string vehicle_state_to_str(Vehicle::State state) {
     res = "CHARGING";
   }
   return res;
-}
-
-bool data_actions_to_vda5050_actions(const data::model::Actions::Action& src,
-                                     vda5050::order::Action& dest) {
-  if (!src.vaild) {
-    return false;
-  }
-  dest.action_id = src.id;
-  dest.action_description = src.name;
-  if (src.block_type == "SOFT") {
-    dest.blocking_type = vda5050::order::ActionBlockingType::SOFT;
-  } else if (src.block_type == "HARD") {
-    dest.blocking_type = vda5050::order::ActionBlockingType::HARD;
-  } else {
-    dest.blocking_type = vda5050::order::ActionBlockingType::NONE;
-  }
-  if (!src.params.empty()) {
-    dest.action_parameters = std::vector<vda5050::order::ActionParam>();
-    for (auto& x : src.params) {
-      auto parm = vda5050::order::ActionParam();
-      parm.key = x.first;
-      parm.value = x.second;
-      dest.action_parameters->push_back(parm);
-    }
-  }
-  if (!src.check_name) {
-    auto parm = vda5050::order::ActionParam();
-    parm.key = "name";
-    parm.value = src.name;
-    dest.action_parameters->push_back(parm);
-    return true;
-  }
-  dest.action_type = vda5050::order::get_vda5050_type_from_str(src.name);
-  return true;
 }
 
 void Vehicle::execute_action(
@@ -188,7 +131,6 @@ void Vehicle::plan_route() {
     auto destination = orderpool.lock()->res_to_destination(
         start_check.second, op->destination->operation);
     op->destination = destination;
-    bool able{false};
     if (start_check.first == allocate::ResourceManager::ResType::Point) {
       end_planner =
           std::dynamic_pointer_cast<data::model::Point>(start_check.second);
@@ -204,22 +146,19 @@ void Vehicle::plan_route() {
       current_order->state = data::order::TransportOrder::State::UNROUTABLE;
       CLOG(WARNING, driver_log)
           << name << " " << current_order->name << " can not find obj";
-    }
-    auto path = planner.lock()->find_second_paths(start_planner, end_planner);
-    if (path.empty()) {
-      current_order->state = data::order::TransportOrder::State::UNROUTABLE;
-      CLOG(WARNING, driver_log)
-          << name << " " << current_order->name << " can not routable";
     } else {
-      auto driverorder = orderpool.lock()->route_to_driverorder(
-          resource.lock()->paths_to_route(path.front()), destination);
-      driverorder->transport_order = current_order;
-      driverorder->state = data::order::DriverOrder::State::PRISTINE;
-      op = driverorder;
-      able = true;
-    }
-    if (!able) {
-      current_order->state = data::order::TransportOrder::State::UNROUTABLE;
+      auto path = planner.lock()->find_second_paths(start_planner, end_planner);
+      if (path.empty()) {
+        current_order->state = data::order::TransportOrder::State::UNROUTABLE;
+        CLOG(WARNING, driver_log)
+            << name << " " << current_order->name << " can not routable";
+      } else {
+        auto driverorder = orderpool.lock()->route_to_driverorder(
+            resource.lock()->paths_to_route(path.front()), destination);
+        driverorder->transport_order = current_order;
+        driverorder->state = data::order::DriverOrder::State::PRISTINE;
+        op = driverorder;
+      }
     }
   }
 }
@@ -464,7 +403,9 @@ bool SimVehicle::action(
     last_point = t;
     return true;
   } else if (dest->operation ==
-             data::order::DriverOrder::Destination::OpType::LOAD) {
+                 data::order::DriverOrder::Destination::OpType::LOAD ||
+             dest->operation ==
+                 data::order::DriverOrder::Destination::OpType::PICK) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     auto t = std::dynamic_pointer_cast<data::model::Location>(
         dest->destination.lock());
@@ -481,7 +422,9 @@ bool SimVehicle::action(
                            << position.y << ")\n";
     return true;
   } else if (dest->operation ==
-             data::order::DriverOrder::Destination::OpType::UNLOAD) {
+                 data::order::DriverOrder::Destination::OpType::UNLOAD ||
+             dest->operation == data::order::DriverOrder::Destination::
+                                    Destination::OpType::DROP) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     auto t = std::dynamic_pointer_cast<data::model::Location>(
         dest->destination.lock());
@@ -504,7 +447,7 @@ bool SimVehicle::action(
   return true;
 }
 bool SimVehicle::instant_action(
-    std::shared_ptr<vda5050::instantaction::Action> act) {
+    std::shared_ptr<data::model::Actions::Action> act) {
   CLOG(INFO, driver_log) << act->action_id << " ok";
   return true;
 };
@@ -841,21 +784,16 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
                                << x->path->acts.actions.size() << " actions";
         for (auto& act : x->path->acts.actions) {
           if (!act.vaild) continue;
-          CLOG(INFO, driver_log) << name << " " << act.id << " " << act.name;
-          vda5050::order::Action action;
-          if (data_actions_to_vda5050_actions(act, action)) {
-            if (act.when == "ORDER_START") {
-              (ord.nodes.end() - 2)->actions.push_back(action);
-            } else if (act.when == "ORDER_END") {
-              (ord.nodes.end() - 1)->actions.push_back(action);
-            }
-            if (action.blocking_type !=
-                vda5050::order::ActionBlockingType::NONE) {
-              wait_act.insert(action.action_id);
-            }
+          CLOG(INFO, driver_log)
+              << name << " " << act.action_id << " " << act.name;
+          auto action = static_cast<vda5050::order::Action*>(&act);
+          if (act.when == data::model::Actions::ActionWhen::ORDER_START) {
+            (ord.nodes.end() - 2)->actions.push_back(*action);
           } else {
-            CLOG(ERROR, driver_log)
-                << name << " " << act.name << " trans failed";
+            (ord.nodes.end() - 1)->actions.push_back(*action);
+          }
+          if (act.blocking_type != vda5050::order::ActionBlockingType::NONE) {
+            wait_act.insert(action->action_id);
           }
         }
       }
@@ -1061,7 +999,7 @@ bool Rabbit3::action(
     node.released = false;
     node.sequence_id = 0;
     act.action_id = ord.order_id + "/action";
-    act.action_type = driverorder_dest_optype_to_vda5050_type(dest->operation);
+    act.action_type = dest->operation;
     act.blocking_type = vda5050::order::ActionBlockingType::HARD;
     node.actions.push_back(act);
     ord.nodes.push_back(node);
@@ -1152,7 +1090,7 @@ bool Rabbit3::action(
   return false;
 }
 bool Rabbit3::instant_action(
-    std::shared_ptr<vda5050::instantaction::Action> act) {
+    std::shared_ptr<data::model::Actions::Action> act) {
   CLOG(INFO, driver_log) << "instantaction " << act->action_id;
   if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
     CLOG(ERROR, driver_log) << name << " "
@@ -1174,7 +1112,8 @@ bool Rabbit3::instant_action(
   insact->manufacturer = mqtt_cli->manufacturer;
   insact->timestamp = get_time_fmt(std::chrono::system_clock::now());
   insact->version = mqtt_cli->version;
-  insact->actions.push_back(*act);
+  auto action = static_cast<vda5050::instantaction::Action*>(act.get());
+  insact->actions.push_back(*action);
   auto msg = mqtt::make_message(prefix + "instantAction",
                                 insact->to_json().as_string());
   mqtt_cli->mqtt_client->publish(msg)->wait();

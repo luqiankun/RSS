@@ -3,30 +3,24 @@
 #include <optional>
 #include <variant>
 
+#include "../data/order/driverorder.hpp"
 #include "../tools/jsoncons/json.hpp"
 #include "../tools/mqtt/mqtt.hpp"
+
 namespace vda5050 {
 namespace instantaction {
-enum class ActionType { startPause = 1, stopPause = 2, NOP = 3 };
-enum class ActionBlockingType { NONE = 1, SOFT = 2, HARD = 3 };
+using ActionType = data::order::DriverOrder::Destination::OpType;
+
+using ActionBlockingType = data::model::Actions::ActionBlockingType;
 
 // action
 
-class ActionParam {
- public:
-  std::string key;
-  std::variant<std::string, bool, double, std::vector<std::string>> value;
-};
+using ActionParam = data::model::Actions::ActionParam;
 
-class Action {
+class Action : public data::model::Actions::Action {
  public:
-  ActionType action_type{ActionType::NOP};
-  std::string action_id;
-  std::optional<std::string> action_description;
-  ActionBlockingType blocking_type{ActionBlockingType::HARD};
-  std::optional<std::vector<ActionParam>> action_parameters;
-  Action() {}
-  Action(jsoncons::json& obj) {
+  using data::model::Actions::Action ::Action;
+  void init(jsoncons::json& obj) override {
     if (obj["actionType"].as_string() == "startPause") {
       action_type = ActionType::startPause;
     } else if (obj["actionType"].as_string() == "stopPause") {
@@ -67,7 +61,7 @@ class Action {
       }
     }
   }
-  jsoncons::json to_json() {
+  jsoncons::json to_json() override {
     jsoncons::json res;
     res["actionId"] = action_id;
     if (action_type == ActionType::startPause) {
@@ -127,7 +121,9 @@ class InstantAction {
     serial_number = obj["serialNumber"].as_string();
     version = obj["version"].as_string();
     for (auto& x : obj["actions"].array_range()) {
-      actions.push_back(Action(x));
+      auto a = Action();
+      a.init(x);
+      actions.push_back(a);
     }
   }
   jsoncons::json to_json() {

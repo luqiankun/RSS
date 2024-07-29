@@ -11,59 +11,14 @@ class DriverOrder : public TCSObject {
   enum class State { PRISTINE, TRAVELLING, OPERATING, FINISHED, FAILED };
 
   struct Destination {
-    enum class OpType {
-      NOP,     // 啥也不干
-      LOAD,    // 去某location load
-      UNLOAD,  // 去某location unload
-      MOVE,    // 去某point
-      CHARGE,  // 充电
-      CLOSE,
-      OPEN,
-      LIFT
-    };
+    using OpType = data::model::Actions::OpType;
     std::map<std::string, std::string> properties;
     std::weak_ptr<TCSResource> destination;
     OpType operation{OpType::NOP};
-    static std::optional<OpType> get_optype(const std::string& op) {
-      if (op == "NOP") {
-        return OpType::NOP;
-      } else if (op == "pick") {
-        return OpType::LOAD;
-      } else if (op == "drop") {
-        return OpType::UNLOAD;
-      } else if (op == "CLOSE") {
-        return OpType::CLOSE;
-      } else if (op == "OPEN") {
-        return OpType::OPEN;
-      } else if (op == "LIFT") {
-        return OpType::LIFT;
-      } else if (op == "Charge") {
-        return OpType::CHARGE;
-      } else if (op == "MOVE") {
-        return OpType::MOVE;
-      } else {
-        return std::nullopt;
-      }
-    }
+
     std::string get_type() {
-      if (operation == OpType::MOVE) {
-        return "MOVE";
-      } else if (operation == OpType::LOAD) {
-        return "pick";
-      } else if (operation == OpType::UNLOAD) {
-        return "drop";
-      } else if (operation == OpType::CHARGE) {
-        return "Charge";
-      } else if (operation == OpType::OPEN) {
-        return "OPEN";
-      } else if (operation == OpType::CLOSE) {
-        return "CLOSE";
-      } else if (operation == OpType::LIFT) {
-        return "LIFT";
-      } else {
-        return "NOP";
-      }
-    }
+      return data::model::Actions::get_type(operation);
+    };
   };
   std::string get_cmd_name() {
     if (route->steps.empty()) {
@@ -85,7 +40,6 @@ class DriverOrder : public TCSObject {
       return msg;
     }
   }
-
   std::string get_state() {
     if (state == State::PRISTINE) {
       return "PRISTINE";
@@ -101,7 +55,7 @@ class DriverOrder : public TCSObject {
     } else {
       return "FAILED";
     }
-  }
+  };
 
  public:
   std::shared_ptr<Destination> destination;

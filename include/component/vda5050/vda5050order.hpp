@@ -3,81 +3,32 @@
 #include <optional>
 #include <variant>
 
+#include "../data/order/driverorder.hpp"
 #include "../tools/jsoncons/json.hpp"
 #include "../tools/mqtt/mqtt.hpp"
 namespace vda5050 {
 namespace order {
-enum class ActionType {
-  NOP,     // 啥也不干
-  LOAD,    // 去某location load
-  UNLOAD,  // 去某location unload
-  MOVE,    // 去某point
-  CHARGE,  // 充电
-  CLOSE,
-  OPEN,
-  LIFT
-};
-enum class ActionBlockingType { NONE = 1, SOFT = 2, HARD = 3 };
+using ActionType = data::order::DriverOrder::Destination::OpType;
+using ActionBlockingType = data::model::Actions::ActionBlockingType;
+
+// 自定义
+using ActionWhen = data::model::Actions::ActionWhen;
 
 // action
 
-class ActionParam {
- public:
-  std::string key;
-  std::variant<std::string, bool, double, std::vector<std::string>> value;
-};
+using ActionParam = data::model::Actions::ActionParam;
 inline vda5050::order::ActionType get_vda5050_type_from_str(
     const std::string& t) {
   vda5050::order::ActionType res{ActionType::NOP};
-  if (t == "pick") {
-    res = ActionType::LOAD;
-  } else if (t == "drop") {
-    res = ActionType::UNLOAD;
-  } else if (t == "MOVE") {
-    res = ActionType::MOVE;
-  } else if (t == "LIFT") {
-    res = ActionType::LIFT;
-  } else if (t == "OPEN") {
-    res = ActionType::OPEN;
-  } else if (t == "Charge") {
-    res = ActionType::CHARGE;
-  } else if (t == "CLOSE") {
-    res = ActionType::CLOSE;
-  } else {
-    res = ActionType::NOP;
-  }
-  return res;
+  return data::model::Actions::get_optype(t).value_or(res);
 }
 inline std::string vda5050_type_to_str(vda5050::order::ActionType t) {
-  std::string res{"NOP"};
-  if (t == ActionType::LOAD) {
-    res = "pick";
-  } else if (t == ActionType::UNLOAD) {
-    res = "drop";
-  } else if (t == ActionType::MOVE) {
-    res = "MOVE";
-  } else if (t == ActionType::LIFT) {
-    res = "LIFT";
-  } else if (t == ActionType::OPEN) {
-    res = "OPEN";
-  } else if (t == ActionType::CLOSE) {
-    res = "CLOSE";
-  } else if (t == ActionType::CHARGE) {
-    res = "Charge";
-  } else {
-    res = "NOP";
-  }
-  return res;
+  return data::model::Actions::get_type(t);
 }
-class Action {
+class Action : public data::model::Actions::Action {
  public:
-  ActionType action_type{ActionType::NOP};
-  std::string action_id;
-  std::optional<std::string> action_description;
-  ActionBlockingType blocking_type{ActionBlockingType::HARD};
-  std::optional<std::vector<ActionParam>> action_parameters;
-  Action() {}
-  Action(jsoncons::json& obj) {
+  using data::model::Actions::Action ::Action;
+  void init(jsoncons::json& obj) override {
     action_type = get_vda5050_type_from_str(obj["actionType"].as_string());
     action_id = obj["actionId"].as_string();
     if (obj.contains("actionDescription")) {
@@ -112,7 +63,7 @@ class Action {
       }
     }
   }
-  jsoncons::json to_json() {
+  jsoncons::json to_json() override {
     jsoncons::json res;
     res["actionId"] = action_id;
     res["actionType"] = vda5050_type_to_str(action_type);
@@ -192,7 +143,8 @@ class Edge {
     start_node_id = obj["startNodeId"].as_string();
     end_node_id = obj["endNodeId"].as_string();
     for (auto& x : obj["actions"].array_range()) {
-      Action act(x);
+      Action act;
+      act.init(x);
       actions.push_back(act);
     }
     //
@@ -329,7 +281,8 @@ class Node {
     sequence_id = obj["sequenceId"].as_integer<int>();
     released = obj["released"].as_bool();
     for (auto& x : obj["actions"].array_range()) {
-      Action act(x);
+      Action act;
+      act.init(x);
       actions.push_back(act);
     }
     if (obj.contains("nodeDescription")) {

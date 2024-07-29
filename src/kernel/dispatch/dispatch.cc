@@ -212,7 +212,9 @@ void Dispatcher::dispatch_once() {
         if (v->integration_level !=
             driver::Vehicle::integrationLevel::TO_BE_UTILIZED) {
           current->state = data::order::TransportOrder::State::FAILED;
-          CLOG(INFO, dispatch_log) << current->name << " status: [failed]";
+          CLOG(INFO, dispatch_log)
+              << current->name
+              << " status: [failed] the vehicle {TO_BE_UTILIZED} ";
         }
       } else {
         if (auto_select) {  // 自动分配车辆
@@ -237,11 +239,15 @@ void Dispatcher::dispatch_once() {
                 << current->name << " status: [dispatchable]\n";
           } else {
             current->state = data::order::TransportOrder::State::FAILED;
-            CLOG(INFO, dispatch_log) << current->name << " status: [failed]\n";
+            CLOG(INFO, dispatch_log)
+                << current->name
+                << " status: [failed] not exist vehicle for using  \n";
           }
         } else {
           current->state = data::order::TransportOrder::State::FAILED;
-          CLOG(INFO, dispatch_log) << current->name << " status: [failed]\n";
+          CLOG(INFO, dispatch_log)
+              << current->name
+              << " status: [failed] not exist vehicle for using\n";
         }
       }
     }
@@ -253,7 +259,9 @@ void Dispatcher::dispatch_once() {
       if (current->intended_vehicle.lock()->state ==
           driver::Vehicle::State::UNAVAILABLE) {
         current->state = data::order::TransportOrder::State::FAILED;
-        CLOG(INFO, dispatch_log) << current->name << " status: [failed]\n";
+        CLOG(INFO, dispatch_log)
+            << current->name
+            << " status: [failed] vehicle status {UNAVAILABLE}\n";
       } else {
         current->intended_vehicle.lock()->receive_task(current);
         current->processing_vehicle = current->intended_vehicle;

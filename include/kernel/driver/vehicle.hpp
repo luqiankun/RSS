@@ -50,7 +50,7 @@ class Vehicle : public schedule::Client,
       std::vector<std::shared_ptr<data::order::Step>>) = 0;  // 执行移动
   virtual void init(){};  // 初始化或者配置接收外部信息更新机器人状态
   virtual bool instant_action(
-      std::shared_ptr<vda5050::instantaction::Action>) = 0;
+      std::shared_ptr<data::model::Actions::Action>) = 0;
   virtual ~Vehicle();
 
  public:
@@ -101,7 +101,7 @@ class SimVehicle : public Vehicle {
   SimVehicle(int rate, std::string name) : rate(rate), Vehicle(name) {}
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
   bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
-  bool instant_action(std::shared_ptr<vda5050::instantaction::Action>) override;
+  bool instant_action(std::shared_ptr<data::model::Actions::Action>) override;
   void init() override;
 
  public:
@@ -119,7 +119,7 @@ class Rabbit3 : public Vehicle {
   }
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
   bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
-  bool instant_action(std::shared_ptr<vda5050::instantaction::Action>) override;
+  bool instant_action(std::shared_ptr<data::model::Actions::Action>) override;
   void init() override;
   void onstate(mqtt::const_message_ptr);
   void onconnect(mqtt::const_message_ptr);
@@ -146,8 +146,7 @@ class InvalidVehicle : public Vehicle {
   bool move(std::vector<std::shared_ptr<data::order::Step>>) override {
     return false;
   }
-  bool instant_action(
-      std::shared_ptr<vda5050::instantaction::Action>) override {
+  bool instant_action(std::shared_ptr<data::model::Actions::Action>) override {
     return false;
   }
   void init() override {
