@@ -398,8 +398,7 @@ bool SimVehicle::action(
   if (dest->operation == data::order::DriverOrder::Destination::OpType::MOVE) {
     auto t =
         std::dynamic_pointer_cast<data::model::Point>(dest->destination.lock());
-    position.x = t->position.x;
-    position.y = t->position.y;
+    position = t->position;
     last_point = t;
     return true;
   } else if (dest->operation ==
@@ -412,14 +411,13 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << position.x << " , "
-                           << position.y << ")\n";
+    CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
+                           << position.y() << ")\n";
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    position.x = t->link.lock()->position.x;
-    position.y = t->link.lock()->position.y;
+    position = t->link.lock()->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << position.x << " , "
-                           << position.y << ")\n";
+    CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
+                           << position.y() << ")\n";
     return true;
   } else if (dest->operation ==
                  data::order::DriverOrder::Destination::OpType::UNLOAD ||
@@ -431,14 +429,13 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << position.x << " , "
-                           << position.y << ")";
+    CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
+                           << position.y() << ")";
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    position.x = t->link.lock()->position.x;
-    position.y = t->link.lock()->position.y;
+    position = t->link.lock()->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << position.x << " , "
-                           << position.y << ")";
+    CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
+                           << position.y() << ")";
     return true;
   } else if (dest->operation ==
              data::order::DriverOrder::Destination::OpType::NOP) {
@@ -479,19 +476,19 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       std::this_thread::sleep_for(
           std::chrono::milliseconds(step->wait_time / rate));
       size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-      int x_len = end->position.x - position.x;
-      int y_len = end->position.y - position.y;
+      int x_len = end->position.x() - position.x();
+      int y_len = end->position.y() - position.y();
       for (int i = 0; i < 10; i++) {
-        position.x += x_len / 10;
-        position.y += y_len / 10;
+        position.x() += x_len / 10;
+        position.y() += y_len / 10;
         std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
       }
-      position.x = end->position.x;
-      position.y = end->position.y;
+      position.x() = end->position.x();
+      position.y() = end->position.y();
       last_point = end;
       current_point = last_point;
-      CLOG(INFO, driver_log)
-          << name << " now at (" << position.x << " , " << position.y << ")\n";
+      CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
+                             << position.y() << ")\n";
       res.push_back(1);
       continue;
     } else if (step->vehicle_orientation ==
@@ -500,19 +497,19 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       size_t t = step->path->length * 1000 / max_vel / rate;  // ms
       std::this_thread::sleep_for(
           std::chrono::milliseconds(step->wait_time / rate));
-      int x_len = end->position.x - position.x;
-      int y_len = end->position.y - position.y;
+      int x_len = end->position.x() - position.x();
+      int y_len = end->position.y() - position.y();
       for (int i = 0; i < 10; i++) {
-        position.x += x_len / 10;
-        position.y += y_len / 10;
+        position.x() += x_len / 10;
+        position.y() += y_len / 10;
         std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
       }
-      position.x = end->position.x;
-      position.y = end->position.y;
+      position.x() = end->position.x();
+      position.y() = end->position.y();
       last_point = end;
       current_point = last_point;
-      CLOG(INFO, driver_log)
-          << name << " now at (" << position.x << " , " << position.y << ")\n";
+      CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
+                             << position.y() << ")\n";
       res.push_back(1);
       continue;
     } else {
@@ -596,8 +593,8 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
         }
       }
       if (v.contains("agvPosition")) {
-        this->position.x = v["agvPosition"]["x"].as_double();
-        this->position.y = v["agvPosition"]["y"].as_double();
+        this->position.x() = v["agvPosition"]["x"].as_double();
+        this->position.y() = v["agvPosition"]["y"].as_double();
         this->map_id = v["agvPosition"]["mapId"].as_string();
         this->angle = v["agvPosition"]["theta"].as_double();
         layout = position;
@@ -722,8 +719,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   start.released = false;
   start.sequence_id = 0;
   auto pos = vda5050::order::NodePosition();
-  pos.x = start_point->position.x;
-  pos.y = start_point->position.y;
+  pos.x = start_point->position.x();
+  pos.y = start_point->position.y();
   pos.map_id = map_id;
   pos.theta = angle;
   start.node_position = pos;
@@ -750,8 +747,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     end.released = false;
     end.sequence_id = 1;
     auto pos2 = vda5050::order::NodePosition();
-    pos2.x = end_point->position.x;
-    pos2.y = end_point->position.y;
+    pos2.x = end_point->position.x();
+    pos2.y = end_point->position.y();
     pos2.map_id = map_id;
     pos2.theta = angle;
     end.node_position = pos2;
@@ -956,31 +953,31 @@ bool Rabbit3::action(
       auto t1 = std::dynamic_pointer_cast<data::model::Point>(
           dest->destination.lock());
       node.node_id = t1->name;
-      node.node_position.value().x = t1->position.x;
-      node.node_position.value().y = t1->position.y;
+      node.node_position.value().x = t1->position.x();
+      node.node_position.value().y = t1->position.y();
       act.action_parameters = std::vector<vda5050::order::ActionParam>();
       auto param_x = vda5050::order::ActionParam();
       param_x.key = "x";
-      param_x.value = (float)t1->position.x;
+      param_x.value = (float)t1->position.x();
       act.action_parameters->push_back(param_x);
       auto param_y = vda5050::order::ActionParam();
       param_y.key = "y";
-      param_y.value = (float)t1->position.y;
+      param_y.value = (float)t1->position.y();
       act.action_parameters->push_back(param_y);
     } else if (t.first == allocate::ResourceManager::ResType::Location) {
       auto t1 = std::dynamic_pointer_cast<data::model::Location>(
           dest->destination.lock());
       act.action_parameters = std::vector<vda5050::order::ActionParam>();
       node.node_id = t1->link.lock()->name;
-      node.node_position.value().x = t1->link.lock()->position.x;
-      node.node_position.value().y = t1->link.lock()->position.y;
+      node.node_position.value().x = t1->link.lock()->position.x();
+      node.node_position.value().y = t1->link.lock()->position.y();
       auto param_x = vda5050::order::ActionParam();
       param_x.key = "x";
-      param_x.value = (float)t1->position.x;
+      param_x.value = (float)t1->position.x();
       act.action_parameters->push_back(param_x);
       auto param_y = vda5050::order::ActionParam();
       param_y.key = "y";
-      param_y.value = (float)t1->position.y;
+      param_y.value = (float)t1->position.y();
       act.action_parameters->push_back(param_y);
       auto it = t1->type.lock()->allowed_ops.find(dest->get_type());
       auto params = it->second;

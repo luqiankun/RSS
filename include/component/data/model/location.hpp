@@ -9,8 +9,8 @@ namespace model {
 class Location : public TCSResource {
  public:
   struct Layout {
-    data::Vector2i position{0, 0};
-    data::Vector2i label_offset{0, 0};
+    Vector2i position{0, 0};
+    Vector2i label_offset{0, 0};
     int layer_id;
   };
 

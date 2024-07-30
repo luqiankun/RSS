@@ -140,12 +140,12 @@ bool Edge::operator==(const EdgePtr &edge) {
   return false;
 }
 
-Console::Console(data::Vector2i pos, const std::string &n) {
+Console::Console(Eigen::Vector2i pos, const std::string &n) {
   location = pos;
   layout = pos;
   name = n;
 }
-Console::Console(data::Vector2i pos, data::Vector2i layout,
+Console::Console(Eigen::Vector2i pos, Eigen::Vector2i layout,
                  const std::string &n) {
   location = pos;
   layout = layout;

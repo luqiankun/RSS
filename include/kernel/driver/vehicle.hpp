@@ -84,9 +84,9 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<vda5050::instantaction::Action> current_action;
   std::shared_ptr<data::model::Point> park_point;
   std::thread run_th;
-  data::Vector3i position;
+  Eigen::Vector3i position;
   float angle{0};
-  data::Vector3i layout;
+  Eigen::Vector3i layout;
   fa::taskpool_t pool{1};          // 普通任务
   fa::taskpool_t instant_pool{1};  // 立即任务
   bool task_run{false};

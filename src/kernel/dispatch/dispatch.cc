@@ -14,15 +14,15 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
   if (vehicles.empty()) {
     return nullptr;
   }
-  std::vector<std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>>>
+  std::vector<std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>>>
       idle_temp;
-  std::vector<std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>>>
+  std::vector<std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>>>
       busy_temp;
-  std::vector<std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>>>
+  std::vector<std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>>>
       charge_temp;
 
   for (auto& v : vehicles) {
-    data::Vector3i v_pos{0, 0, 0};
+    Eigen::Vector3i v_pos{0, 0, 0};
     v_pos = v->position;
     // if (v->state == driver::Vehicle::State::IDLE &&
     //     v->proc_state == driver::Vehicle::ProcState::AWAITING_ORDER) {
@@ -55,8 +55,9 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
       } else {
         std::sort(
             charge_temp.begin(), charge_temp.end(),
-            [=](std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>> a,
-                std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>> b) {
+            [=](std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> a,
+                std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>>
+                    b) {
               auto dis_a = start->position - a.first;
               auto dis_b = start->position - b.first;
               return dis_a.norm() < dis_b.norm();
@@ -66,8 +67,8 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
     } else {
       std::sort(
           charge_temp.begin(), charge_temp.end(),
-          [=](std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>> a,
-              std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>> b) {
+          [=](std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> a,
+              std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> b) {
             auto dis_a = start->position - a.first;
             auto dis_b = start->position - b.first;
             return dis_a.norm() < dis_b.norm();
@@ -77,8 +78,8 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
   } else {
     std::sort(
         charge_temp.begin(), charge_temp.end(),
-        [=](std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>> a,
-            std::pair<data::Vector3i, std::shared_ptr<driver::Vehicle>> b) {
+        [=](std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> a,
+            std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> b) {
           auto dis_a = start->position - a.first;
           auto dis_b = start->position - b.first;
           return dis_a.norm() < dis_b.norm();

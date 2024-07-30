@@ -9,28 +9,28 @@ namespace allocate {
 void OnlyOneRectRule::get_occupys() {
   occs.clear();
   for (auto& x : res.lock()->points) {
-    if (x->position.x >= this->x && x->position.y >= this->y &&
-        (x->position.x <= this->x + width) &&
-        (x->position.y <= this->y + height)) {
+    if (x->position.x() >= this->x && x->position.y() >= this->y &&
+        (x->position.x() <= this->x + width) &&
+        (x->position.y() <= this->y + height)) {
       occs.insert(x);
     }
   }
   for (auto& x : res.lock()->paths) {
-    if ((x->source_point.lock()->position.x >= this->x) &&
-        (x->source_point.lock()->position.y >= this->y) &&
-        (x->source_point.lock()->position.x <= this->x + width) &&
-        (x->source_point.lock()->position.y <= this->y + height) &&
-        (x->destination_point.lock()->position.x >= this->x) &&
-        (x->destination_point.lock()->position.y >= this->y) &&
-        (x->destination_point.lock()->position.x <= this->x + width) &&
-        (x->destination_point.lock()->position.y <= this->y + height)) {
+    if ((x->source_point.lock()->position.x() >= this->x) &&
+        (x->source_point.lock()->position.y() >= this->y) &&
+        (x->source_point.lock()->position.x() <= this->x + width) &&
+        (x->source_point.lock()->position.y() <= this->y + height) &&
+        (x->destination_point.lock()->position.x() >= this->x) &&
+        (x->destination_point.lock()->position.y() >= this->y) &&
+        (x->destination_point.lock()->position.x() <= this->x + width) &&
+        (x->destination_point.lock()->position.y() <= this->y + height)) {
       occs.insert(x);
     }
   }
   for (auto& x : res.lock()->locations) {
-    if (x->position.x >= this->x && x->position.y >= this->y &&
-        (x->position.x <= this->x + width) &&
-        (x->position.y <= this->y + height)) {
+    if (x->position.x() >= this->x && x->position.y() >= this->y &&
+        (x->position.x() <= this->x + width) &&
+        (x->position.y() <= this->y + height)) {
       occs.insert(x);
     }
   }

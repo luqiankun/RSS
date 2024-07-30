@@ -36,7 +36,7 @@ class Path : public TCSResource {
   struct PathLayout {
     int layer_id{0};
     ConnectType connect_type{ConnectType::DIRECT};
-    std::vector<data::Vector2i> control_points;
+    std::vector<Vector2i> control_points;
   };
   static std::string get_connect_type(ConnectType t) {
     if (t == ConnectType::BEZIER) {

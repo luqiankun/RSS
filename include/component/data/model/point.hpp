@@ -1,10 +1,10 @@
 #ifndef POINT_HPP
 #define POINT_HPP
 #include "../../tcsresource.hpp"
-#include "../vec.hpp"
 #include "./envelope.hpp"
 namespace data {
 namespace model {
+using namespace Eigen;
 class Path;
 class Location;
 class Point : public TCSResource {
@@ -55,7 +55,7 @@ class Point : public TCSResource {
   }
 
  public:
-  data::Vector3i position{0, 0, 0};  // x y
+  Vector3i position{0, 0, 0};  // x y
   Layout layout;
   Type type{Type::UNKNOWN};
   int client_angle{0};

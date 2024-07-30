@@ -201,11 +201,11 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         int layerId = point.child("pointLayout").attribute("layerId").as_int();
         data::model::Point::Layout layout;
         layout.layer_id = layerId;
-        layout.label_offset = data::Vector2i(xLabelOffset, yLabelOffset);
-        layout.position = data::Vector2i(xPosition_layout, yPosition_layout);
+        layout.label_offset = Eigen::Vector2i(xLabelOffset, yLabelOffset);
+        layout.position = Eigen::Vector2i(xPosition_layout, yPosition_layout);
         auto p = std::make_shared<data::model::Point>(name);
-        p->position.x = xPosition;
-        p->position.y = yPosition;
+        p->position.x() = xPosition;
+        p->position.y() = yPosition;
         p->layout = layout;
         p->type = data::model::Point::new_type(type);
         p->vehicle_orientation = vehicle_orientation;
@@ -355,8 +355,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
                 .attribute("locationRepresentation")
                 .as_string();
         data::model::Location::Layout layout;
-        layout.position = data::Vector2i(xPosition_layout, yPosition_layout);
-        layout.label_offset = data::Vector2i(xLabelOffset, yLabelOffset);
+        layout.position = Eigen::Vector2i(xPosition_layout, yPosition_layout);
+        layout.label_offset = Eigen::Vector2i(xLabelOffset, yLabelOffset);
         layout.layer_id = layerId;
 
         auto loc = std::make_shared<data::model::Location>(name);
@@ -397,7 +397,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
           }
         }
 
-        loc->position = data::Vector3i(xPosition, yPosition, zPosition);
+        loc->position = Eigen::Vector3i(xPosition, yPosition, zPosition);
         loc->layout = layout;
         loc->link = link;
         loc->locked = locked;
@@ -446,10 +446,10 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         p->source_point = source_point;
         p->destination_point = destination_point;
         //  xmllength不准
-        p->length = Eigen::Vector2d(source_point.lock()->position.x -
-                                        destination_point.lock()->position.x,
-                                    source_point.lock()->position.y -
-                                        destination_point.lock()->position.y)
+        p->length = Eigen::Vector2d(source_point.lock()->position.x() -
+                                        destination_point.lock()->position.x(),
+                                    source_point.lock()->position.y() -
+                                        destination_point.lock()->position.y())
                         .norm();
         p->max_vel = maxVelocity;
         p->max_reverse_vel = maxReverseVelocity;
@@ -1518,9 +1518,9 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["paused"] = v->paused;
   res["transportOrder"] = v->current_order ? v->current_order->name : "";
   res["currentPosition"] = v->current_point ? v->current_point->name : "";
-  res["precisePosition"]["x"] = v->position.x;
-  res["precisePosition"]["y"] = v->position.y;
-  res["precisePosition"]["z"] = v->position.z;
+  res["precisePosition"]["x"] = v->position.x();
+  res["precisePosition"]["y"] = v->position.y();
+  res["precisePosition"]["z"] = v->position.z();
   res["state"] = v->get_state();
   res["procState"] = v->get_process_state();
   res["allocatedResources"] = json::array();
@@ -1743,16 +1743,16 @@ std::pair<int, std::string> TCS::get_model() {
   for (auto &p : resource->points) {
     json point;
     point["name"] = p->name;
-    point["position"]["x"] = p->position.x;
-    point["position"]["y"] = p->position.y;
-    point["position"]["z"] = p->position.z;
+    point["position"]["x"] = p->position.x();
+    point["position"]["y"] = p->position.y();
+    point["position"]["z"] = p->position.z();
     point["vehicleOrientationAngle"] = p->client_angle;
     point["type"] = data::model::Point::get_type(p->type);
     json layout;
-    layout["position"]["x"] = p->layout.position.x;
-    layout["position"]["y"] = p->layout.position.y;
-    layout["labelOffset"]["x"] = p->layout.label_offset.x;
-    layout["labelOffset"]["y"] = p->layout.label_offset.y;
+    layout["position"]["x"] = p->layout.position.x();
+    layout["position"]["y"] = p->layout.position.y();
+    layout["labelOffset"]["x"] = p->layout.label_offset.x();
+    layout["labelOffset"]["y"] = p->layout.label_offset.y();
     layout["layerId"] = p->layout.layer_id;
     point["layout"] = layout;
     point["properties"] = json::array();
@@ -1855,9 +1855,9 @@ std::pair<int, std::string> TCS::get_model() {
     json location;
     location["name"] = loc->name;
     location["typeName"] = loc->type.lock()->name;
-    location["position"]["x"] = loc->position.x;
-    location["position"]["y"] = loc->position.y;
-    location["position"]["z"] = loc->position.z;
+    location["position"]["x"] = loc->position.x();
+    location["position"]["y"] = loc->position.y();
+    location["position"]["z"] = loc->position.z();
     location["links"] = json::array();
     if (loc->link.lock()) {
       json link;
@@ -1869,10 +1869,10 @@ std::pair<int, std::string> TCS::get_model() {
       location["links"].push_back(link);
     }
     location["locked"] = loc->locked;
-    location["layout"]["position"]["x"] = loc->layout.position.x;
-    location["layout"]["position"]["y"] = loc->layout.position.y;
-    location["layout"]["labelOffset"]["x"] = loc->layout.label_offset.x;
-    location["layout"]["labelOffset"]["y"] = loc->layout.label_offset.y;
+    location["layout"]["position"]["x"] = loc->layout.position.x();
+    location["layout"]["position"]["y"] = loc->layout.position.y();
+    location["layout"]["labelOffset"]["x"] = loc->layout.label_offset.x();
+    location["layout"]["labelOffset"]["y"] = loc->layout.label_offset.y();
     location["layout"]["locationRepresentation"] =
         data::model::get_Representation(
             loc->type.lock()->layout.location_representation);
@@ -1988,9 +1988,9 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       for (auto &p : model["points"]) {
         auto point =
             std::make_shared<data::model::Point>(p["name"].get<std::string>());
-        point->position.x = p["position"]["x"].get<int>();
-        point->position.y = p["position"]["y"].get<int>();
-        point->position.z = p["position"]["z"].get<int>();
+        point->position.x() = p["position"]["x"].get<int>();
+        point->position.y() = p["position"]["y"].get<int>();
+        point->position.z() = p["position"]["z"].get<int>();
         if (p.contains("vehicleOrientationAngle")) {
           if (p["vehicleOrientationAngle"].is_number())
             point->client_angle = p["vehicleOrientationAngle"].get<int>();
@@ -2000,11 +2000,11 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         }
         point->type =
             data::model::Point::new_type(p["type"].get<std::string>());
-        point->layout.position.x = p["layout"]["position"]["x"].get<int>();
-        point->layout.position.y = p["layout"]["position"]["y"].get<int>();
-        point->layout.label_offset.x =
+        point->layout.position.x() = p["layout"]["position"]["x"].get<int>();
+        point->layout.position.y() = p["layout"]["position"]["y"].get<int>();
+        point->layout.label_offset.x() =
             p["layout"]["labelOffset"]["x"].get<int>();
-        point->layout.label_offset.y =
+        point->layout.label_offset.y() =
             p["layout"]["labelOffset"]["y"].get<int>();
         point->layout.layer_id = p["layout"]["layerId"].get<int>();
         if (p.contains("properties")) {
@@ -2067,9 +2067,9 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       for (auto &l : model["locations"]) {
         auto loc = std::make_shared<data::model::Location>(
             l["name"].get<std::string>());
-        loc->position.x = l["position"]["x"].get<int>();
-        loc->position.y = l["position"]["y"].get<int>();
-        loc->position.z = l["position"]["z"].get<int>();
+        loc->position.x() = l["position"]["x"].get<int>();
+        loc->position.y() = l["position"]["y"].get<int>();
+        loc->position.z() = l["position"]["z"].get<int>();
         if (!l["links"].empty()) {
           auto p_name = l["links"].front()["pointName"].get<std::string>();
           for (auto &x : resource->points) {
@@ -2079,10 +2079,12 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           }
         }
         loc->locked = l["locked"].get<bool>();
-        loc->layout.position.x = l["layout"]["position"]["x"].get<int>();
-        loc->layout.position.y = l["layout"]["position"]["y"].get<int>();
-        loc->layout.label_offset.x = l["layout"]["labelOffset"]["x"].get<int>();
-        loc->layout.label_offset.y = l["layout"]["labelOffset"]["y"].get<int>();
+        loc->layout.position.x() = l["layout"]["position"]["x"].get<int>();
+        loc->layout.position.y() = l["layout"]["position"]["y"].get<int>();
+        loc->layout.label_offset.x() =
+            l["layout"]["labelOffset"]["x"].get<int>();
+        loc->layout.label_offset.y() =
+            l["layout"]["labelOffset"]["y"].get<int>();
         loc->layout.layer_id = l["layout"]["layerId"].get<int>();
         for (auto &x : resource->location_types) {
           if (x->name == l["typeName"].get<std::string>()) {
@@ -2426,8 +2428,8 @@ std::string TCS::get_vehicles_step() {
     veh["name"] = v->name;
     veh["color"] = v->color;
     veh["step"] = json::array();
-    veh["position"]["x"] = v->position.x;
-    veh["position"]["y"] = v->position.y;
+    veh["position"]["x"] = v->position.x();
+    veh["position"]["y"] = v->position.y();
     veh["envelope"]["type"] = v->envelope_key;
     veh["envelope"]["vertex"] = json::array();
     for (auto &p : resource->points) {

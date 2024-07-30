@@ -7,7 +7,7 @@ namespace planner {
 
 Vertex::Vertex(const std::shared_ptr<data::model::Point> &p) {
   equal_point = p;
-  location = data::Vector2i(p->position.x, p->position.y);
+  location = Eigen::Vector2i(p->position.x(), p->position.y());
   this->name = p->name;
   layout = p->layout.position;
 }

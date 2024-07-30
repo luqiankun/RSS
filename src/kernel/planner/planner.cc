@@ -61,9 +61,9 @@ void Planner::rebuild() {
   }
   // std::cout << "generate " << edges.size() << " edge\n";
   for (auto &x : res.lock()->locations) {
-    auto console =
-        std::make_shared<Console>(data::Vector2i(x->position.x, x->position.y),
-                                  x->layout.position, x->name);
+    auto console = std::make_shared<Console>(
+        Eigen::Vector2i(x->position.x(), x->position.y()), x->layout.position,
+        x->name);
     VertexPtr link;
     for (auto &v : vertexs) {
       if (v->equal_point == x->link.lock()) {
@@ -125,19 +125,20 @@ uint32_t Planner::calculate_turns(const std::vector<VertexPtr> &path,
   if (path.empty()) {
     return 0;
   }
-  std::vector<data::Vector2f> edge_vec;
+  std::vector<Eigen::Vector2i> edge_vec;
   for (auto it = path.begin(); it != path.end() - 1; it++) {
     auto from = *it;
     auto to = *(it + 1);
-    edge_vec.emplace_back(data::Vector2f(to->location.x - from->location.x,
-                                         to->location.y - from->location.y));
+    edge_vec.emplace_back(
+        Eigen::Vector2i(to->location.x() - from->location.x(),
+                        to->location.y() - from->location.y()));
   }
   if (edge_vec.size() < 2) {
     return 0;
   }
   uint32_t con{0};
   for (auto it = edge_vec.begin(); it != edge_vec.end() - 1; it++) {
-    float cos = (*it).dot(*(it + 1)) / ((*it).norm() * (*(it + 1)).norm());
+    long cos = (*it).dot(*(it + 1)) / ((*it).norm() * (*(it + 1)).norm());
     float angle = std::fabs(std::acos(cos));
     if (angle > th) {
       con++;
