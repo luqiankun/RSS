@@ -10,9 +10,10 @@ class MqttClient : public mqtt::async_client {
  public:
   using mqtt::async_client::async_client;
   void set_func(std::string path, message_handler func) { cbs[path] = func; }
-  void cancle_func(std::string path) {
-    if (cbs.find(path) != cbs.end()) {
-      cbs.erase(path);
+  void cancle_func(const std::string& path) {
+    auto it = cbs.find(path);
+    if (it != cbs.end()) {
+      cbs.erase(it);
     }
   }
   void on() {

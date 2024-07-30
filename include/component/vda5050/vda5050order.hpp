@@ -118,11 +118,11 @@ class Trajectory {
 };
 class Edge {
  public:
-  std::string edge_id;
+  std::string edge_id{};
   int sequence_id;
   bool released;
-  std::string start_node_id;
-  std::string end_node_id;
+  std::string start_node_id{};
+  std::string end_node_id{};
   std::vector<Action> actions;
   std::optional<std::string> edge_description;
   std::optional<float> max_speed;
@@ -136,12 +136,12 @@ class Edge {
   std::optional<float> length;
   std::optional<Trajectory> trajectory;
   Edge() {}
-  Edge(jsoncons::json& obj) {
-    edge_id = obj["edgeId"].as_string();
-    sequence_id = obj["sequenceId"].as_integer<int>();
-    released = obj["released"].as_bool();
-    start_node_id = obj["startNodeId"].as_string();
-    end_node_id = obj["endNodeId"].as_string();
+  explicit Edge(jsoncons::json& obj)
+      : edge_id(obj["edgeId"].as_string()),
+        sequence_id(obj["sequenceId"].as_integer<int>()),
+        released(obj["released"].as_bool()),
+        start_node_id(obj["startNodeId"].as_string()),
+        end_node_id(obj["endNodeId"].as_string()) {
     for (auto& x : obj["actions"].array_range()) {
       Action act;
       act.init(x);
@@ -269,17 +269,17 @@ class NodePosition {
 
 class Node {
  public:
-  std::string node_id;
+  std::string node_id{};
   int sequence_id;
   bool released;
   std::vector<Action> actions;
   std::optional<std::string> node_description;
   std::optional<NodePosition> node_position;
   Node() {}
-  Node(jsoncons::json& obj) {
-    node_id = obj["nodeId"].as_string();
-    sequence_id = obj["sequenceId"].as_integer<int>();
-    released = obj["released"].as_bool();
+  explicit Node(jsoncons::json& obj)
+      : node_id(obj["nodeId"].as_string()),
+        sequence_id(obj["sequenceId"].as_integer<int>()),
+        released(obj["released"].as_bool()) {
     for (auto& x : obj["actions"].array_range()) {
       Action act;
       act.init(x);
@@ -361,14 +361,14 @@ class VDA5050Order {
   std::vector<Edge> edges;
   std::optional<std::string> zoneset_id;
   VDA5050Order() {}
-  VDA5050Order(jsoncons::json& obj) {
-    header_id = obj["headerId"].as_integer<int>();
-    timestamp = obj["timestamp"].as_string();
-    version = obj["version"].as_string();
-    manufacturer = obj["manufacturer"].as_string();
-    serial_number = obj["serialNumber"].as_string();
-    order_id = obj["orderId"].as_string();
-    order_update_id = obj["orderUpdateId"].as_integer<int>();
+  explicit VDA5050Order(jsoncons::json& obj)
+      : header_id(obj["headerId"].as_integer<int>()),
+        timestamp(obj["timestamp"].as_string()),
+        version(obj["version"].as_string()),
+        manufacturer(obj["manufacturer"].as_string()),
+        serial_number(obj["serialNumber"].as_string()),
+        order_id(obj["orderId"].as_string()),
+        order_update_id(obj["orderUpdateId"].as_integer<int>()) {
     if (obj.contains("zoneSetId")) {
       zoneset_id = obj["zoneSetId"].as_string();
     }

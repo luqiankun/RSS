@@ -8,9 +8,9 @@ class Edge : public std::enable_shared_from_this<Edge> {
  public:
   enum class Access { Front = 0, Back = 1, Both = 2 };
   int weight;  // 权重
-  VertexWeakPtr head;
-  VertexWeakPtr tail;
-  std::string name;
+  VertexWeakPtr head{};
+  VertexWeakPtr tail{};
+  std::string name{};
   bool open{true};  // 是否可通行
   Access access{Access::Front};
 
@@ -48,9 +48,9 @@ class Console {
   }
 
  public:
-  std::string name;
-  Eigen::Vector2i location;
-  Eigen::Vector2i layout;
+  std::string name{};
+  Eigen::Vector2i location{};
+  Eigen::Vector2i layout{};
   VertexPtr link{nullptr};
   bool locked{false};
 };

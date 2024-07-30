@@ -41,29 +41,26 @@ std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
 std::pair<ResourceManager::ResType, std::shared_ptr<TCSResource>>
 ResourceManager::find(const std::string& name) {
   std::shared_ptr<TCSResource> res;
-  for (auto& p : points) {
-    if (p->name == name) {
-      res = p;
-      return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Point,
-                                                              res);
-    }
+  auto it = std::find_if(points.begin(), points.end(),
+                         [&](const auto& p) { return p->name == name; });
+  if (it != points.end()) {
+    res = *it;
+    return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Point,
+                                                            res);
   }
-  for (auto& p : paths) {
-    if (p->name == name) {
-      res = p;
-      return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Path,
-                                                              res);
-    }
+  auto it_p = std::find_if(paths.begin(), paths.end(),
+                           [&](const auto& p) { return p->name == name; });
+  if (it_p != paths.end()) {
+    res = *it_p;
+    return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Path, res);
   }
-  for (auto& l : locations) {
-    if (l->name == name) {
-      if (l->locked) {
-        break;
-      }
-      res = l;
-      return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Location,
-                                                              res);
-    }
+  auto it_l = std::find_if(
+      locations.begin(), locations.end(),
+      [&](const auto& p) { return (p->name == name) && (!p->locked); });
+  if (it_l != locations.end()) {
+    res = *it_l;
+    return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Location,
+                                                            res);
   }
   return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Err, res);
 }
@@ -219,8 +216,8 @@ std::shared_ptr<data::model::Point> ResourceManager::get_recent_park_point(
   // CLOG(INFO, "allocate") << "now" << cur->name << " " << cur->position;
   std::vector<double> dis;
   std::sort(points.begin(), points.end(),
-            [&](std::shared_ptr<data::model::Point>& a,
-                std::shared_ptr<data::model::Point>& b) {
+            [&](const std::shared_ptr<data::model::Point>& a,
+                const std::shared_ptr<data::model::Point>& b) {
               double d1 = std::numeric_limits<double>::max();
               double d2 = std::numeric_limits<double>::max();
               d1 = (cur->position - a->position).norm();
@@ -241,8 +238,8 @@ std::shared_ptr<data::model::Location> ResourceManager::get_recent_charge_loc(
     std::shared_ptr<data::model::Point> cur) {
   std::vector<double> dis;
   std::sort(locations.begin(), locations.end(),
-            [&](std::shared_ptr<data::model::Location>& a,
-                std::shared_ptr<data::model::Location>& b) {
+            [&](const std::shared_ptr<data::model::Location>& a,
+                const std::shared_ptr<data::model::Location>& b) {
               double d1 = std::numeric_limits<double>::max();
               double d2 = std::numeric_limits<double>::max();
               d1 = (cur->position - a->position).norm();

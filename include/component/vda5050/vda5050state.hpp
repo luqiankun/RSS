@@ -37,7 +37,7 @@ class SafetyState {
     estop = SafetyStatus::NONE;
     field_violation = false;
   }
-  SafetyState(jsoncons::json& obj) {
+  explicit SafetyState(jsoncons::json& obj) {
     auto es = obj["eStop"].as_string();
     if (es == "AUTOACK") {
       estop = SafetyStatus::AUTOACK;
@@ -68,26 +68,26 @@ class SafetyState {
     } else {
       res["eStop"] = "NONE";
     }
-    return std::move(res);
+    return res;
   }
 };
 
 // information
 class InforRef {
  public:
-  std::string reference_key;
-  std::string reference_value;
+  std::string reference_key{};
+  std::string reference_value{};
 };
 
 class InforMation {
  public:
-  std::string info_type;
+  std::string info_type{};
   InfoLevel info_level{InfoLevel::INFO};
   std::optional<std::string> info_description{std::nullopt};
   std::optional<std::vector<InforRef>> info_references{std::nullopt};
   InforMation(){};
-  InforMation(jsoncons::json& obj) {
-    info_type = obj["infoType"].as_string();
+  explicit InforMation(jsoncons::json& obj) {
+    info_type.assign(obj["infoType"].as_string());
     auto level = obj["infoLevel"].as_string();
     if (level == "INFO") {
       info_level = InfoLevel::INFO;
@@ -99,7 +99,7 @@ class InforMation {
       for (auto& x : obj["infoReferences"].array_range()) {
         auto t = InforRef();
         t.reference_key = x["referenceKey"].as_string();
-        t.reference_key = x["referenceValue"].as_string();
+        t.reference_value = x["referenceValue"].as_string();
         info_references->push_back(t);
       }
     }
@@ -135,18 +135,18 @@ class InforMation {
 
 class ErrorRef {
  public:
-  std::string reference_key;
-  std::string reference_value;
+  std::string reference_key{};
+  std::string reference_value{};
 };
 class Error {
  public:
   ErrorLevel error_level;
-  std::string error_type;
+  std::string error_type{};
   std::optional<std::string> error_description{std::nullopt};
   std::optional<std::vector<ErrorRef>> error_references{std::nullopt};
   Error() {}
-  Error(jsoncons::json& obj) {
-    error_type = obj["errorType"].as_string();
+  explicit Error(jsoncons::json& obj)
+      : error_type(obj["errorType"].as_string()) {
     auto level = obj["errorLevel"].as_string();
     if (level == "WARNING") {
       error_level = ErrorLevel::WARNING;
@@ -200,7 +200,7 @@ class BatteryState {
   std::optional<float> battery_health{std::nullopt};
   std::optional<float> reach{std::nullopt};
   BatteryState() {}
-  BatteryState(jsoncons::json& obj) {
+  explicit BatteryState(jsoncons::json& obj) {
     battery_charge = obj["batteryCharge"].as_double();
     charging = obj["charging"].as_bool();
     if (obj.contains("batteryHealth")) {
@@ -234,14 +234,14 @@ class BatteryState {
 
 class ActionState {
  public:
-  std::string action_id;
+  std::string action_id{};
   std::optional<std::string> action_type{std::nullopt};
   std::optional<std::string> action_description{std::nullopt};
   std::optional<std::string> result_description{std::nullopt};
   ActionStatus action_status;
   ActionState(){};
-  ActionState(jsoncons::json& obj) {
-    action_id = obj["actionId"].as_string();
+  explicit ActionState(jsoncons::json& obj)
+      : action_id(obj["actionId"].as_string()) {
     auto status = obj["actionStatus"].as_string();
     if (status == "WAITING") {
       action_status = ActionStatus::WAITING;
@@ -315,7 +315,7 @@ class Load {
   std::optional<BoundingBox> bounding_boxReference{std::nullopt};
   std::optional<LoadDimensions> Load_dimensions{std::nullopt};
   Load(){};
-  Load(jsoncons::json& obj) {
+  explicit Load(jsoncons::json& obj) {
     if (obj.contains("loadId")) {
       load_id = obj["loadId"].as_string();
     }
@@ -391,7 +391,7 @@ class Velocity {
   std::optional<float> vy{std::nullopt};
   std::optional<float> omega{std::nullopt};
   Velocity(){};
-  Velocity(jsoncons::json& obj) {
+  explicit Velocity(jsoncons::json& obj) {
     if (obj.contains("vx")) {
       vx = obj["vx"].as_double();
     }
@@ -430,7 +430,7 @@ class AgvPosition {
   std::optional<float> deviation_range;
   std::optional<float> localization_score;
   AgvPosition(){};
-  AgvPosition(jsoncons::json obj) {
+  explicit AgvPosition(jsoncons::json obj) {
     x = obj["x"].as_double();
     y = obj["y"].as_double();
     theta = obj["theta"].as_double();
@@ -485,16 +485,16 @@ class Trajectory {
 
 class EdgeState {
  public:
-  std::string edge_id;
+  std::string edge_id{};
   int sequence_id;
   bool released;
   std::optional<std::string> edge_description;
   std::optional<Trajectory> trajectory;
   EdgeState() {}
-  EdgeState(jsoncons::json& obj) {
-    edge_id = obj["edgeId"].as_string();
-    sequence_id = obj["sequenceId"].as_integer<int>();
-    released = obj["released"].as_bool();
+  explicit EdgeState(jsoncons::json& obj)
+      : edge_id(obj["edgeId"].as_string()),
+        sequence_id(obj["sequenceId"].as_integer<int>()),
+        released(obj["released"].as_bool()) {
     if (obj.contains("edgeDescription")) {
       edge_description = obj["edgeDescription"].as_string();
     }
@@ -563,10 +563,10 @@ class NodeState {
   std::optional<std::string> node_description;
   std::optional<NodePosition> node_position;
   NodeState(){};
-  NodeState(jsoncons::json& obj) {
-    node_id = obj["nodeId"].as_string();
-    sequence_id = obj["sequenceId"].as_integer<int>();
-    released = obj["released"].as_bool();
+  explicit NodeState(jsoncons::json& obj)
+      : node_id(obj["nodeId"].as_string()),
+        sequence_id(obj["sequenceId"].as_integer<int>()),
+        released(obj["released"].as_bool()) {
     if (obj.contains("nodeDescription")) {
       node_description = obj["nodeDescription"].as_string();
     }
@@ -629,16 +629,16 @@ class VDA5050State {
   std::optional<std::vector<Load>> loads;
   std::optional<InforMation> information;
   VDA5050State() {}
-  VDA5050State(jsoncons::json& obj) {
-    header_id = obj["headerId"].as_integer<int>();
-    timestamp = obj["timestamp"].as_string();
-    version = obj["version"].as_string();
-    manufacturer = obj["manufacturer"].as_string();
-    serial_number = obj["serialNumber"].as_string();
-    order_id = obj["orderId"].as_string();
-    order_update_id = obj["orderUpdateId"].as_integer<int>();
-    last_node_id = obj["lastNodeId"].as_string();
-    last_node_seq_id = obj["lastNodeSequenceId"].as_integer<int>();
+  explicit VDA5050State(jsoncons::json& obj)
+      : header_id(obj["headerId"].as_integer<int>()),
+        timestamp(obj["timestamp"].as_string()),
+        version(obj["version"].as_string()),
+        manufacturer(obj["manufacturer"].as_string()),
+        serial_number(obj["serialNumber"].as_string()),
+        order_id(obj["orderId"].as_string()),
+        order_update_id(obj["orderUpdateId"].as_integer<int>()),
+        last_node_seq_id(obj["lastNodeSequenceId"].as_integer<int>()),
+        last_node_id(obj["lastNodeId"].as_string()) {
     for (auto& x : obj["nodeStates"].array_range()) {
       auto s = NodeState(x);
       nodestates.push_back(s);

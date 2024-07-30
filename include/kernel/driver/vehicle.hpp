@@ -155,7 +155,6 @@ class InvalidVehicle : public Vehicle {
     integration_level = integrationLevel::TO_BE_IGNORED;
   }
 };
-// TODO 工厂
 }  // namespace driver
 }  // namespace kernel
 #endif

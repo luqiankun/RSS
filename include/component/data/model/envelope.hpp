@@ -9,20 +9,20 @@ class Envelope : public TCSResource {
  public:
   using TCSResource ::TCSResource;
   using Vertex = Eigen::Vector2f;
-  Envelope(const std::string& name) : TCSResource(name) {}
+  explicit Envelope(const std::string& name) : TCSResource(name) {}
   inline void add_vertex(double x, double y) {
     vertexs.push_back(Eigen::Vector2f(x, y));
   }
   bool collide(const Envelope& other) const {
-    for (auto& v : vertexs) {
-      if (other.inside(v)) {
-        return true;
-      }
+    auto it = std::any_of(vertexs.begin(), vertexs.end(),
+                          [&](const Vertex& v) { return other.inside(v); });
+    if (it) {
+      return true;
     }
-    for (auto& v : other.vertexs) {
-      if (inside(v)) {
-        return true;
-      }
+    auto if_it = std::any_of(other.vertexs.begin(), other.vertexs.end(),
+                             [&](const Vertex& v) { return inside(v); });
+    if (if_it) {
+      return true;
     }
     return false;
   }

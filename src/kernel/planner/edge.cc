@@ -3,12 +3,8 @@ namespace kernel {
 namespace planner {
 
 Edge::Edge(const VertexPtr &h, const VertexPtr &t, const std::string &n, int w,
-           Access access) {
-  head = h;
-  tail = t;
-  weight = w;
-  this->name = n;
-  this->access = access;
+           Access access)
+    : head(h), tail(t), weight(w), name(n), access(access) {
   rebuild_links();
 }
 
@@ -140,11 +136,8 @@ bool Edge::operator==(const EdgePtr &edge) {
   return false;
 }
 
-Console::Console(Eigen::Vector2i pos, const std::string &n) {
-  location = pos;
-  layout = pos;
-  name = n;
-}
+Console::Console(Eigen::Vector2i pos, const std::string &n)
+    : location(pos), layout(pos), name(n) {}
 Console::Console(Eigen::Vector2i pos, Eigen::Vector2i layout,
                  const std::string &n) {
   location = pos;

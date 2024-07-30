@@ -18,17 +18,17 @@ enum class AType {
 };
 class Vertex : public ::std::enable_shared_from_this<Vertex> {
  public:
-  Eigen::Vector2i location;
-  Eigen::Vector2i layout;
+  Eigen::Vector2i location{};
+  Eigen::Vector2i layout{};
   AType type{AType::ATYPE_UNKNOWN};
-  std::vector<VertexWeakPtr> next_node;
-  std::vector<EdgePtr> next_edge;
-  std::shared_ptr<data::model::Point> equal_point;
+  std::vector<VertexWeakPtr> next_node{};
+  std::vector<EdgePtr> next_edge{};
+  std::shared_ptr<data::model::Point> equal_point{nullptr};
   float F{0};
   float G{0};
   float H{0};
-  std::vector<VertexWeakPtr> parents;
-  std::string name;
+  std::vector<VertexWeakPtr> parents{};
+  std::string name{};
 
  public:
   Vertex() = delete;

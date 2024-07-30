@@ -108,18 +108,18 @@ class Action : public data::model::Actions::Action {
 class InstantAction {
  public:
   int header_id;
-  std::string timestamp;
-  std::string version;
-  std::string manufacturer;
-  std::string serial_number;
+  std::string timestamp{};
+  std::string version{};
+  std::string manufacturer{};
+  std::string serial_number{};
   std::vector<Action> actions;
   InstantAction() {}
-  InstantAction(jsoncons::json& obj) {
-    header_id = obj["headerId"].as_integer<int>();
-    timestamp = obj["timestamp"].as_string();
-    manufacturer = obj["manufacturer"].as_string();
-    serial_number = obj["serialNumber"].as_string();
-    version = obj["version"].as_string();
+  explicit InstantAction(jsoncons::json& obj)
+      : header_id(obj["headerId"].as_integer<int>()),
+        timestamp(obj["timestamp"].as_string()),
+        manufacturer(obj["manufacturer"].as_string()),
+        serial_number(obj["serialNumber"].as_string()),
+        version(obj["version"].as_string()) {
     for (auto& x : obj["actions"].array_range()) {
       auto a = Action();
       a.init(x);

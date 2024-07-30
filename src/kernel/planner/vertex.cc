@@ -5,12 +5,11 @@
 namespace kernel {
 namespace planner {
 
-Vertex::Vertex(const std::shared_ptr<data::model::Point> &p) {
-  equal_point = p;
-  location = Eigen::Vector2i(p->position.x(), p->position.y());
-  this->name = p->name;
-  layout = p->layout.position;
-}
+Vertex::Vertex(const std::shared_ptr<data::model::Point> &p)
+    : equal_point(p),
+      location(Eigen::Vector2i(p->position.x(), p->position.y())),
+      name(p->name),
+      layout(p->layout.position) {}
 
 void Vertex::set_type(AType type) { this->type = type; }
 

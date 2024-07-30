@@ -30,7 +30,6 @@ void vda5050::VehicleMaster::set_mqtt_ops(const std::string& name,
     mqtt_client = std::make_shared<MqttClient>(addr, name);
   } else {
     auto addr = "tcp://" + server_ip + ":" + std::to_string(server_port);
-    MqttClient cli(addr, name);
     mqtt_client = std::make_shared<MqttClient>(addr, name);
   }
 
@@ -65,10 +64,6 @@ void VehicleMaster::start() {
   }
 }
 
-void VehicleMaster::stop() {
-  if (master_state != MasterMqttStatus::OFFLINE) {
-    master_state = MasterMqttStatus::OFFLINE;
-  }
-}
+void VehicleMaster::stop() { master_state = MasterMqttStatus::OFFLINE; }
 
 }  // namespace vda5050

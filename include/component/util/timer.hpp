@@ -12,9 +12,8 @@ constexpr auto timer_log{"timer"};
 
 class cpu_timer {
  public:
-  explicit cpu_timer(const std::string& n = "") : name(n) {
-    start = std::chrono::steady_clock::now();
-  }
+  explicit cpu_timer(const std::string& n = "")
+      : name(n), start(std::chrono::steady_clock::now()) {}
   ~cpu_timer() {
     auto end = std::chrono::steady_clock::now();
     auto dur =
@@ -45,9 +44,9 @@ inline std::string get_date_fmt() {
   auto t = std::chrono::system_clock::now();
   auto tm = std::chrono::system_clock::to_time_t(t);
   std::stringstream time;
-  auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
-               t.time_since_epoch())
-               .count();
+  // auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
+  //              t.time_since_epoch())
+  //              .count();
   time << std::put_time(std::localtime(&tm), "%Y-%m-%d");
   return time.str();
 }

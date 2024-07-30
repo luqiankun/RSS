@@ -65,10 +65,11 @@ void Planner::rebuild() {
         Eigen::Vector2i(x->position.x(), x->position.y()), x->layout.position,
         x->name);
     VertexPtr link;
-    for (auto &v : vertexs) {
-      if (v->equal_point == x->link.lock()) {
-        link = v;
-      }
+    auto it = std::find_if(vertexs.begin(), vertexs.end(), [=](VertexPtr a) {
+      return a->equal_point == x->link.lock();
+    });
+    if (it != vertexs.end()) {
+      link = *it;
     }
     if (link) {
       console->set_link_node(link);
@@ -182,7 +183,8 @@ Planner::find_paths_with_vertex(
     } else {
       // 按转弯数量排序
       std::sort(paths.begin(), paths.end(),
-                [this](std::vector<VertexPtr> &a, std::vector<VertexPtr> &b) {
+                [this](const std::vector<VertexPtr> &a,
+                       const std::vector<VertexPtr> &b) {
                   return calculate_turns(a) < calculate_turns(b);
                 });
       for (auto &x : paths) {
@@ -259,7 +261,8 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
     } else {
       // 按转弯数量排序
       std::sort(paths.begin(), paths.end(),
-                [this](std::vector<VertexPtr> &a, std::vector<VertexPtr> &b) {
+                [this](const std::vector<VertexPtr> &a,
+                       const std::vector<VertexPtr> &b) {
                   return calculate_turns(a) < calculate_turns(b);
                 });
       for (auto &x : paths) {
@@ -303,13 +306,12 @@ std::vector<std::vector<std::shared_ptr<data::model::Point>>>
 Planner::to_model_path(
     std::vector<std::pair<std::vector<VertexPtr>, double>> src) {
   std::vector<std::vector<std::shared_ptr<data::model::Point>>> res;
-  for (auto &x : src) {
+  std::transform(src.begin(), src.end(), std::back_inserter(res), [](auto &x) {
     std::vector<std::shared_ptr<data::model::Point>> temp;
-    for (auto &p : x.first) {
-      temp.push_back(p->equal_point);
-    }
-    res.push_back(temp);
-  }
+    std::transform(x.first.begin(), x.first.end(), std::back_inserter(temp),
+                   [](auto &x) { return x->equal_point; });
+    return temp;
+  });
   return res;
 }
 

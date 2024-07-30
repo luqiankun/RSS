@@ -205,7 +205,7 @@ class SimRabbit3 {
                   while (status == Status::PASUED) {
                     std::chrono::milliseconds(50);
                   }
-                  // TODO
+                  //
                   //  front action
                   //   move
                   // first node

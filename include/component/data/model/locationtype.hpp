@@ -77,17 +77,19 @@ class LocationType : public TCSObject {
         auto name = (*(sm.end() - 2)).str();
         auto key = (*(sm.end() - 1)).str();
         auto value = x.second;
-        for (auto& op : allowed_ops) {
-          if (op.first == name) {
-            op.second.insert(std::pair<std::string, std::string>(key, value));
-            break;
-          }
+        auto it_ops =
+            std::find_if(allowed_ops.begin(), allowed_ops.end(),
+                         [&name](const auto& x) { return x.first == name; });
+        if (it_ops != allowed_ops.end()) {
+          it_ops->second.insert(
+              std::pair<std::string, std::string>(key, value));
         }
-        for (auto& op : allowrd_per_ops) {
-          if (op.first == name) {
-            op.second.insert(std::pair<std::string, std::string>(key, value));
-            break;
-          }
+        auto it_ops_per =
+            std::find_if(allowrd_per_ops.begin(), allowrd_per_ops.end(),
+                         [&name](const auto& x) { return name == x.first; });
+        if (it_ops_per != allowrd_per_ops.end()) {
+          it_ops_per->second.insert(
+              std::pair<std::string, std::string>(key, value));
         }
       }
     }

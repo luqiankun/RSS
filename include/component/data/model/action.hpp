@@ -103,7 +103,7 @@ class Actions {
     virtual void init(jsoncons::json&){};
     virtual jsoncons::json to_json() { return jsoncons::json::object(); };
   };
-  Actions(std::map<std::string, std::string> pro) {
+  explicit Actions(std::map<std::string, std::string> pro) {
     std::regex N{R"(^vda5050:action.([^.]+)$)"};
     std::regex T{R"(^vda5050:action.([^.]+).blockingType$)"};
     std::regex P{R"(^vda5050:action.([^.]+).parameter.([^.]+)$)"};
