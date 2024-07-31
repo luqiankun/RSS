@@ -361,8 +361,12 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
            });
   srv.set_logger([](const httplib::Request &req, const httplib::Response &res) {
     // printf("%s", log(req, res).c_str());
-    CLOG(DEBUG, "http") << req.method << ": " << req.path
-                        << "  Res Code: " << res.status;
+    CLOG_IF(res.status != httplib::OK_200, ERROR, "http")
+        << req.remote_addr << ":" << req.remote_port << "| " << req.method
+        << " " << req.path << " | Res Code: " << res.status << "\n";
+    CLOG_IF(res.status == httplib::OK_200, INFO, "http")
+        << req.remote_addr << ":" << req.remote_port << "| " << req.method
+        << " " << req.path << " | Res Code: " << res.status << "\n";
     CLOG(DEBUG, "http") << "http req and rep\n" << log(req, res);
   });
 }

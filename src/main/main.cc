@@ -23,7 +23,7 @@ std::string log_size{"10485760"};
 uint32_t log_max_num{5};
 // auto init
 bool init_enable{false};
-std::string log_debug{true};
+std::string log_level{"info"};
 std::string init_xml_path{""};
 // mqtt value
 std::string mqtt_ip{"127.0.0.1"};
@@ -49,8 +49,8 @@ void read_params(std::string path) {
     if (!root["log"]["enable"].IsNone()) {
       log_enable = root["log"]["enable"].As<bool>() ? "true" : "false";
     }
-    if (!root["log"]["debug"].IsNone()) {
-      log_debug = root["log"]["debug"].As<bool>() ? "true" : "false";
+    if (!root["log"]["level"].IsNone()) {
+      log_level = root["log"]["level"].As<std::string>();
     }
     if (!root["log"]["max_num"].IsNone()) {
       log_max_num = root["log"]["max_num"].As<uint32_t>();
@@ -82,7 +82,7 @@ void read_params(std::string path) {
     if (!root["tcs"]["mqtt_addr"]["port"].IsNone()) {
       mqtt_port = root["tcs"]["mqtt_addr"]["port"].As<int>();
     }
-    CLOG(INFO, tcs_log) << "read param success";
+    CLOG(INFO, tcs_log) << "read yaml param success\n";
   } catch (Yaml::Exception& ec) {
     CLOG(ERROR, tcs_log) << "load param from <" << path << "> failed :"
                          << " " << ec.Message() << ", will use deafult params.";
@@ -116,9 +116,31 @@ int main(int argc, char** argv) {
   conf.setGlobally(el ::ConfigurationType ::ToStandardOutput, log_to_stdout);
   conf.setGlobally(el ::ConfigurationType ::MillisecondsWidth, "4");
   conf.setGlobally(el ::ConfigurationType ::MaxLogFileSize, log_size);
-  conf.set(el ::Level ::Debug, el ::ConfigurationType ::Format,
-           "%datetime{%d/%M} %func [%fbase:%line] %msg");
-  conf.set(el::Level::Debug, el ::ConfigurationType ::Enabled, log_debug);
+  // conf.set(el ::Level ::Debug, el ::ConfigurationType ::Format,
+  //          "%datetime{%d/%M} %func [%fbase:%line] %msg");
+  if (log_level == "debug") {
+    conf.set(el::Level::Trace, el ::ConfigurationType ::Enabled, "false");
+  } else if (log_level == "info") {
+    conf.set(el::Level::Trace, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Debug, el ::ConfigurationType ::Enabled, "false");
+  } else if (log_level == "warn") {
+    conf.set(el::Level::Trace, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Debug, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Info, el ::ConfigurationType ::Enabled, "false");
+  } else if (log_level == "error") {
+    conf.set(el::Level::Trace, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Debug, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Info, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Warning, el ::ConfigurationType ::Enabled, "false");
+  } else if (log_level == "fatal") {
+    conf.set(el::Level::Trace, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Debug, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Info, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Warning, el ::ConfigurationType ::Enabled, "false");
+    conf.set(el::Level::Error, el ::ConfigurationType ::Enabled, "false");
+  } else {
+    conf.set(el::Level::Global, el ::ConfigurationType ::Enabled, "false");
+  }
   el ::Loggers ::reconfigureAllLoggers(conf);
   std::deque<std::string> logs_name;
   {

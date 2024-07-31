@@ -97,8 +97,7 @@ bool ResourceManager::allocate(std::vector<std::shared_ptr<TCSResource>> res,
   for (auto& r : rules) {
     // LOG(INFO) << r->name;
     if (!r->pass(res, client)) {
-      DCLOG(WARNING, allocate_log)
-          << r->name << " not pass of " << client->name;
+      CLOG(WARNING, allocate_log) << r->name << " not pass of " << client->name;
       return false;
     }
   }
