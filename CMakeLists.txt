@@ -30,11 +30,8 @@ find_package (Eigen3 REQUIRED NO_MODULE)
 include_directories( ${EIGEN3_INCLUDE_DIR} )
 ################
 ##
-file(GLOB_RECURSE TOOLS_SRC 
- src/component/tools/*.cc
-)
-file(GLOB_RECURSE MQTT_SRC 
- src/component/vda5050/*.cc
+file(GLOB_RECURSE 3rd_SRC 
+ src/3rdparty/*.cc
 )
 file(GLOB_RECURSE KERNEL_SRC src/kernel/*.cc )
 file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
@@ -45,9 +42,8 @@ file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
 
 add_executable(tcs
 ${KERNEL_SRC}
-${TOOLS_SRC}
+${3rd_SRC}
 ${MAIN_SRC}
-${MQTT_SRC}
 )
 target_link_libraries(tcs PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen)
 
@@ -66,26 +62,21 @@ install(DIRECTORY config DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
 ########
 
 if(TEST)
-    file(GLOB_RECURSE EVENT_SRC src/component/data/*.cc
-    src/component/event/*.cc
-    )
-    add_executable(test_event test/component/event/event_test.cc ${EVENT_SRC})
-    add_executable(log_event test/component/tools/log/log_test.cc ${TOOLS_SRC} )
+    add_executable(log_event test/component/tools/log/log_test.cc src/3rdparty/log/easylogging++.cc)
     target_link_libraries(log_event)
-    add_executable(xml_test test/component/tools/xml/xml_test.cc  src/component/tools/xml/pugixml.cc)
+    add_executable(xml_test test/component/tools/xml/xml_test.cc  src/3rdparty/xml/pugixml.cc)
     add_executable(http_test test/component/tools/http/http_test.cc)
-    target_link_libraries(http_test)
     add_executable(json_test test/component/tools/json/json_test.cc 
-    ${TOOLS_SRC} 
+    src/3rdparty/log/easylogging++.cc
     )
     add_executable(schema_test test/component/tools/json/schema_test.cc 
-    ${TOOLS_SRC} 
+    src/3rdparty/log/easylogging++.cc
     )
     add_executable(mqtt_test test/component/tools/mqtt/mqtt_test.cc  )
     target_link_libraries(mqtt_test PahoMqttCpp::paho-mqttpp3)
-    add_executable(sim_agv_test test/kernel/driver/rabbit3_test.cc  ${MQTT_SRC} ${TOOLS_SRC} )
+    add_executable(sim_agv_test test/kernel/driver/rabbit3_test.cc   ${3rd_SRC} )
     target_link_libraries(sim_agv_test  PahoMqttCpp::paho-mqttpp3 Threads::Threads)
-    install(TARGETS test_event log_event xml_test http_test json_test sim_agv_test mqtt_test
+    install(TARGETS  log_event xml_test http_test json_test sim_agv_test mqtt_test
     RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/bin/${PROJECT_NAME}
     )
   

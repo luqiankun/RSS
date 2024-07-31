@@ -1,9 +1,9 @@
 ﻿#include <Eigen/Eigen>
 #include <csignal>
 
-#include "../../include/component/tools/fs/filesystem.hpp"
-#include "../../include/component/tools/log/easylogging++.h"
-#include "../../include/component/tools/yaml/yaml.hpp"
+#include "../../include/3rdparty/fs/filesystem.hpp"
+#include "../../include/3rdparty/log/easylogging++.h"
+#include "../../include/3rdparty/yaml/yaml.hpp"
 #include "../../include/main/httpsrv.hpp"
 #include "../../include/main/tcs.hpp"
 INITIALIZE_EASYLOGGINGPP

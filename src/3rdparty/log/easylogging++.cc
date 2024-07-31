@@ -10,7 +10,7 @@
 //  https://github.com/abumq/easyloggingpp/blob/master/LICENSE
 //
 
-#include "../../../../include/component/tools/log/easylogging++.h"
+#include "../../../include/3rdparty/log/easylogging++.h"
 
 #if defined(AUTO_INITIALIZE_EASYLOGGINGPP)
 INITIALIZE_EASYLOGGINGPP

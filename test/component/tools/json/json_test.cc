@@ -1,10 +1,10 @@
-#include "../../../../include/component/tools/json/json.hpp"
+#include "../../../../include/3rdparty/jsoncons/json.hpp"
 
 #include <locale>
 #include <regex>
 
-#include "../../../../include/component/tools/log/easylogging++.h"
-#include "../../../../include/component/tools/utest/utest.h"
+#include "../../../../include/3rdparty/log/easylogging++.h"
+#include "../../../../include/3rdparty/utest/utest.h"
 #include "../../../../include/component/util/timer.hpp"
 
 INITIALIZE_EASYLOGGINGPP
@@ -12,13 +12,15 @@ INITIALIZE_EASYLOGGINGPP
 UTEST(json_parse, case1) {
   auto msg1 = "321312dasda{a_2d}%^";
   auto msg2 = R"({"name":12})";
-  EXPECT_EXCEPTION(nlohmann::json v = nlohmann::json::parse(msg1);
-                   , nlohmann::json::parse_error);
-  nlohmann::json v2 = nlohmann::json::parse(msg2);
-  auto res = nlohmann::json::array();
+  EXPECT_EXCEPTION(jsoncons::json v = jsoncons::json::parse(msg1);
+                   , jsoncons::ser_error);
+  jsoncons::json v2 = jsoncons::json::parse(msg2);
+  auto res = jsoncons::json();
   auto msg = "Could not parse JSON input.";
   res.push_back(msg);
-  std::cout << res.dump() << "\n";
+  std::string t;
+  res.dump(t);
+  std::cout << t << "\n";
 }
 UTEST(time_parse, case) {
   std::stringstream timeStr{"2021-09-30T15:46:37.394Z"};  // 要解析的时间字符串

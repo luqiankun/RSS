@@ -2,8 +2,7 @@
 #define VDA5050STATE_HPP
 #include <optional>
 
-#include "../tools/jsoncons/json.hpp"
-#include "../tools/mqtt/mqtt.hpp"
+#include "../../3rdparty/jsoncons/json.hpp"
 namespace vda5050 {
 enum class VehicleMqttStatus { ONLINE = 1, OFFLINE = 2, CONNECTIONBROKEN = 3 };
 enum class MasterMqttStatus { ONLINE = 1, OFFLINE = 2, CONNECTIONBROKEN = 3 };

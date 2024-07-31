@@ -1,6 +1,6 @@
-#include "../../../../include/component/tools/mqtt/mqtt.hpp"
-
 #include <regex>
+
+#include "../../../../include/component/vda5050/master.hpp"
 
 int main() {
   std::string addr = "tcp://192.168.0.39:1883";
@@ -14,7 +14,7 @@ int main() {
   will_ops.set_qos(0);
   will_ops.set_payload(std::string("DDDD"));
   ops.set_will(will_ops);
-  MqttClient cli{addr, "dada"};
+  vda5050::MqttClient cli{addr, "dada"};
   cli.set_connected_handler([&](std::string cause) {
     std::cout << "on_connect "
               << "\n";

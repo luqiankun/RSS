@@ -103,7 +103,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       auto msg =
           "Could not parse XML input '" + std::string(ret.description()) + "'.";
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
+      return std::pair<int, std::string>(httplib::BadRequest_400,
+                                         res.to_string());
     }
     //
     auto root = doc.first_child();  // <model>
@@ -114,7 +115,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       auto msg =
           "Could not parse XML input '" + std::string("'don't has model'.");
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
+      return std::pair<int, std::string>(httplib::BadRequest_400,
+                                         res.to_string());
     }
     { resource->model_name = root.attribute("name").as_string(); }
     {
@@ -868,7 +870,8 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
     json res = json::array();
     auto msg = "Could not parse XML input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
   }
 }
 
@@ -1062,7 +1065,7 @@ std::pair<int, std::string> TCS::get_transport_orders(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   if (vehicle.empty()) {
     json res = json::array();
@@ -1074,7 +1077,7 @@ std::pair<int, std::string> TCS::get_transport_orders(
       json value = order_to_json(v);
       res.push_back(value);
     }
-    return std::pair<int, std::string>(httplib::OK_200, res.dump());
+    return std::pair<int, std::string>(httplib::OK_200, res.to_string());
   } else {
     for (auto &v : dispatcher->vehicles) {
       if (v->name == vehicle) {
@@ -1083,13 +1086,13 @@ std::pair<int, std::string> TCS::get_transport_orders(
           json value = order_to_json(v);
           res.push_back(value);
         }
-        return std::pair<int, std::string>(httplib::OK_200, res.dump());
+        return std::pair<int, std::string>(httplib::OK_200, res.to_string());
       }
     }
     json res = json::array();
     auto msg = "Could not find the intended vehicle '" + vehicle + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
 }
 
@@ -1100,24 +1103,24 @@ std::pair<int, std::string> TCS::get_transport_order(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   json res = json::array();
   for (auto &ord : orderpool->orderpool) {
     if (ord->name == ord_name) {
       res.push_back(order_to_json(ord));
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     }
   }
   for (auto &ord : orderpool->ended_orderpool) {
     if (ord->name == ord_name) {
       res.push_back(order_to_json(ord));
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     }
   }
   auto msg = "Could not find transport order '" + ord_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 std::pair<int, std::string> TCS::post_transport_order(
     const std::string &ord_name, const std::string &body) {
@@ -1126,7 +1129,7 @@ std::pair<int, std::string> TCS::post_transport_order(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &o : orderpool->orderpool) {
     if (o->name == ord_name) {
@@ -1134,7 +1137,8 @@ std::pair<int, std::string> TCS::post_transport_order(
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
       CLOG(ERROR, tcs_log) << msg;
-      return std::pair<int, std::string>(httplib::Conflict_409, res.dump());
+      return std::pair<int, std::string>(httplib::Conflict_409,
+                                         res.to_string());
     }
   }
   for (auto &o : orderpool->ended_orderpool) {
@@ -1143,7 +1147,8 @@ std::pair<int, std::string> TCS::post_transport_order(
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
       CLOG(ERROR, tcs_log) << msg;
-      return std::pair<int, std::string>(httplib::Conflict_409, res.dump());
+      return std::pair<int, std::string>(httplib::Conflict_409,
+                                         res.to_string());
     }
   }
   try {
@@ -1152,41 +1157,45 @@ std::pair<int, std::string> TCS::post_transport_order(
     auto ord = std::make_shared<data::order::TransportOrder>(ord_name);
     ord->create_time = std::chrono::system_clock::now();
     if (req.contains("deadline") && !req["deadline"].empty()) {
-      auto dt = get_time_from_str(req["deadline"].get<std::string>());
+      auto dt = get_time_from_str(req["deadline"].as_string());
       ord->dead_time = dt.value_or(ord->create_time + std::chrono::minutes(60));
     } else {
       ord->dead_time = ord->create_time + std::chrono::hours(1000000);
     }
-    for (auto &v : dispatcher->vehicles) {
-      if (v->name == req["intendedVehicle"].get<std::string>()) {
-        ord->intended_vehicle = v;
+    if (req.contains("intendedVehicle")) {
+      for (auto &v : dispatcher->vehicles) {
+        if (v->name == req["intendedVehicle"].as_string()) {
+          ord->intended_vehicle = v;
+        }
       }
     }
     bool quence{false};
-    for (auto &o : orderpool->orderquence) {
-      if (o->name == req["wrappingSequence"].get<std::string>()) {
-        o->add_transport_ord(ord);
-        quence = true;
-        break;
+    if (req.contains("wrappingSequence")) {
+      for (auto &o : orderpool->orderquence) {
+        if (o->name == req["wrappingSequence"].as_string()) {
+          o->add_transport_ord(ord);
+          quence = true;
+          break;
+        }
+      }
+      if (!quence) {
+        //  new orderquence
+        auto new_orderquence = std::make_shared<data::order::OrderSequence>(
+            req["wrappingSequence"].as_string());
+        new_orderquence->add_transport_ord(ord);
+        orderpool->orderquence.push_back(new_orderquence);
       }
     }
-    if (!quence) {
-      //  new orderquence
-      auto new_orderquence = std::make_shared<data::order::OrderSequence>(
-          req["wrappingSequence"].get<std::string>());
-      new_orderquence->add_transport_ord(ord);
-      orderpool->orderquence.push_back(new_orderquence);
-    }
-    ord->type = req["type"].get<std::string>();
+    if (req.contains("type")) ord->type = req["type"].as_string();
     auto destinations = req["destinations"];
     if (destinations.empty()) {
       LOG(WARNING) << ord->name << " op is null";
       ord->state = data::order::TransportOrder::State::FAILED;
       orderpool->ended_orderpool.push_back(ord);
     } else {
-      for (auto &d : destinations) {
+      for (auto &d : destinations.array_range()) {
         //  操作类型判断
-        auto loc = d["locationName"].get<std::string>();
+        auto loc = d["locationName"].as_string();
         auto check = resource->find(loc);
         if (check.first == kernel::allocate::ResourceManager::ResType::Err) {
           json res = json::array();
@@ -1195,9 +1204,10 @@ std::pair<int, std::string> TCS::post_transport_order(
           CLOG(ERROR, tcs_log) << msg;
           ord->state = data::order::TransportOrder::State::UNROUTABLE;
           orderpool->ended_orderpool.push_back(ord);
-          return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+          return std::pair<int, std::string>(httplib::NotFound_404,
+                                             res.to_string());
         } else {
-          auto op = d["operation"].get<std::string>();
+          auto op = d["operation"].as_string();
           auto op_ = data::model::Actions::get_optype(op);
           if (op_.has_value()) {
             if (check.first ==
@@ -1214,18 +1224,17 @@ std::pair<int, std::string> TCS::post_transport_order(
                 auto msg = "not support type '" + op + "'.";
                 res.push_back(msg);
                 return std::pair<int, std::string>(httplib::NotFound_404,
-                                                   res.dump());
+                                                   res.to_string());
               }
             }
 
             auto destination =
                 orderpool->res_to_destination(check.second, op_.value());
             if (d.contains("properties")) {
-              for (auto &pro : d["properties"]) {
+              for (auto &pro : d["properties"].array_range()) {
                 destination->properties.insert(
                     std::pair<std::string, std::string>(
-                        pro["key"].get<std::string>(),
-                        pro["value"].get<std::string>()));
+                        pro["key"].as_string(), pro["value"].as_string()));
               }
             }
             auto dr = std::make_shared<data::order::DriverOrder>(
@@ -1242,29 +1251,35 @@ std::pair<int, std::string> TCS::post_transport_order(
             auto msg = "Could not support type '" + op + "'.";
             res.push_back(msg);
             return std::pair<int, std::string>(httplib::NotFound_404,
-                                               res.dump());
+                                               res.to_string());
           }
         }
       }
     }
-    for (auto &pro : req["properties"]) {
-      ord->properties.insert(std::pair<std::string, std::string>(
-          pro["key"].get<std::string>(), pro["value"].get<std::string>()));
-    }
-    for (auto &dep : req["dependencies"]) {
-      for (auto &o : orderpool->orderpool) {
-        if (o->name == dep.get<std::string>()) {
-          ord->dependencies.push_back(o);
-        }
+    if (req.contains("properties")) {
+      for (auto &pro : req["properties"].array_range()) {
+        ord->properties.insert(std::pair<std::string, std::string>(
+            pro["key"].as_string(), pro["value"].as_string()));
       }
-      for (auto &o : orderpool->ended_orderpool) {
-        if (o->name == dep.get<std::string>()) {
-          ord->dependencies.push_back(o);
+    }
+    if (req.contains("dependencies")) {
+      for (auto &dep : req["dependencies"].array_range()) {
+        for (auto &o : orderpool->orderpool) {
+          if (o->name == dep.as_string()) {
+            ord->dependencies.push_back(o);
+          }
+        }
+        for (auto &o : orderpool->ended_orderpool) {
+          if (o->name == dep.as_string()) {
+            ord->dependencies.push_back(o);
+          }
         }
       }
     }
     ord->peripheral_reservation_token =
-        req["peripheralReservationToken"].get<std::string>();
+        req.contains("peripheralReservationToken")
+            ? req["peripheralReservationToken"].as_string()
+            : "";
     ord->state = data::order::TransportOrder::State::RAW;
     orderpool->orderpool.push_back(ord);
     dispatcher->notify();
@@ -1297,25 +1312,28 @@ std::pair<int, std::string> TCS::post_transport_order(
       }
       res["destinations"].push_back(value);
     }
-    return std::pair<int, std::string>(httplib::OK_200, res.dump());
-  } catch (json::parse_error ec) {
-    CLOG(ERROR, tcs_log) << "parse failed :" << ec.what();
+    return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+  } catch (jsoncons::ser_error ec) {
+    CLOG(ERROR, tcs_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
-  } catch (json::type_error ec) {
-    CLOG(ERROR, tcs_log) << "type error :" << ec.what();
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
+  } catch (jsoncons::key_not_found ec) {
+    CLOG(ERROR, tcs_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
-  } catch (json::other_error ec) {
-    CLOG(ERROR, tcs_log) << "other error :" << ec.what();
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
+  } catch (jsoncons::not_an_object ec) {
+    CLOG(ERROR, tcs_log) << "not_an_object error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
   }
 }
 
@@ -1326,7 +1344,7 @@ std::pair<int, std::string> TCS::post_transport_order_withdrawl(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &o : orderpool->orderpool) {
     if (o->name == ord_name) {
@@ -1343,7 +1361,7 @@ std::pair<int, std::string> TCS::post_transport_order_withdrawl(
   json res = json::array();
   auto msg = "Could not find transport order '" + ord_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
@@ -1380,7 +1398,7 @@ std::pair<int, std::string> TCS::get_ordersequences(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   if (!vehicle.empty()) {
     json res = json::array();
@@ -1394,16 +1412,17 @@ std::pair<int, std::string> TCS::get_ordersequences(
     if (res.empty()) {
       auto msg = "Could not find the intended vehicle '" + vehicle + "'.";
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+      return std::pair<int, std::string>(httplib::NotFound_404,
+                                         res.to_string());
     } else {
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     }
   } else {
     json res = json::array();
     for (auto &q : orderpool->orderquence) {
       res.push_back(orderquence_to_json(q));
     }
-    return std::pair<int, std::string>(httplib::OK_200, res.dump());
+    return std::pair<int, std::string>(httplib::OK_200, res.to_string());
   }
 }
 
@@ -1414,18 +1433,18 @@ std::pair<int, std::string> TCS::get_ordersequence(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &q : orderpool->orderquence) {
     if (q->name == sequence_name) {
       auto res = orderquence_to_json(q);
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     }
   }
   json res = json::array();
   auto msg = "Could not find order sequence '" + sequence_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> TCS::post_ordersequence(
@@ -1435,58 +1454,71 @@ std::pair<int, std::string> TCS::post_ordersequence(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &s : orderpool->orderquence) {
     if (s->name == sequence_name) {
       json res = json::array();
       auto msg = "Order sequence '" + sequence_name + "' already exists.";
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::Conflict_409, res.dump());
+      return std::pair<int, std::string>(httplib::Conflict_409,
+                                         res.to_string());
     }
   }
   try {
     auto req = json::parse(body);
-    auto veh = req["intendedVehicle"].get<std::string>();
-    for (auto &v : dispatcher->vehicles) {
-      if (v->name == veh) {
-        auto new_orderquence =
-            std::make_shared<data::order::OrderSequence>(sequence_name);
-        new_orderquence->intended_vehicle = v;
-        new_orderquence->failure_fatal = req["failureFatal"].get<bool>();
-        new_orderquence->complete = req["incompleteName"].get<bool>();
-        for (auto &pro : req["properties"]) {
-          new_orderquence->properties[pro["name"].get<std::string>()] =
-              pro["value"].get<std::string>();
+    std::string veh{};
+    if (req.contains("intendedVehicle")) {
+      veh = req["intendedVehicle"].as_string();
+      for (auto &v : dispatcher->vehicles) {
+        if (v->name == veh) {
+          auto new_orderquence =
+              std::make_shared<data::order::OrderSequence>(sequence_name);
+          new_orderquence->intended_vehicle = v;
+          if (req.contains("failureFatal")) {
+            new_orderquence->failure_fatal = req["failureFatal"].as_bool();
+          }
+          if (req.contains("incompleteName")) {
+            new_orderquence->complete = req["incompleteName"].as_bool();
+          }
+          if (req.contains("properties")) {
+            for (auto &pro : req["properties"].array_range()) {
+              new_orderquence->properties[pro["name"].as_string()] =
+                  pro["value"].as_string();
+            }
+          }
+          // return
+          auto res = orderquence_to_json(new_orderquence);
+          orderpool->orderquence.push_back(new_orderquence);
+          return std::pair<int, std::string>(httplib::OK_200, res.to_string());
         }
-        // return
-        auto res = orderquence_to_json(new_orderquence);
-        orderpool->orderquence.push_back(new_orderquence);
-        return std::pair<int, std::string>(httplib::OK_200, res.dump());
       }
     }
     json res = json::array();
-    auto msg = "Could not find Vehicle '" + veh + "'.";
+    auto msg = "Could not find Vehicle " + veh + ".";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
-  } catch (json::parse_error ec) {
-    CLOG(ERROR, tcs_log) << "parse error:" << ec.what();
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  } catch (jsoncons::not_an_object ec) {
+    CLOG(ERROR, tcs_log) << "not_an_object error:" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
-  } catch (json::type_error ec) {
-    CLOG(ERROR, tcs_log) << "type error :" << ec.what();
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
+  } catch (jsoncons::ser_error ec) {
+    CLOG(ERROR, tcs_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
-  } catch (json::other_error ec) {
-    CLOG(ERROR, tcs_log) << "other error :" << ec.what();
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
+  } catch (jsoncons::key_not_found ec) {
+    CLOG(ERROR, tcs_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
   }
 }
 
@@ -1554,14 +1586,14 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   if (state.empty()) {
     json res = json::array();
     for (auto &v : dispatcher->vehicles) {
       res.push_back(vehicle_to_json(v));
     }
-    return std::pair<int, std::string>(httplib::OK_200, res.dump());
+    return std::pair<int, std::string>(httplib::OK_200, res.to_string());
   } else {
     if (state == "IDLE") {
       json res = json::array();
@@ -1570,7 +1602,7 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     } else if (state == "ERROR") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1578,7 +1610,7 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     } else if (state == "EXECUTING") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1586,7 +1618,7 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     } else if (state == "UNKNOWN") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1594,7 +1626,7 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     } else if (state == "UNAVAILABLE") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1602,7 +1634,7 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     } else if (state == "CHARGING") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1610,12 +1642,13 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     } else {
       json res = json::array();
       auto msg = "Could not parse input.";
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
+      return std::pair<int, std::string>(httplib::BadRequest_400,
+                                         res.to_string());
     }
   }
 }
@@ -1626,18 +1659,18 @@ std::pair<int, std::string> TCS::get_vehicle(const std::string &vehicle) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
       auto res = vehicle_to_json(v);
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     }
   }
   json res = json::array();
   auto msg = "Could not find vehicle '" + vehicle + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> TCS::post_vehicle_withdrawl(
@@ -1647,7 +1680,7 @@ std::pair<int, std::string> TCS::post_vehicle_withdrawl(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
@@ -1663,7 +1696,7 @@ std::pair<int, std::string> TCS::post_vehicle_withdrawl(
   json res = json::array();
   auto msg = "Could not find vehicle '" + vehicle + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
@@ -1674,7 +1707,7 @@ std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &x : dispatcher->vehicles) {
     if (x->name == name) {
@@ -1701,7 +1734,7 @@ std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> TCS::get_model() {
@@ -1710,7 +1743,7 @@ std::pair<int, std::string> TCS::get_model() {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   json res;
   res["name"] = resource->model_name;
@@ -1932,7 +1965,7 @@ std::pair<int, std::string> TCS::get_model() {
     }
     res["vehicles"].push_back(vehicle);
   }
-  return std::pair<int, std::string>(httplib::OK_200, res.dump());
+  return std::pair<int, std::string>(httplib::OK_200, res.to_string());
 }
 std::pair<int, std::string> TCS::put_model(const std::string &body) {
   std::unique_lock<std::shared_mutex> lk(mutex);
@@ -1953,85 +1986,105 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         "collision_rule", resource);
     resource->rules.push_back(envelope_rule);
     if (model.contains("name")) {
-      resource->model_name = model["name"].get<std::string>();
+      resource->model_name = model["name"].as_string();
     }
     // visuallayout
     {
       auto visuallayout = std::make_shared<data::model::VisualLayout>(
-          model["visualLayout"]["name"].get<std::string>());
+          model["visualLayout"]["name"].as_string());
       resource->visual_layout = visuallayout;
-      visuallayout->scale_x = model["visualLayout"]["scaleX"].get<double>();
-      visuallayout->scale_y = model["visualLayout"]["scaleY"].get<double>();
-      for (auto &x : model["visualLayout"]["layers"]) {
-        auto layer = data::model::VisualLayout::Layer();
-        layer.id = x["id"].get<int>();
-        layer.ordinal = x["ordinal"].get<int>();
-        layer.visible = x["visible"].get<bool>();
-        layer.name = x["name"].get<std::string>();
-        layer.group_id = x["groupId"].get<int>();
-        visuallayout->layers.push_back(layer);
+      if (model["visualLayout"].contains("scaleX")) {
+        visuallayout->scale_x = model["visualLayout"]["scaleX"].as_double();
       }
-      for (auto &x : model["visualLayout"]["layerGroups"]) {
-        auto layer_group = data::model::VisualLayout::LayerGroup();
-        layer_group.id = x["id"].get<int>();
-        layer_group.name = x["name"].get<std::string>();
-        layer_group.visible = x["visible"].get<bool>();
-        visuallayout->layer_groups.push_back(layer_group);
+      if (model["visualLayout"].contains("scaleY")) {
+        visuallayout->scale_y = model["visualLayout"]["scaleY"].as_double();
       }
-      for (auto &x : model["visualLayout"]["properties"]) {
-        visuallayout->properties.insert(std::pair<std::string, std::string>(
-            x["name"].get<std::string>(), x["value"].get<std::string>()));
+      if (model["visualLayout"].contains("layers")) {
+        for (auto &x : model["visualLayout"]["layers"].array_range()) {
+          auto layer = data::model::VisualLayout::Layer();
+          layer.id = x["id"].as_integer<int>();
+          layer.ordinal = x["ordinal"].as_integer<int>();
+          layer.visible = x["visible"].as_bool();
+          layer.name = x["name"].as_string();
+          layer.group_id = x["groupId"].as_integer<int>();
+          visuallayout->layers.push_back(layer);
+        }
+      }
+      if (model["visualLayout"].contains("layerGroups")) {
+        for (auto &x : model["visualLayout"]["layerGroups"].array_range()) {
+          auto layer_group = data::model::VisualLayout::LayerGroup();
+          layer_group.id = x["id"].as_integer<int>();
+          layer_group.name = x["name"].as_string();
+          layer_group.visible = x["visible"].as_bool();
+          visuallayout->layer_groups.push_back(layer_group);
+        }
+      }
+      if (model["visualLayout"].contains("properties")) {
+        for (auto &x : model["visualLayout"]["properties"].array_range()) {
+          visuallayout->properties.insert(std::pair<std::string, std::string>(
+              x["name"].as_string(), x["value"].as_string()));
+        }
       }
     }
     // point
     {
-      for (auto &p : model["points"]) {
+      for (auto &p : model["points"].array_range()) {
         auto point =
-            std::make_shared<data::model::Point>(p["name"].get<std::string>());
-        point->position.x() = p["position"]["x"].get<int>();
-        point->position.y() = p["position"]["y"].get<int>();
-        point->position.z() = p["position"]["z"].get<int>();
+            std::make_shared<data::model::Point>(p["name"].as_string());
+        if (p.contains("position")) {
+          point->position.x() = p["position"]["x"].as_integer<int>();
+          point->position.y() = p["position"]["y"].as_integer<int>();
+          point->position.z() = p["position"]["z"].as_integer<int>();
+        }
         if (p.contains("vehicleOrientationAngle")) {
           if (p["vehicleOrientationAngle"].is_number())
-            point->client_angle = p["vehicleOrientationAngle"].get<int>();
+            point->client_angle =
+                p["vehicleOrientationAngle"].as_integer<int>();
           else {
             point->client_angle = 0;
           }
         }
-        point->type =
-            data::model::Point::new_type(p["type"].get<std::string>());
-        point->layout.position.x() = p["layout"]["position"]["x"].get<int>();
-        point->layout.position.y() = p["layout"]["position"]["y"].get<int>();
-        point->layout.label_offset.x() =
-            p["layout"]["labelOffset"]["x"].get<int>();
-        point->layout.label_offset.y() =
-            p["layout"]["labelOffset"]["y"].get<int>();
-        point->layout.layer_id = p["layout"]["layerId"].get<int>();
+        if (p.contains("type")) {
+          point->type = data::model::Point::new_type(p["type"].as_string());
+        }
+        if (p.contains("layout")) {
+          point->layout.position.x() =
+              p["layout"]["position"]["x"].as_integer<int>();
+          point->layout.position.y() =
+              p["layout"]["position"]["y"].as_integer<int>();
+          point->layout.label_offset.x() =
+              p["layout"]["labelOffset"]["x"].as_integer<int>();
+          point->layout.label_offset.y() =
+              p["layout"]["labelOffset"]["y"].as_integer<int>();
+          point->layout.layer_id = p["layout"]["layerId"].as_integer<int>();
+        }
         if (p.contains("properties")) {
-          for (auto &pro : p["properties"]) {
+          for (auto &pro : p["properties"].array_range()) {
             std::string value;
-            if (pro["value"].is_boolean()) {
-              if (pro["value"].get<bool>()) {
+            if (pro["value"].is_bool()) {
+              if (pro["value"].as_bool()) {
                 value = "true";
               } else {
                 value = "false";
               }
             } else {
-              value = pro["value"].get<std::string>();
+              value = pro["value"].as_string();
             }
             point->properties.insert(std::pair<std::string, std::string>(
-                pro["name"].get<std::string>(), value));
+                pro["name"].as_string(), value));
           }
         }
-        for (auto &x : p["vehicleEnvelope"]) {
-          auto envelope = std::make_shared<data::model::Envelope>(
-              x["envelopeKey"].get<std::string>());
-          for (auto &v : p["vehicleEnvelope"]["vertices"]) {
-            envelope->add_vertex(v["x"].get<double>(), v["y"].get<double>());
+        if (p.contains("vehicleEnvelope")) {
+          for (auto &x : p["vehicleEnvelope"].array_range()) {
+            auto envelope = std::make_shared<data::model::Envelope>(
+                x["envelopeKey"].as_string());
+            for (auto &v : p["vehicleEnvelope"]["vertices"].array_range()) {
+              envelope->add_vertex(v["x"].as_double(), v["y"].as_double());
+            }
+            point->envelopes.insert(
+                std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
+                    x["envelopeKey"].as_string(), envelope));
           }
-          point->envelopes.insert(
-              std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
-                  x["envelopeKey"].get<std::string>(), envelope));
         }
         resource->points.push_back(point);
       }
@@ -2039,22 +2092,32 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     }
     // locationtype
     {
-      for (auto &x : model["locationTypes"]) {
-        auto type = std::make_shared<data::model::LocationType>(
-            x["name"].get<std::string>());
-        type->layout.location_representation = data::model::new_location_type(
-            x["layout"]["locationRepresentation"].get<std::string>());
-        for (auto &pro : x["property"]) {
-          auto name = pro["name"].get<std::string>();
-          auto value = pro["value"].get<std::string>();
-          type->properties.insert(
-              std::pair<std::string, std::string>(name, value));
+      for (auto &x : model["locationTypes"].array_range()) {
+        auto type =
+            std::make_shared<data::model::LocationType>(x["name"].as_string());
+        if (x.contains("layout")) {
+          type->layout.location_representation = data::model::new_location_type(
+              x["layout"]["locationRepresentation"].as_string());
         }
-        for (auto &allow : x["allowedOperations"]) {
-          type->allowed_ops[allow] = std::map<std::string, std::string>();
+        if (x.contains("properties")) {
+          for (auto &pro : x["properties"].array_range()) {
+            auto name = pro["name"].as_string();
+            auto value = pro["value"].as_string();
+            type->properties.insert(
+                std::pair<std::string, std::string>(name, value));
+          }
         }
-        for (auto &allow : x["allowedPeripheralOperations"]) {
-          type->allowrd_per_ops[allow] = std::map<std::string, std::string>();
+        if (x.contains("allowedOperations")) {
+          for (auto &allow : x["allowedOperations"].array_range()) {
+            type->allowed_ops[allow.as_string()] =
+                std::map<std::string, std::string>();
+          }
+        }
+        if (x.contains("allowedPeripheralOperations")) {
+          for (auto &allow : x["allowedPeripheralOperations"].array_range()) {
+            type->allowrd_per_ops[allow.as_string()] =
+                std::map<std::string, std::string>();
+          }
         }
         type->get_param();
         resource->location_types.push_back(type);
@@ -2064,30 +2127,27 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     }
     // location
     {
-      for (auto &l : model["locations"]) {
-        auto loc = std::make_shared<data::model::Location>(
-            l["name"].get<std::string>());
-        loc->position.x() = l["position"]["x"].get<int>();
-        loc->position.y() = l["position"]["y"].get<int>();
-        loc->position.z() = l["position"]["z"].get<int>();
-        if (!l["links"].empty()) {
-          auto p_name = l["links"].front()["pointName"].get<std::string>();
-          for (auto &x : resource->points) {
-            if (x->name == p_name) {
-              loc->link = x;
+      for (auto &l : model["locations"].array_range()) {
+        auto loc =
+            std::make_shared<data::model::Location>(l["name"].as_string());
+        loc->position.x() = l["position"]["x"].as_integer<int>();
+        loc->position.y() = l["position"]["y"].as_integer<int>();
+        loc->position.z() = l["position"]["z"].as_integer<int>();
+        if (l.contains("links")) {
+          if (!l["links"].empty()) {
+            auto p_name = l["links"][0]["pointName"].as_string();
+            for (auto &x : resource->points) {
+              if (x->name == p_name) {
+                loc->link = x;
+              }
             }
           }
         }
-        loc->locked = l["locked"].get<bool>();
-        loc->layout.position.x() = l["layout"]["position"]["x"].get<int>();
-        loc->layout.position.y() = l["layout"]["position"]["y"].get<int>();
-        loc->layout.label_offset.x() =
-            l["layout"]["labelOffset"]["x"].get<int>();
-        loc->layout.label_offset.y() =
-            l["layout"]["labelOffset"]["y"].get<int>();
-        loc->layout.layer_id = l["layout"]["layerId"].get<int>();
+        if (l.contains("locked")) {
+          loc->locked = l["locked"].as_bool();
+        }
         for (auto &x : resource->location_types) {
-          if (x->name == l["typeName"].get<std::string>()) {
+          if (x->name == l["typeName"].as_string()) {
             loc->type = x;
             for (auto &a_op : x->allowed_ops) {
               for (auto &per : loc->properties) {
@@ -2101,16 +2161,29 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
             }
           }
         }
-        if (l["layout"].contains("locationRepresentation")) {
-          loc->type.lock()->layout.location_representation =
-              data::model::new_location_type(
-                  l["layout"]["locationRepresentation"].get<std::string>());
+        if (l.contains("layout")) {
+          loc->layout.position.x() =
+              l["layout"]["position"]["x"].as_integer<int>();
+          loc->layout.position.y() =
+              l["layout"]["position"]["y"].as_integer<int>();
+          loc->layout.label_offset.x() =
+              l["layout"]["labelOffset"]["x"].as_integer<int>();
+          loc->layout.label_offset.y() =
+              l["layout"]["labelOffset"]["y"].as_integer<int>();
+          loc->layout.layer_id = l["layout"]["layerId"].as_integer<int>();
+          if (l["layout"].contains("locationRepresentation")) {
+            loc->type.lock()->layout.location_representation =
+                data::model::new_location_type(
+                    l["layout"]["locationRepresentation"].as_string());
+          }
         }
-        for (auto &pro : l["property"]) {
-          auto name = pro["name"].get<std::string>();
-          auto value = pro["value"].get<std::string>();
-          loc->properties.insert(
-              std::pair<std::string, std::string>(name, value));
+        if (l.contains("properties")) {
+          for (auto &pro : l["properties"].array_range()) {
+            auto name = pro["name"].as_string();
+            auto value = pro["value"].as_string();
+            loc->properties.insert(
+                std::pair<std::string, std::string>(name, value));
+          }
         }
         resource->locations.push_back(loc);
       }
@@ -2119,40 +2192,42 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     }
     // path
     {
-      for (auto &p : model["paths"]) {
-        auto path = std::make_shared<data::model::Path>(p["name"]);
-        path->max_vel = p["maxVelocity"].get<int>();
-        path->max_reverse_vel = p["maxReverseVelocity"].get<int>();
+      for (auto &p : model["paths"].array_range()) {
+        auto path = std::make_shared<data::model::Path>(p["name"].as_string());
+        path->max_vel = p["maxVelocity"].as_integer<int>();
+        path->max_reverse_vel = p["maxReverseVelocity"].as_integer<int>();
         if (p.contains("locked")) {
-          path->locked = p["locked"].get<bool>();
+          path->locked = p["locked"].as_bool();
         }
         for (auto &x : resource->points) {
-          if (x->name == p["srcPointName"].get<std::string>()) {
+          if (x->name == p["srcPointName"].as_string()) {
             path->source_point = x;
             x->incoming_paths.push_back(path);
           }
-          if (x->name == p["destPointName"].get<std::string>()) {
+          if (x->name == p["destPointName"].as_string()) {
             path->destination_point = x;
             x->outgoing_paths.push_back(path);
           }
         }
-        path->layout.layer_id = p["layout"]["layerId"].get<int>();
-        path->layout.connect_type =
-            data::model::Path::new_connect_type(p["layout"]["connectionType"]);
+        if (p.contains("layout")) {
+          path->layout.layer_id = p["layout"]["layerId"].as_integer<int>();
+          path->layout.connect_type = data::model::Path::new_connect_type(
+              p["layout"]["connectionType"].as_string());
+        }
         if (p.contains("properties")) {
-          for (auto &pro : p["properties"]) {
+          for (auto &pro : p["properties"].array_range()) {
             std::string value;
-            if (pro["value"].is_boolean()) {
-              if (pro["value"].get<bool>()) {
+            if (pro["value"].is_bool()) {
+              if (pro["value"].as_bool()) {
                 value = "true";
               } else {
                 value = "false";
               }
             } else {
-              value = pro["value"].get<std::string>();
+              value = pro["value"].as_string();
             }
             path->properties.insert(std::pair<std::string, std::string>(
-                pro["name"].get<std::string>(), value));
+                pro["name"].as_string(), value));
           }
         }
         if (!p.contains("length")) {
@@ -2164,12 +2239,11 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         data::model::Actions acts(path->properties);
         {
           if (p.contains("peripheralOperation")) {
-            for (auto &op : p["peripheralOperation"]) {
-              auto per_op_name = op["name"].get<std::string>();
-              auto wait =
-                  op["completionRequired"].get<bool>() ? "SOFT" : "NONE";
-              auto when = op["executionTrigger"].get<std::string>();
-              auto link_loc_name = op["locationName"].get<std::string>();
+            for (auto &op : p["peripheralOperation"].array_range()) {
+              auto per_op_name = op["name"].as_string();
+              auto wait = op["completionRequired"].as_bool() ? "SOFT" : "NONE";
+              auto when = op["executionTrigger"].as_string();
+              auto link_loc_name = op["locationName"].as_string();
               for (auto &loc : resource->locations) {
                 if (loc->name == link_loc_name) {
                   if (loc->type.lock()->allowrd_per_ops.find(per_op_name) !=
@@ -2187,15 +2261,17 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           }
         }
         path->acts = acts;
-        for (auto &x : p["vehicleEnvelope"]) {
-          auto envelope = std::make_shared<data::model::Envelope>(
-              x["envelopeKey"].get<std::string>());
-          for (auto &v : p["vehicleEnvelope"]["vertices"]) {
-            envelope->add_vertex(v["x"].get<double>(), v["y"].get<double>());
+        if (p.contains("vehicleEnvelope")) {
+          for (auto &x : p["vehicleEnvelope"].array_range()) {
+            auto envelope = std::make_shared<data::model::Envelope>(
+                x["envelopeKey"].as_string());
+            for (auto &v : p["vehicleEnvelope"]["vertices"].array_range()) {
+              envelope->add_vertex(v["x"].as_double(), v["y"].as_double());
+            }
+            path->envelopes.insert(
+                std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
+                    x["envelopeKey"].as_string(), envelope));
           }
-          path->envelopes.insert(
-              std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
-                  x["envelopeKey"].get<std::string>(), envelope));
         }
         resource->paths.push_back(path);
       }
@@ -2203,41 +2279,45 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     }
     // block
     {
-      for (auto &block : model["blocks"]) {
+      for (auto &block : model["blocks"].array_range()) {
         std::unordered_set<std::shared_ptr<TCSResource>> rs;
-        for (auto &ch : block["memberNames"]) {
-          for (auto &x : resource->points) {
-            if (x->name == ch) {
-              rs.insert(x);
+        if (block.contains("memberNames")) {
+          for (auto &ch : block["memberNames"].array_range()) {
+            for (auto &x : resource->points) {
+              if (x->name == ch) {
+                rs.insert(x);
+              }
             }
-          }
-          for (auto &x : resource->paths) {
-            if (x->name == ch) {
-              rs.insert(x);
+            for (auto &x : resource->paths) {
+              if (x->name == ch) {
+                rs.insert(x);
+              }
             }
-          }
-          for (auto &x : resource->locations) {
-            if (x->name == ch) {
-              rs.insert(x);
+            for (auto &x : resource->locations) {
+              if (x->name == ch) {
+                rs.insert(x);
+              }
             }
           }
         }
-        if (block["type"] == "SINGLE_VEHICLE_ONLY") {
-          auto rule = std::make_shared<kernel::allocate::OnlyOneGatherRule>(
-              block["name"], resource);
-          rule->occs = rs;
-          rule->color = block["layout"]["color"];
-          resource->rules.push_back(rule);
-        } else if (block["type"] == "SAME_DIRECTION_ONLY") {
-          std::string direction = block["direct"];
-          for (auto &x : resource->paths) {
-            auto p = rs.find(x);
-            if (p != rs.end()) {
-              auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
-              if (direction == "FRONT") {
-                path->max_reverse_vel = 0;
-              } else if (direction == "BACK") {
-                path->max_vel = 0;
+        if (block.contains("type")) {
+          if (block["type"] == "SINGLE_VEHICLE_ONLY") {
+            auto rule = std::make_shared<kernel::allocate::OnlyOneGatherRule>(
+                block["name"].as_string(), resource);
+            rule->occs = rs;
+            rule->color = block["layout"]["color"].as_string();
+            resource->rules.push_back(rule);
+          } else if (block["type"] == "SAME_DIRECTION_ONLY") {
+            std::string direction = block["direct"].as_string();
+            for (auto &x : resource->paths) {
+              auto p = rs.find(x);
+              if (p != rs.end()) {
+                auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
+                if (direction == "FRONT") {
+                  path->max_reverse_vel = 0;
+                } else if (direction == "BACK") {
+                  path->max_vel = 0;
+                }
               }
             }
           }
@@ -2247,46 +2327,67 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     // vehicle
     {
       int orderquence{2};
-      for (auto &v : model["vehicles"]) {
+      for (auto &v : model["vehicles"].array_range()) {
         std::string adapter;
-        for (auto &x : v["properties"]) {
-          if (x["name"] == "tcs:preferredAdapterClass") {
-            adapter = x["value"].get<std::string>();
+        if (v.contains("properties")) {
+          for (auto &x : v["properties"].array_range()) {
+            if (x["name"] == "tcs:preferredAdapterClass") {
+              adapter = x["value"].as_string();
+            }
           }
         }
         if (adapter.find("virtual") != std::string::npos) {
           ///////////////////
           /// // 使用虚拟车辆
           //////////////////
-          auto veh = std::make_shared<kernel::driver::SimVehicle>(5, v["name"]);
-          veh->length = v["length"].get<int>();
-          veh->max_reverse_vel = v["maxReverseVelocity"].get<int>();
-          veh->max_vel = v["maxVelocity"].get<int>();
-          veh->color = v["layout"]["routeColor"];
-          veh->energy_level_critical = v["energyLevelCritical"].get<int>();
-          veh->energy_level_good = v["energyLevelGood"].get<int>();
-          veh->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
-          veh->engrgy_level_recharge =
-              v["energyLevelSufficientlyRecharged"].get<int>();
+          auto veh = std::make_shared<kernel::driver::SimVehicle>(
+              5, v["name"].as_string());
+          if (v.contains("length")) {
+            veh->length = v["length"].as_integer<int>();
+          }
+          if (v.contains("maxReverseVelocity")) {
+            veh->max_reverse_vel = v["maxReverseVelocity"].as_integer<int>();
+          }
+          if (v.contains("maxVelocity")) {
+            veh->max_vel = v["maxVelocity"].as_integer<int>();
+          }
+          if (v.contains("layout")) {
+            veh->color = v["layout"]["routeColor"].as_string();
+          }
+          if (v.contains("energyLevelCritical")) {
+            veh->energy_level_critical =
+                v["energyLevelCritical"].as_integer<int>();
+          }
+          if (v.contains("energyLevelGood")) {
+            veh->energy_level_good = v["energyLevelGood"].as_integer<int>();
+          }
+          if (v.contains("energyLevelFullyRecharged")) {
+            veh->engrgy_level_full =
+                v["energyLevelFullyRecharged"].as_integer<int>();
+          }
+          if (v.contains("energyLevelSufficientlyRecharged")) {
+            veh->engrgy_level_recharge =
+                v["energyLevelSufficientlyRecharged"].as_integer<int>();
+          }
           veh->send_queue_size = orderquence;
-          veh->envelope_key = v.contains("envelopeKey")
-                                  ? v["envelopeKey"].get<std::string>()
-                                  : "";
-          for (auto &pro : v["properties"]) {
-            veh->properties.insert(std::pair<std::string, std::string>(
-                pro["name"].get<std::string>(),
-                pro["value"].get<std::string>()));
-            if (pro["name"] == "loopback:initialPosition") {
-              for (auto &x : resource->points) {
-                if (x->name == pro["value"].get<std::string>()) {
-                  veh->last_point = x;
+          veh->envelope_key =
+              v.contains("envelopeKey") ? v["envelopeKey"].as_string() : "";
+          if (v.contains("properties")) {
+            for (auto &pro : v["properties"].array_range()) {
+              veh->properties.insert(std::pair<std::string, std::string>(
+                  pro["name"].as_string(), pro["value"].as_string()));
+              if (pro["name"] == "loopback:initialPosition") {
+                for (auto &x : resource->points) {
+                  if (x->name == pro["value"].as_string()) {
+                    veh->last_point = x;
+                  }
                 }
               }
-            }
-            if (pro["name"] == "tcs:preferredParkingPosition") {
-              for (auto &x : resource->points) {
-                if (x->name == pro["value"].get<std::string>()) {
-                  veh->park_point = x;
+              if (pro["name"] == "tcs:preferredParkingPosition") {
+                for (auto &x : resource->points) {
+                  if (x->name == pro["value"].as_string()) {
+                    veh->park_point = x;
+                  }
                 }
               }
             }
@@ -2298,63 +2399,98 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           std::string vda_serialNumber{"rw"};
           std::string vda_version{"1.0"};
           std::string vda_manufacturer{"rw"};
-          for (auto &pro : v["properties"]) {
-            if (pro["name"] == "vda5050:interfaceName") {
-              vda_interfaceName = pro["value"];
-            } else if (pro["name"] == "vda5050:manufacturer") {
-              vda_manufacturer = pro["value"];
-            } else if (pro["name"] == "vda5050:serialNumber") {
-              vda_serialNumber = pro["value"];
+          if (v.contains("properties")) {
+            for (auto &pro : v["properties"].array_range()) {
+              if (pro["name"] == "vda5050:interfaceName") {
+                vda_interfaceName = pro["value"].as_string();
+              } else if (pro["name"] == "vda5050:manufacturer") {
+                vda_manufacturer = pro["value"].as_string();
+              } else if (pro["name"] == "vda5050:serialNumber") {
+                vda_serialNumber = pro["value"].as_string();
 
-            } else if (pro["name"] == "vda5050:version") {
-              vda_version = pro["value"];
+              } else if (pro["name"] == "vda5050:version") {
+                vda_version = pro["value"].as_string();
 
-            } else if (pro["name"] == "vda5050:orderQueueSize") {
-              orderquence = pro["value"].get<int>();
+              } else if (pro["name"] == "vda5050:orderQueueSize") {
+                orderquence = pro["value"].as_integer<int>();
+              }
             }
           }
           auto veh = std::make_shared<kernel::driver::Rabbit3>(
-              v["name"], vda_interfaceName, vda_serialNumber, vda_version,
-              vda_manufacturer);
-          veh->length = v["length"].get<int>();
-          veh->max_reverse_vel = v["maxReverseVelocity"].get<int>();
-          veh->max_vel = v["maxVelocity"].get<int>();
-          veh->map_id = model["name"];
-          veh->color = v["layout"]["routeColor"];
-          veh->energy_level_critical = v["energyLevelCritical"].get<int>();
-          veh->energy_level_good = v["energyLevelGood"].get<int>();
-          veh->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
-          veh->engrgy_level_recharge =
-              v["energyLevelSufficientlyRecharged"].get<int>();
+              v["name"].as_string(), vda_interfaceName, vda_serialNumber,
+              vda_version, vda_manufacturer);
+          if (v.contains("length")) {
+            veh->length = v["length"].as_integer<int>();
+          }
+          if (v.contains("maxReverseVelocity")) {
+            veh->max_reverse_vel = v["maxReverseVelocity"].as_integer<int>();
+          }
+          if (v.contains("maxVelocity")) {
+            veh->max_vel = v["maxVelocity"].as_integer<int>();
+          }
+          veh->map_id = model["name"].as_string();
+          if (v.contains("layout")) {
+            veh->color = v["layout"]["routeColor"].as_string();
+          }
+          if (v.contains("energyLevelCritical")) {
+            veh->energy_level_critical =
+                v["energyLevelCritical"].as_integer<int>();
+          }
+          if (v.contains("energyLevelGood")) {
+            veh->energy_level_good = v["energyLevelGood"].as_integer<int>();
+          }
+          if (v.contains("energyLevelFullyRecharged")) {
+            veh->engrgy_level_full =
+                v["energyLevelFullyRecharged"].as_integer<int>();
+          }
+          if (v.contains("energyLevelSufficientlyRecharged")) {
+            veh->engrgy_level_recharge =
+                v["energyLevelSufficientlyRecharged"].as_integer<int>();
+          }
           veh->broker_ip = ip;
           veh->broker_port = port;
           veh->send_queue_size = orderquence;
-          veh->envelope_key = v.contains("envelopeKey")
-                                  ? v["envelopeKey"].get<std::string>()
-                                  : "";
-          for (auto &pro : v["properties"]) {
-            veh->properties.insert(std::pair<std::string, std::string>(
-                pro["name"].get<std::string>(),
-                pro["value"].get<std::string>()));
+          veh->envelope_key =
+              v.contains("envelopeKey") ? v["envelopeKey"].as_string() : "";
+          if (v.contains("properties")) {
+            for (auto &pro : v["properties"].array_range()) {
+              veh->properties.insert(std::pair<std::string, std::string>(
+                  pro["name"].as_string(), pro["value"].as_string()));
+            }
           }
           ///////////////////////////
           dispatcher->vehicles.push_back(veh);
         } else {
-          auto veh =
-              std::make_shared<kernel::driver::InvalidVehicle>(v["name"]);
-          veh->length = v["length"].get<int>();
-          veh->max_reverse_vel = v["maxReverseVelocity"].get<int>();
-          veh->max_vel = v["maxVelocity"].get<int>();
-          veh->color = v["layout"]["routeColor"];
-          veh->energy_level_critical = v["energyLevelCritical"].get<int>();
-          veh->energy_level_good = v["energyLevelGood"].get<int>();
-          veh->engrgy_level_full = v["energyLevelFullyRecharged"].get<int>();
-          veh->engrgy_level_recharge =
-              v["energyLevelSufficientlyRecharged"].get<int>();
+          auto veh = std::make_shared<kernel::driver::InvalidVehicle>(
+              v["name"].as_string());
+          if (v.contains("length")) veh->length = v["length"].as_integer<int>();
+          if (v.contains("maxReverseVelocity")) {
+            veh->max_reverse_vel = v["maxReverseVelocity"].as_integer<int>();
+          }
+          if (v.contains("maxVelocity")) {
+            veh->max_vel = v["maxVelocity"].as_integer<int>();
+          }
+          if (v.contains("layout")) {
+            veh->color = v["layout"]["routeColor"].as_string();
+          }
+          if (v.contains("energyLevelCritical")) {
+            veh->energy_level_critical =
+                v["energyLevelCritical"].as_integer<int>();
+          }
+          if (v.contains("energyLevelGood")) {
+            veh->energy_level_good = v["energyLevelGood"].as_integer<int>();
+          }
+          if (v.contains("energyLevelFullyRecharged")) {
+            veh->engrgy_level_full =
+                v["energyLevelFullyRecharged"].as_integer<int>();
+          }
+          if (v.contains("energyLevelSufficientlyRecharged")) {
+            veh->engrgy_level_recharge =
+                v["energyLevelSufficientlyRecharged"].as_integer<int>();
+          }
           veh->send_queue_size = orderquence;
-          veh->envelope_key = v.contains("envelopeKey")
-                                  ? v["envelopeKey"].get<std::string>()
-                                  : "";
+          veh->envelope_key =
+              v.contains("envelopeKey") ? v["envelopeKey"].as_string() : "";
           dispatcher->vehicles.push_back(veh);
         }
       }
@@ -2386,24 +2522,27 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     run();
     CLOG(INFO, tcs_log) << "run all ok\n";
     return std::pair<int, std::string>(httplib::OK_200, "");
-  } catch (json::parse_error ec) {
-    CLOG(ERROR, tcs_log) << "parse error: " << ec.what();
+  } catch (jsoncons::not_an_object ec) {
+    CLOG(ERROR, tcs_log) << "not_an_object error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
-  } catch (json::type_error ec) {
-    CLOG(ERROR, tcs_log) << "type error :" << ec.what();
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
+  } catch (jsoncons::ser_error ec) {
+    CLOG(ERROR, tcs_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
-  } catch (json::other_error ec) {
-    CLOG(ERROR, tcs_log) << "other error :" << ec.what();
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
+  } catch (jsoncons::key_not_found ec) {
+    CLOG(ERROR, tcs_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400, res.dump());
+    return std::pair<int, std::string>(httplib::BadRequest_400,
+                                       res.to_string());
   }
 }
 
@@ -2414,14 +2553,13 @@ std::pair<int, std::string> TCS::get_view() {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   auto r = get_vehicles_step();
   return std::pair<int, std::string>(httplib::OK_200, r);
 }
 
 std::string TCS::get_vehicles_step() {
-  using json = nlohmann::json;
   json value = json::array();
   for (auto &v : dispatcher->vehicles) {
     json veh;
@@ -2504,7 +2642,7 @@ std::string TCS::get_vehicles_step() {
     veh["battery_level"] = v->engerg_level;
     value.push_back(veh);
   }
-  return value.dump();
+  return value.to_string();
 }
 
 std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
@@ -2514,7 +2652,7 @@ std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &x : resource->paths) {
     if (x->name == path_name) {
@@ -2531,7 +2669,7 @@ std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
   json res = json::array();
   auto msg = "Could not find path '" + path_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> TCS::put_location_locked(
@@ -2541,7 +2679,7 @@ std::pair<int, std::string> TCS::put_location_locked(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &x : resource->locations) {
     if (x->name == loc_name) {
@@ -2552,7 +2690,7 @@ std::pair<int, std::string> TCS::put_location_locked(
   json res = json::array();
   auto msg = "Could not find location  '" + loc_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 void TCS::reroute() {
@@ -2569,7 +2707,7 @@ std::pair<int, std::string> TCS::post_reroute() {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   reroute();
   return std::pair<int, std::string>(httplib::OK_200, "");
@@ -2586,7 +2724,7 @@ std::pair<int, std::string> TCS::post_vehicle_reroute(const std::string &name,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
@@ -2597,7 +2735,7 @@ std::pair<int, std::string> TCS::post_vehicle_reroute(const std::string &name,
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> TCS::put_vehicle_enable(const std::string &name,
@@ -2607,7 +2745,7 @@ std::pair<int, std::string> TCS::put_vehicle_enable(const std::string &name,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
@@ -2622,7 +2760,7 @@ std::pair<int, std::string> TCS::put_vehicle_enable(const std::string &name,
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> TCS::put_vehicle_integration_level(
@@ -2632,7 +2770,7 @@ std::pair<int, std::string> TCS::put_vehicle_integration_level(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
@@ -2663,7 +2801,7 @@ std::pair<int, std::string> TCS::post_vehicle_path_to_point(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.dump());
+    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   }
   json body = json::parse(p_);
   for (auto &v : dispatcher->vehicles) {
@@ -2680,7 +2818,7 @@ std::pair<int, std::string> TCS::post_vehicle_path_to_point(
       } else {
         s_p = v->current_point;
       }
-      for (auto &e_p : body["destinationPoints"]) {
+      for (auto &e_p : body["destinationPoints"].array_range()) {
         std::shared_ptr<data::model::Point> d_p;
         for (auto &p : resource->points) {
           if (p->name == e_p) {
@@ -2725,7 +2863,7 @@ std::pair<int, std::string> TCS::post_vehicle_path_to_point(
           res["routes"].push_back("");
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.dump());
+      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
     }
   }
   return std::pair<int, std::string>(httplib::BadRequest_400,

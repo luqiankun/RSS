@@ -1,8 +1,7 @@
 #ifndef HTTPSERVER_HPP
 #define HTTPSERVER_HPP
 #define CPPHTTPLIB_THREAD_POOL_COUNT 20
-#include "../component/tools/http/httplib.h"
-#include "../component/tools/json/json.hpp"
+#include "../3rdparty/http/httplib.h"
 #include "../component/util/timer.hpp"
 const auto http_log{"http"};
 using TCSRep = std::pair<int, std::string>;

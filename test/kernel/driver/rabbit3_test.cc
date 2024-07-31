@@ -1,9 +1,6 @@
-#include "../../../include/component/tools/mqtt/mqtt.hpp"
 #include "../../../include/component/util/taskpool.hpp"
+#include "../../../include/component/vda5050/master.hpp"
 #include "../../../include/component/vda5050/valitator.hpp"
-#include "../../../include/component/vda5050/vda5050insact.hpp"
-#include "../../../include/component/vda5050/vda5050order.hpp"
-#include "../../../include/component/vda5050/vda5050state.hpp"
 
 class SimRabbit3 {
  public:
@@ -42,10 +39,10 @@ class SimRabbit3 {
                     int server_port = 1883, bool ssl = false) {
     if (ssl) {
       auto addr = "ssl://" + server_ip + ":" + std::to_string(server_port);
-      mqtt_client = std::make_shared<MqttClient>(addr, name);
+      mqtt_client = std::make_shared<vda5050::MqttClient>(addr, name);
     } else {
       auto addr = "tcp://" + server_ip + ":" + std::to_string(server_port);
-      mqtt_client = std::make_shared<MqttClient>(addr, name);
+      mqtt_client = std::make_shared<vda5050::MqttClient>(addr, name);
     }
     con_ops.set_automatic_reconnect(true);
     con_ops.set_keep_alive_interval(5000);
@@ -505,7 +502,7 @@ class SimRabbit3 {
 
  public:
   mqtt::connect_options con_ops;
-  std::shared_ptr<MqttClient> mqtt_client;
+  std::shared_ptr<vda5050::MqttClient> mqtt_client;
   std::queue<mqtt::const_message_ptr> order_msgs;
   std::queue<mqtt::const_message_ptr> instantaction_msgs;
   vda5050::state::VDA5050State vda_state;

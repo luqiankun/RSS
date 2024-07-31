@@ -2,8 +2,7 @@
 #define TCS_HPP
 #include <shared_mutex>
 
-#include "../component/tools/json/json.hpp"
-#include "../component/tools/xml/pugixml.hpp"
+#include "../3rdparty/xml/pugixml.hpp"
 #include "../kernel/dispatch/dispatch.hpp"
 #include "../kernel/schedule/schedule.hpp"
 inline std::string get_log_path(const std::string& path) {
@@ -22,7 +21,7 @@ inline std::string get_log_name(const std::string& path) {
   return (std::string(path) + "/tcs_" + data + ".log");
 #endif
 }
-using json = nlohmann::json;
+using json = jsoncons::json;
 class TCS : public std::enable_shared_from_this<TCS> {
  public:
   TCS(const std::string& ip, int port) : ip(ip), port(port) {}

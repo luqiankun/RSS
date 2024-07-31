@@ -7,7 +7,7 @@
 #include <regex>
 #include <sstream>
 
-#include "../tools/log/easylogging++.h"
+#include "../../3rdparty/log/easylogging++.h"
 constexpr auto timer_log{"timer"};
 
 class cpu_timer {

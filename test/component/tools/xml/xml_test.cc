@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "../../../../include/component/tools/utest/utest.h"
-#include "../../../../include/component/tools/xml/pugixml.hpp"
+#include "../../../../include/3rdparty/utest/utest.h"
+#include "../../../../include/3rdparty/xml/pugixml.hpp"
 
 UTEST(load_file, case1) {
   pugi::xml_document doc;

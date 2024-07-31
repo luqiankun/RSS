@@ -1,7 +1,7 @@
-#include "../../../../include/component/tools/json_validator/validator.hpp"
+#include "../../../../include/component/vda5050/valitator.hpp"
 // for brevity
-#include "../../../../include/component/tools/log/easylogging++.h"
-#include "../../../../include/component/tools/utest/utest.h"
+#include "../../../../include/3rdparty/log/easylogging++.h"
+#include "../../../../include/3rdparty/utest/utest.h"
 INITIALIZE_EASYLOGGINGPP
 
 jsoncons::json sc = jsoncons::json::parse(R"(
@@ -698,7 +698,8 @@ jsoncons::json data = jsoncons::json::parse(R"(
 // }
 
 UTEST(schema, case2) {
-  auto s = SchemaValidator::validate(ob, jsoncons::jsonschema::make_schema(sc));
+  auto s = vda5050::SchemaValidator::validate(
+      ob, jsoncons::jsonschema::make_schema(sc));
   EXPECT_EQ(s.size(), 0);
 }
 

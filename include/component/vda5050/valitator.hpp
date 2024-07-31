@@ -1,8 +1,29 @@
 #ifndef VALIDATOR_VDA5050_HPP
 #define VALIDATOR_VDA5050_HPP
-#include "../tools/json_validator/validator.hpp"
+#include "../../3rdparty/jsoncons_ext/jsonschema/jsonschema.hpp"
 namespace vda5050 {
-
+class SchemaValidator {
+ public:
+  static std::vector<std::string> validate(
+      jsoncons::json obj,
+      std::shared_ptr<jsoncons::jsonschema::json_schema<jsoncons::json>>
+          schema) {
+    std::vector<std::string> errors;
+    try {
+      auto reporter =
+          [&errors](const jsoncons::jsonschema::validation_output& o) {
+            auto t = o.instance_location() + ": " + o.message();
+            errors.push_back(t);
+          };
+      jsoncons::jsonschema::json_validator<jsoncons::json> vad(schema);
+      vad.validate(obj, reporter);
+      return errors;
+    } catch (std::exception& ec) {
+      errors.push_back(std::string{"std::exception: "} + ec.what());
+      return errors;
+    }
+  }
+};
 static std::string state_sch = R"(
 {
     "$schema": "https://json-schema.org/draft/2019-09/schema",
