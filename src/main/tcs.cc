@@ -1385,7 +1385,7 @@ json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
   res["properties"] = json::array();
   for (auto &pro : quence->properties) {
     json p;
-    p["name"] = pro.first;
+    p["key"] = pro.first;
     p["value"] = pro.second;
     res["properties"].push_back(p);
   }
@@ -1959,7 +1959,7 @@ std::pair<int, std::string> TCS::get_model() {
     vehicle["properties"] = json::array();
     for (auto &pro : v->properties) {
       json t;
-      t["name"] = pro.first;
+      t["key"] = pro.first;
       t["value"] = pro.second;
       vehicle["properties"].push_back(t);
     }
@@ -2455,7 +2455,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           if (v.contains("properties")) {
             for (auto &pro : v["properties"].array_range()) {
               veh->properties.insert(std::pair<std::string, std::string>(
-                  pro["name"].as_string(), pro["value"].as_string()));
+                  pro["key"].as_string(), pro["value"].as_string()));
             }
           }
           ///////////////////////////
