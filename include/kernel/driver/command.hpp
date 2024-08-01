@@ -7,6 +7,10 @@ namespace schedule {
 class Scheduler;
 }
 namespace driver {
+using DestPtr = std::shared_ptr<data::order::DriverOrder::Destination>;
+using DriverOrderPtr = std::shared_ptr<data::order::DriverOrder>;
+using StepPtr = std::shared_ptr<data::order::Step>;
+using TransOrderPtr = std::shared_ptr<data::order::TransportOrder>;
 class Vehicle;
 class Command : public TCSObject {
  public:
@@ -20,14 +24,10 @@ class Command : public TCSObject {
     END,
     DISPOSABLE
   };
-  std::shared_ptr<data::order::DriverOrder::Destination> get_dest(
-      std::shared_ptr<data::order::DriverOrder>);
-  std::vector<std::shared_ptr<data::order::Step>> get_step(
-      std::shared_ptr<data::order::DriverOrder>, uint32_t);
-  std::vector<std::shared_ptr<data::order::Step>> get_step_nopop(
-      std::shared_ptr<data::order::DriverOrder>, uint32_t);
-  std::vector<std::shared_ptr<TCSResource>> get_future(
-      std::shared_ptr<data::order::DriverOrder>);
+  DestPtr get_dest(DriverOrderPtr);
+  std::vector<StepPtr> get_step(DriverOrderPtr, uint32_t);
+  std::vector<StepPtr> get_step_nopop(DriverOrderPtr, uint32_t);
+  std::vector<std::shared_ptr<TCSResource>> get_future(DriverOrderPtr);
   void vehicle_execute_cb(bool);  // 车辆通知动作结果
   void run_once();
   ~Command() { CLOG(INFO, driver_log) << name << " drop\n"; }
@@ -36,11 +36,9 @@ class Command : public TCSObject {
   State state{State::INIT};
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<driver::Vehicle> vehicle;
-  std::shared_ptr<data::order::TransportOrder> order;
-  std::function<void(std::vector<std::shared_ptr<data::order::Step>>)> move;
-  std::function<void(
-      const std::shared_ptr<data::order::DriverOrder::Destination>)>
-      action;
+  TransOrderPtr order;
+  std::function<void(std::vector<StepPtr>)> move;
+  std::function<void(const DestPtr)> action;
 };
 
 }  // namespace driver

@@ -1,6 +1,6 @@
 #include <thread>
 
-#include "../../../../include/3rdparty/log/easylogging++.h"
+#include "../../../include/3rdparty/log/easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 
 int main(int argc, const char** argv) {

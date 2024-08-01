@@ -1,7 +1,7 @@
-#include "../../../../include/component/vda5050/valitator.hpp"
+#include "../../../include/component/vda5050/valitator.hpp"
 // for brevity
-#include "../../../../include/3rdparty/log/easylogging++.h"
-#include "../../../../include/3rdparty/utest/utest.h"
+#include "../../../include/3rdparty/log/easylogging++.h"
+#include "../../../include/3rdparty/utest/utest.h"
 INITIALIZE_EASYLOGGINGPP
 
 jsoncons::json sc = jsoncons::json::parse(R"(

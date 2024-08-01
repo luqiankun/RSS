@@ -1,6 +1,6 @@
 #include <regex>
 
-#include "../../../../include/component/vda5050/master.hpp"
+#include "../../../include/component/vda5050/master.hpp"
 
 int main() {
   std::string addr = "tcp://192.168.0.39:1883";

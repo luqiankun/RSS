@@ -5,7 +5,7 @@
 namespace kernel {
 namespace allocate {
 std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
-    std::vector<std::shared_ptr<data::model::Point>> ps) {
+    std::vector<PointPtr> ps) {
   std::string route_name = ps.front()->name + "_" + ps.back()->name;
   auto res = std::make_shared<data::order::Route>(route_name);
   int index{0};
@@ -38,36 +38,33 @@ std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
   return res;
 }
 
-std::pair<ResourceManager::ResType, std::shared_ptr<TCSResource>>
-ResourceManager::find(const std::string& name) {
-  std::shared_ptr<TCSResource> res;
+std::pair<ResourceManager::ResType, TCSResourcePtr> ResourceManager::find(
+    const std::string& name) {
+  TCSResourcePtr res;
   auto it = std::find_if(points.begin(), points.end(),
                          [&](const auto& p) { return p->name == name; });
   if (it != points.end()) {
     res = *it;
-    return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Point,
-                                                            res);
+    return std::pair<ResType, TCSResourcePtr>(ResType::Point, res);
   }
   auto it_p = std::find_if(paths.begin(), paths.end(),
                            [&](const auto& p) { return p->name == name; });
   if (it_p != paths.end()) {
     res = *it_p;
-    return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Path, res);
+    return std::pair<ResType, TCSResourcePtr>(ResType::Path, res);
   }
   auto it_l = std::find_if(
       locations.begin(), locations.end(),
       [&](const auto& p) { return (p->name == name) && (!p->locked); });
   if (it_l != locations.end()) {
     res = *it_l;
-    return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Location,
-                                                            res);
+    return std::pair<ResType, TCSResourcePtr>(ResType::Location, res);
   }
-  return std::pair<ResType, std::shared_ptr<TCSResource>>(ResType::Err, res);
+  return std::pair<ResType, TCSResourcePtr>(ResType::Err, res);
 }
 
-bool ResourceManager::claim(
-    const std::vector<std::shared_ptr<TCSResource>>& res,
-    const std::shared_ptr<schedule::Client>& client) {
+bool ResourceManager::claim(const std::vector<TCSResourcePtr>& res,
+                            const ClientPtr& client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
     for (auto& p : points) {
@@ -87,12 +84,12 @@ bool ResourceManager::claim(
     }
   }
   client->claim_resources.push_back(
-      std::unordered_set<std::shared_ptr<TCSResource>>{res.begin(), res.end()});
+      std::unordered_set<TCSResourcePtr>{res.begin(), res.end()});
   return true;
 }
 
-bool ResourceManager::allocate(std::vector<std::shared_ptr<TCSResource>> res,
-                               std::shared_ptr<schedule::Client> client) {
+bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
+                               ClientPtr client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : rules) {
     // LOG(INFO) << r->name;
@@ -129,7 +126,7 @@ bool ResourceManager::allocate(std::vector<std::shared_ptr<TCSResource>> res,
     }
   }
   client->allocated_resources.push_back(
-      std::unordered_set<std::shared_ptr<TCSResource>>{res.begin(), res.end()});
+      std::unordered_set<TCSResourcePtr>{res.begin(), res.end()});
   for (auto& r : res) {
     for (auto x = client->future_allocate_resources.begin();
          x != client->future_allocate_resources.end();) {
@@ -147,8 +144,8 @@ bool ResourceManager::allocate(std::vector<std::shared_ptr<TCSResource>> res,
   return true;
 }
 
-bool ResourceManager::free(const std::vector<std::shared_ptr<TCSResource>>& res,
-                           const std::shared_ptr<schedule::Client>& client) {
+bool ResourceManager::free(const std::vector<TCSResourcePtr>& res,
+                           const ClientPtr& client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
     for (auto& ar : client->allocated_resources) {
@@ -177,9 +174,8 @@ bool ResourceManager::free(const std::vector<std::shared_ptr<TCSResource>>& res,
   return true;
 }
 
-bool ResourceManager::unclaim(
-    const std::vector<std::shared_ptr<TCSResource>>& res,
-    const std::shared_ptr<schedule::Client>& client) {
+bool ResourceManager::unclaim(const std::vector<TCSResourcePtr>& res,
+                              const ClientPtr& client) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
     for (auto& cr : client->claim_resources) {
@@ -210,13 +206,11 @@ bool ResourceManager::unclaim(
   }
   return true;
 }
-std::shared_ptr<data::model::Point> ResourceManager::get_recent_park_point(
-    std::shared_ptr<data::model::Point> cur) {
+PointPtr ResourceManager::get_recent_park_point(PointPtr cur) {
   // CLOG(INFO, "allocate") << "now" << cur->name << " " << cur->position;
   std::vector<double> dis;
   std::sort(points.begin(), points.end(),
-            [&](const std::shared_ptr<data::model::Point>& a,
-                const std::shared_ptr<data::model::Point>& b) {
+            [&](const PointPtr& a, const PointPtr& b) {
               double d1 = std::numeric_limits<double>::max();
               double d2 = std::numeric_limits<double>::max();
               d1 = (cur->position - a->position).norm();
@@ -233,12 +227,10 @@ std::shared_ptr<data::model::Point> ResourceManager::get_recent_park_point(
   }
   return nullptr;
 }
-std::shared_ptr<data::model::Location> ResourceManager::get_recent_charge_loc(
-    std::shared_ptr<data::model::Point> cur) {
+LocationPtr ResourceManager::get_recent_charge_loc(PointPtr cur) {
   std::vector<double> dis;
   std::sort(locations.begin(), locations.end(),
-            [&](const std::shared_ptr<data::model::Location>& a,
-                const std::shared_ptr<data::model::Location>& b) {
+            [&](const LocationPtr& a, const LocationPtr& b) {
               double d1 = std::numeric_limits<double>::max();
               double d2 = std::numeric_limits<double>::max();
               d1 = (cur->position - a->position).norm();

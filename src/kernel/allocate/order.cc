@@ -2,9 +2,7 @@
 
 namespace kernel {
 namespace allocate {
-std::shared_ptr<data::order::DriverOrder> OrderPool::route_to_driverorder(
-    std::shared_ptr<data::order::Route> route,
-    std::shared_ptr<data::order::DriverOrder::Destination> dest) {
+DriverOrderPtr OrderPool::route_to_driverorder(RoutePtr route, DestPtr dest) {
   auto ord =
       std::make_shared<data::order::DriverOrder>("driverorder_" + route->name);
   ord->destination = dest;
@@ -12,8 +10,7 @@ std::shared_ptr<data::order::DriverOrder> OrderPool::route_to_driverorder(
   ord->state = data::order::DriverOrder::State::PRISTINE;
   return ord;
 }
-std::shared_ptr<data::order::DriverOrder::Destination>
-OrderPool::res_to_destination(
+DestPtr OrderPool::res_to_destination(
     const std::shared_ptr<TCSResource>& res,
     data::order::DriverOrder::Destination::OpType op) {
   auto destination = std::make_shared<data::order::DriverOrder::Destination>();
@@ -34,7 +31,7 @@ void OrderPool::cancel_order(size_t order_uuid) {
   }
 }
 
-std::shared_ptr<data::order::TransportOrder> OrderPool::pop() {
+TransOrderPtr OrderPool::pop() {
   update_quence();
   if (orderpool.empty()) {
     return nullptr;

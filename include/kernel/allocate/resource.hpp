@@ -11,39 +11,36 @@ namespace schedule {
 class Client;
 }
 namespace allocate {
+using TCSResourcePtr = std::shared_ptr<TCSResource>;
+using ClientPtr = std::shared_ptr<schedule::Client>;
+using PointPtr = std::shared_ptr<data::model::Point>;
+using LocationTypePtr = std::shared_ptr<data::model::LocationType>;
+using PathPtr = std::shared_ptr<data::model::Path>;
+using LocationPtr = std::shared_ptr<data::model::Location>;
 class ResourceManager : public TCSObject {
  public:
   using TCSObject::TCSObject;
   enum class ResType { Point = 0, Location = 1, Err = 2, Path = 3 };
   ~ResourceManager() { CLOG(INFO, allocate_log) << name << " close\n"; }
-  bool claim(const std::vector<std::shared_ptr<TCSResource>>&,
-             const std::shared_ptr<schedule::Client>&);
-  bool allocate(std::vector<std::shared_ptr<TCSResource>>,
-                std::shared_ptr<schedule::Client>);
-  bool unclaim(const std::vector<std::shared_ptr<TCSResource>>&,
-               const std::shared_ptr<schedule::Client>&);
-  bool free(const std::vector<std::shared_ptr<TCSResource>>&,
-            const std::shared_ptr<schedule::Client>&);
-  std::shared_ptr<data::model::Point> get_recent_park_point(
-      std::shared_ptr<data::model::Point>);
-  std::shared_ptr<data::model::Location> get_recent_charge_loc(
-      std::shared_ptr<data::model::Point>);
-  std::shared_ptr<data::order::Route> paths_to_route(
-      std::vector<std::shared_ptr<data::model::Point>> ps);
+  bool claim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
+  bool allocate(std::vector<TCSResourcePtr>, ClientPtr);
+  bool unclaim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
+  bool free(const std::vector<TCSResourcePtr>&, const ClientPtr&);
+  PointPtr get_recent_park_point(PointPtr);
+  LocationPtr get_recent_charge_loc(PointPtr);
+  std::shared_ptr<data::order::Route> paths_to_route(std::vector<PointPtr> ps);
   std::pair<ResType, std::shared_ptr<TCSResource>> find(
       const std::string& name);
 
  public:
   std::mutex mut;
   std::string model_name;
-  std::vector<std::shared_ptr<data::model::Path>> paths;
-  std::vector<std::shared_ptr<data::model::Point>> points;
-  std::vector<std::shared_ptr<data::model::Location>> locations;
-  std::vector<std::shared_ptr<data::model::LocationType>> location_types;
+  std::vector<PathPtr> paths;
+  std::vector<PointPtr> points;
+  std::vector<LocationPtr> locations;
+  std::vector<LocationTypePtr> location_types;
   std::shared_ptr<data::model::VisualLayout> visual_layout;
-  std::function<bool(std::shared_ptr<data::model::Point>,
-                     std::shared_ptr<data::model::Point>)>
-      is_connected;
+  std::function<bool(PointPtr, PointPtr)> is_connected;
 
  public:
   std::vector<std::shared_ptr<RuleBase>> rules;

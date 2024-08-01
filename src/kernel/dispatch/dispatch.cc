@@ -8,18 +8,13 @@
 
 namespace kernel {
 namespace dispatch {
-
-std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
-    std::shared_ptr<data::model::Point> start) {
+VehPtr Dispatcher::select_vehicle(allocate::PointPtr start) {
   if (vehicles.empty()) {
     return nullptr;
   }
-  std::vector<std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>>>
-      idle_temp;
-  std::vector<std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>>>
-      busy_temp;
-  std::vector<std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>>>
-      charge_temp;
+  std::vector<std::pair<Eigen::Vector3i, VehPtr>> idle_temp;
+  std::vector<std::pair<Eigen::Vector3i, VehPtr>> busy_temp;
+  std::vector<std::pair<Eigen::Vector3i, VehPtr>> charge_temp;
 
   for (auto& v : vehicles) {
     Eigen::Vector3i v_pos{0, 0, 0};
@@ -53,54 +48,50 @@ std::shared_ptr<driver::Vehicle> Dispatcher::select_vehicle(
       if (charge_temp.empty()) {
         return nullptr;
       } else {
-        std::sort(
-            charge_temp.begin(), charge_temp.end(),
-            [=](std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> a,
-                std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>>
-                    b) {
-              auto dis_a = start->position - a.first;
-              auto dis_b = start->position - b.first;
-              return dis_a.norm() < dis_b.norm();
-            });
+        std::sort(charge_temp.begin(), charge_temp.end(),
+                  [=](std::pair<Eigen::Vector3i, VehPtr> a,
+                      std::pair<Eigen::Vector3i, VehPtr> b) {
+                    auto dis_a = start->position - a.first;
+                    auto dis_b = start->position - b.first;
+                    return dis_a.norm() < dis_b.norm();
+                  });
         return charge_temp.front().second;
       }
     } else {
-      std::sort(
-          charge_temp.begin(), charge_temp.end(),
-          [=](std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> a,
-              std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> b) {
-            auto dis_a = start->position - a.first;
-            auto dis_b = start->position - b.first;
-            return dis_a.norm() < dis_b.norm();
-          });
+      std::sort(charge_temp.begin(), charge_temp.end(),
+                [=](std::pair<Eigen::Vector3i, VehPtr> a,
+                    std::pair<Eigen::Vector3i, VehPtr> b) {
+                  auto dis_a = start->position - a.first;
+                  auto dis_b = start->position - b.first;
+                  return dis_a.norm() < dis_b.norm();
+                });
       return busy_temp.front().second;
     }
   } else {
-    std::sort(
-        charge_temp.begin(), charge_temp.end(),
-        [=](std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> a,
-            std::pair<Eigen::Vector3i, std::shared_ptr<driver::Vehicle>> b) {
-          auto dis_a = start->position - a.first;
-          auto dis_b = start->position - b.first;
-          return dis_a.norm() < dis_b.norm();
-        });
+    std::sort(charge_temp.begin(), charge_temp.end(),
+              [=](std::pair<Eigen::Vector3i, VehPtr> a,
+                  std::pair<Eigen::Vector3i, VehPtr> b) {
+                auto dis_a = start->position - a.first;
+                auto dis_b = start->position - b.first;
+                return dis_a.norm() < dis_b.norm();
+              });
     return idle_temp.front().second;
   }
 }
 
-std::vector<std::shared_ptr<driver::Vehicle>> Dispatcher::deadlock_loop() {
-  std::vector<std::shared_ptr<driver::Vehicle>> res;
+std::vector<VehPtr> Dispatcher::deadlock_loop() {
+  std::vector<VehPtr> res;
   // 死锁检测
   for (auto& v : vehicles) {
-    std::stack<std::shared_ptr<driver::Vehicle>> vs;
-    std::vector<std::shared_ptr<driver::Vehicle>> exist;
+    std::stack<VehPtr> vs;
+    std::vector<VehPtr> exist;
     vs.push(v);
     while (!vs.empty()) {
       auto& x = vs.top();
       vs.pop();
       auto it = std::find(exist.begin(), exist.end(), x);
       if (it != exist.end()) {
-        return std::vector<std::shared_ptr<driver::Vehicle>>(it, exist.end());
+        return std::vector<VehPtr>(it, exist.end());
       }
       exist.push_back(x);
 
@@ -117,9 +108,8 @@ std::vector<std::shared_ptr<driver::Vehicle>> Dispatcher::deadlock_loop() {
   return res;
 }
 
-std::set<std::shared_ptr<driver::Vehicle>> Dispatcher::find_owners(
-    const std::shared_ptr<driver::Vehicle>& vs) {
-  std::set<std::shared_ptr<driver::Vehicle>> res;
+std::set<VehPtr> Dispatcher::find_owners(const VehPtr& vs) {
+  std::set<VehPtr> res;
   for (auto& f : vs->future_allocate_resources) {
     auto f_veh = f->owner.lock();
     if (f_veh) {
@@ -222,7 +212,7 @@ void Dispatcher::dispatch_once() {
           auto dest = current->driverorders[current->current_driver_index]
                           ->destination->destination.lock();
           auto dest_check = find_res(dest->name);
-          std::shared_ptr<data::model::Point> start;
+          allocate::PointPtr start;
           if (dest_check.first == allocate::ResourceManager::ResType::Point) {
             start = std::dynamic_pointer_cast<data::model::Point>(
                 dest_check.second);
@@ -285,8 +275,7 @@ void Dispatcher::dispatch_once() {
     }
   }
 }
-void Dispatcher::brake_deadlock(
-    std::vector<std::shared_ptr<driver::Vehicle>> d_loop) {
+void Dispatcher::brake_deadlock(std::vector<VehPtr> d_loop) {
   // TODO
   if (!d_loop.empty()) {
   }

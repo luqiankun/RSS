@@ -1,11 +1,11 @@
-#include "../../../../include/3rdparty/jsoncons/json.hpp"
+#include "../../../include/3rdparty/jsoncons/json.hpp"
 
 #include <locale>
 #include <regex>
 
-#include "../../../../include/3rdparty/log/easylogging++.h"
-#include "../../../../include/3rdparty/utest/utest.h"
-#include "../../../../include/component/util/timer.hpp"
+#include "../../../include/3rdparty/log/easylogging++.h"
+#include "../../../include/3rdparty/utest/utest.h"
+#include "../../../include/component/util/timer.hpp"
 
 INITIALIZE_EASYLOGGINGPP
 
