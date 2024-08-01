@@ -1,6 +1,26 @@
+// Copyright 2013-2024 Daniel Parker
+// Distributed under the Boost license, Version 1.0.
+// (See accompanying file LICENSE_1_0.txt or copy at
+// http://www.boost.org/LICENSE_1_0.txt)
+
+// See https://github.com/danielaparker/jsoncons for latest version
+
+#ifndef JSONCONS_JSONSCHEMA_SCHEMA_DRAFT6_HPP
+#define JSONCONS_JSONSCHEMA_SCHEMA_DRAFT6_HPP
+
+#include "../../../jsoncons/json.hpp"
+
+namespace jsoncons {
+namespace jsonschema {
+namespace draft6 {
+
+template <class Json>
+struct schema_draft6 {
+  static Json get_schema() {
+    static Json sch = Json::parse(R"(
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "http://json-schema.org/draft-07/schema#",
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "$id": "http://json-schema.org/draft-06/schema#",
     "title": "Core schema meta-schema",
     "definitions": {
         "schemaArray": {
@@ -50,27 +70,16 @@
             "type": "string",
             "format": "uri-reference"
         },
-        "$comment": {
-            "type": "string"
-        },
         "title": {
             "type": "string"
         },
         "description": {
             "type": "string"
         },
-        "default": true,
-        "readOnly": {
-            "type": "boolean",
-            "default": false
-        },
-        "writeOnly": {
-            "type": "boolean",
-            "default": false
-        },
+        "default": {},
         "examples": {
             "type": "array",
-            "items": true
+            "items": {}
         },
         "multipleOf": {
             "type": "number",
@@ -100,7 +109,7 @@
                 { "$ref": "#" },
                 { "$ref": "#/definitions/schemaArray" }
             ],
-            "default": true
+            "default": {}
         },
         "maxItems": { "$ref": "#/definitions/nonNegativeInteger" },
         "minItems": { "$ref": "#/definitions/nonNegativeIntegerDefault0" },
@@ -139,10 +148,9 @@
             }
         },
         "propertyNames": { "$ref": "#" },
-        "const": true,
+        "const": {},
         "enum": {
-            "type": "array",
-            "items": true
+            "type": "array"
         },
         "type": {
             "anyOf": [
@@ -156,15 +164,21 @@
             ]
         },
         "format": { "type": "string" },
-        "contentMediaType": { "type": "string" },
-        "contentEncoding": { "type": "string" },
-        "if": { "$ref": "#" },
-        "then": { "$ref": "#" },
-        "else": { "$ref": "#" },
         "allOf": { "$ref": "#/definitions/schemaArray" },
         "anyOf": { "$ref": "#/definitions/schemaArray" },
         "oneOf": { "$ref": "#/definitions/schemaArray" },
         "not": { "$ref": "#" }
     },
-    "default": true
+    "default": {}
 }
+            )");
+
+    return sch;
+  }
+};
+
+}  // namespace draft6
+}  // namespace jsonschema
+}  // namespace jsoncons
+
+#endif  // JSONCONS_JSONSCHEMA_SCHEMA_DRAFT7_HPP

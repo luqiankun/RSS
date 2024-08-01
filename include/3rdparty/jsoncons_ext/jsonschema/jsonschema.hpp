@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -8,8 +8,7 @@
 #ifndef JSONCONS_JSONSCHEMA_JSONSCHEMA_HPP
 #define JSONCONS_JSONSCHEMA_JSONSCHEMA_HPP
 
-#include "../../jsoncons_ext/jsonschema/common/keyword_validators.hpp"
+#include "../../jsoncons_ext/jsonschema/json_schema_factory.hpp"
 #include "../../jsoncons_ext/jsonschema/json_validator.hpp"
-#include "../../jsoncons_ext/jsonschema/schema_factory.hpp"
 
 #endif  // JSONCONS_JSONSCHEMA_JSONSCHEMA_HPP

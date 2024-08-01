@@ -1,54 +1,57 @@
+// Copyright 2013-2024 Daniel Parker
+// Distributed under the Boost license, Version 1.0.
+// (See accompanying file LICENSE_1_0.txt or copy at
+// http://www.boost.org/LICENSE_1_0.txt)
+
+// See https://github.com/danielaparker/jsoncons for latest version
+
+#ifndef JSONCONS_JSONSCHEMA_SCHEMA_DRAFT4_HPP
+#define JSONCONS_JSONSCHEMA_SCHEMA_DRAFT4_HPP
+
+#include "../../../jsoncons/json.hpp"
+
+namespace jsoncons {
+namespace jsonschema {
+namespace draft4 {
+
+template <class Json>
+struct schema_draft4 {
+  static Json get_schema() {
+    static Json sch = Json::parse(R"(
 {
-    "$schema": "http://json-schema.org/draft-06/schema#",
-    "$id": "http://json-schema.org/draft-06/schema#",
-    "title": "Core schema meta-schema",
+    "id": "http://json-schema.org/draft-04/schema#",
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "Core schema meta-schema",
     "definitions": {
         "schemaArray": {
             "type": "array",
             "minItems": 1,
             "items": { "$ref": "#" }
         },
-        "nonNegativeInteger": {
+        "positiveInteger": {
             "type": "integer",
             "minimum": 0
         },
-        "nonNegativeIntegerDefault0": {
-            "allOf": [
-                { "$ref": "#/definitions/nonNegativeInteger" },
-                { "default": 0 }
-            ]
+        "positiveIntegerDefault0": {
+            "allOf": [ { "$ref": "#/definitions/positiveInteger" }, { "default": 0 } ]
         },
         "simpleTypes": {
-            "enum": [
-                "array",
-                "boolean",
-                "integer",
-                "null",
-                "number",
-                "object",
-                "string"
-            ]
+            "enum": [ "array", "boolean", "integer", "null", "number", "object", "string" ]
         },
         "stringArray": {
             "type": "array",
             "items": { "type": "string" },
-            "uniqueItems": true,
-            "default": []
+            "minItems": 1,
+            "uniqueItems": true
         }
     },
-    "type": ["object", "boolean"],
+    "type": "object",
     "properties": {
-        "$id": {
-            "type": "string",
-            "format": "uri-reference"
+        "id": {
+            "type": "string"
         },
         "$schema": {
-            "type": "string",
-            "format": "uri"
-        },
-        "$ref": {
-            "type": "string",
-            "format": "uri-reference"
+            "type": "string"
         },
         "title": {
             "type": "string"
@@ -57,33 +60,38 @@
             "type": "string"
         },
         "default": {},
-        "examples": {
-            "type": "array",
-            "items": {}
-        },
         "multipleOf": {
             "type": "number",
-            "exclusiveMinimum": 0
+            "minimum": 0,
+            "exclusiveMinimum": true
         },
         "maximum": {
             "type": "number"
         },
         "exclusiveMaximum": {
-            "type": "number"
+            "type": "boolean",
+            "default": false
         },
         "minimum": {
             "type": "number"
         },
         "exclusiveMinimum": {
-            "type": "number"
+            "type": "boolean",
+            "default": false
         },
-        "maxLength": { "$ref": "#/definitions/nonNegativeInteger" },
-        "minLength": { "$ref": "#/definitions/nonNegativeIntegerDefault0" },
+        "maxLength": { "$ref": "#/definitions/positiveInteger" },
+        "minLength": { "$ref": "#/definitions/positiveIntegerDefault0" },
         "pattern": {
             "type": "string",
             "format": "regex"
         },
-        "additionalItems": { "$ref": "#" },
+        "additionalItems": {
+            "anyOf": [
+                { "type": "boolean" },
+                { "$ref": "#" }
+            ],
+            "default": {}
+        },
         "items": {
             "anyOf": [
                 { "$ref": "#" },
@@ -91,17 +99,22 @@
             ],
             "default": {}
         },
-        "maxItems": { "$ref": "#/definitions/nonNegativeInteger" },
-        "minItems": { "$ref": "#/definitions/nonNegativeIntegerDefault0" },
+        "maxItems": { "$ref": "#/definitions/positiveInteger" },
+        "minItems": { "$ref": "#/definitions/positiveIntegerDefault0" },
         "uniqueItems": {
             "type": "boolean",
             "default": false
         },
-        "contains": { "$ref": "#" },
-        "maxProperties": { "$ref": "#/definitions/nonNegativeInteger" },
-        "minProperties": { "$ref": "#/definitions/nonNegativeIntegerDefault0" },
+        "maxProperties": { "$ref": "#/definitions/positiveInteger" },
+        "minProperties": { "$ref": "#/definitions/positiveIntegerDefault0" },
         "required": { "$ref": "#/definitions/stringArray" },
-        "additionalProperties": { "$ref": "#" },
+        "additionalProperties": {
+            "anyOf": [
+                { "type": "boolean" },
+                { "$ref": "#" }
+            ],
+            "default": {}
+        },
         "definitions": {
             "type": "object",
             "additionalProperties": { "$ref": "#" },
@@ -115,7 +128,6 @@
         "patternProperties": {
             "type": "object",
             "additionalProperties": { "$ref": "#" },
-            "propertyNames": { "format": "regex" },
             "default": {}
         },
         "dependencies": {
@@ -127,10 +139,10 @@
                 ]
             }
         },
-        "propertyNames": { "$ref": "#" },
-        "const": {},
         "enum": {
-            "type": "array"
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true
         },
         "type": {
             "anyOf": [
@@ -149,5 +161,20 @@
         "oneOf": { "$ref": "#/definitions/schemaArray" },
         "not": { "$ref": "#" }
     },
+    "dependencies": {
+        "exclusiveMaximum": [ "maximum" ],
+        "exclusiveMinimum": [ "minimum" ]
+    },
     "default": {}
 }
+            )");
+
+    return sch;
+  }
+};
+
+}  // namespace draft4
+}  // namespace jsonschema
+}  // namespace jsoncons
+
+#endif  // JSONCONS_JSONSCHEMA_SCHEMA_DRAFT4_HPP

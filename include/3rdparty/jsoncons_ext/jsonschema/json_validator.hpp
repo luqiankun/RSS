@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -24,30 +24,71 @@
 namespace jsoncons {
 namespace jsonschema {
 
-class throwing_error_reporter : public error_reporter {
-  void do_error(const validation_output& o) override {
-    JSONCONS_THROW(
-        validation_error(o.instance_location() + ": " + o.message()));
+#if !defined(JSONCONS_NO_DEPRECATED)
+
+class validation_output {
+  std::string keyword_;
+  std::string schema_path_;
+  std::string instance_location_;
+  std::string message_;
+  std::vector<validation_output> nested_errors_;
+
+ public:
+  validation_output(std::string keyword, std::string schema_path,
+                    std::string instance_location, std::string message)
+      : keyword_(std::move(keyword)),
+        schema_path_(std::move(schema_path)),
+        instance_location_(std::move(instance_location)),
+        message_(std::move(message)) {}
+
+  validation_output(const std::string& keyword, const std::string& schema_path,
+                    const std::string& instance_location,
+                    const std::string& message,
+                    const std::vector<validation_output>& nested_errors)
+      : keyword_(keyword),
+        schema_path_(schema_path),
+        instance_location_(instance_location),
+        message_(message),
+        nested_errors_(nested_errors) {}
+
+  const std::string& instance_location() const { return instance_location_; }
+
+  const std::string& message() const { return message_; }
+
+  const std::string& schema_path() const { return schema_path_; }
+
+  const std::string& keyword() const { return keyword_; }
+
+  const std::vector<validation_output>& nested_errors() const {
+    return nested_errors_;
   }
 };
 
-class fail_early_reporter : public error_reporter {
-  void do_error(const validation_output&) override {}
+struct validation_message_to_validation_output : public error_reporter {
+  using validation_output_reporter_t =
+      std::function<void(const validation_output& msg)>;
 
- public:
-  fail_early_reporter() : error_reporter(true) {}
-};
+  validation_output_reporter_t reporter_;
 
-using error_reporter_t = std::function<void(const validation_output& o)>;
-
-struct error_reporter_adaptor : public error_reporter {
-  error_reporter_t reporter_;
-
-  error_reporter_adaptor(const error_reporter_t& reporter)
+  validation_message_to_validation_output(
+      const validation_output_reporter_t& reporter)
       : reporter_(reporter) {}
 
  private:
-  void do_error(const validation_output& e) override { reporter_(e); }
+  walk_result do_error(const validation_message& m) override {
+    std::vector<validation_output> nested_errors;
+    for (const auto& detail : m.details()) {
+      nested_errors.emplace_back(validation_output(
+          detail.keyword(), detail.schema_location().string(),
+          detail.instance_location().string(), detail.message()));
+    }
+
+    reporter_(validation_output(m.keyword(), m.schema_location().string(),
+                                m.instance_location().string(), m.message(),
+                                std::move(nested_errors)));
+
+    return walk_result::advance;
+  }
 };
 
 template <class Json>
@@ -68,44 +109,38 @@ class json_validator {
   // Validate input JSON against a JSON Schema with a default throwing error
   // reporter
   Json validate(const Json& instance) const {
-    throwing_error_reporter reporter;
-    jsonpointer::json_pointer instance_location("#");
+    throwing_error_listener reporter;
     Json patch(json_array_arg);
 
-    std::unordered_set<std::string> evaluated_properties;
-    root_->validate(instance, instance_location, evaluated_properties, reporter,
-                    patch);
+    root_->validate2(instance, reporter, patch);
     return patch;
   }
 
   // Validate input JSON against a JSON Schema
   bool is_valid(const Json& instance) const {
     fail_early_reporter reporter;
-    jsonpointer::json_pointer instance_location("#");
     Json patch(json_array_arg);
 
-    std::unordered_set<std::string> evaluated_properties;
-    root_->validate(instance, instance_location, evaluated_properties, reporter,
-                    patch);
+    root_->validate2(instance, reporter, patch);
     return reporter.error_count() == 0;
   }
 
   // Validate input JSON against a JSON Schema with a provided error reporter
-  template <class Reporter>
-  typename std::enable_if<extension_traits::is_unary_function_object_exact<
-                              Reporter, void, validation_output>::value,
+  template <class MsgReporter>
+  typename std::enable_if<extension_traits::is_unary_function_object<
+                              MsgReporter, validation_output>::value,
                           Json>::type
-  validate(const Json& instance, const Reporter& reporter) const {
-    jsonpointer::json_pointer instance_location("#");
+  validate(const Json& instance, MsgReporter&& reporter) const {
     Json patch(json_array_arg);
 
-    error_reporter_adaptor adaptor(reporter);
-    std::unordered_set<std::string> evaluated_properties;
-    root_->validate(instance, instance_location, evaluated_properties, adaptor,
-                    patch);
+    validation_message_to_validation_output adaptor(reporter);
+
+    root_->validate2(instance, adaptor, patch);
     return patch;
   }
 };
+
+#endif
 
 }  // namespace jsonschema
 }  // namespace jsoncons

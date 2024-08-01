@@ -14,6 +14,7 @@ class SchemaValidator {
           [&errors](const jsoncons::jsonschema::validation_output& o) {
             auto t = o.instance_location() + ": " + o.message();
             errors.push_back(t);
+            return jsoncons::jsonschema::walk_result::advance;
           };
       jsoncons::jsonschema::json_validator<jsoncons::json> vad(schema);
       vad.validate(obj, reporter);
@@ -26,7 +27,7 @@ class SchemaValidator {
 };
 static std::string state_sch = R"(
 {
-    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "state",
     "description": "all encompassing state of the AGV.",
     "subtopic": "/state",
@@ -58,7 +59,7 @@ static std::string state_sch = R"(
         "timestamp": {
             "type": "string",
             "format": "date-time",
-            "description": "Timestamp in ISO8601 format.",
+            "description": "Timestamp in ISO8601 format (YYYY-MM-DDTHH:mm:ss.ssZ).",
             "examples": [
                 "1991-03-11T11:40:03.12Z"
             ]
@@ -80,11 +81,11 @@ static std::string state_sch = R"(
         },
         "orderId": {
             "type": "string",
-            "description": "Unique order identification of the current order or the previous finished order. The orderId is kept until a new order is received. Empty string (â€œâ€) if no previous orderId is available. "
+            "description": "Unique order identification of the current order or the previous finished order. The orderId is kept until a new order is received. Empty string (\"\") if no previous orderId is available. "
         },
         "orderUpdateId": {
             "type": "integer",
-            "description": "Order Update Identification to identify that an order update has been accepted by the AGV. â€œ0â€ if no previous orderUpdateId is available."
+            "description": "Order Update Identification to identify that an order update has been accepted by the AGV. \"0\" if no previous orderUpdateId is available."
         },
         "zoneSetId": {
             "type": "string",
@@ -92,7 +93,7 @@ static std::string state_sch = R"(
         },
         "lastNodeId": {
             "type": "string",
-            "description": "nodeID of last reached node or, if AGV is currently on a node, current node (e. g. â€œnode7â€). Empty string (â€œâ€) if no lastNodeId is available."
+            "description": "nodeID of last reached node or, if AGV is currently on a node, current node (e.g., \"node7\"). Empty string (\"\") if no lastNodeId is available."
         },
         "lastNodeSequenceId": {
             "type": "integer",
@@ -100,7 +101,7 @@ static std::string state_sch = R"(
         },
         "driving": {
             "type": "boolean",
-            "description": "True: indicates that the AGV is driving and/or rotating. Other movements of the AGV (e.g. lift movements) are not included here.\nFalse: indicates that the AGV is neither driving nor rotating "
+            "description": "True: indicates that the AGV is driving and/or rotating. Other movements of the AGV (e.g., lift movements) are not included here.\nFalse: indicates that the AGV is neither driving nor rotating "
         },
         "paused": {
             "type": "boolean",
@@ -108,11 +109,11 @@ static std::string state_sch = R"(
         },
         "newBaseRequest": {
             "type": "boolean",
-            "description": "True: AGV is almost at the end of the base and will reduce speed if no new base is transmitted. Trigger for MC to send ne base\nFalse: no base update required "
+            "description": "True: AGV is almost at the end of the base and will reduce speed if no new base is transmitted. Trigger for master control to send new base\nFalse: no base update required."
         },
         "distanceSinceLastNode": {
             "type": "number",
-            "description": "Used by line guided vehicles to indicate the distance it has been driving past the â€žlastNodeIdâ€œ.\nDistance is in meters"
+            "description": "Used by line guided vehicles to indicate the distance it has been driving past the \"lastNodeId\".\nDistance is in meters."
         },
         "operatingMode": {
             "type": "string",
@@ -127,7 +128,7 @@ static std::string state_sch = R"(
         },
         "nodeStates": {
             "type": "array",
-            "description": "Information about the nodes the AGV still has to drive over. Empty list if idle.",
+            "description": "Array of nodeState-Objects, that need to be traversed for fulfilling the order. Empty list if idle.",
             "items": {
                 "type": "object",
                 "title": "nodeState",
@@ -143,11 +144,11 @@ static std::string state_sch = R"(
                     },
                     "sequenceId": {
                         "type": "integer",
-                        "description": "sequenceId of the node."
+                        "description": "sequenceId to discern multiple nodes with same nodeId."
                     },
                     "nodeDescription": {
                         "type": "string",
-                        "description": "Verbose node description"
+                        "description": "Additional information on the node."
                     },
                     "nodePosition": {
                         "type": "object",
@@ -157,7 +158,7 @@ static std::string state_sch = R"(
                             "theta",
                             "mapId"
                         ],
-                        "description": "Node position. The object is defined in chapter 5.4 Topic: Order (from master control to AGV).\nOptional:\nMaster control has this information. Can be sent additionally, e. g. for debugging purposes. ",
+                        "description": "Node position. The object is defined in chapter 5.4 Topic: Order (from master control to AGV).\nOptional:Master control has this information. Can be sent additionally, e.g., for debugging purposes. ",
                         "properties": {
                             "x": {
                                 "type": "number"
@@ -182,7 +183,7 @@ static std::string state_sch = R"(
         },
         "edgeStates": {
             "type": "array",
-            "description": "Information about the edges the AGV still has to drive over. Empty list if the AGV is idle.",
+            "description": "Array of edgeState-Objects, that need to be traversed for fulfilling the order, empty list if idle.",
             "items": {
                 "type": "object",
                 "required": [
@@ -201,15 +202,15 @@ static std::string state_sch = R"(
                     },
                     "edgeDescription": {
                         "type": "string",
-                        "description": "Verbose Edge description"
+                        "description": "Additional information on the edge."
                     },
                     "released": {
                         "type": "boolean",
-                        "description": "True: Edge is part of base. False: Edge is part of horizon."
+                        "description": "True indicates that the edge is part of the base. False indicates that the edge is part of the horizon."
                     },
                     "trajectory": {
                         "type": "object",
-                        "description": "The trajectory is to be communicated as a NURBS and is defined in chapter 5.4 Topic: Order (from master control to AGV).\nTrajectory segments are from the point where the AGV starts to enter the edge until the point where it reports that the next node was traversed. ",
+                        "description": "The trajectory is to be communicated as a NURBS and is defined in chapter 6.7 Implementation of the Order message.\nTrajectory segments reach from the point, where the AGV starts to enter the edge to the point where it reports that the next node was traversed. ",
                         "required": [
                             "degree",
                             "knotVector",
@@ -218,7 +219,7 @@ static std::string state_sch = R"(
                         "properties": {
                             "degree": {
                                 "type": "integer",
-                                "description": "The degree of the NURBS."
+                                "description": "Defines the number of control points that influence any given point on the curve. Increasing the degree increases continuity. If not defined, the default value is 1."
                             },
                             "knotVector": {
                                 "type": "array",
@@ -231,13 +232,12 @@ static std::string state_sch = R"(
                             },
                             "controlPoints": {
                                 "type": "array",
-                                "description": "List of JSON controlPoint objects defining the control points of the NURBS. This includes the start and end point.",
+                                "description": "List of JSON controlPoint objects defining the control points of the NURBS, which includes the beginning and end point.",
                                 "items": {
                                     "type": "object",
                                     "required": [
                                         "x",
-                                        "y",
-                                        "weight"
+                                        "y"
                                     ],
                                     "properties": {
                                         "x": {
@@ -248,7 +248,7 @@ static std::string state_sch = R"(
                                         },
                                         "weight": {
                                             "type": "number",
-                                            "description": "The weight with which this control point pulls no the curve.\nWhen not defined, the default will be 1.0."
+                                            "description": "The weight, with which this control point pulls on the curve.\nWhen not defined, the default will be 1.0."
                                         }
                                     }
                                 }
@@ -267,7 +267,7 @@ static std::string state_sch = R"(
                 "mapId",
                 "positionInitialized"
             ],
-            "description": "The AGVs position",
+            "description": "Defines the position on a map in world coordinates. Each floor has its own map.",
             "properties": {
                 "x": {
                     "type": "number"
@@ -286,17 +286,17 @@ static std::string state_sch = R"(
                 },
                 "positionInitialized": {
                     "type": "boolean",
-                    "description": "True if the AGVs position is initialized, false, if position is not initizalized."
+                    "description": "True: position is initialized. False: position is not initizalized."
                 },
                 "localizationScore": {
                     "type": "number",
-                    "description": "Describes the quality of the localization and therefore, can be used e. g. by SLAM-AGVs to describe how accurate the current position information is.\n0.0: position unknown\n1.0: position known\nOptional for vehicles that cannot estimate their localization score.\nOnly for logging and visualization purposes",
+                    "description": "Describes the quality of the localization and therefore, can be used, e.g., by SLAM-AGV to describe how accurate the current position information is.\n0.0: position unknown\n1.0: position known\nOptional for vehicles that cannot estimate their localization score.\nOnly for logging and visualization purposes",
                     "minimum": 0.0,
                     "maximum": 1.0
                 },
                 "deviationRange": {
                     "type": "number",
-                    "description": "Value for position deviation range in meters. Can be used if the AGV is able to derive it."
+                    "description": "Value for position deviation range in meters. Optional for vehicles that cannot estimate their deviation, e.g., grid-based localization. Only for logging and visualization purposes."
                 }
             }
         },
@@ -305,19 +305,22 @@ static std::string state_sch = R"(
             "description": "The AGVs velocity in vehicle coordinates",
             "properties": {
                 "vx": {
-                    "type": "number"
+                    "type": "number",
+                    "description":"The AVGs velocity in its x direction"
                 },
                 "vy": {
-                    "type": "number"
+                    "type": "number",
+                    "description":"The AVGs velocity in its y direction"
                 },
                 "omega": {
-                    "type": "number"
+                    "type": "number",
+                    "description":"The AVGs turning speed around its z axis."
                 }
             }
         },
         "loads": {
             "type": "array",
-            "description": "Array for information about the loads that an AGV currently carries, if the AGV has any information about them. This array is optional: if an AGV cannot reason about its load state, it shall not send this field. If an empty field is sent, MC is to assume that the AGV can reason about its load state and that the AGV currently does not carry a load.",
+            "description": "Loads, that are currently handled by the AGV. Optional: If AGV cannot determine load state, leave the array out of the state. If the AGV can determine the load state, but the array is empty, the AGV is considered unloaded.",
             "items": {
                 "type": "object",
                 "required": [],
@@ -326,14 +329,18 @@ static std::string state_sch = R"(
                 "properties": {
                     "loadId": {
                         "type": "string",
-                        "description": "Unique identification number of the load (e. g. barcode or RFID)\nEmpty field if the AGV can identify the load but didnâ€™t identify the load yet.\nOptional if the AGV has cannot identify the load."
+                        "description": "Unique identification number of the load (e.g., barcode or RFID). Empty field, if the AGV can identify the load, but did not identify the load yet. Optional, if the AGV cannot identify the load."
                     },
                     "loadType": {
-                        "type": "string"
+                        "type": "string",
+                        "description":"Type of load."
                     },
                     "loadPosition": {
                         "type": "string",
-                        "description": "Indicates which load handling/carrying unit of the AGV is used, e. g. in case the AGV has multiple spots/positions to carry loads.\nFor example: â€œfrontâ€, â€œbackâ€, â€œpositionC1â€, etc.\nOptional for vehicles with only one loadPosition."
+                        "description": "Indicates, which load handling/carrying unit of the AGV is used, e.g., in case the AGV has multiple spots/positions to carry loads. Optional for vehicles with only one loadPosition.",
+                        "examples":[
+                            "front", "back", "positionC1"
+                        ]
                     },
                     "boundingBoxReference": {
                         "type": "object",
@@ -342,7 +349,7 @@ static std::string state_sch = R"(
                             "y",
                             "z"
                         ],
-                        "description": "This point describes the loads position on the AGV in the vehicle coordinates. The boundingBoxReference point is in the middle of the footprint of the load, so length/2 and width/2.",
+                        "description": "Point of reference for the location of the bounding box. The point of reference is always the center of the bounding box bottom surface (at height = 0) and is described in coordinates of the AGV coordinate system.",
                         "properties": {
                             "x": {
                                 "type": "number"
@@ -354,7 +361,8 @@ static std::string state_sch = R"(
                                 "type": "number"
                             },
                             "theta": {
-                                "type": "number"
+                                "type": "number",
+                                "description":"Orientation of the loads bounding box. Important for tugger, trains, etc."
                             }
                         }
                     },
@@ -364,7 +372,7 @@ static std::string state_sch = R"(
                             "length",
                             "width"
                         ],
-                        "description": "Dimensions of the loadâ€™s bounding box in meters. ",
+                        "description": "Dimensions of the loads bounding box in meters.",
                         "properties": {
                             "length": {
                                 "type": "number",
@@ -382,7 +390,8 @@ static std::string state_sch = R"(
                     },
                     "weight": {
                         "type": "number",
-                        "description": "Weight of load in kg"
+                        "description": "Absolute weight of the load measured in kg.",
+                        "minimum":0.0
                     }
                 }
             }
@@ -411,11 +420,11 @@ static std::string state_sch = R"(
                     },
                     "actionDescription": {
                         "type": "string",
-                        "description": "Additional information on the action."
+                        "description": "Additional information on the current action."
                     },
                     "actionStatus": {
                         "type": "string",
-                        "description": "WAITING: waiting for trigger\nFAILED: action could not be performed.",
+                        "description": "WAITING: waiting for the trigger (passing the mode, entering the edge) PAUSED: paused by instantAction or external trigger FAILED: action could not be performed.",
                         "enum": [
                             "WAITING",
                             "INITIALIZING",
@@ -426,7 +435,7 @@ static std::string state_sch = R"(
                     },
                     "resultDescription": {
                         "type": "string",
-                        "description": "Description of the result, e.g. the result of a rfid-read."
+                        "description": "Description of the result, e.g., the result of a RFID-read. Errors will be transmitted in errors."
                     }
                 }
             }
@@ -437,33 +446,36 @@ static std::string state_sch = R"(
                 "batteryCharge",
                 "charging"
             ],
-            "description": "All information relating to the battery.",
+            "description": "Contains all battery-related information.",
             "properties": {
                 "batteryCharge": {
                     "type": "number",
-                    "description": "State of Charge:\nIf AGV only provides values for good or bad battery levels, these will be indicated as 20% (bad) and 80% (good)."
+                    "description": "State of Charge in %:\nIf AGV only provides values for good or bad battery levels, these will be indicated as 20% (bad) and 80% (good)."
                 },
                 "batteryVoltage": {
                     "type": "number",
                     "description": "Battery voltage"
                 },
                 "batteryHealth": {
-                    "type": "integer",
-                    "description": "State of health in percent."
+                    "type": "number",
+                    "description": "State of health in percent.",
+                    "minimum":0,
+                    "maximum":100
                 },
                 "charging": {
                     "type": "boolean",
-                    "description": "If true: Charging in progress."
+                    "description": "True: charging in progress. False: AGV is currently not charging."
                 },
                 "reach": {
-                    "type": "integer",
-                    "description": "estimated reach with actual State of Charge"
+                    "type": "number",
+                    "description": "Estimated reach with current State of Charge in meter.",
+                    "minimum": 0
                 }
             }
         },
         "errors": {
             "type": "array",
-            "description": "Array of errors. Errors are kept until resolution.",
+            "description": "Array of error-objects. All active errors of the AGV should be in the list. An empty array indicates that the AGV has no active errors.",
             "items": {
                 "type": "object",
                 "required": [
@@ -474,20 +486,22 @@ static std::string state_sch = R"(
                 "properties": {
                     "errorType": {
                         "type": "string",
-                        "description": "Type of error."
+                        "description": "Type/name of error."
                     },
                     "errorReferences": {
                         "type": "array",
                         "items": {
                             "type": "object",
                             "title": "errorReference",
-                            "description": "Object that holds the error reference (e.g. orderId, orderUpdateId, actionId...) as key-value pairs.",
+                            "description": "Array of references to identify the source of the error (e.g., headerId, orderId, actionId, etc.).",
                             "properties": {
                                 "referenceKey": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "description":"References the type of reference (e.g., headerId, orderId, actionId, etc.)."
                                 },
                                 "referenceValue": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "description":"References the value, which belongs to the reference key."
                                 }
                             },
                             "required": [
@@ -498,11 +512,11 @@ static std::string state_sch = R"(
                     },
                     "errorDescription": {
                         "type": "string",
-                        "description": "Verbose description of error."
+                        "description": "Error description."
                     },
                     "errorLevel": {
                         "type": "string",
-                        "description": "warning: AGV is ready to drive without human intervention \n fatal: AGV is not in running condition.",
+                        "description": "WARNING: AGV is ready to start (e.g., maintenance cycle expiration warning). FATAL: AGV is not in running condition, user intervention required (e.g., laser scanner is contaminated).",
                         "enum": [
                             "WARNING",
                             "FATAL"
@@ -513,7 +527,7 @@ static std::string state_sch = R"(
         },
         "information": {
             "type": "array",
-            "description": "Array of information messages. Messages are only for visualization/debugging. There's no specification when these messages are deleted.",
+            "description": "Array of info-objects. An empty array indicates, that the AGV has no information. This should only be used for visualization or debugging – it must not be used for logic in master control.",
             "items": {
                 "type": "object",
                 "required": [
@@ -523,7 +537,7 @@ static std::string state_sch = R"(
                 "properties": {
                     "infoType": {
                         "type": "string",
-                        "description": "Type of Information."
+                        "description": "Type/name of information."
                     },
                     "infoReferences": {
                         "type": "array",
@@ -534,24 +548,26 @@ static std::string state_sch = R"(
                                 "referenceValue"
                             ],
                             "title": "infoReference",
-                            "description": "Object that holds the info reference (e.g. orderId, orderUpdateId, actionId...) as key-value pairs.",
+                            "description": "Array of references.",
                             "properties": {
                                 "referenceKey": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "description":"References the type of reference (e.g., headerId, orderId, actionId, etc.)."
                                 },
                                 "referenceValue": {
-                                    "type": "string"
+                                    "type": "string",
+                                    "description":"References the value, which belongs to the reference key."
                                 }
                             }
                         }
                     },
                     "infoDescription": {
                         "type": "string",
-                        "description": "Verbose description of error."
+                        "description": "Info of description."
                     },
                     "infoLevel": {
                         "type": "string",
-                        "description": "Type of information",
+                        "description": "DEBUG: used for debugging. INFO: used for visualization.",
                         "enum": [
                             "INFO",
                             "DEBUG"
@@ -566,11 +582,11 @@ static std::string state_sch = R"(
                 "eStop",
                 "fieldViolation"
             ],
-            "description": "Object that holds information about the safety status",
+            "description": "Contains all safety-related information.",
             "properties": {
                 "eStop": {
                     "type": "string",
-                    "description": "autoAck, manual, remote, none",
+                    "description": "Acknowledge-Type of eStop: AUTOACK: auto-acknowledgeable e-stop is activated, e.g., by bumper or protective field. MANUAL: e-stop hast to be acknowledged manually at the vehicle. REMOTE: facility e-stop has to be acknowledged remotely. NONE: no e-stop activated.",
                     "enum": [
                         "AUTOACK",
                         "MANUAL",
@@ -580,7 +596,7 @@ static std::string state_sch = R"(
                 },
                 "fieldViolation": {
                     "type": "boolean",
-                    "description": "Protective field violation"
+                    "description": "Protective field violation. True: field is violated. False: field is not violated."
                 }
             }
         }
@@ -591,7 +607,7 @@ static jsoncons::json state_schema = jsoncons::json::parse(state_sch);
 
 static std::string con_sch = R"(
 {
-    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "connection",
     "description": "The last will message of the AGV. Has to be sent with retain flag.\nOnce the AGV comes online, it has to send this message on its connect topic, with the connectionState enum set to \"ONLINE\".\n The last will message is to be configured with the connection state set to \"CONNECTIONBROKEN\".\nThus, if the AGV disconnects from the broker, master control gets notified via the topic \"connection\".\nIf the AGV is disconnecting in an orderly fashion (e.g. shutting down, sleeping), the AGV is to publish a message on this topic with the connectionState set to \"DISCONNECTED\".",
     "subtopic": "/connection",
@@ -607,12 +623,12 @@ static std::string con_sch = R"(
     "properties": {
         "headerId": {
             "type": "integer",
-            "description": "headerId of the message. The headerId is defined per topic and incremented by 1 with each sent (but not necessarily received) message."
+            "description": "Header ID of the message. The headerId is defined per topic and incremented by 1 with each sent (but not necessarily received) message."
         },
         "timestamp": {
             "type": "string",
             "format": "date-time",
-            "description": "Timestamp in ISO8601 format.",
+            "description": "Timestamp in ISO8601 format (YYYY-MM-DDTHH:mm:ss.ssZ).",
             "examples": [
                 "1991-03-11T11:40:03.12Z"
             ]
@@ -626,7 +642,7 @@ static std::string con_sch = R"(
         },
         "manufacturer": {
             "type": "string",
-            "description": "Manufacturer of the AGV"
+            "description": "Manufacturer of the AGV."
         },
         "serialNumber": {
             "type": "string",
@@ -639,7 +655,7 @@ static std::string con_sch = R"(
                 "OFFLINE",
                 "CONNECTIONBROKEN"
             ],
-            "description": "online: connection between AGV and broker is active.\noffline: connection between AGV and broker has gone offline in a coordinated way.\nconnectionBroken: The connection between AGV and broker has unexpectedly ended."
+            "description": "ONLINE: connection between AGV and broker is active. OFFLINE: connection between AGV and broker has gone offline in a coordinated way. CONNECTIONBROKEN: The connection between AGV and broker has unexpectedly ended."
         }
     }
 }
@@ -648,7 +664,7 @@ static jsoncons::json con_schema = jsoncons::json::parse(con_sch);
 
 static std::string ord_sch = R"(
 {
-    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Order Message",
     "description": "The message schema to communicate orders from master control to the AGV.",
     "subtopic": "/order",
@@ -787,7 +803,7 @@ static std::string ord_sch = R"(
                         "description": "Array of actions to be executed on a node. Empty array, if no actions required.",
                         "type": "array",
                         "items": {
-                            "$ref": "#/definitions/action"
+                            "$ref": "#/$defs/action"
                         }
                     }
                 }
@@ -933,14 +949,14 @@ static std::string ord_sch = R"(
                         "description": "Array of action objects with detailed information.",
                         "type": "array",
                         "items": {
-                            "$ref": "#/definitions/action"
+                            "$ref": "#/$defs/action"
                         }
                     }
                 }
             }
         }
     },
-    "definitions": {
+    "$defs": {
         "action": {
             "type": "object",
             "description": "Describes an action that the AGV can perform.",
@@ -1024,7 +1040,7 @@ static jsoncons::json ord_schema = jsoncons::json::parse(ord_sch);
 
 static std::string ins_sch = R"(
 {
-    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "instantActions",
     "description": "JSON Schema for publishing instantActions that the AGV is to execute as soon as they arrive.",
     "subtopic": "/instantActions",

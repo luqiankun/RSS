@@ -6,7 +6,7 @@ INITIALIZE_EASYLOGGINGPP
 
 jsoncons::json sc = jsoncons::json::parse(R"(
 {
-    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "state",
     "description": "all encompassing state of the AGV.",
     "subtopic": "/state",
