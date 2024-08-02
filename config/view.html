@@ -61,7 +61,7 @@
             }
         }
         class Vehicle {
-            constructor(name, x, y, level, envelope) {
+            constructor(name, x, y, level, envelope, res) {
                 this.name = name;
                 this.x = x;
                 this.y = y;
@@ -70,18 +70,14 @@
                 this.destination = {};
                 this.battery = level
                 this.envelope = envelope
+                this.res = res
             }
         }
         class Block {
             constructor(obj) {
                 this.name = obj["name"];
                 this.color = obj["layout"]["color"];
-                this.member = [];
-                for (let x of obj['memberNames']) {
-                    let v = {};
-                    v['name'] = x["name"];
-                    this.member.push(v);
-                }
+                this.member = obj['memberNames'];
             }
         }
         let points = [];
@@ -580,9 +576,9 @@
                     vehicles = [];
                     let model = JSON.parse(Http.responseText);
                     for (let v of model) {
-                        let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"], v["battery_level"], v["envelope"]);
+                        let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"], v["battery_level"], v["envelope"], v["allocatedResources"]);
                         veh.color = v["color"];
-                        // console.log(v["step"]);
+                        // console.log(v["allocatedResources"], v["step"]);
                         veh.step = v["step"];
                         veh.destination = v["destination"]
                         vehicles.push(veh);
@@ -741,8 +737,8 @@
                 }
 
                 for (let x_ of blocks) {
-                    for (let p of x_['member']) {
-                        let point = get_block_point(p['name']);
+                    for (let p of x_.member) {
+                        let point = get_block_point(p);
                         if (point != null) {
                             let x = (point.x - xmin) / resolution;
                             let y = canvas.height - (point.y - ymin) / resolution;
@@ -765,8 +761,9 @@
                             ctx.fillStyle = x_.color;
                             ctx.textBaseline = "top";
                             ctx.fillText(point.name, x + 10 * (50 / resolution), y + 23 * (50 / resolution), point.name.length * font_size);
+                            continue;
                         }
-                        path = get_block_path(p['name']);
+                        path = get_block_path(p);
                         if (path != null) {
                             if (path.locked) {
                                 continue
@@ -790,7 +787,7 @@
                             end_y = end_y - norm_y * 15 * (50 / resolution);
                             if (path.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), x_.color); }
                             if (path.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), x_.color); }
-
+                            continue
                         }
                     }
 
@@ -987,6 +984,72 @@
                         ctx.moveTo(start_x, start_y);
                         ctx.lineTo(link_x, link_y)
                         ctx.stroke()
+                    }
+                    //resource
+                    for (let res of v.res) {
+                        if (get_point(res) != null) {
+                            let point = get_point(res)
+                            let x = (point.x - xmin) / resolution;
+                            let y = canvas.height - (point.y - ymin) / resolution;
+                            let radius = 8 * (50 / resolution);
+                            ctx.beginPath()
+                            ctx.fillStyle = "#8B0A50";
+                            ctx.strokeStyle = '#8B0A50'
+                            ctx.moveTo(x + radius, y);
+                            ctx.lineWidth = 3 * (50 / resolution);
+                            if (ctx.lineWidth < 1) {
+                                ctx.lineWidth = 1;
+                            }
+                            ctx.arc(x, y, radius + 1, 0, 2 * Math.PI, true)
+                            ctx.fill()
+                            ctx.arc(x, y, radius + 3, 0, 2 * Math.PI, true)
+                            ctx.stroke()
+                        }
+                        else if (get_block_path(res) != null) {
+                            let path = get_block_path(res);
+                            // console.log(path)
+                            let start = get_point(path.start);
+                            let end = get_point(path.end);
+                            if (path.name.startsWith()) { }
+                            let start_x = (start.x - xmin) / resolution;
+                            let start_y = canvas.height - (start.y - ymin) / resolution;
+                            let end_x = (end.x - xmin) / resolution;
+                            let end_y = canvas.height - (end.y - ymin) / resolution;
+                            let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
+                            let norm_x = (end_x - start_x) / len;
+                            let norm_y = (end_y - start_y) / len;
+                            start_x = start_x + norm_x * 15;
+                            start_y = start_y + norm_y * 15;
+                            end_x = end_x - norm_x * 15;
+                            end_y = end_y - norm_y * 15;
+                            drawArrowhead(ctx, start_x, start_y, end_x, end_y, 7 * (50 / resolution), "#8B0A50");
+                            drawArrowhead(ctx, end_x, end_y, start_x, start_y, 7 * (50 / resolution), "#8B0A50");
+                        }
+                        else if (get_location(res) != null) {
+                            color = '#8B0A50'
+                            let loc = get_location(res);
+                            let start_x = (loc.x - xmin) / resolution;
+                            let start_y = canvas.height - (loc.y - ymin) / resolution;
+                            ctx.beginPath()
+                            ctx.lineWidth = 1 * (50 / resolution);
+                            if (ctx.lineWidth < 1) {
+                                ctx.lineWidth = 1;
+                            }
+                            let radius = 7 * (50 / resolution)
+                            ctx.strokeStyle = color
+                            ctx.moveTo(start_x + radius, start_y);
+                            ctx.arc(start_x, start_y, radius, 0, 2 * Math.PI, true)
+                            ctx.stroke()
+                            ctx.lineWidth = 2 * (50 / resolution);
+                            if (loc.type == "charge") {
+                                ctx.arc(start_x, start_y, radius + 3, 0, 2 * Math.PI, true)
+                            } else if (loc.type == "LIFT") {
+                                ctx.strokeRect(start_x - 8, start_y - 8, 16, 16);
+                            }
+                            ctx.stroke()
+                            ctx.lineWidth = 4 * (50 / resolution);
+                            ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
+                        }
                     }
                 }
             }

@@ -411,13 +411,11 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
-                           << position.y() << ")\n";
+    CLOG(INFO, driver_log) << name << " now at (" << t->name << ")\n";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->link.lock()->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
-                           << position.y() << ")\n";
+    CLOG(INFO, driver_log) << name << " now at (" << t->name << ")\n";
     return true;
   } else if (dest->operation ==
                  data::order::DriverOrder::Destination::OpType::UNLOAD ||
@@ -464,65 +462,57 @@ void SimVehicle::init() {
 }
 bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   std::vector<int> res;
-  for (auto& step : steps) {
-    if (!step->path) {
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(step->wait_time / rate));
-      res.push_back(1);
-      continue;
-    }
-    if (step->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-      auto end = step->path->destination_point.lock();
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(step->wait_time / rate));
-      size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-      int x_len = end->position.x() - position.x();
-      int y_len = end->position.y() - position.y();
-      for (int i = 0; i < 10; i++) {
-        position.x() += x_len / 10;
-        position.y() += y_len / 10;
-        std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
-      }
-      position.x() = end->position.x();
-      position.y() = end->position.y();
-      last_point = end;
-      current_point = last_point;
-      CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
-                             << position.y() << ")\n";
-      res.push_back(1);
-      continue;
-    } else if (step->vehicle_orientation ==
-               data::order::Step::Orientation::BACKWARD) {
-      auto end = step->path->source_point.lock();
-      size_t t = step->path->length * 1000 / max_vel / rate;  // ms
-      std::this_thread::sleep_for(
-          std::chrono::milliseconds(step->wait_time / rate));
-      int x_len = end->position.x() - position.x();
-      int y_len = end->position.y() - position.y();
-      for (int i = 0; i < 10; i++) {
-        position.x() += x_len / 10;
-        position.y() += y_len / 10;
-        std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
-      }
-      position.x() = end->position.x();
-      position.y() = end->position.y();
-      last_point = end;
-      current_point = last_point;
-      CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
-                             << position.y() << ")\n";
-      res.push_back(1);
-      continue;
-    } else {
-      res.push_back(0);
-      continue;
-    }
+  if (steps.empty()) {
+    return false;
   }
-  for (auto& x : res) {
-    if (x == 0) {
-      return false;
-    }
+  auto step = steps.front();
+  if (!step->path) {
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(step->wait_time / rate));
+    return false;
   }
-  return true;
+  if (step->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
+    auto end = step->path->destination_point.lock();
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(step->wait_time / rate));
+    size_t t = step->path->length * 1000 / max_vel / rate;  // ms
+    int x_len = end->position.x() - position.x();
+    int y_len = end->position.y() - position.y();
+    for (int i = 0; i < 10; i++) {
+      position.x() += x_len / 10;
+      position.y() += y_len / 10;
+      std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+    }
+    position.x() = end->position.x();
+    position.y() = end->position.y();
+    last_point = end;
+    current_point = last_point;
+    CLOG(INFO, driver_log) << name << " now at (" << current_point->name
+                           << ")\n";
+    return true;
+  } else if (step->vehicle_orientation ==
+             data::order::Step::Orientation::BACKWARD) {
+    auto end = step->path->source_point.lock();
+    size_t t = step->path->length * 1000 / max_vel / rate;  // ms
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(step->wait_time / rate));
+    int x_len = end->position.x() - position.x();
+    int y_len = end->position.y() - position.y();
+    for (int i = 0; i < 10; i++) {
+      position.x() += x_len / 10;
+      position.y() += y_len / 10;
+      std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+    }
+    position.x() = end->position.x();
+    position.y() = end->position.y();
+    last_point = end;
+    current_point = last_point;
+    CLOG(INFO, driver_log) << name << " now at (" << current_point->name
+                           << ")\n";
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void Rabbit3::init() {

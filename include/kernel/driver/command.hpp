@@ -28,6 +28,8 @@ class Command : public TCSObject {
   std::vector<StepPtr> get_step(DriverOrderPtr, uint32_t);
   std::vector<StepPtr> get_step_nopop(DriverOrderPtr, uint32_t);
   std::vector<std::shared_ptr<TCSResource>> get_future(DriverOrderPtr);
+  std::vector<std::shared_ptr<TCSResource>> get_next_allocate_res(
+      DriverOrderPtr, std::shared_ptr<Vehicle>);
   void vehicle_execute_cb(bool);  // 车辆通知动作结果
   void run_once();
   ~Command() { CLOG(INFO, driver_log) << name << " drop\n"; }

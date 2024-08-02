@@ -2570,6 +2570,12 @@ std::string TCS::get_vehicles_step() {
     veh["position"]["y"] = v->position.y();
     veh["envelope"]["type"] = v->envelope_key;
     veh["envelope"]["vertex"] = json::array();
+    veh["allocatedResources"] = json::array();
+    for (auto &x : v->allocated_resources) {
+      for (auto &x_ : x) {
+        veh["allocatedResources"].push_back(x_->name);
+      }
+    }
     for (auto &p : resource->points) {
       for (auto &key : p->envelopes) {
         if (v->envelope_key == key.first) {
@@ -2588,26 +2594,26 @@ std::string TCS::get_vehicles_step() {
       if (v->current_order->state ==
           data::order::TransportOrder::State::BEING_PROCESSED) {
         for (auto &dr : v->current_order->driverorders) {
-          if (dr->state == data::order::DriverOrder::State::TRAVELLING ||
-              dr->state == data::order::DriverOrder::State::OPERATING) {
-            // current
-            for (auto &step_ : dr->route->current_steps) {
-              auto beg = step_->path->source_point.lock();
-              auto end = step_->path->destination_point.lock();
-              json step;
-              step["src"] = beg->name;
-              step["dest"] = end->name;
-              if (step_->vehicle_orientation ==
-                  data::order::Step::Orientation::FORWARD) {
-                step["orientation"] = "FORWARD";
-              } else if (step_->vehicle_orientation ==
-                         data::order::Step::Orientation::BACKWARD) {
-                step["orientation"] = "BACKWARD";
-              } else {
-                step["orientation"] = "UNDEFINED";
-              }
-              veh["step"].push_back(step);
+          if (dr->state == data::order::DriverOrder::State::TRAVELLING) {
+            // current first
+            auto step_ = dr->route->current_step;
+            LOG(INFO) << "++++++++++++++++++" << step_->name;
+            auto beg = step_->path->source_point.lock();
+            auto end = step_->path->destination_point.lock();
+            json step;
+            step["src"] = beg->name;
+            step["dest"] = end->name;
+            if (step_->vehicle_orientation ==
+                data::order::Step::Orientation::FORWARD) {
+              step["orientation"] = "FORWARD";
+            } else if (step_->vehicle_orientation ==
+                       data::order::Step::Orientation::BACKWARD) {
+              step["orientation"] = "BACKWARD";
+            } else {
+              step["orientation"] = "UNDEFINED";
             }
+            veh["step"].push_back(step);
+
             // other
             for (auto &path : dr->route->steps) {
               auto beg = path->path->source_point.lock();

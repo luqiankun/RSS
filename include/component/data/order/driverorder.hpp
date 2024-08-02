@@ -25,14 +25,15 @@ class DriverOrder : public TCSObject {
       return "->operation]";
     } else {
       std::string msg{"{"};
-      for (auto& x : route->current_steps) {
-        if (x->vehicle_orientation == Step::Orientation::FORWARD) {
+      if (route->current_step) {
+        if (route->current_step->vehicle_orientation ==
+            Step::Orientation::FORWARD) {
           msg.append("[");
-          msg.append(x->name);
+          msg.append(route->current_step->name);
           msg.append("->forward]");
         } else {
           msg.append("[");
-          msg.append(x->name);
+          msg.append(route->current_step->name);
           msg.append("->backward]");
         }
       }

@@ -33,7 +33,7 @@ std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
     }
   }
   if (!res->steps.empty()) {
-    res->current_steps.push_back(res->steps.front());
+    res->current_step = res->steps.front();
   }
   return res;
 }
@@ -99,7 +99,6 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
     }
   }
   std::stringstream ss;
-  ss << client->name << " allocate ";
   for (auto& r : res) {
     for (auto& p : points) {
       if (static_cast<TCSResource*>(r.get()) == p.get()) {
@@ -140,7 +139,8 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
       }
     }
   }
-  CLOG(INFO, allocate_log) << ss.str() << "\n";
+  CLOG_IF(!ss.str().empty(), INFO, allocate_log)
+      << client->name << " allocate " << ss.str() << "\n";
   return true;
 }
 

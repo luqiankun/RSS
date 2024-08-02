@@ -3,6 +3,52 @@
 #include "../../../include/kernel/driver/vehicle.hpp"
 namespace kernel {
 namespace driver {
+std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
+    allocate::DriverOrderPtr driver_order, std::shared_ptr<Vehicle> veh) {
+  auto steps = get_step_nopop(driver_order, veh->send_queue_size);
+  std::vector<std::shared_ptr<TCSResource>> temp;
+  for (auto& x : steps) {
+    std::vector<std::shared_ptr<TCSResource>> step_res;
+    bool has_1{false}, has_2{false};
+    auto s_p = x->path->source_point.lock();
+    auto e_p = x->path->destination_point.lock();
+    for (auto& exist : temp) {
+      if (exist->name == s_p->name) {
+        has_1 = true;
+      }
+      if (exist->name == e_p->name) {
+        has_2 = true;
+      }
+    }
+    if (!has_1) {
+      temp.push_back(x->path->source_point.lock());
+      step_res.push_back(x->path->source_point.lock());
+    }
+    if (!has_2) {
+      temp.push_back(x->path->destination_point.lock());
+      step_res.push_back(x->path->destination_point.lock());
+    }
+    temp.push_back(x->path);
+    step_res.push_back(x->path);
+    for (auto x = step_res.begin(); x != step_res.end();) {
+      bool has{false};
+      for (auto& allocate_list : veh->allocated_resources) {
+        for (auto& temo_res : allocate_list) {
+          if (temo_res == *x) {
+            has = true;
+            break;
+          }
+        }
+      }
+      if (has) {
+        x = step_res.erase(x);
+      } else {
+        x++;
+      }
+    }
+  }
+  return temp;
+}
 void Command::run_once() {
   auto veh = vehicle.lock();
   auto scheduler = veh->scheduler.lock();
@@ -41,6 +87,7 @@ void Command::run_once() {
       auto steps = get_step_nopop(driver_order, veh->send_queue_size);
       if (steps.empty()) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
+        // LOG(WARNING) << "-------------------------";
       } else {
         std::vector<std::shared_ptr<TCSResource>> temp;
         veh->claim_resources.clear();
@@ -154,6 +201,7 @@ void Command::run_once() {
       auto steps = get_step(driver_order, veh->send_queue_size);
       if (steps.empty()) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
+        // LOG(WARNING) << "-------------------------";
       } else {
         move(steps);
         state = State::EXECUTING;
@@ -174,14 +222,19 @@ void Command::run_once() {
   } else if (state == State::EXECUTED) {
     auto& driver_order = order->driverorders[order->current_driver_index];
     // free
+    // 获取下次要分配的资源
     std::stringstream ss;
+    auto next_res = get_next_allocate_res(driver_order, veh);
     std::vector<std::shared_ptr<TCSResource>> temp;
     for (auto& a : veh->allocated_resources) {
       for (auto& x : a) {
         if (x != veh->current_point &&
             x != get_dest(driver_order)->destination.lock()) {
-          temp.push_back(x);
-          ss << x->name << " ";
+          auto it = std::find(next_res.begin(), next_res.end(), x);
+          if (it == next_res.end()) {
+            temp.push_back(x);
+            ss << x->name << " ";
+          }
         }
       }
     }
@@ -223,35 +276,33 @@ std::shared_ptr<data::order::DriverOrder::Destination> Command::get_dest(
 std::vector<std::shared_ptr<data::order::Step>> Command::get_step(
     std::shared_ptr<data::order::DriverOrder> order, uint32_t size) {
   if (order->route->steps.empty()) {
-    order->route->current_steps.clear();
+    order->route->current_step.reset();
     return std::vector<std::shared_ptr<data::order::Step>>();
   }
-  order->route->current_steps.clear();
-  auto res = std::vector<std::shared_ptr<data::order::Step>>();
-  auto len =
-      size >= order->route->steps.size() ? order->route->steps.size() : size;
-  for (auto i = 0; i < len; i++) {
-    res.push_back(order->route->steps.front());
-    order->route->current_steps.push_back(order->route->steps.front());
-    order->route->steps.pop_front();
-  }
-  return res;
-}
-std::vector<std::shared_ptr<data::order::Step>> Command::get_step_nopop(
-    std::shared_ptr<data::order::DriverOrder> order, uint32_t size) {
-  if (order->route->steps.empty()) {
-    order->route->current_steps.clear();
-    return std::vector<std::shared_ptr<data::order::Step>>();
-  }
-  order->route->current_steps.clear();
-  auto step = order->route->steps.front();
-  order->route->current_steps.push_back(step);
+  order->route->current_step = order->route->steps.front();
   auto res = std::vector<std::shared_ptr<data::order::Step>>();
   auto len =
       size >= order->route->steps.size() ? order->route->steps.size() : size;
   for (auto i = 0; i < len; i++) {
     res.push_back(order->route->steps.at(i));
-    order->route->current_steps.push_back(order->route->steps.front());
+  }
+  order->route->steps.pop_front();
+  return res;
+}
+std::vector<std::shared_ptr<data::order::Step>> Command::get_step_nopop(
+    std::shared_ptr<data::order::DriverOrder> order, uint32_t size) {
+  if (order->route->steps.empty()) {
+    order->route->current_step.reset();
+    return std::vector<std::shared_ptr<data::order::Step>>();
+  }
+  // auto step = order->route->steps.front();
+  // order->route->current_steps.push_back(step);
+  auto res = std::vector<std::shared_ptr<data::order::Step>>();
+  auto len =
+      size >= order->route->steps.size() ? order->route->steps.size() : size;
+  for (auto i = 0; i < len; i++) {
+    res.push_back(order->route->steps.at(i));
+    // order->route->current_steps.push_back(order->route->steps.at(i));
   }
   return res;
 }

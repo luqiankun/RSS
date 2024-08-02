@@ -17,7 +17,7 @@ class Route : public TCSObject {
  public:
   using TCSObject::TCSObject;
   std::deque<std::shared_ptr<Step>> steps;
-  std::vector<std::shared_ptr<Step>> current_steps;
+  std::shared_ptr<Step> current_step;
   int64_t costs{0};
 };
 }  // namespace order
