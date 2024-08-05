@@ -42,20 +42,20 @@ std::pair<ResourceManager::ResType, TCSResourcePtr> ResourceManager::find(
     const std::string& name) {
   TCSResourcePtr res;
   auto it = std::find_if(points.begin(), points.end(),
-                         [&](const auto& p) { return p->name == name; });
+                         [&](const PointPtr& p) { return p->name == name; });
   if (it != points.end()) {
     res = *it;
     return std::pair<ResType, TCSResourcePtr>(ResType::Point, res);
   }
   auto it_p = std::find_if(paths.begin(), paths.end(),
-                           [&](const auto& p) { return p->name == name; });
+                           [&](const PathPtr& p) { return p->name == name; });
   if (it_p != paths.end()) {
     res = *it_p;
     return std::pair<ResType, TCSResourcePtr>(ResType::Path, res);
   }
   auto it_l = std::find_if(
       locations.begin(), locations.end(),
-      [&](const auto& p) { return (p->name == name) && (!p->locked); });
+      [&](const LocationPtr& p) { return (p->name == name) && (!p->locked); });
   if (it_l != locations.end()) {
     res = *it_l;
     return std::pair<ResType, TCSResourcePtr>(ResType::Location, res);
@@ -94,7 +94,8 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
   for (auto& r : rules) {
     // LOG(INFO) << r->name;
     if (!r->pass(res, client)) {
-      CLOG(WARNING, allocate_log) << r->name << " not pass of " << client->name;
+      CLOG_N_TIMES(5, WARNING, allocate_log)
+          << r->name << " not pass of " << client->name;
       return false;
     }
   }
@@ -213,17 +214,21 @@ PointPtr ResourceManager::get_recent_park_point(PointPtr cur) {
             [&](const PointPtr& a, const PointPtr& b) {
               double d1 = std::numeric_limits<double>::max();
               double d2 = std::numeric_limits<double>::max();
-              d1 = (cur->position - a->position).norm();
-              d2 = (cur->position - b->position).norm();
+              d1 = (cur->position - a->position).cast<double>().norm();
+              d2 = (cur->position - b->position).cast<double>().norm();
               return d1 < d2;
             });
   for (int i = 0; i < points.size(); i++) {
     if (points.at(i)->type != data::model::Point::Type::PARK_POSITION) {
       continue;
     }
-    if (is_connected(cur, points.at(i))) {
-      return points.at(i);
+    if (!is_connected(cur, points.at(i))) {
+      continue;
     }
+    if (points.at(i)->owner.lock()) {
+      continue;
+    }
+    return points.at(i);
   }
   return nullptr;
 }
@@ -233,8 +238,8 @@ LocationPtr ResourceManager::get_recent_charge_loc(PointPtr cur) {
             [&](const LocationPtr& a, const LocationPtr& b) {
               double d1 = std::numeric_limits<double>::max();
               double d2 = std::numeric_limits<double>::max();
-              d1 = (cur->position - a->position).norm();
-              d2 = (cur->position - b->position).norm();
+              d1 = (cur->position - a->position).cast<double>().norm();
+              d2 = ((cur->position - b->position).cast<double>()).norm();
               return d1 < d2;
             });
   for (int i = 0; i < locations.size(); i++) {
@@ -245,9 +250,13 @@ LocationPtr ResourceManager::get_recent_charge_loc(PointPtr cur) {
     if (!locations.at(i)->link.lock()) {
       continue;
     }
-    if (is_connected(cur, locations.at(i)->link.lock())) {
-      return locations.at(i);
+    if (!is_connected(cur, locations.at(i)->link.lock())) {
+      continue;
     }
+    if (locations.at(i)->owner.lock()) {
+      continue;
+    }
+    return locations.at(i);
   }
   return nullptr;
 }

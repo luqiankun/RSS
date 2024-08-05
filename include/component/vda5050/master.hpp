@@ -9,7 +9,6 @@
 #include "./vda5050insact.hpp"
 #include "./vda5050order.hpp"
 #include "./vda5050state.hpp"
-
 namespace vda5050 {
 class MqttClient : public mqtt::async_client {
  public:
@@ -23,6 +22,7 @@ class MqttClient : public mqtt::async_client {
   }
   void on() {
     this->set_message_callback([&](mqtt::const_message_ptr msg) {
+      // std::cerr << msg->get_topic() << std::endl;
       auto topic = msg->get_topic();
       for (auto& x : cbs) {
         std::string reg = x.first;
@@ -87,7 +87,7 @@ class VehicleMaster {
         master_state = MasterMqttStatus::ONLINE;
         CLOG(INFO, mqtt_log)
             << "mqtt_serial_number:" << serial_number << " master ONLINE";
-        mqtt_client->subscribe("/" + interface_name + "/" + version + "/" +
+        mqtt_client->subscribe(interface_name + "/" + version + "/" +
                                    manufacturer + "/" + serial_number + "/#",
                                0);
       });

@@ -168,9 +168,13 @@ void Dispatcher::idle_detect() {
                     v);
           } else if (v->last_point->type !=
                      data::model::Point::Type::PARK_POSITION) {
-            go_home("TOder_" + std::to_string(now.time_since_epoch().count()) +
-                        "_" + v->name + "_goto_park",
-                    v);
+            auto x = get_park_point(v->last_point);
+            if (x) {
+              go_home("TOder_" +
+                          std::to_string(now.time_since_epoch().count()) + "_" +
+                          v->name + "_goto_park",
+                      v);
+            }
           }
         }
       }

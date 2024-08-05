@@ -266,28 +266,28 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
                   return calculate_turns(a) < calculate_turns(b);
                 });
       for (auto &x : paths) {
-        std::stringstream ss;
-        ss << "\n.- - - - - - - - - - - - - - - - - - - - - - -.\n"
-           << "| turns : " << calculate_turns(x) << " cost : " << x.back()->F
-           << " vertex number : " << x.size() << "\n";
+        // std::stringstream ss;
+        // ss << "\n.- - - - - - - - - - - - - - - - - - - - - - -.\n"
+        //    << "| turns : " << calculate_turns(x) << " cost : " << x.back()->F
+        //    << " vertex number : " << x.size() << "\n";
         std::vector<std::shared_ptr<data::model::Point>> temp;
-        ss << "| path:[";
+        // ss << "| path:[";
         temp.reserve(x.size());
         for (auto &p : x) {
           if (p == *(x.end() - 1)) {
-            ss << p->name << "";
+            // ss << p->name << "";
           } else {
-            ss << p->name << " -> ";
+            // ss << p->name << " -> ";
           }
           temp.push_back(p->equal_point);
         }
-        ss << "]\n";
+        // ss << "]\n";
         if (x.back()->F != std::numeric_limits<float>::max()) {
           res.push_back(std::move(temp));
-          ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
-          CLOG(INFO, planner_log) << ss.str();
+          // ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
+          // CLOG(INFO, planner_log) << ss.str();
         } else {
-          ss << "this path is not open";
+          // ss << "this path is not open";
         }
       }
     }

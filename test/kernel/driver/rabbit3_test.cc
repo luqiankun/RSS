@@ -22,8 +22,8 @@ class SimRabbit3 {
     vda_state.order_update_id = 0;
     vda_state.last_node_id = init_point;
     vda_state.agv_position = vda5050::state::AgvPosition();
-    vda_state.agv_position.value().x = x;
-    vda_state.agv_position.value().y = y;
+    vda_state.agv_position.value().x = x / 1000;
+    vda_state.agv_position.value().y = y / 1000;
     vda_state.agv_position.value().theta = 0;
     vda_state.agv_position.value().map_id = "lyg";
     vda_state.last_node_seq_id = 0;
@@ -47,8 +47,8 @@ class SimRabbit3 {
     con_ops.set_automatic_reconnect(true);
     con_ops.set_keep_alive_interval(5000);
     con_ops.set_connect_timeout(2);
-    auto prefix = "/" + interface_name + "/" + version + "/" + manufacturer +
-                  "/" + serial_number + "/";
+    auto prefix = interface_name + "/" + version + "/" + manufacturer + "/" +
+                  serial_number + "/";
     mqtt::will_options will_ops;
     will_ops.set_qos(0);
     will_ops.set_retained(true);
@@ -67,8 +67,8 @@ class SimRabbit3 {
     if (mqtt_client) {
       th_state = std::thread([&] {
         int send_id{0};
-        auto prefix = "/" + interface_name + "/" + version + "/" +
-                      manufacturer + "/" + serial_number + "/";
+        auto prefix = interface_name + "/" + version + "/" + manufacturer +
+                      "/" + serial_number + "/";
         while (true) {
           if (mqtt_client->is_connected()) {
             try {
@@ -92,8 +92,8 @@ class SimRabbit3 {
       mqtt_client->set_connected_handler([&](std::string) {
         LOG(INFO) << serial_number << "  ONLINE";
 
-        auto prefix = "/" + interface_name + "/" + version + "/" +
-                      manufacturer + "/" + serial_number + "/";
+        auto prefix = interface_name + "/" + version + "/" + manufacturer +
+                      "/" + serial_number + "/";
         jsoncons::json ctx;
         ctx["connectionState"] = "ONLINE";
         ctx["headerId"] = 0;
@@ -108,7 +108,7 @@ class SimRabbit3 {
         msg->set_topic(prefix + "connection");
         mqtt_client->publish(msg);
         //
-        mqtt_client->subscribe("/" + interface_name + "/" + version + "/" +
+        mqtt_client->subscribe(interface_name + "/" + version + "/" +
                                    manufacturer + "/" + serial_number + "/#",
                                0);
       });
@@ -120,7 +120,7 @@ class SimRabbit3 {
             LOG(INFO) << serial_number << " master OFFLINE";
           });
       mqtt_client->connect(con_ops);
-      const std::string prefix = "/" + interface_name + "/" + version + "/" +
+      const std::string prefix = interface_name + "/" + version + "/" +
                                  manufacturer + "/" + serial_number + "/";
       mqtt_client->set_func(prefix + "order", [&](mqtt::const_message_ptr t) {
         // LOG(INFO) << t->get_topic();
@@ -207,17 +207,17 @@ class SimRabbit3 {
                   //   move
                   // first node
                   bool first{true};
-                  for (auto i = 0; i < ord.edges.size(); i++) {
+                  {
                     vda5050::order::Node start_node;
                     vda5050::order::Node end_node;
                     for (auto& x : ord.nodes) {
-                      if (x.node_id == ord.edges.at(i).start_node_id) {
+                      if (x.node_id == ord.edges.at(0).start_node_id) {
                         start_node = x;
                         break;
                       }
                     }
                     for (auto& x : ord.nodes) {
-                      if (x.node_id == ord.edges.at(i).end_node_id) {
+                      if (x.node_id == ord.edges.at(0).end_node_id) {
                         end_node = x;
                         break;
                       }
@@ -257,12 +257,12 @@ class SimRabbit3 {
                     float e_x = end_node.node_position.value().x;
                     float e_y = end_node.node_position.value().y;
                     // move
-                    auto vx = 5000 * cos(std::atan2(e_y - s_y, e_x - s_x));
-                    auto vy = 5000 * sin(std::atan2(e_y - s_y, e_x - s_x));
+                    auto vx = 5 * cos(std::atan2(e_y - s_y, e_x - s_x));
+                    auto vy = 5 * sin(std::atan2(e_y - s_y, e_x - s_x));
                     LOG(INFO) << "Vx " << vx << " Vy " << vy;
                     auto time = sqrt((e_x - s_x) * (e_x - s_x) +
                                      (e_y - s_y) * (e_y - s_y)) *
-                                1000 / 5000;  // ms
+                                1000 / 5;  // ms
                     state->driving = true;
                     for (auto i = 0; i < time; i = i + 50) {
                       while (status == Status::PASUED) {
@@ -278,7 +278,12 @@ class SimRabbit3 {
                     }
                     state->agv_position.value().x = e_x;
                     state->agv_position.value().y = e_y;
+                    std::for_each(
+                        state->edgestates.begin(), state->edgestates.end(),
+                        [&](auto& x) { LOG(INFO) << x.edge_id << "\t"; });
+                    LOG(INFO) << state->edgestates.front().edge_id;
                     state->edgestates.erase(state->edgestates.begin());
+                    LOG(INFO) << state->edgestates.front().edge_id;
                     state->driving = false;
                     state->last_node_id = end_node.node_id;
                     std::unique_lock<std::mutex> lock(mut);
@@ -299,14 +304,14 @@ class SimRabbit3 {
                         }
                       }
                     }
-                    for (int j = 0; j < ord.edges.at(i).actions.size(); j++) {
+                    for (int j = 0; j < ord.edges.at(0).actions.size(); j++) {
                       LOG(INFO) << "action "
-                                << ord.edges.at(i).actions.at(j).action_id;
+                                << ord.edges.at(0).actions.at(j).action_id;
                       std::this_thread::sleep_for(
                           std::chrono::milliseconds(500));
                       for (auto& x : state->actionstates) {
                         if (x.action_id ==
-                            ord.edges.at(i).actions.at(j).action_id) {
+                            ord.edges.at(0).actions.at(j).action_id) {
                           x.action_status =
                               vda5050::state::ActionStatus::FINISHED;
                           std::unique_lock<std::mutex> lock(mut);
@@ -358,12 +363,12 @@ class SimRabbit3 {
                                                      .action_parameters.value()
                                                      .at(1)
                                                      .value);
-                    auto vx = 5000 * cos(std::atan2(e_y - s_y, e_x - s_x));
-                    auto vy = 5000 * sin(std::atan2(e_y - s_y, e_x - s_x));
+                    auto vx = 5 * cos(std::atan2(e_y - s_y, e_x - s_x));
+                    auto vy = 5 * sin(std::atan2(e_y - s_y, e_x - s_x));
                     LOG(INFO) << "Vx " << vx << " Vy " << vy;
                     auto time = sqrt((e_x - s_x) * (e_x - s_x) +
                                      (e_y - s_y) * (e_y - s_y)) *
-                                1000 / 5000;  // ms
+                                1000 / 5;  // ms
                     state->driving = true;
                     state->nodestates.erase(state->nodestates.begin());
 
@@ -371,8 +376,8 @@ class SimRabbit3 {
                       if (!state->agv_position.has_value()) {
                         state->agv_position = vda5050::state::AgvPosition();
                       }
-                      state->agv_position.value().x = s_x + vx / 1000 * i;
-                      state->agv_position.value().y = s_y + vy / 1000 * i;
+                      state->agv_position.value().x = s_x + vx * i;
+                      state->agv_position.value().y = s_y + vy * i;
                       std::this_thread::sleep_for(
                           std::chrono::milliseconds(50));
                       std::unique_lock<std::mutex> lock(mut);
@@ -463,8 +468,8 @@ class SimRabbit3 {
                     std::unique_lock<std::mutex> lock(mut);
                     vda_state.actionstates.push_back(st);
                     mqtt::message_ptr msg = mqtt::make_message(
-                        "/" + interface_name + "/" + version + "/" +
-                            manufacturer + "/" + serial_number + "/" + "state",
+                        interface_name + "/" + version + "/" + manufacturer +
+                            "/" + serial_number + "/" + "state",
                         vda_state.to_json().as_string(), 0, false);
                     vda_state.header_id = vda_state.header_id + 1;
                     vda_state.timestamp =

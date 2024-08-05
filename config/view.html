@@ -578,7 +578,7 @@
                     for (let v of model) {
                         let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"], v["battery_level"], v["envelope"], v["allocatedResources"]);
                         veh.color = v["color"];
-                        // console.log(v["allocatedResources"], v["step"]);
+                        // console.log(v["position"]);
                         veh.step = v["step"];
                         veh.destination = v["destination"]
                         vehicles.push(veh);

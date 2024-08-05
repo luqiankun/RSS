@@ -979,11 +979,11 @@
         <property name="vda5050:action.02.parameter.script" value="robot_pose" />
         <property name="vda5050:action.02.when" value="ORDER_END" />
     </path>
-    <!-- <vehicle name="Vehicle-0001" length="1000" energyLevelCritical="30" energyLevelGood="90"
+    <vehicle name="Vehicle-0001" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
         maxReverseVelocity="1000" envelope="3A">
         <property name="tcs:preferredAdapterClass"
-            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+            value="org.opentcs.vdavehicle.LoopbackCommunicationAdapterFactory" />
         <property name="vda5050:interfaceName" value="uagv" />
         <property name="vda5050:manufacturer" value="rw" />
         <property name="vda5050:minVisualizationInterval" value="1000" />
@@ -1038,7 +1038,7 @@
         <property name="vda5050:ip" value="192.168.0.39" />
         <property name="vda5050:port" value="1883" />
         <vehicleLayout color="#FFFF00" />
-    </vehicle> -->
+    </vehicle>
     <vehicle name="Vehicle-0005" length="1000" energyLevelCritical="30" energyLevelGood="90"
         energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
         maxReverseVelocity="1000">

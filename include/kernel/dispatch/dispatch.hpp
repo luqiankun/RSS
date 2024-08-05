@@ -33,6 +33,7 @@ class Dispatcher : public TCSObject {
                           allocate::TCSResourcePtr>(const std::string&)>
       find_res;
   std::function<void(const std::string&, VehPtr)> go_home;
+  std::function<allocate::PointPtr(allocate::PointPtr)> get_park_point;
   std::function<void(const std::string&, VehPtr)> go_charge;
   std::function<allocate::TransOrderPtr()> get_next_ord;
   std::function<bool()> order_empty;

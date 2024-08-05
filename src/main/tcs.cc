@@ -854,6 +854,9 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         &TCS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->get_next_ord =
         std::bind(&kernel::allocate::OrderPool::pop, orderpool);
+    dispatcher->get_park_point =
+        std::bind(&kernel::allocate::ResourceManager::get_recent_park_point,
+                  resource, std::placeholders::_1);
     for (auto &v : dispatcher->vehicles) {
       v->planner = planner;
       v->scheduler = scheduler;
@@ -952,12 +955,13 @@ void TCS::charge_order(const std::string &name,
   CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   //  检查是否通路
-  auto park_point = resource->get_recent_charge_loc(v->last_point);
-  if (!park_point) {
-    CLOG(ERROR, tcs_log) << "park point not found";
+  auto charge_point = resource->get_recent_charge_loc(v->last_point);
+  if (!charge_point) {
+    CLOG(ERROR, tcs_log) << "charge point not found";
+    return;
   }
   auto destination = orderpool->res_to_destination(
-      park_point, data::order::DriverOrder::Destination::OpType::CHARGE);
+      charge_point, data::order::DriverOrder::Destination::OpType::CHARGE);
   auto dr = std::make_shared<data::order::DriverOrder>("driverorder_charge_" +
                                                        v->name);
   dr->destination = destination;
@@ -1048,7 +1052,7 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
       dest_v["properties"] = json::array();
       for (auto &property : dest->properties) {
         json pro;
-        pro["key"] = property.first;
+        pro["name"] = property.first;
         pro["value"] = property.second;
         dest_v["properties"].push_back(pro);
       }
@@ -1234,7 +1238,7 @@ std::pair<int, std::string> TCS::post_transport_order(
               for (auto &pro : d["properties"].array_range()) {
                 destination->properties.insert(
                     std::pair<std::string, std::string>(
-                        pro["key"].as_string(), pro["value"].as_string()));
+                        pro["name"].as_string(), pro["value"].as_string()));
               }
             }
             auto dr = std::make_shared<data::order::DriverOrder>(
@@ -1259,7 +1263,7 @@ std::pair<int, std::string> TCS::post_transport_order(
     if (req.contains("properties")) {
       for (auto &pro : req["properties"].array_range()) {
         ord->properties.insert(std::pair<std::string, std::string>(
-            pro["key"].as_string(), pro["value"].as_string()));
+            pro["name"].as_string(), pro["value"].as_string()));
       }
     }
     if (req.contains("dependencies")) {
@@ -1385,7 +1389,7 @@ json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
   res["properties"] = json::array();
   for (auto &pro : quence->properties) {
     json p;
-    p["key"] = pro.first;
+    p["name"] = pro.first;
     p["value"] = pro.second;
     res["properties"].push_back(p);
   }
@@ -1959,7 +1963,7 @@ std::pair<int, std::string> TCS::get_model() {
     vehicle["properties"] = json::array();
     for (auto &pro : v->properties) {
       json t;
-      t["key"] = pro.first;
+      t["name"] = pro.first;
       t["value"] = pro.second;
       vehicle["properties"].push_back(t);
     }
@@ -2455,7 +2459,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           if (v.contains("properties")) {
             for (auto &pro : v["properties"].array_range()) {
               veh->properties.insert(std::pair<std::string, std::string>(
-                  pro["key"].as_string(), pro["value"].as_string()));
+                  pro["name"].as_string(), pro["value"].as_string()));
             }
           }
           ///////////////////////////
@@ -2511,6 +2515,9 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         std::bind(&kernel::allocate::OrderPool::pop, orderpool);
     dispatcher->go_charge = std::bind(
         &TCS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
+    dispatcher->get_park_point =
+        std::bind(&kernel::allocate::ResourceManager::get_recent_park_point,
+                  resource, std::placeholders::_1);
     for (auto &v : dispatcher->vehicles) {
       v->planner = planner;
       v->scheduler = scheduler;
@@ -2597,22 +2604,23 @@ std::string TCS::get_vehicles_step() {
           if (dr->state == data::order::DriverOrder::State::TRAVELLING) {
             // current first
             auto step_ = dr->route->current_step;
-            LOG(INFO) << "++++++++++++++++++" << step_->name;
-            auto beg = step_->path->source_point.lock();
-            auto end = step_->path->destination_point.lock();
-            json step;
-            step["src"] = beg->name;
-            step["dest"] = end->name;
-            if (step_->vehicle_orientation ==
-                data::order::Step::Orientation::FORWARD) {
-              step["orientation"] = "FORWARD";
-            } else if (step_->vehicle_orientation ==
-                       data::order::Step::Orientation::BACKWARD) {
-              step["orientation"] = "BACKWARD";
-            } else {
-              step["orientation"] = "UNDEFINED";
+            if (step_) {  // LOG(INFO) << "++++++++++++++++++" << step_->name;
+              auto beg = step_->path->source_point.lock();
+              auto end = step_->path->destination_point.lock();
+              json step;
+              step["src"] = beg->name;
+              step["dest"] = end->name;
+              if (step_->vehicle_orientation ==
+                  data::order::Step::Orientation::FORWARD) {
+                step["orientation"] = "FORWARD";
+              } else if (step_->vehicle_orientation ==
+                         data::order::Step::Orientation::BACKWARD) {
+                step["orientation"] = "BACKWARD";
+              } else {
+                step["orientation"] = "UNDEFINED";
+              }
+              veh["step"].push_back(step);
             }
-            veh["step"].push_back(step);
 
             // other
             for (auto &path : dr->route->steps) {

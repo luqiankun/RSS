@@ -77,7 +77,6 @@ class InforRef {
   std::string reference_key{};
   std::string reference_value{};
 };
-
 class InforMation {
  public:
   std::string info_type{};
@@ -626,7 +625,7 @@ class VDA5050State {
   std::optional<AgvPosition> agv_position;
   std::optional<Velocity> velocity;
   std::optional<std::vector<Load>> loads;
-  std::optional<InforMation> information;
+  std::optional<std::vector<InforMation>> information;
   VDA5050State() {}
   explicit VDA5050State(jsoncons::json& obj)
       : header_id(obj["headerId"].as_integer<int>()),
@@ -682,7 +681,7 @@ class VDA5050State {
       newbase_request = obj["newBaseRequest"].as_bool();
     }
     if (obj.contains("distanceSinceLastNode")) {
-      distance_since_last_node = obj["distanceSinceLastNode"].as_bool();
+      distance_since_last_node = obj["distanceSinceLastNode"].as_double();
     }
     if (obj.contains("zoneSetId")) {
       zoneset_id = obj["zoneSetId"].as_string();
@@ -701,7 +700,11 @@ class VDA5050State {
       }
     }
     if (obj.contains("information")) {
-      information = InforMation(obj["information"]);
+      information = std::vector<InforMation>();
+      for (auto& x : obj["information"].array_range()) {
+        auto info = InforMation(x);
+        information.value().push_back(info);
+      }
     }
   }
   jsoncons::json to_json() {
@@ -772,7 +775,9 @@ class VDA5050State {
       }
     }
     if (information.has_value()) {
-      res["information"] = information.value().to_json();
+      res["information"] = jsoncons::json::array();
+      for (auto& x : information.value())
+        res["information"].push_back(x.to_json());
     }
     return res;
   }
