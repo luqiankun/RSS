@@ -30,20 +30,18 @@ std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
     }
     temp.push_back(x->path);
     step_res.push_back(x->path);
-    for (auto x = step_res.begin(); x != step_res.end();) {
+    for (auto x_res = step_res.begin(); x_res != step_res.end();) {
       bool has{false};
       for (auto& allocate_list : veh->allocated_resources) {
-        for (auto& temo_res : allocate_list) {
-          if (temo_res == *x) {
-            has = true;
-            break;
-          }
+        if (std::any_of(allocate_list.begin(), allocate_list.end(),
+                        [&](auto& x) { return x == *x_res; })) {
+          has = true;
         }
       }
       if (has) {
-        x = step_res.erase(x);
+        x_res = step_res.erase(x_res);
       } else {
-        x++;
+        x_res++;
       }
     }
   }
@@ -114,20 +112,18 @@ void Command::run_once() {
           }
           temp.push_back(x->path);
           step_res.push_back(x->path);
-          for (auto x = step_res.begin(); x != step_res.end();) {
+          for (auto x_res = step_res.begin(); x_res != step_res.end();) {
             bool has{false};
             for (auto& allocate_list : veh->allocated_resources) {
-              for (auto& temo_res : allocate_list) {
-                if (temo_res == *x) {
-                  has = true;
-                  break;
-                }
+              if (std::any_of(allocate_list.begin(), allocate_list.end(),
+                              [&](auto& v) { return v == *x_res; })) {
+                has = true;
               }
             }
             if (has) {
-              x = step_res.erase(x);
+              x_res = step_res.erase(x_res);
             } else {
-              x++;
+              x_res++;
             }
           }
           // allocate
@@ -136,17 +132,17 @@ void Command::run_once() {
                                                                step_res.end()});
           if (!res->allocate(step_res, veh)) {
             // future_claim
-            for (auto& x : step_res) {
+            for (auto& x_res : step_res) {
               bool has{false};
               for (auto& t : veh->allocated_resources) {
-                for (auto& c : t) {
-                  if (c == x) {
-                    has = true;
-                  }
+                if (std::any_of(t.begin(), t.end(),
+                                [&](auto& v) { return v == x_res; })) {
+                  has = true;
+                  break;
                 }
               }
               if (!has) {
-                veh->future_allocate_resources.insert(x);
+                veh->future_allocate_resources.insert(x_res);
               }
             }
             //
@@ -157,10 +153,10 @@ void Command::run_once() {
         for (auto& x : get_future(driver_order)) {
           bool has{false};
           for (auto& t : veh->allocated_resources) {
-            for (auto& c : t) {
-              if (c == x) {
-                has = true;
-              }
+            if (std::any_of(t.begin(), t.end(),
+                            [&](auto& v) { return v == x; })) {
+              has = true;
+              break;
             }
           }
           if (!has) {
@@ -179,11 +175,11 @@ void Command::run_once() {
           std::unordered_set<std::shared_ptr<TCSResource>>{temp.begin(),
                                                            temp.end()});
       for (auto& r : veh->allocated_resources) {
-        for (auto& x : r) {
-          if (x == dest->destination.lock()) {
-            state = State::ALLOCATED;
-            return;
-          }
+        if (std::any_of(r.begin(), r.end(), [&](auto& v) {
+              return v == dest->destination.lock();
+            })) {
+          state = State::ALLOCATED;
+          return;
         }
       }
       if (res->allocate(temp, veh)) {

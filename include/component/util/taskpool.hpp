@@ -150,7 +150,7 @@ class promise_pack_t {
  public:
   promise_pack_t(std::function<T && ()> _func) : m_func(_func) {}
   void invoke() { m_promise.set_value(std::move(m_func())); }
-  future_t<T> get_future() { return std::move(m_promise.get_future()); }
+  future_t<T> get_future() { return m_promise.get_future(); }
 
  private:
   std::function<T()> m_func;
@@ -165,7 +165,7 @@ class promise_pack_t<void> {
     m_func();
     m_promise.set_value();
   }
-  future_t<void> get_future() { return std::move(m_promise.get_future()); }
+  future_t<void> get_future() { return m_promise.get_future(); }
 
  private:
   std::function<void()> m_func;

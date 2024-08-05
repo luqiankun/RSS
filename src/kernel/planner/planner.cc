@@ -309,7 +309,7 @@ Planner::to_model_path(
   std::transform(src.begin(), src.end(), std::back_inserter(res), [](auto &x) {
     std::vector<std::shared_ptr<data::model::Point>> temp;
     std::transform(x.first.begin(), x.first.end(), std::back_inserter(temp),
-                   [](auto &x) { return x->equal_point; });
+                   [](const auto &x) { return x->equal_point; });
     return temp;
   });
   return res;

@@ -139,11 +139,8 @@ bool Edge::operator==(const EdgePtr &edge) {
 Console::Console(Eigen::Vector2i pos, const std::string &n)
     : location(pos), layout(pos), name(n) {}
 Console::Console(Eigen::Vector2i pos, Eigen::Vector2i layout,
-                 const std::string &n) {
-  location = pos;
-  layout = layout;
-  name = n;
-}
+                 const std::string &n)
+    : location(pos), layout(layout), name(n) {}
 
 }  // namespace planner
 }  // namespace kernel

@@ -97,8 +97,8 @@ std::vector<VehPtr> Dispatcher::deadlock_loop() {
 
       auto depens = find_owners(x);
       if (!depens.empty()) {
-        for (auto& x : depens) {
-          vs.push(x);
+        for (auto& x_dep : depens) {
+          vs.push(x_dep);
         }
       } else {
         exist.pop_back();
@@ -226,9 +226,9 @@ void Dispatcher::dispatch_once() {
                         dest_check.second)
                         ->link.lock();
           }
-          auto v = select_vehicle(start);
-          if (v) {
-            current->intended_vehicle = v;
+          auto v_select = select_vehicle(start);
+          if (v_select) {
+            current->intended_vehicle = v_select;
             current->state = data::order::TransportOrder::State::DISPATCHABLE;
             CLOG(INFO, dispatch_log)
                 << current->name << " status: [dispatchable]\n";

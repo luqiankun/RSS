@@ -1,6 +1,7 @@
 #ifndef VEHICLE_HPP
 #define VEHICLE_HPP
 #include "../../../include/3rdparty/log/easylogging++.h"
+#include "../../../include/3rdparty/uuid/uuid.hpp"
 #include "../../../include/component/util/taskpool.hpp"
 #include "../../../include/component/vda5050/master.hpp"
 #include "../../component/data/order/orderquence.hpp"
@@ -8,7 +9,6 @@
 #include "../allocate/order.hpp"
 #include "../planner/planner.hpp"
 #include "../schedule/schedule.hpp"
-
 namespace kernel {
 namespace dispatch {
 class Dispatcher;
@@ -54,8 +54,8 @@ class Vehicle : public schedule::Client,
 
  public:
   int priority_level{0};
-  int length;  // mm
-  int width;
+  int length{0};  // mm
+  int width{0};
   int max_vel{0};
   int max_reverse_vel{0};
   int energy_level_good{70};      // 接收订单，无订单自动充电
@@ -97,7 +97,7 @@ class Vehicle : public schedule::Client,
 class SimVehicle : public Vehicle {
  public:
   using Vehicle::Vehicle;
-  SimVehicle(int rate, std::string name) : rate(rate), Vehicle(name) {}
+  SimVehicle(int rate, const std::string& name) : rate(rate), Vehicle(name) {}
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
   bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
   bool instant_action(std::shared_ptr<data::model::Actions::Action>) override;
@@ -112,10 +112,9 @@ class Rabbit3 : public Vehicle {
   Rabbit3(const std::string& name, const std::string& interface_name,
           const std::string& serial_number, const std::string& version,
           const std::string& manufacturer)
-      : Vehicle(name) {
-    mqtt_cli = std::make_shared<vda5050::VehicleMaster>(
-        interface_name, serial_number, version, manufacturer);
-  }
+      : Vehicle(name),
+        mqtt_cli(std::make_shared<vda5050::VehicleMaster>(
+            interface_name, serial_number, version, manufacturer)) {}
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
   bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
   bool instant_action(std::shared_ptr<data::model::Actions::Action>) override;
@@ -127,18 +126,19 @@ class Rabbit3 : public Vehicle {
  public:
   std::shared_ptr<vda5050::VehicleMaster> mqtt_cli;
   vda5050::VehicleMqttStatus veh_state{vda5050::VehicleMqttStatus::OFFLINE};
-  std::string broker_ip;
-  int broker_port;
+  std::string broker_ip{"127.0.0.1"};
+  int broker_port{1883};
   vda5050::state ::VDA5050State vdastate;
   std::string map_id;
   int send_header_id{0};
-  int order_id{-1};
+  uuids::uuid order_id;
+  uuids::uuid_random_generator* gen;
   bool init_pos{false};
   int rece_header_id{-1};
 };
 class InvalidVehicle : public Vehicle {
  public:
-  InvalidVehicle(const std::string& name) : Vehicle(name) {}
+  explicit InvalidVehicle(const std::string& name) : Vehicle(name) {}
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override {
     return false;
   }

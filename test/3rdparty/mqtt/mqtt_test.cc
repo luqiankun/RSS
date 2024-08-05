@@ -24,7 +24,7 @@ int main() {
       [](const std::string p) { std::cout << "dis " << p << '\n'; });
   cli.on();
   cli.connect(ops);
-  cli.set_func("uagv/v2/tx/tx3/state", [](mqtt::const_message_ptr t) {
+  cli.set_func("uagv/2.0/rw/tx2/connection", [](mqtt::const_message_ptr t) {
     std::cout << t->to_string() << "\n";
   });
   std::cin.get();

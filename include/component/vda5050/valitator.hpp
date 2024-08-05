@@ -5,7 +5,7 @@ namespace vda5050 {
 class SchemaValidator {
  public:
   static std::vector<std::string> validate(
-      jsoncons::json obj,
+      jsoncons::json& obj,
       std::shared_ptr<jsoncons::jsonschema::json_schema<jsoncons::json>>
           schema) {
     std::vector<std::string> errors;

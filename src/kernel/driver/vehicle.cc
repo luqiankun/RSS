@@ -217,7 +217,6 @@ void Vehicle::get_next_ord() {
 
 void Vehicle::command_done() {
   process_state = proState::AWAITING_ORDER;
-  bool ord_shutdown{false};
   if (reroute_flag) {
     plan_route();
     reroute_flag = false;
@@ -467,7 +466,6 @@ void SimVehicle::init() {
   }
 }
 bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
-  std::vector<int> res;
   if (steps.empty()) {
     return false;
   }
@@ -522,6 +520,12 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
 }
 
 void Rabbit3::init() {
+  std::random_device rd;
+  auto seed_data = std::array<int, std::mt19937::state_size>{};
+  std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+  std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
+  std::mt19937 generator(seq);
+  gen = new uuids::uuid_random_generator(generator);
   mqtt_cli->set_mqtt_ops(name, this->broker_ip, this->broker_port);
   auto prefix = mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
@@ -627,7 +631,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       }
 
     } else {
-      std::for_each(ms.begin(), ms.end(), [&](const std::string s) {
+      std::for_each(ms.begin(), ms.end(), [&](const std::string& s) {
         CLOG(WARNING, driver_log) << name << " " << s;
       });
     }
@@ -659,7 +663,7 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
         state = Vehicle::State::UNKNOWN;
       }
     } else {
-      std::for_each(ms.begin(), ms.end(), [&](const std::string s) {
+      std::for_each(ms.begin(), ms.end(), [&](const std::string& s) {
         CLOG(WARNING, driver_log) << name << " " << s;
       });
     }
@@ -704,8 +708,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   ord.version = mqtt_cli->version;
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
-  order_id++;
-  ord.order_id = prefix + std::to_string(order_id);
+  order_id = (*gen)();
+  ord.order_id = prefix + uuids::to_string(order_id);
   ord.order_update_id = 0;
 
   std::shared_ptr<data::model::Point> start_point;
@@ -818,12 +822,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       task_run = false;
       return false;
     }
-    if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << name << " vehlicle not online";
-      task_run = false;
-      return false;
-    }
-    if (vdastate.order_id == prefix + std::to_string(order_id)) {
+    if (vdastate.order_id == prefix + uuids::to_string(order_id)) {
       auto p = get_time_from_str(vdastate.timestamp);
       if (p.has_value()) {
         auto dt = std::chrono::system_clock::now() - p.value();
@@ -836,12 +835,6 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       } else {
         CLOG(WARNING, driver_log)
             << name << " dot not has timestamp, the status may be incorrect ";
-      }
-      // state
-      if (veh_state == vda5050::VehicleMqttStatus::OFFLINE) {
-        CLOG(ERROR, driver_log) << name << " vehicle offline";
-        task_run = false;
-        return false;
       }
       // error
       if (!vdastate.errors.empty()) {
@@ -912,11 +905,16 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
         //                 << ord.edges.front().edge_id;
       }
     } else {
-      CLOG(WARNING, driver_log)
+      CLOG_N_TIMES(1, WARNING, driver_log)
           << name << " "
           << "order state has not been updated,wait_for {\'"
-          << prefix + std::to_string(order_id) << "\'}, but now is {\'"
-          << vdastate.order_id << "\'}\n";
+          << prefix + uuids::to_string(order_id) << "\'}, but now is {\'"
+          << prefix << vdastate.order_id << "\'}\n";
+      CLOG_EVERY_N(10, WARNING, driver_log)
+          << name << " "
+          << "order state has not been updated,wait_for {\'"
+          << prefix + uuids::to_string(order_id) << "\'}, but now is {\'"
+          << prefix << vdastate.order_id << "\'}\n";
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -960,8 +958,8 @@ bool Rabbit3::action(
   ord.version = mqtt_cli->version;
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
-  order_id++;
-  ord.order_id = prefix + std::to_string(order_id);
+  order_id = (*gen)();
+  ord.order_id = prefix + uuids::to_string(order_id);
   ord.order_update_id = 0;
   {
     auto node = vda5050::order::Node();
@@ -1027,26 +1025,13 @@ bool Rabbit3::action(
   // wait
   int n{0};
   while (task_run) {
-    if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "master not online";
-      task_run = false;
-      return false;
-    }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
       CLOG(ERROR, driver_log) << name << " "
                               << "vehlicle not online";
       task_run = false;
       return false;
     }
-    if (vdastate.order_id == prefix + std::to_string(order_id)) {
-      // state
-      if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-        CLOG(ERROR, driver_log) << name << " "
-                                << "vehicle not online";
-        task_run = false;
-        return false;
-      }
+    if (vdastate.order_id == prefix + uuids::to_string(order_id)) {
       // error
       if (!vdastate.errors.empty()) {
         for (auto& x : vdastate.errors) {
@@ -1090,7 +1075,7 @@ bool Rabbit3::action(
       CLOG(WARNING, driver_log)
           << name << " "
           << "order state has not been updated,needed {\'"
-          << prefix + std::to_string(order_id) << "\'}, but now is {\'"
+          << prefix + uuids::to_string(order_id) << "\'}, but now is {\'"
           << vdastate.order_id << "}\n";
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
