@@ -1,6 +1,6 @@
 #ifndef LOCATIONTYYPE_HPP
 #define LOCATIONTYYPE_HPP
-#include "../../tcsresource.hpp"
+#include "../../rssresource.hpp"
 namespace data {
 namespace model {
 struct LocationTypeLayout {
@@ -65,9 +65,9 @@ struct LocationTypeLayout {
   };
   LocationRepresentation location_representation{LocationRepresentation::NONE};
 };
-class LocationType : public TCSObject {
+class LocationType : public RSSObject {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   void get_param() {
     std::regex P{R"(^vda5050:destinationAction.([^.]+).parameter.([^.]+)$)"};
     for (auto& x : properties) {

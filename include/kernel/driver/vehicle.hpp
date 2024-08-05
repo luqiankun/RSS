@@ -1,11 +1,10 @@
 #ifndef VEHICLE_HPP
 #define VEHICLE_HPP
 #include "../../../include/3rdparty/log/easylogging++.h"
-#include "../../../include/3rdparty/uuid/uuid.hpp"
 #include "../../../include/component/util/taskpool.hpp"
 #include "../../../include/component/vda5050/master.hpp"
 #include "../../component/data/order/orderquence.hpp"
-#include "../../component/tcsobject.hpp"
+#include "../../component/rssobject.hpp"
 #include "../allocate/order.hpp"
 #include "../planner/planner.hpp"
 #include "../schedule/schedule.hpp"
@@ -132,7 +131,6 @@ class Rabbit3 : public Vehicle {
   std::string map_id;
   int send_header_id{0};
   uuids::uuid order_id;
-  uuids::uuid_random_generator* gen;
   bool init_pos{false};
   int rece_header_id{-1};
 };

@@ -9,10 +9,10 @@ using RoutePtr = std::shared_ptr<data::order::Route>;
 using OpType = data::order::DriverOrder::Destination::OpType;
 using TransOrderPtr = std::shared_ptr<data::order::TransportOrder>;
 using OrderSeqPtr = std::shared_ptr<data::order::OrderSequence>;
-class OrderPool : public TCSObject {
+class OrderPool : public RSSObject {
  public:
   DriverOrderPtr route_to_driverorder(RoutePtr route, DestPtr dest);
-  DestPtr res_to_destination(const std::shared_ptr<TCSResource>& res,
+  DestPtr res_to_destination(const std::shared_ptr<RSSResource>& res,
                              OpType op);
   void cancel_all_order();
   void cancel_order(size_t order_uuid);
@@ -22,7 +22,7 @@ class OrderPool : public TCSObject {
   bool is_empty() { return orderpool.empty(); }
 
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   std::deque<TransOrderPtr> orderpool;
   std::deque<TransOrderPtr> ended_orderpool;
   std::deque<OrderSeqPtr> orderquence;

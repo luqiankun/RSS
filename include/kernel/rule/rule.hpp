@@ -10,12 +10,12 @@ class Planner;
 }
 namespace allocate {
 class ResourceManager;
-class RuleBase : public TCSObject {
+class RuleBase : public RSSObject {
  public:
   RuleBase(const std::string& name, std::shared_ptr<ResourceManager> r)
-      : TCSObject(name), res(r){};
-  using TCSObject::TCSObject;
-  virtual bool pass(std::vector<std::shared_ptr<TCSResource>> res,
+      : RSSObject(name), res(r){};
+  using RSSObject::RSSObject;
+  virtual bool pass(std::vector<std::shared_ptr<RSSResource>> res,
                     std::shared_ptr<schedule::Client>) = 0;
 
  public:
@@ -25,14 +25,14 @@ class RuleBase : public TCSObject {
 class OwnerRule : public RuleBase {
  public:
   using RuleBase::RuleBase;
-  bool pass(std::vector<std::shared_ptr<TCSResource>>,
+  bool pass(std::vector<std::shared_ptr<RSSResource>>,
             std::shared_ptr<schedule::Client>) override;
 };
 
 class CollisionRule : public RuleBase {
  public:
   using RuleBase::RuleBase;
-  bool pass(std::vector<std::shared_ptr<TCSResource>> res,
+  bool pass(std::vector<std::shared_ptr<RSSResource>> res,
             std::shared_ptr<schedule::Client>) override;
 };
 
@@ -42,13 +42,13 @@ class BlockRuleBase : public RuleBase {
 
  public:
   std::string color;
-  std::unordered_set<std::shared_ptr<TCSObject>> owners;
-  std::unordered_set<std::shared_ptr<TCSResource>> occs;
+  std::unordered_set<std::shared_ptr<RSSObject>> owners;
+  std::unordered_set<std::shared_ptr<RSSResource>> occs;
 };
 class OnlyOneGatherRule : public BlockRuleBase {
  public:
   using BlockRuleBase::BlockRuleBase;
-  bool pass(std::vector<std::shared_ptr<TCSResource>>,
+  bool pass(std::vector<std::shared_ptr<RSSResource>>,
             std::shared_ptr<schedule::Client>) override;
 
  public:

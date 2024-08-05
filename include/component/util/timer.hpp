@@ -7,6 +7,7 @@
 #include <regex>
 #include <sstream>
 
+#include "../../../include/3rdparty/uuid/uuid.hpp"
 #include "../../3rdparty/log/easylogging++.h"
 constexpr auto timer_log{"timer"};
 
@@ -75,5 +76,14 @@ inline std::optional<std::chrono::system_clock::time_point> get_time_from_str(
     return std::nullopt;
   }
 }
-
+inline static uuids::uuid get_uuid() {
+  static std::random_device rd;
+  static auto seed_data = std::array<int, std::mt19937::state_size>{};
+  std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
+  std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
+  static std::mt19937 generator(seq);
+  static uuids::uuid_random_generator gen{generator};
+  uuids::uuid const id = gen();
+  return id;
+}
 #endif

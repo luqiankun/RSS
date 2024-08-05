@@ -5,15 +5,15 @@
 namespace data {
 namespace order {
 class TransportOrder;
-class DriverOrder : public TCSObject {
+class DriverOrder : public RSSObject {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   enum class State { PRISTINE, TRAVELLING, OPERATING, FINISHED, FAILED };
 
   struct Destination {
     using OpType = data::model::Actions::OpType;
     std::map<std::string, std::string> properties;
-    std::weak_ptr<TCSResource> destination;
+    std::weak_ptr<RSSResource> destination;
     OpType operation{OpType::NOP};
 
     std::string get_type() {

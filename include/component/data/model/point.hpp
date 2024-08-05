@@ -1,15 +1,15 @@
 #ifndef POINT_HPP
 #define POINT_HPP
-#include "../../tcsresource.hpp"
+#include "../../rssresource.hpp"
 #include "./envelope.hpp"
 namespace data {
 namespace model {
 using namespace Eigen;
 class Path;
 class Location;
-class Point : public TCSResource {
+class Point : public RSSResource {
  public:
-  using TCSResource::TCSResource;
+  using RSSResource::RSSResource;
   struct Layout {
     Vector2i position{0, 0};
     Vector2i label_offset{0, 0};

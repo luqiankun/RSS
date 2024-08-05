@@ -3,9 +3,9 @@
 #include "transportorder.hpp"
 namespace data {
 namespace order {
-class OrderSequence : public TCSObject {
+class OrderSequence : public RSSObject {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   enum class Type {
     TYPE_ANY,
     TYPE_NONE,

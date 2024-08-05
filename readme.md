@@ -38,17 +38,17 @@ allow_anonymous true
 用MQTTX测试一下确定连接通畅
 ### 运行服务端
 ```
-cd ./install/TCS
+cd ./install/RobotSchedulingSystem
 ls
 ```
 确保当前路径下存在config目录
-运行 tcs文件
+运行 rss文件
 ```
-./tcs
+./rss
 ```
 正常的输出
 ```
-2024-04-30 11:30:24,808 INFO [tcs] read param success
+2024-04-30 11:30:24,808 INFO [rss] read param success
 [I 240430 11:30:24.8092 httpsrv.cc:295] listen 0.0.0.0:8080
 [I 240430 11:30:25.0094 main.cc:228] service start, press 'Ctrl + C' to exit.
 ```
@@ -110,7 +110,7 @@ ls
 
 #### 也可以使用api工具发送http请求
 config中有api接口定义文件
-> TCS.openapi.json
+> RSS.openapi.json
 
 发送上传模型请求：
 路由 /plantModel
@@ -121,21 +121,21 @@ body config中的map.xml内容
 
 操作成功服务器会输出
 ```
-[I 240430 11:33:47.4365 tcs.cc:627] init orderpool ok
-[I 240430 11:33:47.4365 tcs.cc:632] init scheduler ok
-[I 240430 11:33:47.4365 tcs.cc:622] init dispatcher ok
-[I 240430 11:33:47.4369 tcs.cc:84] init point size 93
-[I 240430 11:33:47.4371 tcs.cc:152] init loc_type size 3
-[I 240430 11:33:47.4373 tcs.cc:236] init location size 91
-[I 240430 11:33:47.4486 tcs.cc:336] init path size 98
-[I 240430 11:33:47.4490 tcs.cc:500] init vehicle size 4
-[I 240430 11:33:47.4490 tcs.cc:504] init resource ok
+[I 240430 11:33:47.4365 rss.cc:627] init orderpool ok
+[I 240430 11:33:47.4365 rss.cc:632] init scheduler ok
+[I 240430 11:33:47.4365 rss.cc:622] init dispatcher ok
+[I 240430 11:33:47.4369 rss.cc:84] init point size 93
+[I 240430 11:33:47.4371 rss.cc:152] init loc_type size 3
+[I 240430 11:33:47.4373 rss.cc:236] init location size 91
+[I 240430 11:33:47.4486 rss.cc:336] init path size 98
+[I 240430 11:33:47.4490 rss.cc:500] init vehicle size 4
+[I 240430 11:33:47.4490 rss.cc:504] init resource ok
 [I 240430 11:33:47.4495 timer.hpp:25] generate map use time: 0(s) 0(ms) 487(us)
-[I 240430 11:33:47.4495 tcs.cc:640] init planner ok
-[I 240430 11:33:47.4495 tcs.cc:523] run all ...
+[I 240430 11:33:47.4495 rss.cc:640] init planner ok
+[I 240430 11:33:47.4495 rss.cc:523] run all ...
 [I 240430 11:33:47.4508 dispatch.cc:279] Dispatcher run....
 [I 240430 11:33:47.4608 schedule.cc:10] Scheduler run....
-[I 240430 11:33:47.4609 tcs.cc:525] run all ok
+[I 240430 11:33:47.4609 rss.cc:525] run all ok
 [I 240430 11:33:47.5507 master.cc:47] mqtt_serial_number:tx2 master ONLINE
 [I 240430 11:33:47.5508 master.cc:47] mqtt_serial_number:tx1 master ONLINE
 [I 240430 11:33:47.5508 master.cc:47] mqtt_serial_number:tx3 master ONLINE

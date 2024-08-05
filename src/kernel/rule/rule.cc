@@ -36,7 +36,7 @@ void OnlyOneRectRule::get_occupys() {
   }
 }
 
-bool OnlyOneGatherRule::pass(std::vector<std::shared_ptr<TCSResource>>,
+bool OnlyOneGatherRule::pass(std::vector<std::shared_ptr<RSSResource>>,
                              std::shared_ptr<schedule::Client> client) {
   owners.clear();
   for (auto& x : occs) {
@@ -59,11 +59,11 @@ bool OnlyOneGatherRule::pass(std::vector<std::shared_ptr<TCSResource>>,
   }
 }
 
-bool OwnerRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
+bool OwnerRule::pass(std::vector<std::shared_ptr<RSSResource>> resource,
                      std::shared_ptr<schedule::Client> client) {
   for (auto& r : resource) {
     for (auto& p : res.lock()->points) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         auto it = p->owner.lock();
         if (!it || it == client) {
         } else {
@@ -72,7 +72,7 @@ bool OwnerRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
       }
     }
     for (auto& p : res.lock()->paths) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         auto it = p->owner.lock();
         if (!it || it == client) {
         } else {
@@ -81,7 +81,7 @@ bool OwnerRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
       }
     }
     for (auto& p : res.lock()->locations) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         auto it = p->owner.lock();
         if (!it || it == client) {
         } else {
@@ -94,7 +94,7 @@ bool OwnerRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
 }
 
 std::shared_ptr<data::model::Envelope> get_envelope(
-    std::shared_ptr<TCSResource> res, std::string key) {
+    std::shared_ptr<RSSResource> res, std::string key) {
   auto it = res->envelopes.find(key);
   if (it != res->envelopes.end()) {
     return std::dynamic_pointer_cast<data::model::Envelope>(it->second);
@@ -102,7 +102,7 @@ std::shared_ptr<data::model::Envelope> get_envelope(
   return nullptr;
 }
 
-bool CollisionRule::pass(std::vector<std::shared_ptr<TCSResource>> resource,
+bool CollisionRule::pass(std::vector<std::shared_ptr<RSSResource>> resource,
                          std::shared_ptr<schedule::Client> client) {
   for (auto& r : resource) {
     auto client_envelope = get_envelope(r, client->envelope_key);

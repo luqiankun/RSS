@@ -3,19 +3,19 @@
 #include "../model/path.hpp"
 namespace data {
 namespace order {
-class Step : public TCSObject {
+class Step : public RSSObject {
  public:
   enum class Orientation { FORWARD, BACKWARD, UNDEFINED };
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   int wait_time{0};
   std::shared_ptr<model::Path> path;
   int route_index{0};
   bool execution_allowed{false};
   Orientation vehicle_orientation{Orientation::UNDEFINED};
 };
-class Route : public TCSObject {
+class Route : public RSSObject {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   std::deque<std::shared_ptr<Step>> steps;
   std::shared_ptr<Step> current_step;
   int64_t costs{0};

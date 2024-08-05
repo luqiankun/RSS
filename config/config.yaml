@@ -1,4 +1,4 @@
-#windows下注意该文件编码格式要为GBK格式,否则可以读取失败
+#windows下注意该文件编码格式要为GBK格式,否则可能读取内容失败
 log:
   path: "logs"
   # fmt: "[%levshort] %datetime{%y%M%d %H:%m:%s.%g} %logger %thread %fbase:%line] %msg" #log format
@@ -13,7 +13,7 @@ log:
 httpserver:
   ip: "0.0.0.0" # 默认所有ip都可连接
   port: 55200
-tcs:
+rss:
   auto_init:
     enable: true # 启动时是否自动加载一个地图
     xml_path: "config/map.xml" #绝对目录或相对执行文件目录

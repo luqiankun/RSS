@@ -1,4 +1,4 @@
-#include "../../include/main/tcs.hpp"
+#include "../../include/main/rss.hpp"
 
 #include "../../include/kernel/driver/vehicle.hpp"
 namespace httplib {
@@ -77,7 +77,7 @@ enum StatusCode {
   NetworkAuthenticationRequired_511 = 511,
 };
 }
-std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
+std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
   std::unique_lock<std::shared_mutex> lock(mutex);
   stop();
   init_orderpool();
@@ -87,7 +87,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
   this->resource =
       std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
   this->resource->is_connected = std::bind(
-      &TCS::is_connect, this, std::placeholders::_1, std::placeholders::_2);
+      &RSS::is_connect, this, std::placeholders::_1, std::placeholders::_2);
   auto control_rule =
       std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
   auto envelope_rule = std::make_shared<kernel::allocate::CollisionRule>(
@@ -98,7 +98,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
   try {
     auto ret = doc.load_string(body.c_str());
     if (ret.status != pugi::status_ok) {
-      CLOG(ERROR, tcs_log) << "parse error: " << ret.description();
+      CLOG(ERROR, rss_log) << "parse error: " << ret.description();
       json res = json::array();
       auto msg =
           "Could not parse XML input '" + std::string(ret.description()) + "'.";
@@ -109,7 +109,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
     //
     auto root = doc.first_child();  // <model>
     if (std::string(root.name()) != "model") {
-      CLOG(ERROR, tcs_log) << "parse error: "
+      CLOG(ERROR, rss_log) << "parse error: "
                            << "'don't has model'";
       json res = json::array();
       auto msg =
@@ -255,7 +255,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->points.push_back(p);
         point = point.next_sibling();
       }
-      CLOG(INFO, tcs_log) << "init point size " << resource->points.size();
+      CLOG(INFO, rss_log) << "init point size " << resource->points.size();
     }
 
     {
@@ -323,7 +323,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->location_types.push_back(lt);
         loc_type = loc_type.next_sibling();
       }
-      CLOG(INFO, tcs_log) << "init loc_type size "
+      CLOG(INFO, rss_log) << "init loc_type size "
                           << resource->location_types.size();
     }
     {  // location
@@ -407,7 +407,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->locations.push_back(loc);
         location = location.next_sibling();
       }
-      CLOG(INFO, tcs_log) << "init location size "
+      CLOG(INFO, rss_log) << "init location size "
                           << resource->locations.size();
     }
     {  // path
@@ -539,7 +539,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         resource->paths.push_back(p);
         path = path.next_sibling();
       }
-      CLOG(INFO, tcs_log) << "init path size " << resource->paths.size();
+      CLOG(INFO, rss_log) << "init path size " << resource->paths.size();
     }
     {
       // block
@@ -552,7 +552,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         }
         auto color = block.child("blockLayout").attribute("color").as_string();
         // member
-        std::unordered_set<std::shared_ptr<TCSResource>> rs;
+        std::unordered_set<std::shared_ptr<RSSResource>> rs;
         auto member = block.find_child([](pugi::xml_node node) {
           return std::string(node.name()) == "member";
         });
@@ -661,7 +661,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
                   std::dynamic_pointer_cast<data::model::Point>(p.second);
             }
           } else {
-            CLOG(ERROR, tcs_log) << "vehicle " << name << " no init_pos";
+            CLOG(ERROR, rss_log) << "vehicle " << name << " no init_pos";
             vehicle = vehicle.next_sibling();
             continue;
           }
@@ -836,22 +836,22 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
         ///////////////////////
         vehicle = vehicle.next_sibling();
       }
-      CLOG(INFO, tcs_log) << "init vehicle size "
+      CLOG(INFO, rss_log) << "init vehicle size "
                           << dispatcher->vehicles.size();
     }
     ///
-    CLOG(INFO, tcs_log) << "init resource ok\n";
+    CLOG(INFO, rss_log) << "init resource ok\n";
     init_planner();
     scheduler->resource = resource;
     // connect signals
     dispatcher->find_res = std::bind(&kernel::allocate::ResourceManager::find,
                                      resource, std::placeholders::_1);
     dispatcher->go_home = std::bind(
-        &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2);
+        &RSS::home_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->order_empty =
         std::bind(&kernel::allocate::OrderPool::is_empty, orderpool);
     dispatcher->go_charge = std::bind(
-        &TCS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
+        &RSS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->get_next_ord =
         std::bind(&kernel::allocate::OrderPool::pop, orderpool);
     dispatcher->get_park_point =
@@ -864,12 +864,12 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
       v->resource = resource;
     }
     assert(dispatcher);
-    CLOG(INFO, tcs_log) << "run all ...\n";
+    CLOG(INFO, rss_log) << "run all ...\n";
     run();
-    CLOG(INFO, tcs_log) << "run all ok\n";
+    CLOG(INFO, rss_log) << "run all ok\n";
     return std::pair<int, std::string>(static_cast<int>(httplib::OK_200), "");
   } catch (pugi::xpath_exception ec) {
-    CLOG(ERROR, tcs_log) << "parse error: " << ec.what();
+    CLOG(ERROR, rss_log) << "parse error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse XML input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
@@ -878,7 +878,7 @@ std::pair<int, std::string> TCS::put_model_xml(const std::string &body) {
   }
 }
 
-void TCS::paused_vehicle(const std::string &name) {
+void RSS::paused_vehicle(const std::string &name) {
   std::hash<std::string> hash_fn;
   for (auto &v : dispatcher->vehicles) {
     if (v->name_hash == hash_fn(name)) {
@@ -886,7 +886,7 @@ void TCS::paused_vehicle(const std::string &name) {
     }
   }
 }
-void TCS::recovery_vehicle(const std::string &name) {
+void RSS::recovery_vehicle(const std::string &name) {
   std::hash<std::string> hash_fn;
   for (auto &v : dispatcher->vehicles) {
     if (v->name_hash == hash_fn(name)) {
@@ -895,7 +895,7 @@ void TCS::recovery_vehicle(const std::string &name) {
   }
 }
 
-void TCS::stop() {
+void RSS::stop() {
   if (orderpool) {
     orderpool.reset();
   }
@@ -911,7 +911,7 @@ void TCS::stop() {
   }
   is_run = false;
 }
-void TCS::home_order(const std::string &name,
+void RSS::home_order(const std::string &name,
                      std::shared_ptr<kernel::driver::Vehicle> v) {
   auto time = std::chrono::system_clock::now();
   std::shared_ptr<data::order::TransportOrder> ord =
@@ -920,7 +920,7 @@ void TCS::home_order(const std::string &name,
   ord->create_time = time;
   ord->dead_time = time + std::chrono::minutes(60);
   ord->state = data::order::TransportOrder::State::RAW;
-  CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
+  CLOG(INFO, rss_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   //  检查是否通路
 
@@ -928,7 +928,7 @@ void TCS::home_order(const std::string &name,
                         ? v->park_point
                         : resource->get_recent_park_point(v->last_point);
   if (!home_point) {
-    CLOG(ERROR, tcs_log) << "home point not found";
+    CLOG(ERROR, rss_log) << "home point not found";
     return;
   }
   auto destination = orderpool->res_to_destination(
@@ -942,7 +942,7 @@ void TCS::home_order(const std::string &name,
   ord->anytime_drop = true;
   orderpool->orderpool.push_back(ord);
 }
-void TCS::charge_order(const std::string &name,
+void RSS::charge_order(const std::string &name,
                        std::shared_ptr<kernel::driver::Vehicle> v) {
   v->process_chargeing = true;
   auto time = std::chrono::system_clock::now();
@@ -952,12 +952,12 @@ void TCS::charge_order(const std::string &name,
   ord->create_time = time;
   ord->dead_time = time + std::chrono::minutes(60);
   ord->state = data::order::TransportOrder::State::RAW;
-  CLOG(INFO, tcs_log) << "new ord " << ord->name << " name_hash "
+  CLOG(INFO, rss_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   //  检查是否通路
   auto charge_point = resource->get_recent_charge_loc(v->last_point);
   if (!charge_point) {
-    CLOG(ERROR, tcs_log) << "charge point not found";
+    CLOG(ERROR, rss_log) << "charge point not found";
     return;
   }
   auto destination = orderpool->res_to_destination(
@@ -970,41 +970,41 @@ void TCS::charge_order(const std::string &name,
   ord->intended_vehicle = v;
   orderpool->orderpool.push_back(ord);
 }
-TCS::~TCS() {
-  CLOG(INFO, tcs_log) << "TCS  stop\n";
+RSS::~RSS() {
+  CLOG(INFO, rss_log) << "TCS  stop\n";
   stop();
 }
 
-bool TCS::init_dispatcher() {
+bool RSS::init_dispatcher() {
   dispatcher = std::make_shared<kernel::dispatch::Dispatcher>("Dispatcher");
-  CLOG(INFO, tcs_log) << "init dispatcher ok\n";
+  CLOG(INFO, rss_log) << "init dispatcher ok\n";
   return true;
 }
-bool TCS::init_orderpool() {
+bool RSS::init_orderpool() {
   orderpool = std::make_shared<kernel::allocate::OrderPool>("OrderPool");
-  CLOG(INFO, tcs_log) << "init orderpool ok\n";
+  CLOG(INFO, rss_log) << "init orderpool ok\n";
   return true;
 }
-bool TCS::init_scheduler() {
+bool RSS::init_scheduler() {
   this->scheduler = std::make_shared<kernel::schedule::Scheduler>("Scheduler");
-  CLOG(INFO, tcs_log) << "init scheduler ok\n";
+  CLOG(INFO, rss_log) << "init scheduler ok\n";
   return true;
 }
-bool TCS::init_planner() {
+bool RSS::init_planner() {
   if (!resource) {
     return false;
   }
   this->planner = std::make_shared<kernel::planner::Planner>(this->resource);
-  CLOG(INFO, tcs_log) << "init planner ok\n";
+  CLOG(INFO, rss_log) << "init planner ok\n";
   return true;
 }
-void TCS::cancel_all_order() { orderpool->cancel_all_order(); }
+void RSS::cancel_all_order() { orderpool->cancel_all_order(); }
 
-void TCS::cancel_order(const std::string &order_name) {
+void RSS::cancel_order(const std::string &order_name) {
   std::hash<std::string> hash_fn;
   orderpool->cancel_order(hash_fn(order_name));
 }
-void TCS::cancel_vehicle_all_order(const std::string &vehicle_name) {
+void RSS::cancel_vehicle_all_order(const std::string &vehicle_name) {
   std::hash<std::string> hash_fn;
   for (auto &v : dispatcher->vehicles) {
     if (v->name_hash == hash_fn(vehicle_name)) {
@@ -1012,7 +1012,7 @@ void TCS::cancel_vehicle_all_order(const std::string &vehicle_name) {
     }
   }
 }
-void TCS::run() {
+void RSS::run() {
   assert(dispatcher != nullptr);
   if (dispatcher) {
     for (auto &v : dispatcher->vehicles) {
@@ -1062,7 +1062,7 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
   return value;
 }
 
-std::pair<int, std::string> TCS::get_transport_orders(
+std::pair<int, std::string> RSS::get_transport_orders(
     const std::string &vehicle) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -1100,7 +1100,7 @@ std::pair<int, std::string> TCS::get_transport_orders(
   }
 }
 
-std::pair<int, std::string> TCS::get_transport_order(
+std::pair<int, std::string> RSS::get_transport_order(
     const std::string &ord_name) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -1126,7 +1126,7 @@ std::pair<int, std::string> TCS::get_transport_order(
   res.push_back(msg);
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
-std::pair<int, std::string> TCS::post_transport_order(
+std::pair<int, std::string> RSS::post_transport_order(
     const std::string &ord_name, const std::string &body) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -1140,7 +1140,7 @@ std::pair<int, std::string> TCS::post_transport_order(
       json res = json::array();
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
-      CLOG(ERROR, tcs_log) << msg;
+      CLOG(ERROR, rss_log) << msg;
       return std::pair<int, std::string>(httplib::Conflict_409,
                                          res.to_string());
     }
@@ -1150,7 +1150,7 @@ std::pair<int, std::string> TCS::post_transport_order(
       json res = json::array();
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
-      CLOG(ERROR, tcs_log) << msg;
+      CLOG(ERROR, rss_log) << msg;
       return std::pair<int, std::string>(httplib::Conflict_409,
                                          res.to_string());
     }
@@ -1205,7 +1205,7 @@ std::pair<int, std::string> TCS::post_transport_order(
           json res = json::array();
           auto msg = "Could not find location '" + loc + "'.";
           res.push_back(msg);
-          CLOG(ERROR, tcs_log) << msg;
+          CLOG(ERROR, rss_log) << msg;
           ord->state = data::order::TransportOrder::State::UNROUTABLE;
           orderpool->ended_orderpool.push_back(ord);
           return std::pair<int, std::string>(httplib::NotFound_404,
@@ -1247,7 +1247,7 @@ std::pair<int, std::string> TCS::post_transport_order(
             dr->transport_order = ord;
             ord->driverorders.push_back(dr);
           } else {
-            CLOG(ERROR, tcs_log)
+            CLOG(ERROR, rss_log)
                 << "op type <" + std::string(op) + "> is not support";
             ord->state = data::order::TransportOrder::State::FAILED;
             orderpool->ended_orderpool.push_back(ord);
@@ -1318,21 +1318,21 @@ std::pair<int, std::string> TCS::post_transport_order(
     }
     return std::pair<int, std::string>(httplib::OK_200, res.to_string());
   } catch (jsoncons::ser_error ec) {
-    CLOG(ERROR, tcs_log) << "ser_error error :" << ec.what();
+    CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(httplib::BadRequest_400,
                                        res.to_string());
   } catch (jsoncons::key_not_found ec) {
-    CLOG(ERROR, tcs_log) << "key_not_found error :" << ec.what();
+    CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(httplib::BadRequest_400,
                                        res.to_string());
   } catch (jsoncons::not_an_object ec) {
-    CLOG(ERROR, tcs_log) << "not_an_object error :" << ec.what();
+    CLOG(ERROR, rss_log) << "not_an_object error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
@@ -1341,7 +1341,7 @@ std::pair<int, std::string> TCS::post_transport_order(
   }
 }
 
-std::pair<int, std::string> TCS::post_transport_order_withdrawl(
+std::pair<int, std::string> RSS::post_transport_order_withdrawl(
     const std::string &ord_name, bool immediate, bool) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -1395,7 +1395,7 @@ json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
   }
   return res;
 }
-std::pair<int, std::string> TCS::get_ordersequences(
+std::pair<int, std::string> RSS::get_ordersequences(
     const std::string &vehicle) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -1430,7 +1430,7 @@ std::pair<int, std::string> TCS::get_ordersequences(
   }
 }
 
-std::pair<int, std::string> TCS::get_ordersequence(
+std::pair<int, std::string> RSS::get_ordersequence(
     const std::string &sequence_name) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -1451,7 +1451,7 @@ std::pair<int, std::string> TCS::get_ordersequence(
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
-std::pair<int, std::string> TCS::post_ordersequence(
+std::pair<int, std::string> RSS::post_ordersequence(
     const std::string &sequence_name, const std::string &body) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -1503,21 +1503,21 @@ std::pair<int, std::string> TCS::post_ordersequence(
     res.push_back(msg);
     return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
   } catch (jsoncons::not_an_object ec) {
-    CLOG(ERROR, tcs_log) << "not_an_object error:" << ec.what();
+    CLOG(ERROR, rss_log) << "not_an_object error:" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(httplib::BadRequest_400,
                                        res.to_string());
   } catch (jsoncons::ser_error ec) {
-    CLOG(ERROR, tcs_log) << "ser_error error :" << ec.what();
+    CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(httplib::BadRequest_400,
                                        res.to_string());
   } catch (jsoncons::key_not_found ec) {
-    CLOG(ERROR, tcs_log) << "key_not_found error :" << ec.what();
+    CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
@@ -1584,7 +1584,7 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   return res;
 }
 
-std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
+std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1657,7 +1657,7 @@ std::pair<int, std::string> TCS::get_vehicles(const std::string &state) {
   }
 }
 
-std::pair<int, std::string> TCS::get_vehicle(const std::string &vehicle) {
+std::pair<int, std::string> RSS::get_vehicle(const std::string &vehicle) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1677,7 +1677,7 @@ std::pair<int, std::string> TCS::get_vehicle(const std::string &vehicle) {
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
-std::pair<int, std::string> TCS::post_vehicle_withdrawl(
+std::pair<int, std::string> RSS::post_vehicle_withdrawl(
     const std::string &vehicle, bool, bool) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -1703,7 +1703,7 @@ std::pair<int, std::string> TCS::post_vehicle_withdrawl(
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
-std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
+std::pair<int, std::string> RSS::put_vehicle_paused(const std::string &name,
                                                     bool p) {
   std::shared_lock<std::shared_mutex> lk(mutex);
 
@@ -1741,7 +1741,7 @@ std::pair<int, std::string> TCS::put_vehicle_paused(const std::string &name,
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
-std::pair<int, std::string> TCS::get_model() {
+std::pair<int, std::string> RSS::get_model() {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1971,7 +1971,7 @@ std::pair<int, std::string> TCS::get_model() {
   }
   return std::pair<int, std::string>(httplib::OK_200, res.to_string());
 }
-std::pair<int, std::string> TCS::put_model(const std::string &body) {
+std::pair<int, std::string> RSS::put_model(const std::string &body) {
   std::unique_lock<std::shared_mutex> lk(mutex);
   stop();
   init_orderpool();
@@ -1982,7 +1982,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
     resource =
         std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
     this->resource->is_connected = std::bind(
-        &TCS::is_connect, this, std::placeholders::_1, std::placeholders::_2);
+        &RSS::is_connect, this, std::placeholders::_1, std::placeholders::_2);
     auto control_rule =
         std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
     resource->rules.push_back(control_rule);
@@ -2092,7 +2092,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         }
         resource->points.push_back(point);
       }
-      CLOG(INFO, tcs_log) << "init point size " << resource->points.size();
+      CLOG(INFO, rss_log) << "init point size " << resource->points.size();
     }
     // locationtype
     {
@@ -2126,7 +2126,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         type->get_param();
         resource->location_types.push_back(type);
       }
-      CLOG(INFO, tcs_log) << "init loc_type size "
+      CLOG(INFO, rss_log) << "init loc_type size "
                           << resource->location_types.size();
     }
     // location
@@ -2191,7 +2191,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         }
         resource->locations.push_back(loc);
       }
-      CLOG(INFO, tcs_log) << "init location size "
+      CLOG(INFO, rss_log) << "init location size "
                           << resource->locations.size();
     }
     // path
@@ -2279,12 +2279,12 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
         }
         resource->paths.push_back(path);
       }
-      CLOG(INFO, tcs_log) << "init path size " << resource->paths.size();
+      CLOG(INFO, rss_log) << "init path size " << resource->paths.size();
     }
     // block
     {
       for (auto &block : model["blocks"].array_range()) {
-        std::unordered_set<std::shared_ptr<TCSResource>> rs;
+        std::unordered_set<std::shared_ptr<RSSResource>> rs;
         if (block.contains("memberNames")) {
           for (auto &ch : block["memberNames"].array_range()) {
             for (auto &x : resource->points) {
@@ -2498,23 +2498,23 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
           dispatcher->vehicles.push_back(veh);
         }
       }
-      CLOG(INFO, tcs_log) << "init vehicle size "
+      CLOG(INFO, rss_log) << "init vehicle size "
                           << dispatcher->vehicles.size();
     }
-    CLOG(INFO, tcs_log) << "init resource ok";
+    CLOG(INFO, rss_log) << "init resource ok";
     init_planner();
     scheduler->resource = resource;
     // connect signals
     dispatcher->find_res = std::bind(&kernel::allocate::ResourceManager::find,
                                      resource, std::placeholders::_1);
     dispatcher->go_home = std::bind(
-        &TCS::home_order, this, std::placeholders::_1, std::placeholders::_2);
+        &RSS::home_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->order_empty =
         std::bind(&kernel::allocate::OrderPool::is_empty, orderpool);
     dispatcher->get_next_ord =
         std::bind(&kernel::allocate::OrderPool::pop, orderpool);
     dispatcher->go_charge = std::bind(
-        &TCS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
+        &RSS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->get_park_point =
         std::bind(&kernel::allocate::ResourceManager::get_recent_park_point,
                   resource, std::placeholders::_1);
@@ -2525,26 +2525,26 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
       v->resource = resource;
     }
     assert(dispatcher);
-    CLOG(INFO, tcs_log) << "run all ...\n";
+    CLOG(INFO, rss_log) << "run all ...\n";
     run();
-    CLOG(INFO, tcs_log) << "run all ok\n";
+    CLOG(INFO, rss_log) << "run all ok\n";
     return std::pair<int, std::string>(httplib::OK_200, "");
   } catch (jsoncons::not_an_object ec) {
-    CLOG(ERROR, tcs_log) << "not_an_object error: " << ec.what();
+    CLOG(ERROR, rss_log) << "not_an_object error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(httplib::BadRequest_400,
                                        res.to_string());
   } catch (jsoncons::ser_error ec) {
-    CLOG(ERROR, tcs_log) << "ser_error error :" << ec.what();
+    CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
     return std::pair<int, std::string>(httplib::BadRequest_400,
                                        res.to_string());
   } catch (jsoncons::key_not_found ec) {
-    CLOG(ERROR, tcs_log) << "key_not_found error :" << ec.what();
+    CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
@@ -2553,7 +2553,7 @@ std::pair<int, std::string> TCS::put_model(const std::string &body) {
   }
 }
 
-std::pair<int, std::string> TCS::get_view() {
+std::pair<int, std::string> RSS::get_view() {
   std::shared_lock<std::shared_mutex> lk(mutex);
 
   if (!is_run) {
@@ -2566,7 +2566,7 @@ std::pair<int, std::string> TCS::get_view() {
   return std::pair<int, std::string>(httplib::OK_200, r);
 }
 
-std::string TCS::get_vehicles_step() {
+std::string RSS::get_vehicles_step() {
   json value = json::array();
   for (auto &v : dispatcher->vehicles) {
     json veh;
@@ -2659,7 +2659,7 @@ std::string TCS::get_vehicles_step() {
   return value.to_string();
 }
 
-std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
+std::pair<int, std::string> RSS::put_path_locked(const std::string &path_name,
                                                  bool new_value) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -2686,7 +2686,7 @@ std::pair<int, std::string> TCS::put_path_locked(const std::string &path_name,
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
-std::pair<int, std::string> TCS::put_location_locked(
+std::pair<int, std::string> RSS::put_location_locked(
     const std::string &loc_name, bool new_value) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -2707,7 +2707,7 @@ std::pair<int, std::string> TCS::put_location_locked(
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
-void TCS::reroute() {
+void RSS::reroute() {
   for (auto &v : dispatcher->vehicles) {
     if (v->current_order) {
       v->reroute();
@@ -2715,7 +2715,7 @@ void TCS::reroute() {
   }
 }
 
-std::pair<int, std::string> TCS::post_reroute() {
+std::pair<int, std::string> RSS::post_reroute() {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -2726,12 +2726,12 @@ std::pair<int, std::string> TCS::post_reroute() {
   reroute();
   return std::pair<int, std::string>(httplib::OK_200, "");
 }
-bool TCS::is_connect(std::shared_ptr<data::model::Point> a,
+bool RSS::is_connect(std::shared_ptr<data::model::Point> a,
                      std::shared_ptr<data::model::Point> b) {
   return planner->find_paths(a, b).size() > 0;
 }
 
-std::pair<int, std::string> TCS::post_vehicle_reroute(const std::string &name,
+std::pair<int, std::string> RSS::post_vehicle_reroute(const std::string &name,
                                                       bool f) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -2752,7 +2752,7 @@ std::pair<int, std::string> TCS::post_vehicle_reroute(const std::string &name,
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
-std::pair<int, std::string> TCS::put_vehicle_enable(const std::string &name,
+std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
                                                     bool p) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -2777,7 +2777,7 @@ std::pair<int, std::string> TCS::put_vehicle_enable(const std::string &name,
   return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
 }
 
-std::pair<int, std::string> TCS::put_vehicle_integration_level(
+std::pair<int, std::string> RSS::put_vehicle_integration_level(
     const std::string &name, const std::string &p) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -2808,7 +2808,7 @@ std::pair<int, std::string> TCS::put_vehicle_integration_level(
   return std::pair<int, std::string>(httplib::OK_200, "");
 }
 
-std::pair<int, std::string> TCS::post_vehicle_path_to_point(
+std::pair<int, std::string> RSS::post_vehicle_path_to_point(
     const std::string &name, const std::string &p_) {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
@@ -2883,7 +2883,7 @@ std::pair<int, std::string> TCS::post_vehicle_path_to_point(
   return std::pair<int, std::string>(httplib::BadRequest_400,
                                      "the vehicle does not exist");
 }
-bool TCS::is_exist_active_order() {
+bool RSS::is_exist_active_order() {
   for (auto &x : orderpool->ended_orderpool) {
     if (x->state == data::order::TransportOrder::State::BEING_PROCESSED)
       return true;

@@ -2,14 +2,14 @@
 #define ENVELOPE_HPP
 #include <Eigen/Eigen>
 
-#include "../../tcsresource.hpp"
+#include "../../rssresource.hpp"
 namespace data {
 namespace model {
-class Envelope : public TCSResource {
+class Envelope : public RSSResource {
  public:
-  using TCSResource ::TCSResource;
+  using RSSResource ::RSSResource;
   using Vertex = Eigen::Vector2f;
-  explicit Envelope(const std::string& name) : TCSResource(name) {}
+  explicit Envelope(const std::string& name) : RSSResource(name) {}
   inline void add_vertex(double x, double y) {
     vertexs.push_back(Eigen::Vector2f(x, y));
   }

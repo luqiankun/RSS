@@ -7,9 +7,9 @@
 namespace kernel {
 namespace dispatch {
 using VehPtr = std::shared_ptr<driver::Vehicle>;
-class Dispatcher : public TCSObject {
+class Dispatcher : public RSSObject {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   VehPtr select_vehicle(allocate::PointPtr);
   std::set<VehPtr> find_owners(const VehPtr&);
   std::vector<VehPtr> deadlock_loop();       // 死锁车辆环路

@@ -1,5 +1,5 @@
-#ifndef TCSOBJECT_HPP
-#define TCSOBJECT_HPP
+#ifndef RSSOBJECT_HPP
+#define RSSOBJECT_HPP
 #include <condition_variable>
 #include <deque>
 #include <iostream>
@@ -16,7 +16,7 @@
 #include <vector>
 
 #include "./util/timer.hpp"
-constexpr auto tcs_log{"tcs"};
+constexpr auto rss_log{"rss"};
 constexpr auto dispatch_log{"dispatch"};
 constexpr auto allocate_log{"allocate"};
 constexpr auto order_log{"order"};
@@ -25,11 +25,11 @@ constexpr auto visual_log{"visual"};
 constexpr auto driver_log{"driver"};
 constexpr auto mqtt_log{"mqtt"};
 
-class TCSObject {
+class RSSObject {
  public:
-  TCSObject() = delete;
-  virtual ~TCSObject() = default;
-  explicit TCSObject(const std::string& n) : name(n) {
+  RSSObject() = delete;
+  virtual ~RSSObject() = default;
+  explicit RSSObject(const std::string& n) : name(n) {
     std::hash<std::string> hash_fn;
     name_hash = hash_fn(n);
   }
@@ -40,5 +40,5 @@ class TCSObject {
   std::map<std::string, std::string> properties_readonly;
   std::map<std::string, std::string> properties;
 };
-using TCSObjectPtr = std::shared_ptr<TCSObject>;
+using TCSObjectPtr = std::shared_ptr<RSSObject>;
 #endif

@@ -11,15 +11,15 @@ namespace schedule {
 class Client;
 }
 namespace allocate {
-using TCSResourcePtr = std::shared_ptr<TCSResource>;
+using TCSResourcePtr = std::shared_ptr<RSSResource>;
 using ClientPtr = std::shared_ptr<schedule::Client>;
 using PointPtr = std::shared_ptr<data::model::Point>;
 using LocationTypePtr = std::shared_ptr<data::model::LocationType>;
 using PathPtr = std::shared_ptr<data::model::Path>;
 using LocationPtr = std::shared_ptr<data::model::Location>;
-class ResourceManager : public TCSObject {
+class ResourceManager : public RSSObject {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   enum class ResType { Point = 0, Location = 1, Err = 2, Path = 3 };
   ~ResourceManager() { CLOG(INFO, allocate_log) << name << " close\n"; }
   bool claim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
@@ -29,7 +29,7 @@ class ResourceManager : public TCSObject {
   PointPtr get_recent_park_point(PointPtr);
   LocationPtr get_recent_charge_loc(PointPtr);
   std::shared_ptr<data::order::Route> paths_to_route(std::vector<PointPtr> ps);
-  std::pair<ResType, std::shared_ptr<TCSResource>> find(
+  std::pair<ResType, std::shared_ptr<RSSResource>> find(
       const std::string& name);
 
  public:

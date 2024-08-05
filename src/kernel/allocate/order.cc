@@ -11,7 +11,7 @@ DriverOrderPtr OrderPool::route_to_driverorder(RoutePtr route, DestPtr dest) {
   return ord;
 }
 DestPtr OrderPool::res_to_destination(
-    const std::shared_ptr<TCSResource>& res,
+    const std::shared_ptr<RSSResource>& res,
     data::order::DriverOrder::Destination::OpType op) {
   auto destination = std::make_shared<data::order::DriverOrder::Destination>();
   destination->operation = op;

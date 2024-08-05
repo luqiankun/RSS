@@ -1,24 +1,24 @@
 #ifndef SCHEDULE_HPP
 #define SCHEDULE_HPP
-#include "../../component/tcsresource.hpp"
+#include "../../component/rssresource.hpp"
 #include "../allocate/resource.hpp"
 #include "../driver/command.hpp"
 namespace kernel {
 namespace schedule {
-class Client : public TCSObject {
+class Client : public RSSObject {
  public:
   virtual ~Client() = default;
-  using TCSObject::TCSObject;
-  std::list<std::unordered_set<std::shared_ptr<TCSResource>>> claim_resources;
-  std::list<std::unordered_set<std::shared_ptr<TCSResource>>>
+  using RSSObject::RSSObject;
+  std::list<std::unordered_set<std::shared_ptr<RSSResource>>> claim_resources;
+  std::list<std::unordered_set<std::shared_ptr<RSSResource>>>
       allocated_resources;
-  std::unordered_set<std::shared_ptr<TCSResource>> future_allocate_resources;
+  std::unordered_set<std::shared_ptr<RSSResource>> future_allocate_resources;
   std::string envelope_key;
 };
-class Scheduler : public TCSObject,
+class Scheduler : public RSSObject,
                   public std::enable_shared_from_this<Scheduler> {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   std::shared_ptr<driver::Command> new_command(
       std::shared_ptr<driver::Vehicle>);
   void add_command(std::shared_ptr<driver::Command>);

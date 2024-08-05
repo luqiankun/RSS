@@ -1,11 +1,11 @@
 #ifndef PATH_HPP
 #define PATH_HPP
-#include "../../tcsresource.hpp"
+#include "../../rssresource.hpp"
 #include "./action.hpp"
 #include "point.hpp"
 namespace data {
 namespace model {
-class Path : public TCSResource {
+class Path : public RSSResource {
  public:
   enum class ConnectType {
     /**
@@ -68,7 +68,7 @@ class Path : public TCSResource {
   }
 
  public:
-  using TCSResource::TCSResource;
+  using RSSResource::RSSResource;
   std::weak_ptr<Point> source_point;
   std::weak_ptr<Point> destination_point;
   int64_t length{0};

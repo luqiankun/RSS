@@ -6,9 +6,9 @@ namespace driver {
 std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
     allocate::DriverOrderPtr driver_order, std::shared_ptr<Vehicle> veh) {
   auto steps = get_step_nopop(driver_order, veh->send_queue_size);
-  std::vector<std::shared_ptr<TCSResource>> temp;
+  std::vector<std::shared_ptr<RSSResource>> temp;
   for (auto& x : steps) {
-    std::vector<std::shared_ptr<TCSResource>> step_res;
+    std::vector<std::shared_ptr<RSSResource>> step_res;
     bool has_1{false}, has_2{false};
     auto s_p = x->path->source_point.lock();
     auto e_p = x->path->destination_point.lock();
@@ -87,10 +87,10 @@ void Command::run_once() {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
         // LOG(WARNING) << "-------------------------";
       } else {
-        std::vector<std::shared_ptr<TCSResource>> temp;
+        std::vector<std::shared_ptr<RSSResource>> temp;
         veh->claim_resources.clear();
         for (auto& x : steps) {
-          std::vector<std::shared_ptr<TCSResource>> step_res;
+          std::vector<std::shared_ptr<RSSResource>> step_res;
           bool has_1{false}, has_2{false};
           auto s_p = x->path->source_point.lock();
           auto e_p = x->path->destination_point.lock();
@@ -128,7 +128,7 @@ void Command::run_once() {
           }
           // allocate
           veh->claim_resources.push_back(
-              std::unordered_set<std::shared_ptr<TCSResource>>{step_res.begin(),
+              std::unordered_set<std::shared_ptr<RSSResource>>{step_res.begin(),
                                                                step_res.end()});
           if (!res->allocate(step_res, veh)) {
             // future_claim
@@ -168,11 +168,11 @@ void Command::run_once() {
     }
     if (driver_order->state == data::order::DriverOrder::State::OPERATING) {
       auto dest = get_dest(driver_order);
-      std::vector<std::shared_ptr<TCSResource>> temp;
+      std::vector<std::shared_ptr<RSSResource>> temp;
       temp.push_back(dest->destination.lock());
       veh->claim_resources.clear();
       veh->claim_resources.push_back(
-          std::unordered_set<std::shared_ptr<TCSResource>>{temp.begin(),
+          std::unordered_set<std::shared_ptr<RSSResource>>{temp.begin(),
                                                            temp.end()});
       for (auto& r : veh->allocated_resources) {
         if (std::any_of(r.begin(), r.end(), [&](auto& v) {
@@ -221,7 +221,7 @@ void Command::run_once() {
     // 获取下次要分配的资源
     std::stringstream ss;
     auto next_res = get_next_allocate_res(driver_order, veh);
-    std::vector<std::shared_ptr<TCSResource>> temp;
+    std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto& a : veh->allocated_resources) {
       for (auto& x : a) {
         if (x != veh->current_point &&
@@ -302,10 +302,10 @@ std::vector<std::shared_ptr<data::order::Step>> Command::get_step_nopop(
   }
   return res;
 }
-std::vector<std::shared_ptr<TCSResource>> Command::get_future(
+std::vector<std::shared_ptr<RSSResource>> Command::get_future(
     std::shared_ptr<data::order::DriverOrder> order) {
   auto veh = vehicle.lock();
-  std::vector<std::shared_ptr<TCSResource>> res;
+  std::vector<std::shared_ptr<RSSResource>> res;
   if (order->route->steps.size() > veh->send_queue_size) {
     auto next = *(order->route->steps.begin() + veh->send_queue_size);
     auto path = next->path;

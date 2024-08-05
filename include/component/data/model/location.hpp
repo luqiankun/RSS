@@ -1,12 +1,12 @@
 #ifndef LOCATION_HPP
 #define LOCATION_HPP
-#include "../../tcsresource.hpp"
+#include "../../rssresource.hpp"
 #include "./locationtype.hpp"
 #include "point.hpp"
 namespace data {
 namespace model {
 
-class Location : public TCSResource {
+class Location : public RSSResource {
  public:
   struct Layout {
     Vector2i position{0, 0};
@@ -14,7 +14,7 @@ class Location : public TCSResource {
     int layer_id;
   };
 
-  using TCSResource::TCSResource;
+  using RSSResource::RSSResource;
   Vector3i position{0, 0, 0};
   Layout layout;
   bool locked{false};

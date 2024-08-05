@@ -1,10 +1,13 @@
 ﻿cmake_minimum_required(VERSION 3.10)
-project(TCS VERSION 1.0.0)
+project(RobotSchedulingSystem VERSION 1.0.0)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release
     MinSizeRel RelWithDebInfo)
 endif()
+###
+set(EXE_NAME rss)
+###
 message(STATUS "Build type: " ${CMAKE_BUILD_TYPE})
 message(STATUS "Install path: " ${CMAKE_INSTALL_PREFIX})
 # set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
@@ -40,19 +43,19 @@ file(GLOB_RECURSE MAIN_SRC src/main/*.cc )
 #execute#
 #########
 
-add_executable(tcs
+add_executable(${EXE_NAME}
 ${KERNEL_SRC}
 ${3rd_SRC}
 ${MAIN_SRC}
 )
-target_link_libraries(tcs PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen)
+target_link_libraries(${EXE_NAME} PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen)
 
 
 
 #########
 #install#
 #########
-install(TARGETS tcs
+install(TARGETS ${EXE_NAME}
 RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}
 )
 install(DIRECTORY config DESTINATION  ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
@@ -93,11 +96,11 @@ endif()
 # set(CPACK_DEBIAN_PACKAGE_DEPENDS "libpaho-mqttpp-dev")
 # set(CPACK_DEBIAN_PACKAGE_DEPENDS "libeigen3-dev")
 # set(CPACK_PACKAGE_DESCRIPTION "lqk1949")
-# set(CPACK_DEBIAN_PACKAGE_NAME "tcs")
+# set(CPACK_DEBIAN_PACKAGE_NAME "${EXE_NAME}")
 # #########
 # #install#
 # #########
-# install(TARGETS tcs
+# install(TARGETS ${EXE_NAME}
 # RUNTIME DESTINATION  ${CMAKE_INSTALL_PREFIX}/bin
 # )
 # install(DIRECTORY config DESTINATION  ${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME})

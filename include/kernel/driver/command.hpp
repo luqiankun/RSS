@@ -12,9 +12,9 @@ using DriverOrderPtr = std::shared_ptr<data::order::DriverOrder>;
 using StepPtr = std::shared_ptr<data::order::Step>;
 using TransOrderPtr = std::shared_ptr<data::order::TransportOrder>;
 class Vehicle;
-class Command : public TCSObject {
+class Command : public RSSObject {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   enum class State {
     INIT,
     ALLOCATING,
@@ -27,8 +27,8 @@ class Command : public TCSObject {
   DestPtr get_dest(DriverOrderPtr);
   std::vector<StepPtr> get_step(DriverOrderPtr, uint32_t);
   std::vector<StepPtr> get_step_nopop(DriverOrderPtr, uint32_t);
-  std::vector<std::shared_ptr<TCSResource>> get_future(DriverOrderPtr);
-  std::vector<std::shared_ptr<TCSResource>> get_next_allocate_res(
+  std::vector<std::shared_ptr<RSSResource>> get_future(DriverOrderPtr);
+  std::vector<std::shared_ptr<RSSResource>> get_next_allocate_res(
       DriverOrderPtr, std::shared_ptr<Vehicle>);
   void vehicle_execute_cb(bool);  // 车辆通知动作结果
   void run_once();

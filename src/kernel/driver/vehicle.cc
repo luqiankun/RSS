@@ -459,7 +459,7 @@ void SimVehicle::init() {
       integration_level == integrationLevel::TO_BE_NOTICED) {
   } else {
     idle_time = std::chrono::system_clock::now();
-    std::vector<std::shared_ptr<TCSResource>> ress;
+    std::vector<std::shared_ptr<RSSResource>> ress;
     ress.push_back(current_point);
     resource.lock()->claim(ress, shared_from_this());
     resource.lock()->allocate(ress, shared_from_this());
@@ -520,12 +520,6 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
 }
 
 void Rabbit3::init() {
-  std::random_device rd;
-  auto seed_data = std::array<int, std::mt19937::state_size>{};
-  std::generate(std::begin(seed_data), std::end(seed_data), std::ref(rd));
-  std::seed_seq seq(std::begin(seed_data), std::end(seed_data));
-  std::mt19937 generator(seq);
-  gen = new uuids::uuid_random_generator(generator);
   mqtt_cli->set_mqtt_ops(name, this->broker_ip, this->broker_port);
   auto prefix = mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
@@ -586,7 +580,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
               this->position = current_point->position;
               init_pos = true;
               idle_time = std::chrono::system_clock::now();
-              std::vector<std::shared_ptr<TCSResource>> ress;
+              std::vector<std::shared_ptr<RSSResource>> ress;
               ress.push_back(x);
               res->claim(ress, shared_from_this());
               res->allocate(ress, shared_from_this());
@@ -708,7 +702,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   ord.version = mqtt_cli->version;
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
-  order_id = (*gen)();
+  order_id = get_uuid();
   ord.order_id = prefix + uuids::to_string(order_id);
   ord.order_update_id = 0;
 
@@ -958,7 +952,7 @@ bool Rabbit3::action(
   ord.version = mqtt_cli->version;
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
-  order_id = (*gen)();
+  order_id = get_uuid();
   ord.order_id = prefix + uuids::to_string(order_id);
   ord.order_update_id = 0;
   {

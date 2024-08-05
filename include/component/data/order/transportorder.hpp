@@ -12,9 +12,9 @@ class Vehicle;
 namespace data {
 namespace order {
 class OrderSequence;
-class TransportOrder : public TCSObject {
+class TransportOrder : public RSSObject {
  public:
-  using TCSObject::TCSObject;
+  using RSSObject::RSSObject;
   enum class State {
     RAW,
     ACTIVE,

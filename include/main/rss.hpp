@@ -1,5 +1,5 @@
-#ifndef TCS_HPP
-#define TCS_HPP
+#ifndef RSS_HPP
+#define RSS_HPP
 #include <shared_mutex>
 
 #include "../3rdparty/xml/pugixml.hpp"
@@ -22,9 +22,9 @@ inline std::string get_log_name(const std::string& path) {
 #endif
 }
 using json = jsoncons::json;
-class TCS : public std::enable_shared_from_this<TCS> {
+class RSS : public std::enable_shared_from_this<RSS> {
  public:
-  TCS(const std::string& ip, int port) : ip(ip), port(port) {}
+  RSS(const std::string& ip, int port) : ip(ip), port(port) {}
   // init
   // http interface
 
@@ -91,7 +91,7 @@ class TCS : public std::enable_shared_from_this<TCS> {
   void reroute();
   void stop();
   bool is_exist_active_order();
-  ~TCS();
+  ~RSS();
 
  public:
   bool is_run{false};

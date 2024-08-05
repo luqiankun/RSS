@@ -68,17 +68,17 @@ bool ResourceManager::claim(const std::vector<TCSResourcePtr>& res,
   std::unique_lock<std::mutex> lock(mut);
   for (auto& r : res) {
     for (auto& p : points) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         p->future_owner.push_back(client);
       }
     }
     for (auto& p : paths) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         p->future_owner.push_back(client);
       }
     }
     for (auto& p : locations) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         p->future_owner.push_back(client);
       }
     }
@@ -102,7 +102,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
   std::stringstream ss;
   for (auto& r : res) {
     for (auto& p : points) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
         p->envelope_keys.insert(client->envelope_key);
@@ -110,7 +110,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
       }
     }
     for (auto& p : paths) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
         p->envelope_keys.insert(client->envelope_key);
@@ -118,7 +118,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
       }
     }
     for (auto& p : locations) {
-      if (static_cast<TCSResource*>(r.get()) == p.get()) {
+      if (static_cast<RSSResource*>(r.get()) == p.get()) {
         ss << p->name << " ";
         p->owner = client;
         break;

@@ -364,7 +364,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
     CLOG_IF(res.status != httplib::OK_200, ERROR, "http")
         << req.remote_addr << ":" << req.remote_port << "| " << req.method
         << " " << req.path << " | Res Code: " << res.status << "\n";
-    CLOG_IF(res.status == httplib::OK_200, INFO, "http")
+    CLOG_IF(res.status == httplib::OK_200, DEBUG, "http")
         << req.remote_addr << ":" << req.remote_port << "| " << req.method
         << " " << req.path << " | Res Code: " << res.status << "\n";
     CLOG(DEBUG, "http") << "http req and rep\n" << log(req, res);

@@ -47,7 +47,7 @@ std::shared_ptr<driver::Command> Scheduler::new_command(
     return nullptr;
   }
   std::string cmd_name{
-      "command_" + v->name + "_" + v->current_order->name + "_" +
+      "command_" + v->name + "_" + uuids::to_string(get_uuid()) + "_" +
       v->current_order->driverorders[v->current_order->current_driver_index]
           ->get_cmd_name()};
   auto cmd = std::make_shared<driver::Command>(cmd_name);

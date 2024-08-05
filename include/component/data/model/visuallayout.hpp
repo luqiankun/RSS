@@ -1,11 +1,11 @@
 #ifndef VISUALLAYOUT_HPP
 #define VISUALLAYOUT_HPP
-#include "../../tcsresource.hpp"
+#include "../../rssresource.hpp"
 namespace data {
 namespace model {
-class VisualLayout : public TCSResource {
+class VisualLayout : public RSSResource {
  public:
-  using TCSResource::TCSResource;
+  using RSSResource::RSSResource;
   class Layer {
    public:
     int id;

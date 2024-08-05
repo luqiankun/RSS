@@ -5,7 +5,7 @@
 #include "../../include/3rdparty/log/easylogging++.h"
 #include "../../include/3rdparty/yaml/yaml.hpp"
 #include "../../include/main/httpsrv.hpp"
-#include "../../include/main/tcs.hpp"
+#include "../../include/main/rss.hpp"
 INITIALIZE_EASYLOGGINGPP
 // signal
 void (*signal(int sig, void (*func)(int)))(int);
@@ -70,27 +70,27 @@ void read_params(std::string path) {
     if (!root["log"]["size"].IsNone()) {
       log_size = root["log"]["size"].As<std::string>();
     }
-    if (!root["tcs"]["auto_init"]["enable"].IsNone()) {
-      init_enable = root["tcs"]["auto_init"]["enable"].As<bool>();
+    if (!root["rss"]["auto_init"]["enable"].IsNone()) {
+      init_enable = root["rss"]["auto_init"]["enable"].As<bool>();
     }
-    if (!root["tcs"]["auto_init"]["xml_path"].IsNone()) {
-      init_xml_path = root["tcs"]["auto_init"]["xml_path"].As<std::string>();
+    if (!root["rss"]["auto_init"]["xml_path"].IsNone()) {
+      init_xml_path = root["rss"]["auto_init"]["xml_path"].As<std::string>();
     }
-    if (!root["tcs"]["mqtt_addr"]["host"].IsNone()) {
-      mqtt_ip = root["tcs"]["mqtt_addr"]["host"].As<std::string>();
+    if (!root["rss"]["mqtt_addr"]["host"].IsNone()) {
+      mqtt_ip = root["rss"]["mqtt_addr"]["host"].As<std::string>();
     }
-    if (!root["tcs"]["mqtt_addr"]["port"].IsNone()) {
-      mqtt_port = root["tcs"]["mqtt_addr"]["port"].As<int>();
+    if (!root["rss"]["mqtt_addr"]["port"].IsNone()) {
+      mqtt_port = root["rss"]["mqtt_addr"]["port"].As<int>();
     }
-    CLOG(INFO, tcs_log) << "read yaml param success\n";
+    CLOG(INFO, rss_log) << "read yaml param success\n";
   } catch (Yaml::Exception& ec) {
-    CLOG(ERROR, tcs_log) << "load param from <" << path << "> failed :"
+    CLOG(ERROR, rss_log) << "load param from <" << path << "> failed :"
                          << " " << ec.Message() << ", will use deafult params.";
   }
 }
 
 int main(int argc, char** argv) {
-  el::Loggers::getLogger("tcs");
+  el::Loggers::getLogger("rss");
   el::Loggers::getLogger("timer");
   el::Loggers::getLogger("order");
   el::Loggers::getLogger("visual");
@@ -181,12 +181,12 @@ int main(int argc, char** argv) {
           ghc::filesystem::remove(ghc::filesystem::path(log_path) / obj);
         }
       });
-  auto tcs = std::make_shared<TCS>(mqtt_ip, mqtt_port);
+  auto rss = std::make_shared<RSS>(mqtt_ip, mqtt_port);
   auto srv = std::make_shared<HTTPServer>();
   {
     std::smatch m;
     if (!std::regex_match(http_ip, reg)) {
-      CLOG(ERROR, tcs_log) << "ip's format is wrong";
+      CLOG(ERROR, rss_log) << "ip's format is wrong";
       return -1;
     }
     srv->ip = http_ip;
@@ -196,54 +196,54 @@ int main(int argc, char** argv) {
   // bind
   {
     srv->get_transport_order =
-        std::bind(&TCS::get_transport_order, tcs, std::placeholders::_1);
+        std::bind(&RSS::get_transport_order, rss, std::placeholders::_1);
     srv->get_transport_orders =
-        std::bind(&TCS::get_transport_orders, tcs, std::placeholders::_1);
+        std::bind(&RSS::get_transport_orders, rss, std::placeholders::_1);
     srv->post_transport_order =
-        std::bind(&TCS::post_transport_order, tcs, std::placeholders::_1,
+        std::bind(&RSS::post_transport_order, rss, std::placeholders::_1,
                   std::placeholders::_2);
     srv->post_transport_order_withdrawl = std::bind(
-        &TCS::post_transport_order_withdrawl, tcs, std::placeholders::_1,
+        &RSS::post_transport_order_withdrawl, rss, std::placeholders::_1,
         std::placeholders::_2, std::placeholders::_3);
     srv->get_ordersequences =
-        std::bind(&TCS::get_ordersequences, tcs, std::placeholders::_1);
+        std::bind(&RSS::get_ordersequences, rss, std::placeholders::_1);
     srv->get_ordersequence =
-        std::bind(&TCS::get_ordersequence, tcs, std::placeholders::_1);
+        std::bind(&RSS::get_ordersequence, rss, std::placeholders::_1);
     srv->post_ordersequence =
-        std::bind(&TCS::post_ordersequence, tcs, std::placeholders::_1,
+        std::bind(&RSS::post_ordersequence, rss, std::placeholders::_1,
                   std::placeholders::_2);
     srv->get_vehicles =
-        std::bind(&TCS::get_vehicles, tcs, std::placeholders::_1);
-    srv->get_vehicle = std::bind(&TCS::get_vehicle, tcs, std::placeholders::_1);
+        std::bind(&RSS::get_vehicles, rss, std::placeholders::_1);
+    srv->get_vehicle = std::bind(&RSS::get_vehicle, rss, std::placeholders::_1);
     srv->post_vehicle_withdrawl =
-        std::bind(&TCS::post_vehicle_withdrawl, tcs, std::placeholders::_1,
+        std::bind(&RSS::post_vehicle_withdrawl, rss, std::placeholders::_1,
                   std::placeholders::_2, std::placeholders::_3);
-    srv->get_model = std::bind(&TCS::get_model, tcs);
-    srv->put_model = std::bind(&TCS::put_model, tcs, std::placeholders::_1);
+    srv->get_model = std::bind(&RSS::get_model, rss);
+    srv->put_model = std::bind(&RSS::put_model, rss, std::placeholders::_1);
     srv->put_model_xml =
-        std::bind(&TCS::put_model_xml, tcs, std::placeholders::_1);
+        std::bind(&RSS::put_model_xml, rss, std::placeholders::_1);
     srv->put_path_locked =
-        std::bind(&TCS::put_path_locked, tcs, std::placeholders::_1,
+        std::bind(&RSS::put_path_locked, rss, std::placeholders::_1,
                   std::placeholders::_2);
     srv->put_location_locked =
-        std::bind(&TCS::put_location_locked, tcs, std::placeholders::_1,
+        std::bind(&RSS::put_location_locked, rss, std::placeholders::_1,
                   std::placeholders::_2);
-    srv->get_view = std::bind(&TCS::get_view, tcs);
+    srv->get_view = std::bind(&RSS::get_view, rss);
     srv->put_vehicle_paused =
-        std::bind(&TCS::put_vehicle_paused, tcs, std::placeholders::_1,
+        std::bind(&RSS::put_vehicle_paused, rss, std::placeholders::_1,
                   std::placeholders::_2);
-    srv->post_reroute = std::bind(&TCS::post_reroute, tcs);
+    srv->post_reroute = std::bind(&RSS::post_reroute, rss);
     srv->post_vheicle_reroute =
-        std::bind(&TCS::post_vehicle_reroute, tcs, std::placeholders::_1,
+        std::bind(&RSS::post_vehicle_reroute, rss, std::placeholders::_1,
                   std::placeholders::_2);
     srv->put_vehicle_enabled =
-        std::bind(&::TCS::put_vehicle_enable, tcs, std::placeholders::_1,
+        std::bind(&::RSS::put_vehicle_enable, rss, std::placeholders::_1,
                   std::placeholders::_2);
     srv->put_vehicle_integration_level =
-        std::bind(&::TCS::put_vehicle_integration_level, tcs,
+        std::bind(&::RSS::put_vehicle_integration_level, rss,
                   std::placeholders::_1, std::placeholders::_2);
     srv->post_vehicle_path_to_point =
-        std::bind(&::TCS::post_vehicle_path_to_point, tcs,
+        std::bind(&::RSS::post_vehicle_path_to_point, rss,
                   std::placeholders::_1, std::placeholders::_2);
   }
   std::thread th{[&] { srv->listen(); }};
@@ -264,20 +264,20 @@ int main(int argc, char** argv) {
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   if (init_enable) {
     pugi::xml_document doc;
-    CLOG(INFO, tcs_log) << "auto init using " << init_xml_path;
+    CLOG(INFO, rss_log) << "auto init using " << init_xml_path;
     auto ret = doc.load_file(init_xml_path.c_str());
     if (ret.status == pugi::xml_parse_status::status_ok) {
       std::stringstream body;
       doc.save(body);
-      tcs->put_model_xml(body.str());
+      rss->put_model_xml(body.str());
     } else {
-      CLOG(ERROR, tcs_log) << "parse xml failed: " << ret.description();
+      CLOG(ERROR, rss_log) << "parse xml failed: " << ret.description();
     }
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  CLOG(INFO, tcs_log) << "service start, press 'Ctrl + C' to exit.\n";
+  CLOG(INFO, rss_log) << "service start, press 'Ctrl + C' to exit.\n";
   if (th_wait.joinable()) {
     th_wait.join();
   }
-  CLOG(INFO, tcs_log) << "service shutdown\n";
+  CLOG(INFO, rss_log) << "service shutdown\n";
 }

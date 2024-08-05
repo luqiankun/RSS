@@ -2,10 +2,10 @@
 
 #include <utility>
 
+#include "../../../include/3rdparty/uuid/uuid.hpp"
 #include "../../../include/kernel/allocate/order.hpp"
 #include "../../../include/kernel/driver/vehicle.hpp"
-#include "../../../include/main/tcs.hpp"
-
+#include "../../../include/main/rss.hpp"
 namespace kernel {
 namespace dispatch {
 VehPtr Dispatcher::select_vehicle(allocate::PointPtr start) {
@@ -147,13 +147,13 @@ void Dispatcher::idle_detect() {
     } else if (v->engerg_level <= v->engrgy_level_recharge) {
       v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
       v->cancel_all_order();
-      go_charge("TOder_" + std::to_string(now.time_since_epoch().count()) +
-                    "_" + v->name + "_goto_charge",
+      go_charge("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
+                    "_goto_charge",
                 v);
     } else if (v->engerg_level <= v->energy_level_good) {
       if (v->state == driver::Vehicle::State::IDEL) {
-        go_charge("TOder_" + std::to_string(now.time_since_epoch().count()) +
-                      "_" + v->name + "_goto_charge",
+        go_charge("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
+                      "_goto_charge",
                   v);
       }
     } else {
@@ -163,16 +163,15 @@ void Dispatcher::idle_detect() {
         auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
         if (dt_s.count() > 5) {
           if (v->park_point && v->park_point != v->last_point) {
-            go_home("TOder_" + std::to_string(now.time_since_epoch().count()) +
-                        "_" + v->name + "_goto_park",
+            go_home("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
+                        "_goto_park",
                     v);
           } else if (v->last_point->type !=
                      data::model::Point::Type::PARK_POSITION) {
             auto x = get_park_point(v->last_point);
             if (x) {
-              go_home("TOder_" +
-                          std::to_string(now.time_since_epoch().count()) + "_" +
-                          v->name + "_goto_park",
+              go_home("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
+                          "_goto_park",
                       v);
             }
           }
