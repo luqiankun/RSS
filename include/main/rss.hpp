@@ -22,9 +22,10 @@ inline std::string get_log_name(const std::string& path) {
 #endif
 }
 using json = jsoncons::json;
+inline std::string MQTT_IP{"127.0.0.1"};
+inline int MQTT_PORT{1883};
 class RSS : public std::enable_shared_from_this<RSS> {
  public:
-  RSS(const std::string& ip, int port) : ip(ip), port(port) {}
   // init
   // http interface
 
@@ -95,8 +96,6 @@ class RSS : public std::enable_shared_from_this<RSS> {
 
  public:
   bool is_run{false};
-  std::string ip;
-  int port;
   std::shared_ptr<kernel::allocate::ResourceManager> resource;
   std::shared_ptr<kernel::schedule::Scheduler> scheduler;
   std::shared_ptr<kernel::dispatch::Dispatcher> dispatcher;

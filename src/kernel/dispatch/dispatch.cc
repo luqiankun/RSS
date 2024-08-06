@@ -301,6 +301,7 @@ void Dispatcher::run() {
           ss << v->name << " ,";
         }
         ss << "]";
+        CLOG_N_TIMES(1, ERROR, dispatch_log) << "deadlock --> " << ss.str();
         CLOG_EVERY_N(10, ERROR, dispatch_log) << "deadlock --> " << ss.str();
         brake_deadlock(loop);
       }

@@ -15,6 +15,7 @@ class Vehicle;
 class Command : public RSSObject {
  public:
   using RSSObject::RSSObject;
+  Command(const std::string&);
   enum class State {
     INIT,
     ALLOCATING,
@@ -41,6 +42,7 @@ class Command : public RSSObject {
   TransOrderPtr order;
   std::function<void(std::vector<StepPtr>)> move;
   std::function<void(const DestPtr)> action;
+  std::unordered_map<State, std::function<void()>> cbs;
 };
 
 }  // namespace driver

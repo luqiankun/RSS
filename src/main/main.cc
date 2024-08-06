@@ -93,7 +93,6 @@ int main(int argc, char** argv) {
   el::Loggers::getLogger("rss");
   el::Loggers::getLogger("timer");
   el::Loggers::getLogger("order");
-  el::Loggers::getLogger("visual");
   el::Loggers::getLogger("http");
   el::Loggers::getLogger("driver");
   el::Loggers::getLogger("dispatch");
@@ -181,8 +180,12 @@ int main(int argc, char** argv) {
           ghc::filesystem::remove(ghc::filesystem::path(log_path) / obj);
         }
       });
-  auto rss = std::make_shared<RSS>(mqtt_ip, mqtt_port);
+  auto rss = std::make_shared<RSS>();
   auto srv = std::make_shared<HTTPServer>();
+  {
+    MQTT_IP = mqtt_ip;
+    MQTT_PORT = mqtt_port;
+  }
   {
     std::smatch m;
     if (!std::regex_match(http_ip, reg)) {

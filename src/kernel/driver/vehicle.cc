@@ -238,6 +238,15 @@ void Vehicle::command_done() {
     future_allocate_resources.clear();
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " unrouteable.";
+    std::vector<std::shared_ptr<RSSResource>> temp;
+    for (auto& a : this->allocated_resources) {
+      for (auto& x : a) {
+        if (x != this->current_point) {
+          temp.push_back(x);
+        }
+      }
+    }
+    resource.lock()->free(temp, shared_from_this());
     if (process_chargeing) {
       process_chargeing = false;
     }

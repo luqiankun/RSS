@@ -185,7 +185,7 @@
                                 // console.log(order(select_vehicle, point.name, "MOVE"))
                                 let Http = new XMLHttpRequest();
                                 let ip = document.getElementById("ip_btn").value;
-                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + format(new Date().getTime()), true);
+                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + crypto.randomUUID(), true);
                                 Http.onload = function () {
                                     if (Http.readyState == 4 && Http.status == 200) {
                                         console.log("send order ok");
@@ -641,6 +641,24 @@
             }
             Http.send();
         }
+        function drawArrowheadVirtual(ctx, x1, y1, x2, y2, size, color) {
+            let l = 10 * (50 / resolution); // 
+            let a = Math.atan2((y2 - y1), (x2 - x1));
+            let x3 = x2 - l * Math.cos(a + 30 * Math.PI / 180); // θ=30
+            let y3 = y2 - l * Math.sin(a + 30 * Math.PI / 180);
+            let x4 = x2 - l * Math.cos(a - 30 * Math.PI / 180);
+            let y4 = y2 - l * Math.sin(a - 30 * Math.PI / 180);
+            ctx.beginPath();
+            ctx.setLineDash([15, 8])
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.moveTo(x3, y3);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x4, y4);
+            ctx.lineWidth = size;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+        }
         function drawArrowhead(ctx, x1, y1, x2, y2, size, color) {
             let l = 10 * (50 / resolution); // 
             let a = Math.atan2((y2 - y1), (x2 - x1));
@@ -875,12 +893,12 @@
                 for (let i = order_quence.headIndex; i < order_quence.tailIndex; i++) {
                     msg = order_quence.items[i][0] + " : [" + order_quence.items[i][1] + "]";
                     ctx.fillStyle = "rgba(113, 125, 126,0.3)";
-                    let font_size = (20 * (resolution / 50)).toFixed(0);
+                    let font_size = (20 * 60 / resolution).toFixed(0);
                     if (font_size < 1) {
                         font_size = 1;
                     }
                     let y = index;
-                    index += 25 * resolution / 50;
+                    index += (20 * 60 / resolution)
                     ctx.font = font_size.toString() + 'px Arial';
                     ctx.textBaseline = "top";
                     ctx.textAlign = 'right';
@@ -951,8 +969,8 @@
                         start_y = start_y + norm_y * 15;
                         end_x = end_x - norm_x * 15;
                         end_y = end_y - norm_y * 15;
-                        if (ori == "FORWARD") { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color); }
-                        else if (ori == "BACKWARD") { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color); }
+                        if (ori == "FORWARD") { drawArrowheadVirtual(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color); }
+                        else if (ori == "BACKWARD") { drawArrowheadVirtual(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color); }
                     }
                     // console.log(v.destination);
                     if (v.destination != undefined) {
@@ -986,15 +1004,18 @@
                         ctx.stroke()
                     }
                     //resource
+                    let color = v.color
+                    // console.log(color)
                     for (let res of v.res) {
+                        ctx.globalAlpha = 0.7;
                         if (get_point(res) != null) {
                             let point = get_point(res)
                             let x = (point.x - xmin) / resolution;
                             let y = canvas.height - (point.y - ymin) / resolution;
                             let radius = 8 * (50 / resolution);
                             ctx.beginPath()
-                            ctx.fillStyle = "#8B0A50";
-                            ctx.strokeStyle = '#8B0A50'
+                            ctx.fillStyle = color
+                            ctx.strokeStyle = color
                             ctx.moveTo(x + radius, y);
                             ctx.lineWidth = 3 * (50 / resolution);
                             if (ctx.lineWidth < 1) {
@@ -1022,11 +1043,16 @@
                             start_y = start_y + norm_y * 15;
                             end_x = end_x - norm_x * 15;
                             end_y = end_y - norm_y * 15;
-                            drawArrowhead(ctx, start_x, start_y, end_x, end_y, 7 * (50 / resolution), "#8B0A50");
-                            drawArrowhead(ctx, end_x, end_y, start_x, start_y, 7 * (50 / resolution), "#8B0A50");
+                            ctx.beginPath()
+                            ctx.setLineDash([5, 0])
+                            ctx.moveTo(start_x, start_y)
+                            ctx.lineTo(end_x, end_y)
+                            ctx.lineWidth = 5 * (50 / resolution);
+                            ctx.strokeStyle = v.color
+                            ctx.stroke()
+
                         }
                         else if (get_location(res) != null) {
-                            color = '#8B0A50'
                             let loc = get_location(res);
                             let start_x = (loc.x - xmin) / resolution;
                             let start_y = canvas.height - (loc.y - ymin) / resolution;

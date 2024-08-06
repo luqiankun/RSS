@@ -780,8 +780,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           veh->engrgy_level_full = energyLevelSufficientlyRecharged;
           veh->engrgy_level_recharge = energyLevelFullyRecharged;
           veh->map_id = root.attribute("name").as_string();
-          veh->broker_ip = ip;
-          veh->broker_port = port;
+          veh->broker_ip = MQTT_IP;
+          veh->broker_port = MQTT_PORT;
           veh->send_queue_size = orderquence.type() == pugi::node_null
                                      ? 2
                                      : orderquence.attribute("value").as_int();
@@ -920,6 +920,8 @@ void RSS::home_order(const std::string &name,
   ord->create_time = time;
   ord->dead_time = time + std::chrono::minutes(60);
   ord->state = data::order::TransportOrder::State::RAW;
+  // TODO type ?
+  ord->type = "MOVE";
   CLOG(INFO, rss_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   //  检查是否通路
@@ -952,6 +954,8 @@ void RSS::charge_order(const std::string &name,
   ord->create_time = time;
   ord->dead_time = time + std::chrono::minutes(60);
   ord->state = data::order::TransportOrder::State::RAW;
+  // TODO type ?
+  ord->type = "MOVE";
   CLOG(INFO, rss_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   //  检查是否通路
@@ -2451,8 +2455,8 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             veh->engrgy_level_recharge =
                 v["energyLevelSufficientlyRecharged"].as_integer<int>();
           }
-          veh->broker_ip = ip;
-          veh->broker_port = port;
+          veh->broker_ip = MQTT_IP;
+          veh->broker_port = MQTT_PORT;
           veh->send_queue_size = orderquence;
           veh->envelope_key =
               v.contains("envelopeKey") ? v["envelopeKey"].as_string() : "";

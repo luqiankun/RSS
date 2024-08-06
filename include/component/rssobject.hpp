@@ -21,7 +21,6 @@ constexpr auto dispatch_log{"dispatch"};
 constexpr auto allocate_log{"allocate"};
 constexpr auto order_log{"order"};
 constexpr auto planner_log{"planner"};
-constexpr auto visual_log{"visual"};
 constexpr auto driver_log{"driver"};
 constexpr auto mqtt_log{"mqtt"};
 
@@ -40,5 +39,5 @@ class RSSObject {
   std::map<std::string, std::string> properties_readonly;
   std::map<std::string, std::string> properties;
 };
-using TCSObjectPtr = std::shared_ptr<RSSObject>;
+using RSSObjectPtr = std::shared_ptr<RSSObject>;
 #endif
