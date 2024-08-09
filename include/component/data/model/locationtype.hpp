@@ -75,6 +75,7 @@ class LocationType : public RSSObject {
         std::smatch sm;
         std::regex_search(x.first, sm, P);
         auto name = (*(sm.end() - 2)).str();
+        std::transform(name.begin(), name.end(), name.begin(), ::tolower);
         auto key = (*(sm.end() - 1)).str();
         auto value = x.second;
         auto it_ops =

@@ -5,7 +5,7 @@
 #include <regex>
 
 #include "../data/order/orderquence.hpp"
-#include "../util/timer.hpp"
+#include "../util/tools.hpp"
 #include "./vda5050insact.hpp"
 #include "./vda5050order.hpp"
 #include "./vda5050state.hpp"
@@ -87,7 +87,9 @@ class VehicleMaster {
         master_state = MasterMqttStatus::ONLINE;
         CLOG(INFO, mqtt_log)
             << "mqtt_serial_number:" << serial_number << " master ONLINE";
-        mqtt_client->subscribe(interface_name + "/" + version + "/" +
+        int ver = static_cast<int>(std::stod(version));
+        auto vda_version = "v" + std::to_string(ver);
+        mqtt_client->subscribe(interface_name + "/" + vda_version + "/" +
                                    manufacturer + "/" + serial_number + "/#",
                                0);
       });

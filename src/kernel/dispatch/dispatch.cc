@@ -141,11 +141,15 @@ void Dispatcher::idle_detect() {
     }
     //  充电
     if (v->engerg_level <= v->energy_level_critical) {
-      v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
+      if (v->current_order) {
+        v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
+      }
       v->cancel_all_order();
       v->state = driver::Vehicle::State::ERROR;
     } else if (v->engerg_level <= v->engrgy_level_recharge) {
-      v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
+      if (v->current_order) {
+        v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
+      }
       v->cancel_all_order();
       go_charge("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
                     "_goto_charge",

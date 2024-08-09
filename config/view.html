@@ -38,16 +38,19 @@
                 this.x = x;
                 this.y = y;
                 this.type = t
+
             }
         }
         class Path {
-            constructor(name, start, end, max_vel, max_res_vel) {
+            constructor(name, start, end, max_vel, max_res_vel, t, p) {
                 this.name = name;
                 this.start = start;
                 this.end = end;
                 this.locked = false;
                 this.max_vel = max_vel;
                 this.max_res_vel = max_res_vel;
+                this.type = t
+                this.ctrl_point = p
             }
         }
         class Location {
@@ -61,7 +64,7 @@
             }
         }
         class Vehicle {
-            constructor(name, x, y, level, envelope, res) {
+            constructor(name, x, y, level, res) {
                 this.name = name;
                 this.x = x;
                 this.y = y;
@@ -69,7 +72,6 @@
                 this.step = [];
                 this.destination = {};
                 this.battery = level
-                this.envelope = envelope
                 this.res = res
             }
         }
@@ -80,6 +82,7 @@
                 this.member = obj['memberNames'];
             }
         }
+        let visual_scale = 50
         let points = [];
         let paths = [];
         let locations = [];
@@ -204,7 +207,7 @@
                             if (Math.abs(x - event.offsetX) < 20 && Math.abs(y - event.offsetY) < 20) {
                                 let Http = new XMLHttpRequest();
                                 let ip = document.getElementById("ip_btn").value;
-                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + format(new Date().getTime()), true);
+                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + crypto.randomUUID(), true);
                                 Http.onload = function () {
                                     if (Http.readyState == 4 && Http.status == 200) {
                                         console.log("send order ok");
@@ -489,6 +492,7 @@
                     orders.clear();
                     let model = JSON.parse(Http.responseText);
                     // console.log(model);
+                    visual_scale = model["visualLayout"]["scaleX"]
                     for (let point of model["points"]) {
                         let x = point["layout"]["position"]["x"];
                         let y = point["layout"]["position"]["y"];
@@ -504,7 +508,7 @@
                         let name = path["name"];
                         let max_vel = path['maxVelocity']
                         let max_res_vel = path["maxReverseVelocity"]
-                        let p = new Path(name, start, end, max_vel, max_res_vel);
+                        let p = new Path(name, start, end, max_vel, max_res_vel, path["layout"]["connectionType"], path["layout"]["controlPoints"]);
                         p.locked = locked;
                         paths.push(p);
                     }
@@ -576,7 +580,7 @@
                     vehicles = [];
                     let model = JSON.parse(Http.responseText);
                     for (let v of model) {
-                        let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"], v["battery_level"], v["envelope"], v["allocatedResources"]);
+                        let veh = new Vehicle(v["name"], v["position"]["x"], v["position"]["y"], v["battery_level"], v["allocatedResources"]);
                         veh.color = v["color"];
                         // console.log(v["position"]);
                         veh.step = v["step"];
@@ -667,6 +671,7 @@
             let x4 = x2 - l * Math.cos(a - 30 * Math.PI / 180);
             let y4 = y2 - l * Math.sin(a - 30 * Math.PI / 180);
             ctx.beginPath();
+            ctx.setLineDash([15, 0])
             ctx.moveTo(x1, y1);
             ctx.lineTo(x2, y2);
             ctx.moveTo(x3, y3);
@@ -676,6 +681,83 @@
             ctx.strokeStyle = color;
             ctx.stroke();
         }
+        function drawBezierCurve(ctx, x1, y1, x2, y2, ctrl_p, size, color, height) {
+            let l = 10 * (50 / resolution); // 
+            let a = Math.atan2((y2 - (height - (-ctrl_p[1]["y"] * visual_scale - ymin) / resolution)), (x2 - (ctrl_p[1]["x"] * visual_scale - xmin) / resolution));
+            let x3 = x2 - l * Math.cos(a + 30 * Math.PI / 180); // θ=30
+            let y3 = y2 - l * Math.sin(a + 30 * Math.PI / 180);
+            let x4 = x2 - l * Math.cos(a - 30 * Math.PI / 180);
+            let y4 = y2 - l * Math.sin(a - 30 * Math.PI / 180);
+            ctx.beginPath();
+            ctx.lineWidth = size;
+            ctx.strokeStyle = color;
+            ctx.setLineDash([15, 0])
+            ctx.moveTo(x1, y1);
+            // console.log(x1, y1, (ctrl_p[0]["x"] * visual_scale - xmin) / resolution, height - (ctrl_p[0]["y"] * visual_scale - ymin) / resolution, (ctrl_p[1]["x"] * visual_scale - xmin) / resolution, height - (ctrl_p[1]["y"] * visual_scale - ymin) / resolution, x2, y2)
+            ctx.bezierCurveTo((ctrl_p[0]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[0]["y"] * visual_scale - ymin) / resolution, (ctrl_p[1]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[1]["y"] * visual_scale - ymin) / resolution, x2, y2);
+            ctx.moveTo(x3, y3);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x4, y4);
+            ctx.stroke();
+        }
+        function drawBezierCurveVirtual(ctx, x1, y1, x2, y2, ctrl_p, size, color, height) {
+            let l = 10 * (50 / resolution); // 
+            let a = Math.atan2((y2 - (height - (-ctrl_p[1]["y"] * visual_scale - ymin) / resolution)), (x2 - (ctrl_p[1]["x"] * visual_scale - xmin) / resolution));
+            let x3 = x2 - l * Math.cos(a + 30 * Math.PI / 180); // θ=30
+            let y3 = y2 - l * Math.sin(a + 30 * Math.PI / 180);
+            let x4 = x2 - l * Math.cos(a - 30 * Math.PI / 180);
+            let y4 = y2 - l * Math.sin(a - 30 * Math.PI / 180);
+            ctx.beginPath();
+            ctx.lineWidth = size;
+            ctx.strokeStyle = color;
+            ctx.setLineDash([15, 8])
+            ctx.moveTo(x1, y1);
+            // console.log(x1, y1, (ctrl_p[0]["x"] * visual_scale - xmin) / resolution, height - (ctrl_p[0]["y"] * visual_scale - ymin) / resolution, (ctrl_p[1]["x"] * visual_scale - xmin) / resolution, height - (ctrl_p[1]["y"] * visual_scale - ymin) / resolution, x2, y2)
+            ctx.bezierCurveTo((ctrl_p[0]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[0]["y"] * visual_scale - ymin) / resolution, (ctrl_p[1]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[1]["y"] * visual_scale - ymin) / resolution, x2, y2);
+            ctx.moveTo(x3, y3);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x4, y4);
+            ctx.stroke();
+        }
+        function drawBezierCurve3(ctx, x1, y1, x2, y2, ctrl_p, size, color, height) {
+            let l = 10 * (50 / resolution); // 
+            let a = Math.atan2((y2 - (height - (-ctrl_p[3]["y"] * visual_scale - ymin) / resolution)), (x2 - (ctrl_p[3]["x"] * visual_scale - xmin) / resolution));
+            let x3 = x2 - l * Math.cos(a + 30 * Math.PI / 180); // θ=30
+            let y3 = y2 - l * Math.sin(a + 30 * Math.PI / 180);
+            let x4 = x2 - l * Math.cos(a - 30 * Math.PI / 180);
+            let y4 = y2 - l * Math.sin(a - 30 * Math.PI / 180);
+            ctx.beginPath();
+            ctx.lineWidth = size;
+            ctx.setLineDash([15, 0])
+            ctx.strokeStyle = color;
+            ctx.moveTo(x1, y1);
+            ctx.bezierCurveTo((ctrl_p[0]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[0]["y"] * visual_scale - ymin) / resolution, (ctrl_p[1]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[1]["y"] * visual_scale - ymin) / resolution, (ctrl_p[2]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[2]["y"] * visual_scale - ymin) / resolution);
+            ctx.bezierCurveTo((ctrl_p[3]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[3]["y"] * visual_scale - ymin) / resolution, (ctrl_p[4]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[4]["y"] * visual_scale - ymin) / resolution, x2, y2);
+            ctx.moveTo(x3, y3);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x4, y4);
+            ctx.stroke();
+        }
+        function drawBezierCurve3Virtual(ctx, x1, y1, x2, y2, ctrl_p, size, color, height) {
+            let l = 10 * (50 / resolution); // 
+            let a = Math.atan2((y2 - (height - (-ctrl_p[3]["y"] * visual_scale - ymin) / resolution)), (x2 - (ctrl_p[3]["x"] * visual_scale - xmin) / resolution));
+            let x3 = x2 - l * Math.cos(a + 30 * Math.PI / 180); // θ=30
+            let y3 = y2 - l * Math.sin(a + 30 * Math.PI / 180);
+            let x4 = x2 - l * Math.cos(a - 30 * Math.PI / 180);
+            let y4 = y2 - l * Math.sin(a - 30 * Math.PI / 180);
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = size;
+            ctx.setLineDash([15, 8])
+            ctx.moveTo(x1, y1);
+            ctx.bezierCurveTo((ctrl_p[0]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[0]["y"] * visual_scale - ymin) / resolution, (ctrl_p[1]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[1]["y"] * visual_scale - ymin) / resolution, (ctrl_p[2]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[2]["y"] * visual_scale - ymin) / resolution);
+            ctx.bezierCurveTo((ctrl_p[3]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[3]["y"] * visual_scale - ymin) / resolution, (ctrl_p[4]["x"] * visual_scale - xmin) / resolution, height - (-ctrl_p[4]["y"] * visual_scale - ymin) / resolution, x2, y2);
+            ctx.moveTo(x3, y3);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x4, y4);
+            ctx.stroke();
+        }
+
         function start() {
             // add_wheel('map')
             add_wheel('Vehicle')
@@ -742,18 +824,43 @@
                     let end_y = canvas.height - (end.y - ymin) / resolution;
                     // console.log(start_x, start_y, end_x, end_y);
 
-                    let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
                     // console.log(len);
-                    let norm_x = (end_x - start_x) / len;
-                    let norm_y = (end_y - start_y) / len;
-                    start_x = start_x + norm_x * 15 * (50 / resolution);;
-                    start_y = start_y + norm_y * 15 * (50 / resolution);;
-                    end_x = end_x - norm_x * 15 * (50 / resolution);;
-                    end_y = end_y - norm_y * 15 * (50 / resolution);;
-                    if (x.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), color); }
-                    if (x.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), color); }
-                }
 
+                    // console.log(x.type)
+                    if (x.type == "DIRECT") {
+                        let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
+                        let norm_x = (end_x - start_x) / len;
+                        let norm_y = (end_y - start_y) / len;
+                        start_x = start_x + norm_x * 15 * (50 / resolution);
+                        start_y = start_y + norm_y * 15 * (50 / resolution);
+                        end_x = end_x - norm_x * 15 * (50 / resolution);
+                        end_y = end_y - norm_y * 15 * (50 / resolution);
+                        if (x.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), color); }
+                        if (x.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), color); }
+                    } else if (x.type == "BEZIER") {
+                        if (x.max_vel)
+                            drawBezierCurve(ctx, start_x, start_y, end_x, end_y, x.ctrl_point, 1 * (50 / resolution), color, canvas.height);
+                        if (x.max_res_vel) {
+                            let ctrl_pp = []
+                            ctrl_pp[0] = x.ctrl_point[1]
+                            ctrl_pp[1] = x.ctrl_point[0]
+                            drawBezierCurve(ctx, end_x, end_y, start_x, start_y, ctrl_pp, 1 * (50 / resolution), color, canvas.height);
+                        }
+                    } else if (x.type == "BEZIER_3") {
+                        if (x.max_vel) {
+                            drawBezierCurve3(ctx, start_x, start_y, end_x, end_y, x.ctrl_point, 1 * (50 / resolution), color, canvas.height);
+                        }
+                        if (x.max_res_vel) {
+                            let ctrl_pp = []
+                            ctrl_pp[0] = x.ctrl_point[4]
+                            ctrl_pp[1] = x.ctrl_point[3]
+                            ctrl_pp[2] = x.ctrl_point[2]
+                            ctrl_pp[3] = x.ctrl_point[1]
+                            ctrl_pp[4] = x.ctrl_point[0]
+                            drawBezierCurve3(ctx, end_x, end_y, start_x, start_y, ctrl_pp, 1 * (50 / resolution), color, canvas.height);
+                        }
+                    }
+                }
                 for (let x_ of blocks) {
                     for (let p of x_.member) {
                         let point = get_block_point(p);
@@ -933,26 +1040,6 @@
                     ctx.fillText(v.name + "[" + v.battery + "%]", x, y, v.name.length * font_size);
                     // console.log(v);
 
-                    let len = v.envelope.vertex.length
-                    ctx.beginPath()
-                    ctx.strokeStyle = v.color
-                    for (let index = 0; index < len; index++) {
-                        const element = v.envelope.vertex[index];
-                        let s_x = (element.x + v.x - xmin) / resolution;
-                        let s_y = canvas.height - (element.y + v.y - ymin) / resolution;
-                        ctx.moveTo(s_x, s_y);
-                        if (index == len - 1) {
-                            let e_x = (v.envelope.vertex[0].x + v.x - xmin) / resolution;
-                            let e_y = canvas.height - (v.envelope.vertex[0].y + v.y - ymin) / resolution;
-                            ctx.lineTo(e_x, e_y);
-                        } else {
-                            let e_x = (v.envelope.vertex[index + 1].x + v.x - xmin) / resolution;
-                            let e_y = canvas.height - (v.envelope.vertex[index + 1].y + v.y - ymin) / resolution;
-                            ctx.lineTo(e_x, e_y);
-                        }
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
-                    }
                     for (let step of v.step) {
                         let start = get_point(step["src"]);
                         let end = get_point(step["dest"]);
@@ -961,16 +1048,41 @@
                         let start_y = canvas.height - (start.y - ymin) / resolution;
                         let end_x = (end.x - xmin) / resolution;
                         let end_y = canvas.height - (end.y - ymin) / resolution;
-                        let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
-                        // console.log(len);
-                        let norm_x = (end_x - start_x) / len;
-                        let norm_y = (end_y - start_y) / len;
-                        start_x = start_x + norm_x * 15;
-                        start_y = start_y + norm_y * 15;
-                        end_x = end_x - norm_x * 15;
-                        end_y = end_y - norm_y * 15;
-                        if (ori == "FORWARD") { drawArrowheadVirtual(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color); }
-                        else if (ori == "BACKWARD") { drawArrowheadVirtual(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color); }
+
+                        console.log(step["type"])
+                        if (step["type"] == "BEZIER") {
+                            if (ori == "FORWARD") {
+                                drawBezierCurveVirtual(ctx, start_x, start_y, end_x, end_y, step["control_point"], 5 * (50 / resolution), v.color, canvas.height);
+                            } else if (ori == "BACKWARD") {
+                                let ctrl_p = []
+                                ctrl_p[0] = step["control_point"][1];
+                                ctrl_p[1] = step["control_point"][0];
+                                drawBezierCurveVirtual(ctx, end_x, end_y, start_x, start_y, ctrl_p, 5 * (50 / resolution), v.color, canvas.height);
+                            }
+                        }
+                        else if (step["type"] == "DIRECT") {
+                            let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
+                            // console.log(len);
+                            let norm_x = (end_x - start_x) / len;
+                            let norm_y = (end_y - start_y) / len;
+                            start_x = start_x + norm_x * 15;
+                            start_y = start_y + norm_y * 15;
+                            end_x = end_x - norm_x * 15;
+                            end_y = end_y - norm_y * 15;
+                            if (ori == "FORWARD") { drawArrowheadVirtual(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color); }
+                            else if (ori == "BACKWARD") { drawArrowheadVirtual(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color); }
+                        } else if (step["type"] == "BEZIER_3") {
+                            if (ori == "FORWARD") { drawBezierCurve3Virtual(ctx, start_x, start_y, end_x, end_y, step["control_point"], 5 * (50 / resolution), v.color, canvas.height); }
+                            else if (ori == "BACKWARD") {
+                                let ctrl_p = []
+                                ctrl_p[0] = step["control_point"][4];
+                                ctrl_p[1] = step["control_point"][3];
+                                ctrl_p[2] = step["control_point"][2];
+                                ctrl_p[3] = step["control_point"][1];
+                                ctrl_p[4] = step["control_point"][0];
+                                drawBezierCurve3Virtual(ctx, end_x, end_y, start_x, start_y, ctrl_p, 5 * (50 / resolution), v.color, canvas.height);
+                            }
+                        }
                     }
                     // console.log(v.destination);
                     if (v.destination != undefined) {
@@ -1028,7 +1140,7 @@
                         }
                         else if (get_block_path(res) != null) {
                             let path = get_block_path(res);
-                            // console.log(path)
+                            console.log(path)
                             let start = get_point(path.start);
                             let end = get_point(path.end);
                             if (path.name.startsWith()) { }
@@ -1036,20 +1148,39 @@
                             let start_y = canvas.height - (start.y - ymin) / resolution;
                             let end_x = (end.x - xmin) / resolution;
                             let end_y = canvas.height - (end.y - ymin) / resolution;
-                            let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
-                            let norm_x = (end_x - start_x) / len;
-                            let norm_y = (end_y - start_y) / len;
-                            start_x = start_x + norm_x * 15;
-                            start_y = start_y + norm_y * 15;
-                            end_x = end_x - norm_x * 15;
-                            end_y = end_y - norm_y * 15;
-                            ctx.beginPath()
-                            ctx.setLineDash([5, 0])
-                            ctx.moveTo(start_x, start_y)
-                            ctx.lineTo(end_x, end_y)
-                            ctx.lineWidth = 5 * (50 / resolution);
-                            ctx.strokeStyle = v.color
-                            ctx.stroke()
+
+                            if (path["type"] == "BEZIER") {
+                                if (path.max_vel) {
+                                    drawBezierCurve(ctx, start_x, start_y, end_x, end_y, path.ctrl_point, 5 * (50 / resolution), v.color, canvas.height);
+                                } else if (path.max_res_vel) {
+                                    let ctrl_p = []
+                                    ctrl_p[0] = path.ctrl_point[1];
+                                    ctrl_p[1] = path.ctrl_point[0];
+                                    drawBezierCurve(ctx, end_x, end_y, start_x, start_y, ctrl_p, 5 * (50 / resolution), v.color, canvas.height);
+                                }
+                            }
+                            else if (path["type"] == "DIRECT") {
+                                let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
+                                let norm_x = (end_x - start_x) / len;
+                                let norm_y = (end_y - start_y) / len;
+                                start_x = start_x + norm_x * 15;
+                                start_y = start_y + norm_y * 15;
+                                end_x = end_x - norm_x * 15;
+                                end_y = end_y - norm_y * 15;
+                                if (path.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color); }
+                                else if (path.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color); }
+                            } else if (path["type"] == "BEZIER_3") {
+                                if (path.max_vel) { drawBezierCurve3(ctx, start_x, start_y, end_x, end_y, path.ctrl_point, 5 * (50 / resolution), v.color, canvas.height); }
+                                else if (path.max_res_vel) {
+                                    let ctrl_p = []
+                                    ctrl_p[0] = path.ctrl_point[4];
+                                    ctrl_p[1] = path.ctrl_point[3];
+                                    ctrl_p[2] = path.ctrl_point[2];
+                                    ctrl_p[3] = path.ctrl_point[1];
+                                    ctrl_p[4] = path.ctrl_point[0];
+                                    drawBezierCurve3(ctx, end_x, end_y, start_x, start_y, ctrl_p, 5 * (50 / resolution), v.color, canvas.height);
+                                }
+                            }
 
                         }
                         else if (get_location(res) != null) {

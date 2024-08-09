@@ -15,7 +15,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "./util/timer.hpp"
+#include "./util/tools.hpp"
 constexpr auto rss_log{"rss"};
 constexpr auto dispatch_log{"dispatch"};
 constexpr auto allocate_log{"allocate"};

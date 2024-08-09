@@ -163,13 +163,13 @@ bool ResourceManager::free(const std::vector<TCSResourcePtr>& res,
         }
       }
     }
-    for (auto it = client->allocated_resources.begin();
-         it != client->allocated_resources.end();) {
-      if (it->empty()) {
-        it = client->allocated_resources.erase(it);
-      } else {
-        it++;
-      }
+  }
+  for (auto it = client->allocated_resources.begin();
+       it != client->allocated_resources.end();) {
+    if (it->empty()) {
+      it = client->allocated_resources.erase(it);
+    } else {
+      it++;
     }
   }
   return true;
@@ -243,7 +243,7 @@ LocationPtr ResourceManager::get_recent_charge_loc(PointPtr cur) {
               return d1 < d2;
             });
   for (int i = 0; i < locations.size(); i++) {
-    if (locations.at(i)->type.lock()->allowed_ops.find("Charge") ==
+    if (locations.at(i)->type.lock()->allowed_ops.find("charge") ==
         locations.at(i)->type.lock()->allowed_ops.end()) {
       continue;
     }

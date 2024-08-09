@@ -61,18 +61,12 @@ void Vehicle::execute_move(
       current_order->state = data::order::TransportOrder::State::FAILED;
       current_order->end_time = std::chrono::system_clock::now();
       std::stringstream ss;
-      ss << current_order->name << " : ";
-      for (auto& x : steps) {
-        ss << " move : " << x->name.c_str() << " & ";
-      }
+      ss << current_order->name << " : move {" << steps.front()->name << "}";
       CLOG(WARNING, driver_log) << name << " " << ss.str() << " failed";
     } else {
-      std::stringstream ss;
-      ss << current_order->name << " : ";
-      for (auto& x : steps) {
-        ss << " {" << x->name.c_str() << "} ";
-      }
-      CLOG(INFO, driver_log) << name << " " << ss.str() << " ok\n";
+      // std::stringstream ss;
+      // ss << current_order->name << " : move {" << steps.front()->name << "}";
+      // CLOG(INFO, driver_log) << name << " " << ss.str() << " ok\n";
     }
 
     if (current_command) {
@@ -199,7 +193,7 @@ void Vehicle::get_next_ord() {
       CLOG_IF(state != State::CHARGING, INFO, driver_log)
           << name << " "
           << "state transform to : [" << vehicle_state_to_str(State::CHARGING)
-          << "]";
+          << "]\n";
       state = State::CHARGING;
     } else {
       CLOG_IF(state != State::IDEL, INFO, driver_log)
@@ -529,8 +523,10 @@ bool SimVehicle::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
 }
 
 void Rabbit3::init() {
+  int ver = static_cast<int>(std::stod(mqtt_cli->version));
+  auto vda_version = "v" + std::to_string(ver);
   mqtt_cli->set_mqtt_ops(name, this->broker_ip, this->broker_port);
-  auto prefix = mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
+  auto prefix = mqtt_cli->interface_name + "/" + vda_version + "/" +
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   mqtt_cli->mqtt_client->set_func(
       prefix + "state",
@@ -578,32 +574,36 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
 
       //
 
-      if (v["lastNodeId"].as_string().empty()) {
+      if (vdastate.last_node_id.empty()) {
         current_point.reset();
       } else {
         for (auto& x : res->points) {
-          if (x->name == v["lastNodeId"].as_string()) {
+          LOG(INFO) << x->name;
+          if (x->name == vdastate.last_node_id) {
             last_point = x;
             current_point = last_point;
             if (!init_pos) {
               this->position = current_point->position;
-              init_pos = true;
               idle_time = std::chrono::system_clock::now();
               std::vector<std::shared_ptr<RSSResource>> ress;
               ress.push_back(x);
               res->claim(ress, shared_from_this());
-              res->allocate(ress, shared_from_this());
+              if (!res->allocate(ress, shared_from_this())) {
+                CLOG(ERROR, driver_log)
+                    << name << " init failed:{ allocate init_point failed }\n";
+                init_pos = false;
+              } else {
+                init_pos = true;
+              }
             }
           }
         }
       }
-      if (v.contains("agvPosition")) {
-        this->position.x() = v["agvPosition"]["x"].as_double() * 1000;
-        this->position.y() = v["agvPosition"]["y"].as_double() * 1000;
-        this->map_id = v["agvPosition"]["mapId"].as_string();
-        this->angle = v["agvPosition"]["theta"].as_double();
-        layout = position;
-      }
+      this->position.x() = vdastate.agv_position->x * 1000;
+      this->position.y() = vdastate.agv_position->y * 1000;
+      this->map_id = vdastate.agv_position->map_id;
+      this->angle = vdastate.agv_position->theta;
+      layout = position;
       auto last_state = state;
       if (state == Vehicle::State::UNKNOWN) {
         if (veh_state == vda5050::VehicleMqttStatus::ONLINE) {
@@ -620,7 +620,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       }
       engerg_level = vdastate.battery_state.battery_charge;
       if (process_chargeing) {
-        if (engerg_level > engrgy_level_full &&
+        if (engerg_level > energy_level_good &&
             state == Vehicle::State::CHARGING) {
           state = Vehicle::State::IDEL;
           idle_time = std::chrono::system_clock::now();
@@ -651,18 +651,20 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
     auto ms = vda5050::connection_validate(v);
     if (ms.empty()) {
       if (v["connectionState"] == "ONLINE") {
+        CLOG_IF(veh_state != vda5050::VehicleMqttStatus::ONLINE, INFO,
+                driver_log)
+            << name << " " << mqtt_cli->serial_number + " ONLINE\n";
         veh_state = vda5050::VehicleMqttStatus::ONLINE;
-        CLOG_N_TIMES(1, INFO, driver_log)
-            << name << " " << mqtt_cli->serial_number + " ONLINE";
       } else if (v["connectionState"] == "OFFLINE") {
+        CLOG_IF(veh_state != vda5050::VehicleMqttStatus::OFFLINE, INFO,
+                driver_log)
+            << name << " " << mqtt_cli->serial_number + " OFFLINE\n";
         veh_state = vda5050::VehicleMqttStatus::OFFLINE;
         state = Vehicle::State::UNKNOWN;
-        CLOG(INFO, driver_log)
-            << name << " " << mqtt_cli->serial_number + " OFFLINE";
       } else if (v["connectionState"] == "CONNECTIONBROKEN") {
         veh_state = vda5050::VehicleMqttStatus::CONNECTIONBROKEN;
         CLOG(WARNING, driver_log)
-            << name << " " << mqtt_cli->serial_number + " CONNECTIONBROKEN";
+            << name << " " << mqtt_cli->serial_number + " CONNECTIONBROKEN\n";
         state = Vehicle::State::UNKNOWN;
       }
     } else {
@@ -686,7 +688,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     name_.append("}");
   }
   name_.append("]");
-  CLOG(INFO, driver_log) << name << " move step: " << name_ << "\n";
+  // CLOG(INFO, driver_log) << name << " will move step: " << name_ << "\n";
 
   if (steps.empty()) {
     CLOG(WARNING, driver_log) << name << " move  null step";
@@ -703,7 +705,9 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     task_run = false;
     return false;
   }
-  auto prefix = mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
+  int ver = static_cast<int>(std::stod(mqtt_cli->version));
+  auto vda_version = "v" + std::to_string(ver);
+  auto prefix = mqtt_cli->interface_name + "/" + vda_version + "/" +
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   auto ord = vda5050::order::VDA5050Order();
   ord.header_id = send_header_id++;
@@ -712,7 +716,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
   order_id = get_uuid();
-  ord.order_id = prefix + uuids::to_string(order_id);
+  ord.order_id = "Move_" + uuids::to_string(order_id);
   ord.order_update_id = 0;
 
   std::shared_ptr<data::model::Point> start_point;
@@ -736,7 +740,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
 
   std::set<std::string> wait_act;
   std::stringstream ss;
-  ss << "move along [" << start_point->name << " --> ";
+  ss << "begin move along [" << start_point->name << " --> ";
   std::string last_id = start_point->name;
   for (auto& x : steps) {
     std::shared_ptr<data::model::Point> end_point;
@@ -745,6 +749,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     } else {
       end_point = x->path->source_point.lock();
     }
+    // LOG(INFO) << "□→□" << end_point->name;
     if (x != *(steps.end() - 1)) {
       ss << end_point->name << " --> ";
     } else {
@@ -788,12 +793,14 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       }
       // action vda5050
       if (!x->path->acts.actions.empty()) {
-        CLOG(INFO, driver_log) << name << " this node had "
-                               << x->path->acts.actions.size() << " actions";
+        CLOG(INFO, driver_log) << name << " at this node has "
+                               << x->path->acts.actions.size() << " actions:\n";
         for (auto& act : x->path->acts.actions) {
           if (!act.vaild) continue;
           CLOG(INFO, driver_log)
-              << name << " " << act.action_id << " " << act.name;
+              << name << " has a action at [" << x->path->name << "] name:["
+              << act.action_id << "] act:[ " << act.name << "] type:["
+              << data::model::Actions::get_type(act.action_type) << "]";
           auto action = static_cast<vda5050::order::Action*>(&act);
           if (act.when == data::model::Actions::ActionWhen::ORDER_START) {
             (ord.nodes.end() - 2)->actions.push_back(*action);
@@ -825,7 +832,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       task_run = false;
       return false;
     }
-    if (vdastate.order_id == prefix + uuids::to_string(order_id)) {
+    if (vdastate.order_id == "Move_" + uuids::to_string(order_id)) {
       auto p = get_time_from_str(vdastate.timestamp);
       if (p.has_value()) {
         auto dt = std::chrono::system_clock::now() - p.value();
@@ -889,7 +896,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       if (it == vdastate.edgestates.end() && all_act_ok) {
         task_run = false;
         CLOG(INFO, driver_log) << name << " "
-                               << "move along [" << name_ << "] ok\n";
+                               << "move along " << name_ << " ok\n";
         // per act 服务器本地调用 只调第一步
         // TODO
         auto x = steps.front();
@@ -910,14 +917,14 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     } else {
       CLOG_N_TIMES(1, WARNING, driver_log)
           << name << " "
-          << "order state has not been updated,wait_for {\'"
-          << prefix + uuids::to_string(order_id) << "\'}, but now is {\'"
-          << prefix << vdastate.order_id << "\'}\n";
+          << "order state has not been updated,wait_for {\'Move_"
+          << uuids::to_string(order_id) << "\'}, but now is {\'"
+          << vdastate.order_id << "\'}\n";
       CLOG_EVERY_N(10, WARNING, driver_log)
           << name << " "
-          << "order state has not been updated,wait_for {\'"
-          << prefix + uuids::to_string(order_id) << "\'}, but now is {\'"
-          << prefix << vdastate.order_id << "\'}\n";
+          << "order state has not been updated,wait_for {\'Move_"
+          << uuids::to_string(order_id) << "\'}, but now is {\'"
+          << vdastate.order_id << "\'}\n";
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -953,7 +960,9 @@ bool Rabbit3::action(
     return false;
   }
 
-  auto prefix = mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
+  int ver = static_cast<int>(std::stod(mqtt_cli->version));
+  auto vda_version = "v" + std::to_string(ver);
+  auto prefix = mqtt_cli->interface_name + "/" + vda_version + "/" +
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   auto ord = vda5050::order::VDA5050Order();
   ord.header_id = send_header_id++;
@@ -962,7 +971,7 @@ bool Rabbit3::action(
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
   order_id = get_uuid();
-  ord.order_id = prefix + uuids::to_string(order_id);
+  ord.order_id = dest->get_type() + "_" + uuids::to_string(order_id);
   ord.order_update_id = 0;
   {
     auto node = vda5050::order::Node();
@@ -1001,7 +1010,10 @@ bool Rabbit3::action(
       param_y.key = "y";
       param_y.value = (float)t1->position.y() / 1000.0;
       act.action_parameters->push_back(param_y);
-      auto it = t1->type.lock()->allowed_ops.find(dest->get_type());
+      std::string op_type = dest->get_type();
+      std::transform(op_type.begin(), op_type.end(), op_type.begin(),
+                     ::tolower);
+      auto it = t1->type.lock()->allowed_ops.find(op_type);
       auto params = it->second;
       for (auto& param : params) {
         auto p_ = vda5050::order::ActionParam();
@@ -1017,7 +1029,7 @@ bool Rabbit3::action(
 
     node.released = false;
     node.sequence_id = 0;
-    act.action_id = ord.order_id + "/action";
+    act.action_id = ord.order_id + "_action";
     act.action_type = dest->operation;
     act.blocking_type = vda5050::order::ActionBlockingType::HARD;
     node.actions.push_back(act);
@@ -1034,7 +1046,8 @@ bool Rabbit3::action(
       task_run = false;
       return false;
     }
-    if (vdastate.order_id == prefix + uuids::to_string(order_id)) {
+    if (vdastate.order_id ==
+        dest->get_type() + "_" + uuids::to_string(order_id)) {
       // error
       if (!vdastate.errors.empty()) {
         for (auto& x : vdastate.errors) {
@@ -1075,11 +1088,11 @@ bool Rabbit3::action(
         return true;
       }
     } else {
-      CLOG(WARNING, driver_log)
+      CLOG_EVERY_N(10, WARNING, driver_log)
           << name << " "
           << "order state has not been updated,needed {\'"
-          << prefix + uuids::to_string(order_id) << "\'}, but now is {\'"
-          << vdastate.order_id << "}\n";
+          << dest->get_type() + "_" << uuids::to_string(order_id)
+          << "\'}, but now is {\'" << vdastate.order_id << "}\n";
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     n++;
@@ -1110,7 +1123,9 @@ bool Rabbit3::instant_action(
     instanttask_run = false;
     return false;
   }
-  auto prefix = mqtt_cli->interface_name + "/" + mqtt_cli->version + "/" +
+  int ver = static_cast<int>(std::stod(mqtt_cli->version));
+  auto vda_version = "v" + std::to_string(ver);
+  auto prefix = mqtt_cli->interface_name + "/" + vda_version + "/" +
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   auto insact = std::make_shared<vda5050::instantaction::InstantAction>();
   insact->serial_number = mqtt_cli->serial_number;

@@ -6,14 +6,14 @@ class SimRabbit3 {
  public:
   enum class Status { RUNNING, PASUED };
   SimRabbit3(const std::string& interface_name,
-             const std::string& serial_number, const std::string& version,
+             const std::string& serial_number, const std::string& vers,
              const std::string& manufacturer, const std::string& init_point,
              double x, double y)
       : interface_name(interface_name),
         serial_number(serial_number),
-        version(version),
-        manufacturer(manufacturer) {
-    vda_state.version = version;
+        manufacturer(manufacturer),
+        version(vers) {
+    vda_state.version = this->version;
     vda_state.manufacturer = manufacturer;
     vda_state.serial_number = serial_number;
     vda_state.order_id = "";
@@ -47,8 +47,10 @@ class SimRabbit3 {
     con_ops.set_automatic_reconnect(true);
     con_ops.set_keep_alive_interval(5000);
     con_ops.set_connect_timeout(2);
-    auto prefix = interface_name + "/" + version + "/" + manufacturer + "/" +
-                  serial_number + "/";
+    int ver = static_cast<int>(std::stod(version));
+    auto vda_version = "v" + std::to_string(ver);
+    auto prefix = interface_name + "/" + vda_version + "/" + manufacturer +
+                  "/" + serial_number + "/";
     mqtt::will_options will_ops;
     will_ops.set_qos(0);
     will_ops.set_retained(true);
@@ -67,7 +69,9 @@ class SimRabbit3 {
     if (mqtt_client) {
       th_state = std::thread([&] {
         int send_id{0};
-        auto prefix = interface_name + "/" + version + "/" + manufacturer +
+        int ver = static_cast<int>(std::stod(version));
+        auto vda_version = "v" + std::to_string(ver);
+        auto prefix = interface_name + "/" + vda_version + "/" + manufacturer +
                       "/" + serial_number + "/";
         while (true) {
           if (mqtt_client->is_connected()) {
@@ -91,8 +95,9 @@ class SimRabbit3 {
       mqtt_client->on();
       mqtt_client->set_connected_handler([&](std::string) {
         LOG(INFO) << serial_number << "  ONLINE";
-
-        auto prefix = interface_name + "/" + version + "/" + manufacturer +
+        int ver = static_cast<int>(std::stod(version));
+        auto vda_version = "v" + std::to_string(ver);
+        auto prefix = interface_name + "/" + vda_version + "/" + manufacturer +
                       "/" + serial_number + "/";
         jsoncons::json ctx;
         ctx["connectionState"] = "ONLINE";
@@ -108,7 +113,7 @@ class SimRabbit3 {
         msg->set_topic(prefix + "connection");
         mqtt_client->publish(msg);
         //
-        mqtt_client->subscribe(interface_name + "/" + version + "/" +
+        mqtt_client->subscribe(interface_name + "/" + vda_version + "/" +
                                    manufacturer + "/" + serial_number + "/#",
                                0);
       });
@@ -120,7 +125,9 @@ class SimRabbit3 {
             LOG(INFO) << serial_number << " master OFFLINE";
           });
       mqtt_client->connect(con_ops);
-      const std::string prefix = interface_name + "/" + version + "/" +
+      int ver = static_cast<int>(std::stod(version));
+      auto vda_version = "v" + std::to_string(ver);
+      const std::string prefix = interface_name + "/" + vda_version + "/" +
                                  manufacturer + "/" + serial_number + "/";
       mqtt_client->set_func(prefix + "order", [&](mqtt::const_message_ptr t) {
         // LOG(INFO) << t->get_topic();
@@ -376,13 +383,15 @@ class SimRabbit3 {
                       if (!state->agv_position.has_value()) {
                         state->agv_position = vda5050::state::AgvPosition();
                       }
-                      state->agv_position.value().x = s_x + vx * i;
-                      state->agv_position.value().y = s_y + vy * i;
+                      state->agv_position.value().x = s_x + vx / 1000 * i;
+                      state->agv_position.value().y = s_y + vy / 1000 * i;
                       std::this_thread::sleep_for(
                           std::chrono::milliseconds(50));
                       std::unique_lock<std::mutex> lock(mut);
                       vda_state = *state;
                     }
+                    LOG(INFO) << data::model::Actions::get_type(
+                        ord.nodes.at(0).actions.at(i).action_type);
                     if (ord.nodes.at(0).actions.at(i).action_type ==
                         vda5050::order::ActionType::CHARGE) {
                       LOG(INFO) << "=====charging=====";
@@ -409,13 +418,24 @@ class SimRabbit3 {
                         vda_state.battery_state.charging = false;
                       });
                       LOG(INFO) << "=====charging=====";
+                    } else if (ord.nodes.at(0).actions.at(i).action_type ==
+                               vda5050::order::ActionType::PARK) {
+                      LOG(INFO) << "=====park=====";
+                      state->driving = false;
+                      state->last_node_id.clear();
+                      state->actionstates.at(i).action_status =
+                          vda5050::state::ActionStatus::FINISHED;
+                      std::unique_lock<std::mutex> lock(mut);
+                      vda_state = *state;
+                      lock.unlock();
+                      LOG(INFO) << "=====park=====";
                     } else {
                       std::this_thread::sleep_for(
                           std::chrono::milliseconds(500));
                       state->agv_position.value().x = s_x;
                       state->agv_position.value().y = s_y;
                       state->driving = false;
-                      state->last_node_id = ord.nodes.at(0).node_id;
+                      state->last_node_id.clear();
                       state->actionstates.at(i).action_status =
                           vda5050::state::ActionStatus::FINISHED;
                       std::unique_lock<std::mutex> lock(mut);
@@ -467,9 +487,11 @@ class SimRabbit3 {
                     st.action_status = vda5050::state::ActionStatus::FINISHED;
                     std::unique_lock<std::mutex> lock(mut);
                     vda_state.actionstates.push_back(st);
+                    int ver = static_cast<int>(std::stod(version));
+                    auto vda_version = "v" + std::to_string(ver);
                     mqtt::message_ptr msg = mqtt::make_message(
-                        interface_name + "/" + version + "/" + manufacturer +
-                            "/" + serial_number + "/" + "state",
+                        interface_name + "/" + vda_version + "/" +
+                            manufacturer + "/" + serial_number + "/" + "state",
                         vda_state.to_json().as_string(), 0, false);
                     vda_state.header_id = vda_state.header_id + 1;
                     vda_state.timestamp =
@@ -477,12 +499,12 @@ class SimRabbit3 {
                     // LOG(WARNING) << msg->get_payload_ref();
                     mqtt_client->publish(msg)->wait();
                     if (x.action_type ==
-                        vda5050::instantaction::ActionType::startPause) {
+                        vda5050::instantaction::ActionType::STARTPAUSE) {
                       if (status == Status::RUNNING) {
                         status = Status::PASUED;
                       }
                     } else if (x.action_type ==
-                               vda5050::instantaction::ActionType::stopPause) {
+                               vda5050::instantaction::ActionType::STOPPAUSE) {
                       if (status == Status::PASUED) {
                         status = Status::RUNNING;
                       }
@@ -557,12 +579,12 @@ int main(int argc, char** argv) {
   agv1.set_mqtt_ops(agv1.serial_number, ip);
   SimRabbit3 agv2("uagv", "tx2", "2.0", "rw", "P4", 74475, -107450);
   agv2.set_mqtt_ops(agv2.serial_number, ip);
-  SimRabbit3 agv3("uagv", "tx3", "2.0", "rw", "P5", 84087, -107450);
+  SimRabbit3 agv3("uagv", "tx3", "2.0", "tx", "P1", 7000, 19500);
   agv3.set_mqtt_ops(agv3.serial_number, ip);
   SimRabbit3 agv4("uagv", "tx4", "2.0", "rw", "P6", 93837, -107450);
   agv4.set_mqtt_ops(agv4.serial_number, ip);
   if (only) {
-    agv2.start();
+    agv3.start();
   } else {
     agv1.start();
     agv2.start();

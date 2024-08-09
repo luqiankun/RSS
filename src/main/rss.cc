@@ -277,7 +277,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           if (std::string(allow_ops.name()) != "allowedOperation") {
             break;
           }
-          auto name_ = allow_ops.attribute("name").as_string();
+          std::string name_ = allow_ops.attribute("name").as_string();
+          std::transform(name_.begin(), name_.end(), name_.begin(), ::tolower);
           auto name_t = lt->allowed_ops[name_] =
               std::map<std::string, std::string>();
           allow_ops = allow_ops.next_sibling();
@@ -290,7 +291,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
               "allowedPeripheralOperation") {
             break;
           }
-          auto name_ = allow_per_ops.attribute("name").as_string();
+          std::string name_ = allow_per_ops.attribute("name").as_string();
+          std::transform(name_.begin(), name_.end(), name_.begin(), ::tolower);
           lt->allowrd_per_ops[name_] = std::map<std::string, std::string>();
           allow_per_ops = allow_per_ops.next_sibling();
         }
@@ -429,7 +431,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         bool locked = path.attribute("locked").as_bool();
         std::string connectionType =
             path.child("pathLayout").attribute("connectionType").as_string();
-        int layerId = path.child("pointLayout").attribute("layerId").as_int();
+        int layerId = path.child("pathLayout").attribute("layerId").as_int();
+
         std::weak_ptr<data::model::Point> source_point;
         std::weak_ptr<data::model::Point> destination_point;
         for (auto &p : resource->points) {
@@ -442,7 +445,23 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         }
         data::model::Path::PathLayout layout;
         layout.layer_id = layerId;
-        data::model::Path::new_connect_type(connectionType);
+        layout.connect_type =
+            data::model::Path::new_connect_type(connectionType);
+        {
+          auto ctrl_point =
+              path.child("pathLayout").find_child([](const pugi::xml_node n) {
+                return std::string(n.name()) == "controlPoint";
+              });
+          while (ctrl_point.type() != pugi::node_null) {
+            if (std::string(ctrl_point.name()) != "controlPoint") {
+              break;
+            }
+            auto x = ctrl_point.attribute("x").as_int();
+            auto y = ctrl_point.attribute("y").as_int();
+            layout.control_points.push_back(Eigen::Vector2i(x, y));
+            ctrl_point = ctrl_point.next_sibling();
+          }
+        }
         auto p = std::make_shared<data::model::Path>(name);
         p->layout = layout;
         p->source_point = source_point;
@@ -511,7 +530,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             if (std::string(peripher_op.name()) != "peripheralOperation") {
               break;
             }
-            auto per_op_name = peripher_op.attribute("name").as_string();
+            std::string per_op_name = peripher_op.attribute("name").as_string();
+            std::transform(per_op_name.begin(), per_op_name.end(),
+                           per_op_name.begin(), ::tolower);
             auto wait = peripher_op.attribute("completionRequired").as_bool();
             auto when = peripher_op.attribute("executionTrigger").as_string();
             auto link_loc_name =
@@ -672,8 +693,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           veh->color = color;
           veh->energy_level_critical = energyLevelCritical;
           veh->energy_level_good = energyLevelGood;
-          veh->engrgy_level_full = energyLevelSufficientlyRecharged;
-          veh->engrgy_level_recharge = energyLevelFullyRecharged;
+          veh->engrgy_level_full = energyLevelFullyRecharged;
+          veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
           veh->send_queue_size = 2;
           veh->envelope_key = envelope;
           // pro
@@ -743,9 +764,10 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
               serialNumber.type() == pugi::node_null
                   ? "virtual"
                   : serialNumber.attribute("value").as_string();
-          auto vda_version = version.type() == pugi::node_null
-                                 ? "1.0"
-                                 : version.attribute("value").as_string();
+          std::string vda_version =
+              version.type() == pugi::node_null
+                  ? "1.0"
+                  : version.attribute("value").as_string();
           auto vda_manufacturer =
               manufacturer.type() == pugi::node_null
                   ? "virtual"
@@ -777,8 +799,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           veh->color = color;
           veh->energy_level_critical = energyLevelCritical;
           veh->energy_level_good = energyLevelGood;
-          veh->engrgy_level_full = energyLevelSufficientlyRecharged;
-          veh->engrgy_level_recharge = energyLevelFullyRecharged;
+          veh->engrgy_level_full = energyLevelFullyRecharged;
+          veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
           veh->map_id = root.attribute("name").as_string();
           veh->broker_ip = MQTT_IP;
           veh->broker_port = MQTT_PORT;
@@ -812,8 +834,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           veh->color = color;
           veh->energy_level_critical = energyLevelCritical;
           veh->energy_level_good = energyLevelGood;
-          veh->engrgy_level_full = energyLevelSufficientlyRecharged;
-          veh->engrgy_level_recharge = energyLevelFullyRecharged;
+          veh->engrgy_level_full = energyLevelFullyRecharged;
+          veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
           veh->send_queue_size = 2;
           veh->envelope_key = envelope;
           // pro
@@ -1222,7 +1244,10 @@ std::pair<int, std::string> RSS::post_transport_order(
                 kernel::allocate::ResourceManager::ResType::Location) {
               auto t1 = std::dynamic_pointer_cast<data::model::Location>(
                   check.second);
-              auto it = t1->type.lock()->allowed_ops.find(op);
+              std::string op_lower = op;
+              std::transform(op_lower.begin(), op_lower.end(), op_lower.begin(),
+                             ::tolower);
+              auto it = t1->type.lock()->allowed_ops.find(op_lower);
               if (it == t1->type.lock()->allowed_ops.end()) {
                 CLOG(ERROR, driver_log)
                     << t1->name << " not support <" << op << "> type";
@@ -1565,6 +1590,9 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["procState"] = v->get_process_state();
   res["allocatedResources"] = json::array();
   for (auto &r : v->allocated_resources) {
+    if (r.empty()) {
+      continue;
+    }
     json ls = json::array();
     for (auto &x : r) {
       ls.push_back(x->name);
@@ -1725,11 +1753,11 @@ std::pair<int, std::string> RSS::put_vehicle_paused(const std::string &name,
       paused_task->action_description = "set paused action";
       if (p) {
         paused_task->action_type =
-            vda5050::instantaction::ActionType::startPause;
+            vda5050::instantaction::ActionType::STARTPAUSE;
         paused_vehicle(name);
       } else {
         paused_task->action_type =
-            vda5050::instantaction::ActionType::stopPause;
+            vda5050::instantaction::ActionType::STOPPAUSE;
         recovery_vehicle(name);
       }
       paused_task->blocking_type =
@@ -1834,6 +1862,13 @@ std::pair<int, std::string> RSS::get_model() {
     path["layout"]["connectionType"] =
         data::model::Path::get_connect_type(p->layout.connect_type);
     path["layout"]["layerId"] = p->layout.layer_id;
+    path["layout"]["controlPoints"] = json::array();
+    for (auto &ctrl_p : p->layout.control_points) {
+      json ctrl_p_;
+      ctrl_p_["x"] = ctrl_p.x();
+      ctrl_p_["y"] = ctrl_p.y();
+      path["layout"]["controlPoints"].push_back(ctrl_p_);
+    }
     path["properties"] = json::array();
     for (auto &pro : p->properties) {
       json t;
@@ -1875,10 +1910,14 @@ std::pair<int, std::string> RSS::get_model() {
     loc_type["allowedPeripheralOperations"] = json::array();
     loc_type["properties"] = json::array();
     for (auto &x : type->allowed_ops) {
-      loc_type["allowedOperations"].push_back(x.first);
+      std::string x_type = x.first;
+      x_type[0] = ::toupper(x_type[0]);
+      loc_type["allowedOperations"].push_back(x_type);
     }
     for (auto &x : type->allowrd_per_ops) {
-      loc_type["allowedPeripheralOperations"].push_back(x.first);
+      std::string x_type = x.first;
+      x_type[0] = ::toupper(x_type[0]);
+      loc_type["allowedPeripheralOperations"].push_back(x_type);
     }
     for (auto &pro : type->properties) {
       json t;
@@ -1905,7 +1944,9 @@ std::pair<int, std::string> RSS::get_model() {
       link["pointName"] = loc->link.lock()->name;
       link["allowedOperations"] = json::array();
       for (auto &op : loc->type.lock()->allowed_ops) {
-        link["allowedOperations"].push_back(op.first);
+        std::string x_type = op.first;
+        x_type[0] = ::toupper(x_type[0]);
+        link["allowedOperations"].push_back(x_type);
       }
       location["links"].push_back(link);
     }
@@ -1958,8 +1999,8 @@ std::pair<int, std::string> RSS::get_model() {
     vehicle["length"] = v->length;
     vehicle["energyLevelCritical"] = v->energy_level_critical;
     vehicle["energyLevelGood"] = v->energy_level_good;
-    vehicle["energyLevelFullyRecharged"] = v->engrgy_level_recharge;
-    vehicle["energyLevelSufficientlyRecharged"] = v->engrgy_level_full;
+    vehicle["energyLevelFullyRecharged"] = v->engrgy_level_full;
+    vehicle["energyLevelSufficientlyRecharged"] = v->engrgy_level_recharge;
     vehicle["maxVelocity"] = v->max_vel;
     vehicle["maxReverseVelocity"] = v->max_reverse_vel;
     vehicle["layout"]["routeColor"] = v->color;
@@ -2117,13 +2158,19 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         }
         if (x.contains("allowedOperations")) {
           for (auto &allow : x["allowedOperations"].array_range()) {
-            type->allowed_ops[allow.as_string()] =
+            std::string allow_lower = allow.as_string();
+            std::transform(allow_lower.begin(), allow_lower.end(),
+                           allow_lower.begin(), ::tolower);
+            type->allowed_ops[allow_lower] =
                 std::map<std::string, std::string>();
           }
         }
         if (x.contains("allowedPeripheralOperations")) {
           for (auto &allow : x["allowedPeripheralOperations"].array_range()) {
-            type->allowrd_per_ops[allow.as_string()] =
+            std::string allow_lower = allow.as_string();
+            std::transform(allow_lower.begin(), allow_lower.end(),
+                           allow_lower.begin(), ::tolower);
+            type->allowrd_per_ops[allow_lower] =
                 std::map<std::string, std::string>();
           }
         }
@@ -2221,6 +2268,13 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           path->layout.layer_id = p["layout"]["layerId"].as_integer<int>();
           path->layout.connect_type = data::model::Path::new_connect_type(
               p["layout"]["connectionType"].as_string());
+          if (p["layout"].contains("controlPoints")) {
+            for (auto &ctrl_p : p["layout"]["controlPoints"].array_range()) {
+              int x = ctrl_p["x"].as_integer<int>();
+              int y = ctrl_p["y"].as_integer<int>();
+              path->layout.control_points.push_back(Eigen::Vector2i(x, y));
+            }
+          }
         }
         if (p.contains("properties")) {
           for (auto &pro : p["properties"].array_range()) {
@@ -2249,6 +2303,8 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           if (p.contains("peripheralOperation")) {
             for (auto &op : p["peripheralOperation"].array_range()) {
               auto per_op_name = op["name"].as_string();
+              std::transform(per_op_name.begin(), per_op_name.end(),
+                             per_op_name.begin(), ::tolower);
               auto wait = op["completionRequired"].as_bool() ? "SOFT" : "NONE";
               auto when = op["executionTrigger"].as_string();
               auto link_loc_name = op["locationName"].as_string();
@@ -2405,7 +2461,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         } else if (adapter.find("vda") != std::string::npos) {
           std::string vda_interfaceName{"rw"};
           std::string vda_serialNumber{"rw"};
-          std::string vda_version{"1.0"};
+          std::string vda_version{"v1"};
           std::string vda_manufacturer{"rw"};
           if (v.contains("properties")) {
             for (auto &pro : v["properties"].array_range()) {
@@ -2587,20 +2643,6 @@ std::string RSS::get_vehicles_step() {
         veh["allocatedResources"].push_back(x_->name);
       }
     }
-    for (auto &p : resource->points) {
-      for (auto &key : p->envelopes) {
-        if (v->envelope_key == key.first) {
-          auto e = static_cast<data::model::Envelope *>(key.second.get());
-          for (auto &vertex : e->vertexs) {
-            json ver;
-            ver["x"] = vertex.x() * 1000;
-            ver["y"] = vertex.y() * 1000;
-            veh["envelope"]["vertex"].push_back(ver);
-          }
-        }
-      }
-    }
-
     if (v->current_order) {
       if (v->current_order->state ==
           data::order::TransportOrder::State::BEING_PROCESSED) {
@@ -2623,6 +2665,15 @@ std::string RSS::get_vehicles_step() {
               } else {
                 step["orientation"] = "UNDEFINED";
               }
+              step["type"] = data::model::Path::get_connect_type(
+                  step_->path->layout.connect_type);
+              step["control_point"] = json::array();
+              for (auto &ctrl : step_->path->layout.control_points) {
+                json ctrl_point;
+                ctrl_point["x"] = ctrl.x();
+                ctrl_point["y"] = ctrl.y();
+                step["control_point"].push_back(ctrl_point);
+              }
               veh["step"].push_back(step);
             }
 
@@ -2641,6 +2692,15 @@ std::string RSS::get_vehicles_step() {
                 step["orientation"] = "BACKWARD";
               } else {
                 step["orientation"] = "UNDEFINED";
+              }
+              step["type"] = data::model::Path::get_connect_type(
+                  path->path->layout.connect_type);
+              step["control_point"] = json::array();
+              for (auto &ctrl : path->path->layout.control_points) {
+                json ctrl_point;
+                ctrl_point["x"] = ctrl.x();
+                ctrl_point["y"] = ctrl.y();
+                step["control_point"].push_back(ctrl_point);
               }
               veh["step"].push_back(step);
             }

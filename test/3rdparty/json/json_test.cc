@@ -5,7 +5,7 @@
 
 #include "../../../include/3rdparty/log/easylogging++.h"
 #include "../../../include/3rdparty/utest/utest.h"
-#include "../../../include/component/util/timer.hpp"
+#include "../../../include/component/util/tools.hpp"
 
 INITIALIZE_EASYLOGGINGPP
 

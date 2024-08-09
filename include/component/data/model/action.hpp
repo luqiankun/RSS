@@ -21,8 +21,9 @@ class Actions {
     LIFT,
     DROP,
     PICK,
-    startPause,
-    stopPause
+    PARK,  // 停靠在某个location
+    STARTPAUSE,
+    STOPPAUSE
   };
   enum class ActionBlockingType { NONE = 1, SOFT = 2, HARD = 3 };
   class ActionParam {
@@ -33,59 +34,65 @@ class Actions {
   // 自定义
   enum class ActionWhen { ORDER_START = 1, ORDER_END = 2 };
   static std::optional<OpType> get_optype(const std::string& op) {
-    if (op == "NOP") {
+    auto str1 = op;
+    std::transform(str1.begin(), str1.end(), str1.begin(), ::tolower);
+    if (str1 == "nop") {
       return OpType::NOP;
-    } else if (op == "pick") {
+    } else if (str1 == "pick") {
       return OpType::PICK;
-    } else if (op == "LOAD") {
+    } else if (str1 == "load") {
       return OpType::LOAD;
-    } else if (op == "UNLOAD") {
+    } else if (str1 == "unload") {
       return OpType::UNLOAD;
-    } else if (op == "drop") {
+    } else if (str1 == "drop") {
       return OpType::DROP;
-    } else if (op == "CLOSE") {
+    } else if (str1 == "close") {
       return OpType::CLOSE;
-    } else if (op == "OPEN") {
+    } else if (str1 == "open") {
       return OpType::OPEN;
-    } else if (op == "LIFT") {
+    } else if (str1 == "lift") {
       return OpType::LIFT;
-    } else if (op == "Charge") {
+    } else if (str1 == "charge") {
       return OpType::CHARGE;
-    } else if (op == "MOVE") {
+    } else if (str1 == "move") {
       return OpType::MOVE;
-    } else if (op == "startPause") {
-      return OpType::startPause;
-    } else if (op == "stopPause") {
-      return OpType::stopPause;
+    } else if (str1 == "startpause") {
+      return OpType::STARTPAUSE;
+    } else if (str1 == "stoppause") {
+      return OpType::STOPPAUSE;
+    } else if (str1 == "park") {
+      return OpType::PARK;
     } else {
       return std::nullopt;
     }
   }
   static std::string get_type(OpType t) {
     if (t == OpType::MOVE) {
-      return "MOVE";
+      return "Move";
     } else if (t == OpType::PICK) {
-      return "pick";
+      return "Pick";
     } else if (t == OpType::DROP) {
-      return "drop";
+      return "Drop";
     } else if (t == OpType::LOAD) {
-      return "LOAD";
+      return "Load";
     } else if (t == OpType::UNLOAD) {
-      return "UNLOAD";
+      return "Unload";
     } else if (t == OpType::CHARGE) {
       return "Charge";
     } else if (t == OpType::OPEN) {
-      return "OPEN";
+      return "Open";
     } else if (t == OpType::CLOSE) {
-      return "CLOSE";
+      return "Close";
     } else if (t == OpType::LIFT) {
-      return "LIFT";
-    } else if (t == OpType::startPause) {
+      return "Lift";
+    } else if (t == OpType::STARTPAUSE) {
       return "startPause";
-    } else if (t == OpType::stopPause) {
+    } else if (t == OpType::STOPPAUSE) {
       return "stopPause";
+    } else if (t == OpType::PARK) {
+      return "Park";
     } else {
-      return "NOP";
+      return "Nop";
     }
   }
   // vda操作
@@ -212,6 +219,17 @@ class Actions {
         continue;
       }
       x.vaild = true;
+    }
+    for (auto& x : actions) {
+      if (!x.action_parameters.has_value()) {
+        continue;
+      }
+      for (auto& param : x.action_parameters.value()) {
+        if (param.key == "type") {
+          x.action_type = get_optype(std::get<std::string>(param.value))
+                              .value_or(OpType::NOP);
+        }
+      }
     }
   }
   Actions() {}

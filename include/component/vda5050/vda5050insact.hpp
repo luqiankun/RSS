@@ -21,9 +21,9 @@ class Action : public data::model::Actions::Action {
   using data::model::Actions::Action ::Action;
   void init(jsoncons::json& obj) override {
     if (obj["actionType"].as_string() == "startPause") {
-      action_type = ActionType::startPause;
+      action_type = ActionType::STARTPAUSE;
     } else if (obj["actionType"].as_string() == "stopPause") {
-      action_type = ActionType::stopPause;
+      action_type = ActionType::STOPPAUSE;
     } else {
       action_type = ActionType::NOP;
     }
@@ -63,9 +63,9 @@ class Action : public data::model::Actions::Action {
   jsoncons::json to_json() override {
     jsoncons::json res;
     res["actionId"] = action_id;
-    if (action_type == ActionType::startPause) {
+    if (action_type == ActionType::STARTPAUSE) {
       res["actionType"] = "startPause";
-    } else if (action_type == ActionType::stopPause) {
+    } else if (action_type == ActionType::STOPPAUSE) {
       res["actionType"] = "stopPause";
     } else {
       res["actionType"] = "NOP";
