@@ -429,13 +429,24 @@ class SimRabbit3 {
                       vda_state = *state;
                       lock.unlock();
                       LOG(INFO) << "=====park=====";
+                    } else if (ord.nodes.at(0).actions.at(i).action_type ==
+                               vda5050::order::ActionType::MOVE) {
+                      std::this_thread::sleep_for(
+                          std::chrono::milliseconds(500));
+                      state->agv_position.value().x = s_x;
+                      state->agv_position.value().y = s_y;
+                      state->driving = false;
+                      state->actionstates.at(i).action_status =
+                          vda5050::state::ActionStatus::FINISHED;
+                      std::unique_lock<std::mutex> lock(mut);
+                      vda_state = *state;
                     } else {
                       std::this_thread::sleep_for(
                           std::chrono::milliseconds(500));
                       state->agv_position.value().x = s_x;
                       state->agv_position.value().y = s_y;
                       state->driving = false;
-                      state->last_node_id.clear();
+                      // state->last_node_id.clear();
                       state->actionstates.at(i).action_status =
                           vda5050::state::ActionStatus::FINISHED;
                       std::unique_lock<std::mutex> lock(mut);

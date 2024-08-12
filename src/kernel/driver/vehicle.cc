@@ -578,7 +578,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
         current_point.reset();
       } else {
         for (auto& x : res->points) {
-          LOG(INFO) << x->name;
+          // LOG(INFO) << x->name;
           if (x->name == vdastate.last_node_id) {
             last_point = x;
             current_point = last_point;
@@ -655,6 +655,7 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
                 driver_log)
             << name << " " << mqtt_cli->serial_number + " ONLINE\n";
         veh_state = vda5050::VehicleMqttStatus::ONLINE;
+        rece_header_id = -1;
       } else if (v["connectionState"] == "OFFLINE") {
         CLOG_IF(veh_state != vda5050::VehicleMqttStatus::OFFLINE, INFO,
                 driver_log)

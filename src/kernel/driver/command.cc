@@ -225,13 +225,20 @@ Command::Command(const std::string& n) : RSSObject(n) {
     std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto& a : veh->allocated_resources) {
       for (auto& x : a) {
-        if (x != veh->current_point &&
-            x != get_dest(driver_order)->destination.lock()) {
-          auto it = std::find(next_res.begin(), next_res.end(), x);
-          if (it == next_res.end()) {
-            temp.push_back(x);
-            ss << x->name << " ";
+        if (x == veh->current_point) {
+          continue;
+        }
+        auto dest_ = get_dest(driver_order)->operation;
+        if (dest_ == data::model::Actions::OpType::CHARGE ||
+            dest_ == data::model::Actions::OpType::PARK) {
+          if (x == get_dest(driver_order)->destination.lock()) {
+            continue;
           }
+        }
+        auto it = std::find(next_res.begin(), next_res.end(), x);
+        if (it == next_res.end()) {
+          temp.push_back(x);
+          ss << x->name << " ";
         }
       }
     }

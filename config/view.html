@@ -177,6 +177,7 @@
                 e.stopPropagation();
             })
             canvas.addEventListener('mouseup', (event) => {
+                if (!is_running) return
                 if (mouse_flag) {
                     if (event.button == 0) {
                         mouse_flag = false
@@ -231,6 +232,7 @@
                 }
             });
             canvas.addEventListener('mousedown', (event) => {
+                if (!is_running) return
                 if (event.button == 0) {
                     //左键
                     for (const veh of vehicles) {
@@ -489,6 +491,7 @@
                     points = [];
                     paths = [];
                     locations = []
+                    blocks = []
                     orders.clear();
                     let model = JSON.parse(Http.responseText);
                     // console.log(model);
@@ -1351,7 +1354,7 @@
         left: 0px;
         top: 0px;
         margin: 20px;
-        background: #ffffff;
+        background: #effbff;
         border: thin solid #1b7cdd;
     }
 

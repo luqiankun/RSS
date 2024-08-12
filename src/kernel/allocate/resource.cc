@@ -210,7 +210,8 @@ bool ResourceManager::unclaim(const std::vector<TCSResourcePtr>& res,
 PointPtr ResourceManager::get_recent_park_point(PointPtr cur) {
   // CLOG(INFO, "allocate") << "now" << cur->name << " " << cur->position;
   std::vector<double> dis;
-  std::sort(points.begin(), points.end(),
+  auto temp_ps = points;
+  std::sort(temp_ps.begin(), temp_ps.end(),
             [&](const PointPtr& a, const PointPtr& b) {
               double d1 = std::numeric_limits<double>::max();
               double d2 = std::numeric_limits<double>::max();
@@ -218,23 +219,24 @@ PointPtr ResourceManager::get_recent_park_point(PointPtr cur) {
               d2 = (cur->position - b->position).cast<double>().norm();
               return d1 < d2;
             });
-  for (int i = 0; i < points.size(); i++) {
-    if (points.at(i)->type != data::model::Point::Type::PARK_POSITION) {
+  for (int i = 0; i < temp_ps.size(); i++) {
+    if (temp_ps.at(i)->type != data::model::Point::Type::PARK_POSITION) {
       continue;
     }
-    if (!is_connected(cur, points.at(i))) {
+    if (!is_connected(cur, temp_ps.at(i))) {
       continue;
     }
-    if (points.at(i)->owner.lock()) {
+    if (temp_ps.at(i)->owner.lock()) {
       continue;
     }
-    return points.at(i);
+    return temp_ps.at(i);
   }
   return nullptr;
 }
 LocationPtr ResourceManager::get_recent_charge_loc(PointPtr cur) {
   std::vector<double> dis;
-  std::sort(locations.begin(), locations.end(),
+  auto temp_loc = locations;
+  std::sort(temp_loc.begin(), temp_loc.end(),
             [&](const LocationPtr& a, const LocationPtr& b) {
               double d1 = std::numeric_limits<double>::max();
               double d2 = std::numeric_limits<double>::max();
@@ -242,21 +244,21 @@ LocationPtr ResourceManager::get_recent_charge_loc(PointPtr cur) {
               d2 = ((cur->position - b->position).cast<double>()).norm();
               return d1 < d2;
             });
-  for (int i = 0; i < locations.size(); i++) {
-    if (locations.at(i)->type.lock()->allowed_ops.find("charge") ==
-        locations.at(i)->type.lock()->allowed_ops.end()) {
+  for (int i = 0; i < temp_loc.size(); i++) {
+    if (temp_loc.at(i)->type.lock()->allowed_ops.find("charge") ==
+        temp_loc.at(i)->type.lock()->allowed_ops.end()) {
       continue;
     }
-    if (!locations.at(i)->link.lock()) {
+    if (!temp_loc.at(i)->link.lock()) {
       continue;
     }
-    if (!is_connected(cur, locations.at(i)->link.lock())) {
+    if (!is_connected(cur, temp_loc.at(i)->link.lock())) {
       continue;
     }
-    if (locations.at(i)->owner.lock()) {
+    if (temp_loc.at(i)->owner.lock()) {
       continue;
     }
-    return locations.at(i);
+    return temp_loc.at(i);
   }
   return nullptr;
 }

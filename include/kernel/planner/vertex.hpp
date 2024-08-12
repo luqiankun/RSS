@@ -39,7 +39,6 @@ class Vertex : public ::std::enable_shared_from_this<Vertex> {
   std::optional<float> get_g_value();
   void set_type(AType type);
   ~Vertex() = default;
-  ;
   std::string get_info() {
     std::stringstream os;
     os << "{\"x\": " << this->location.x() << " ,\"y\": " << this->location.y()
