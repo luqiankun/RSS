@@ -752,10 +752,28 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
                     node.attribute("name").as_string() ==
                         std::string("vda5050:orderQueueSize"));
           });
+          auto deviation_xy = vehicle.find_child([](pugi::xml_node node) {
+            return (std::string(node.name()) == "property" &&
+                    node.attribute("name").as_string() ==
+                        std::string("vda5050:deviationXY"));
+          });
+          auto deviation_theta = vehicle.find_child([](pugi::xml_node node) {
+            return (std::string(node.name()) == "property" &&
+                    node.attribute("name").as_string() ==
+                        std::string("vda5050:deviationTheta"));
+          });
 
           ///////////////////
           /// // 使用mqtt车辆
           //////////////////
+          auto vda_deviation_xy =
+              deviation_xy.type() == pugi::node_null
+                  ? 1.0
+                  : deviation_xy.attribute("value").as_double();
+          auto vda_deviation_theta =
+              deviation_theta.type() == pugi::node_null
+                  ? 0.17
+                  : deviation_theta.attribute("value").as_double();
           auto vda_interfaceName =
               interfaceName.type() == pugi::node_null
                   ? "virtual"
@@ -804,6 +822,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           veh->map_id = root.attribute("name").as_string();
           veh->broker_ip = MQTT_IP;
           veh->broker_port = MQTT_PORT;
+          veh->deviation_xy = vda_deviation_xy;
+          veh->deviation_theta = vda_deviation_theta;
           veh->send_queue_size = orderquence.type() == pugi::node_null
                                      ? 2
                                      : orderquence.attribute("value").as_int();
@@ -935,7 +955,7 @@ void RSS::stop() {
 }
 void RSS::home_order(const std::string &name,
                      std::shared_ptr<kernel::driver::Vehicle> v) {
-  auto time = std::chrono::system_clock::now();
+  auto time = get_now_utc_time();
   std::shared_ptr<data::order::TransportOrder> ord =
       std::make_shared<data::order::TransportOrder>(name);
   std::hash<std::string> hash_fn;
@@ -969,7 +989,7 @@ void RSS::home_order(const std::string &name,
 void RSS::charge_order(const std::string &name,
                        std::shared_ptr<kernel::driver::Vehicle> v) {
   v->process_chargeing = true;
-  auto time = std::chrono::system_clock::now();
+  auto time = get_now_utc_time();
   std::shared_ptr<data::order::TransportOrder> ord =
       std::make_shared<data::order::TransportOrder>(name);
   std::hash<std::string> hash_fn;
@@ -1185,7 +1205,7 @@ std::pair<int, std::string> RSS::post_transport_order(
     auto req = json::parse(body);
     // 字段检查
     auto ord = std::make_shared<data::order::TransportOrder>(ord_name);
-    ord->create_time = std::chrono::system_clock::now();
+    ord->create_time = get_now_utc_time();
     if (req.contains("deadline") && !req["deadline"].empty()) {
       auto dt = get_time_from_str(req["deadline"].as_string());
       ord->dead_time = dt.value_or(ord->create_time + std::chrono::minutes(60));
@@ -2463,6 +2483,8 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           std::string vda_serialNumber{"rw"};
           std::string vda_version{"v1"};
           std::string vda_manufacturer{"rw"};
+          float deviationXY{1.0};
+          float deviationTheta{0.17};
           if (v.contains("properties")) {
             for (auto &pro : v["properties"].array_range()) {
               if (pro["name"] == "vda5050:interfaceName") {
@@ -2477,6 +2499,10 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
 
               } else if (pro["name"] == "vda5050:orderQueueSize") {
                 orderquence = pro["value"].as_integer<int>();
+              } else if (pro["name"] == "vda5050:deviationXY") {
+                deviationXY = pro["value"].as_double();
+              } else if (pro["name"] == "vda5050:deviationTheta") {
+                deviationTheta = pro["value"].as_double();
               }
             }
           }
@@ -2514,6 +2540,8 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           veh->broker_ip = MQTT_IP;
           veh->broker_port = MQTT_PORT;
           veh->send_queue_size = orderquence;
+          veh->deviation_xy = deviationXY;
+          veh->deviation_theta = deviationTheta;
           veh->envelope_key =
               v.contains("envelopeKey") ? v["envelopeKey"].as_string() : "";
           if (v.contains("properties")) {

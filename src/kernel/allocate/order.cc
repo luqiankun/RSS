@@ -74,7 +74,9 @@ void OrderPool::cancel_all_order() {
         x->state == data::order::TransportOrder::State::DISPATCHABLE ||
         x->state == data::order::TransportOrder::State::BEING_PROCESSED)
       x->state = data::order::TransportOrder::State::WITHDRAWL;
+    ended_orderpool.push_back(x);
   }
+  orderpool.clear();
   for (auto& x : ended_orderpool) {
     if (x->state == data::order::TransportOrder::State::RAW ||
         x->state == data::order::TransportOrder::State::ACTIVE ||

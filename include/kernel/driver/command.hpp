@@ -33,7 +33,7 @@ class Command : public RSSObject {
       DriverOrderPtr, std::shared_ptr<Vehicle>);
   void vehicle_execute_cb(bool);  // 车辆通知动作结果
   void run_once();
-  ~Command() { CLOG(INFO, driver_log) << name << " drop\n"; }
+  ~Command() { CLOG(DEBUG, driver_log) << name << " drop\n"; }
 
  public:
   State state{State::INIT};

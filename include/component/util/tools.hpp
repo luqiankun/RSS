@@ -37,7 +37,7 @@ inline std::string get_time_fmt(std::chrono::system_clock::time_point t) {
   auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
                t.time_since_epoch())
                .count();
-  time << std::put_time(std::localtime(&tm), "%Y-%m-%dT%H:%M:%S.") << p % 1000
+  time << std::put_time(std::gmtime(&tm), "%Y-%m-%dT%H:%M:%S.") << p % 1000
        << "Z";
   return time.str();
 }
@@ -48,7 +48,7 @@ inline std::string get_date_fmt() {
   // auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
   //              t.time_since_epoch())
   //              .count();
-  time << std::put_time(std::localtime(&tm), "%Y-%m-%d");
+  time << std::put_time(std::gmtime(&tm), "%Y-%m-%d");
   return time.str();
 }
 
@@ -85,5 +85,20 @@ inline static uuids::uuid get_uuid() {
   static uuids::uuid_random_generator gen{generator};
   uuids::uuid const id = gen();
   return id;
+}
+inline static std::chrono::system_clock::time_point get_now_utc_time() {
+  auto now = std::chrono::system_clock::now();
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch())
+                .count() %
+            1000;
+  std::time_t currentTime = std::time(nullptr);
+  std::tm* localTm = std::gmtime(&currentTime);
+  std::time_t utcTime = std::mktime(localTm);
+  auto p =
+      std::chrono::time_point<std::chrono::system_clock>::clock::from_time_t(
+          utcTime) +
+      std::chrono::milliseconds(ms);
+  return p;
 }
 #endif

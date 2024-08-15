@@ -86,7 +86,7 @@ class VehicleMaster {
       mqtt_client->set_connected_handler([&](std::string) {
         master_state = MasterMqttStatus::ONLINE;
         CLOG(INFO, mqtt_log)
-            << "mqtt_serial_number:" << serial_number << " master ONLINE";
+            << "mqtt_serial_number:" << serial_number << " master ONLINE\n";
         int ver = static_cast<int>(std::stod(version));
         auto vda_version = "v" + std::to_string(ver);
         mqtt_client->subscribe(interface_name + "/" + vda_version + "/" +
@@ -96,13 +96,13 @@ class VehicleMaster {
       mqtt_client->set_connection_lost_handler([&](std::string) {
         master_state = MasterMqttStatus::CONNECTIONBROKEN;
         CLOG(WARNING, mqtt_log) << "mqtt_serial_number:" << serial_number
-                                << " master CONNECTIONBROKEN";
+                                << " master CONNECTIONBROKEN\n";
       });
       mqtt_client->set_disconnected_handler(
           [&](const mqtt::properties&, mqtt::ReasonCode) {
             master_state = MasterMqttStatus::OFFLINE;
-            CLOG(INFO, mqtt_log)
-                << "mqtt_serial_number:" << serial_number << " master OFFLINE";
+            CLOG(INFO, mqtt_log) << "mqtt_serial_number:" << serial_number
+                                 << " master OFFLINE]\n";
           });
       mqtt_client->connect(con_ops);
     }

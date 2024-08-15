@@ -295,9 +295,9 @@ class Node {
       if (obj["nodePosition"].contains("theta")) {
         node_position.value().theta = obj["nodePosition"]["theta"].as_double();
       }
-      if (obj["nodePosition"].contains("allowedDeviationXy")) {
+      if (obj["nodePosition"].contains("allowedDeviationXY")) {
         node_position.value().allowed_deviation_xy =
-            obj["nodePosition"]["allowedDeviationXy"].as_double();
+            obj["nodePosition"]["allowedDeviationXY"].as_double();
       }
       if (obj["nodePosition"].contains("allowedDeviationTheta")) {
         node_position.value().allowed_deviation_theta =
@@ -333,7 +333,7 @@ class Node {
         res["nodePosition"]["theta"] = node_position.value().theta.value();
       }
       if (node_position.value().allowed_deviation_xy.has_value()) {
-        res["nodePosition"]["allowedDeviationXy"] =
+        res["nodePosition"]["allowedDeviationXY"] =
             node_position.value().allowed_deviation_xy.value();
       }
       if (node_position.value().allowed_deviation_theta.has_value()) {

@@ -141,7 +141,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
     }
   }
   CLOG_IF(!ss.str().empty(), INFO, allocate_log)
-      << client->name << " allocate " << ss.str() << "\n";
+      << client->name << " allocate { " << ss.str() << "}\n";
   return true;
 }
 

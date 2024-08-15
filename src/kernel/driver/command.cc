@@ -4,8 +4,12 @@
 #define assert_valid                                                   \
   auto veh = vehicle.lock();                                           \
   auto scheduler = veh->scheduler.lock();                              \
+  if (!veh || !scheduler) {                                            \
+    state = State::DISPOSABLE;                                         \
+    return;                                                            \
+  }                                                                    \
   auto res = scheduler->resource.lock();                               \
-  if (!veh || !scheduler || !res) {                                    \
+  if (!res) {                                                          \
     state = State::DISPOSABLE;                                         \
     return;                                                            \
   }                                                                    \
@@ -247,7 +251,7 @@ Command::Command(const std::string& n) : RSSObject(n) {
     }
     state = State::END;
     CLOG_IF(!ss.str().empty(), INFO, driver_log)
-        << veh->name << " free " << ss.str() << "\n";
+        << veh->name << " free { " << ss.str() << "}\n";
   };
   cbs[State::END] = [&] {
     assert_valid;

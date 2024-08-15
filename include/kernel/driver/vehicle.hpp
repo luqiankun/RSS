@@ -18,7 +18,8 @@ class Vehicle : public schedule::Client,
  public:
   Vehicle(const std::string& n) : schedule::Client(n) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDEL, EXECUTING, CHARGING };
-  enum proState { AWAITING_ORDER, IDEL, PROCESSING_ORDER };
+  enum class proState { AWAITING_ORDER, IDEL, PROCESSING_ORDER };
+  enum class nowOrder { BEGIN, END };
   enum integrationLevel {
     TO_BE_IGNORED,
     TO_BE_NOTICED,
@@ -69,7 +70,7 @@ class Vehicle : public schedule::Client,
   State state{State::UNKNOWN};
   proState process_state{proState::IDEL};
   bool paused{false};
-
+  nowOrder now_order_state{nowOrder::END};
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<allocate::ResourceManager> resource;
@@ -131,8 +132,14 @@ class Rabbit3 : public Vehicle {
   std::string map_id;
   int send_header_id{0};
   uuids::uuid order_id;
+  int seq_id{0};
+  int update_vda_order_id{0};
   bool init_pos{false};
   int rece_header_id{-1};
+  double deviation_xy{1.0};
+  double deviation_theta{0.17};
+  double dest_deviation_xy{0.05};
+  double dest_deviation_theta{0.034};
 };
 class InvalidVehicle : public Vehicle {
  public:

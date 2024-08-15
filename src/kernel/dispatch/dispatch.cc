@@ -131,7 +131,7 @@ Dispatcher::~Dispatcher() {
 }
 
 void Dispatcher::idle_detect() {
-  auto now = std::chrono::system_clock::now();
+  auto now = get_now_utc_time();
   for (auto& v : vehicles) {
     if (v->state == driver::Vehicle::State::UNKNOWN) {
       continue;
@@ -165,7 +165,7 @@ void Dispatcher::idle_detect() {
       if (v->state == driver::Vehicle::State::IDEL) {
         auto dt = now - v->idle_time;
         auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
-        if (dt_s.count() > 5) {
+        if (dt_s.count() > 15) {
           if (v->park_point && v->park_point != v->last_point) {
             go_home("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
                         "_goto_park",

@@ -600,13 +600,13 @@ class NodeState {
 
 class VDA5050State {
  public:
-  int header_id;
+  int header_id{-1};
   std::string timestamp;
   std::string version;
   std::string manufacturer;
   std::string serial_number;
   std::string order_id;
-  int order_update_id;
+  int order_update_id{-1};
   std::string last_node_id;
   int last_node_seq_id;
   std::vector<NodeState> nodestates;
