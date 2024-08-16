@@ -71,6 +71,7 @@ Command::Command(const std::string& n) : RSSObject(n) {
   cbs[State::INIT] = [&] {
     assert_valid;
     state = State::ALLOCATING;
+    auto driver_order = order->driverorders[order->current_driver_index];
   };
   cbs[State::ALLOCATING] = [&] {
     assert_valid;

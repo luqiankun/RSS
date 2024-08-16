@@ -49,5 +49,19 @@ UTEST(time_parse, case) {
               << std::endl;
   }
 }
+UTEST(josn_null, case2) {
+  jsoncons::json j;
+  j = jsoncons::json::parse(R"(
+{
+"name": null,
+"age": "NAN"
+}
+)");
+  // j["name"] = jsoncons::json::null();
+  EXPECT_EQ(j["name"].type(), jsoncons::json_type::null_value);
+  EXPECT_TRUE(std::isnan(j["age"].as_double()));
+
+  std::cout << j["name"] << " " << j["age"].as_double() << std::endl;
+}
 
 UTEST_MAIN();

@@ -78,6 +78,7 @@ class SimRabbit3 {
             std::unique_lock<std::mutex> lock(pro_mut);
             con.wait_for(lock, std::chrono::milliseconds(20));
             try {
+              std::unique_lock<std::mutex> lock_(mut);
               mqtt::message_ptr msg = mqtt::make_message(
                   prefix + "state", vda_state.to_json().as_string(), 0, false);
               vda_state.header_id = send_id++;
@@ -85,7 +86,6 @@ class SimRabbit3 {
                   get_time_fmt(std::chrono::system_clock::now());
               // LOG(WARNING) << msg->get_payload_ref();
               mqtt_client->publish(msg)->wait();
-
             } catch (mqtt::exception& ec) {
               LOG(ERROR) << ec.get_error_str();
             }
@@ -194,10 +194,7 @@ class SimRabbit3 {
                     e1.edge_id = ord.edges.at(i).edge_id;
                     e1.released = ord.edges.at(i).released;
                     e1.sequence_id = ord.edges.at(i).sequence_id;
-                    if (ord.edges.at(i).edge_description.has_value()) {
-                      e1.edge_description =
-                          ord.edges.at(i).edge_description.value();
-                    }
+                    e1.edge_description = ord.edges.at(i).edge_description;
                     state->edgestates.push_back(e1);
                     for (auto& x : ord.edges.at(i).actions) {
                       auto act = vda5050::state::ActionState();
@@ -535,10 +532,7 @@ class SimRabbit3 {
                     e1.edge_id = ord.edges.at(i).edge_id;
                     e1.released = ord.edges.at(i).released;
                     e1.sequence_id = ord.edges.at(i).sequence_id;
-                    if (ord.edges.at(i).edge_description.has_value()) {
-                      e1.edge_description =
-                          ord.edges.at(i).edge_description.value();
-                    }
+                    e1.edge_description = ord.edges.at(i).edge_description;
                     state->edgestates.push_back(e1);
                     for (auto& x : ord.edges.at(i).actions) {
                       auto act = vda5050::state::ActionState();

@@ -58,8 +58,7 @@ class Point : public RSSResource {
   Vector3i position{0, 0, 0};  // x y
   Layout layout;
   Type type{Type::UNKNOWN};
-  int client_angle{0};
-  double vehicle_orientation{0};
+  double vehicle_orientation{std::nan("")};
   std::vector<std::shared_ptr<Path>> incoming_paths;
   std::vector<std::shared_ptr<Path>> outgoing_paths;
   std::vector<std::shared_ptr<Location>> attached_links;

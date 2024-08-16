@@ -1,82 +1,6 @@
 #include "../../include/main/rss.hpp"
 
 #include "../../include/kernel/driver/vehicle.hpp"
-namespace httplib {
-enum StatusCode {
-  // Information responses
-  Continue_100 = 100,
-  SwitchingProtocol_101 = 101,
-  Processing_102 = 102,
-  EarlyHints_103 = 103,
-
-  // Successful responses
-  OK_200 = 200,
-  Created_201 = 201,
-  Accepted_202 = 202,
-  NonAuthoritativeInformation_203 = 203,
-  NoContent_204 = 204,
-  ResetContent_205 = 205,
-  PartialContent_206 = 206,
-  MultiStatus_207 = 207,
-  AlreadyReported_208 = 208,
-  IMUsed_226 = 226,
-
-  // Redirection messages
-  MultipleChoices_300 = 300,
-  MovedPermanently_301 = 301,
-  Found_302 = 302,
-  SeeOther_303 = 303,
-  NotModified_304 = 304,
-  UseProxy_305 = 305,
-  unused_306 = 306,
-  TemporaryRedirect_307 = 307,
-  PermanentRedirect_308 = 308,
-
-  // Client error responses
-  BadRequest_400 = 400,
-  Unauthorized_401 = 401,
-  PaymentRequired_402 = 402,
-  Forbidden_403 = 403,
-  NotFound_404 = 404,
-  MethodNotAllowed_405 = 405,
-  NotAcceptable_406 = 406,
-  ProxyAuthenticationRequired_407 = 407,
-  RequestTimeout_408 = 408,
-  Conflict_409 = 409,
-  Gone_410 = 410,
-  LengthRequired_411 = 411,
-  PreconditionFailed_412 = 412,
-  PayloadTooLarge_413 = 413,
-  UriTooLong_414 = 414,
-  UnsupportedMediaType_415 = 415,
-  RangeNotSatisfiable_416 = 416,
-  ExpectationFailed_417 = 417,
-  ImATeapot_418 = 418,
-  MisdirectedRequest_421 = 421,
-  UnprocessableContent_422 = 422,
-  Locked_423 = 423,
-  FailedDependency_424 = 424,
-  TooEarly_425 = 425,
-  UpgradeRequired_426 = 426,
-  PreconditionRequired_428 = 428,
-  TooManyRequests_429 = 429,
-  RequestHeaderFieldsTooLarge_431 = 431,
-  UnavailableForLegalReasons_451 = 451,
-
-  // Server error responses
-  InternalServerError_500 = 500,
-  NotImplemented_501 = 501,
-  BadGateway_502 = 502,
-  ServiceUnavailable_503 = 503,
-  GatewayTimeout_504 = 504,
-  HttpVersionNotSupported_505 = 505,
-  VariantAlsoNegotiates_506 = 506,
-  InsufficientStorage_507 = 507,
-  LoopDetected_508 = 508,
-  NotExtended_510 = 510,
-  NetworkAuthenticationRequired_511 = 511,
-};
-}
 std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
   std::unique_lock<std::shared_mutex> lock(mutex);
   stop();
@@ -103,8 +27,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       auto msg =
           "Could not parse XML input '" + std::string(ret.description()) + "'.";
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::BadRequest_400,
-                                         res.to_string());
+      return std::pair<int, std::string>(BadRequest_400, res.to_string());
     }
     //
     auto root = doc.first_child();  // <model>
@@ -115,8 +38,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       auto msg =
           "Could not parse XML input '" + std::string("'don't has model'.");
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::BadRequest_400,
-                                         res.to_string());
+      return std::pair<int, std::string>(BadRequest_400, res.to_string());
     }
     { resource->model_name = root.attribute("name").as_string(); }
     {
@@ -909,14 +831,13 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     CLOG(INFO, rss_log) << "run all ...\n";
     run();
     CLOG(INFO, rss_log) << "run all ok\n";
-    return std::pair<int, std::string>(static_cast<int>(httplib::OK_200), "");
+    return std::pair<int, std::string>(static_cast<int>(OK_200), "");
   } catch (pugi::xpath_exception ec) {
     CLOG(ERROR, rss_log) << "parse error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse XML input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   }
 }
 
@@ -1086,7 +1007,7 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
         v->processing_vehicle.lock() ? v->processing_vehicle.lock()->name : "";
     value["peripheralReservationToken"] = v->peripheral_reservation_token;
     value["wrappingSequence"] =
-        v->ordersequence.lock() ? v->ordersequence.lock()->name : "";
+        v->ordersequence.lock() ? v->ordersequence.lock()->name : json::null();
     value["createTime"] = get_time_fmt(v->create_time);
     value["destinations"] = json::array();
     for (auto &dest : v->driverorders) {
@@ -1115,7 +1036,7 @@ std::pair<int, std::string> RSS::get_transport_orders(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   if (vehicle.empty()) {
     json res = json::array();
@@ -1127,7 +1048,7 @@ std::pair<int, std::string> RSS::get_transport_orders(
       json value = order_to_json(v);
       res.push_back(value);
     }
-    return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+    return std::pair<int, std::string>(OK_200, res.to_string());
   } else {
     for (auto &v : dispatcher->vehicles) {
       if (v->name == vehicle) {
@@ -1136,13 +1057,13 @@ std::pair<int, std::string> RSS::get_transport_orders(
           json value = order_to_json(v);
           res.push_back(value);
         }
-        return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+        return std::pair<int, std::string>(OK_200, res.to_string());
       }
     }
     json res = json::array();
     auto msg = "Could not find the intended vehicle '" + vehicle + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
 }
 
@@ -1153,24 +1074,24 @@ std::pair<int, std::string> RSS::get_transport_order(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   json res = json::array();
   for (auto &ord : orderpool->orderpool) {
     if (ord->name == ord_name) {
       res.push_back(order_to_json(ord));
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     }
   }
   for (auto &ord : orderpool->ended_orderpool) {
     if (ord->name == ord_name) {
       res.push_back(order_to_json(ord));
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     }
   }
   auto msg = "Could not find transport order '" + ord_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 std::pair<int, std::string> RSS::post_transport_order(
     const std::string &ord_name, const std::string &body) {
@@ -1179,7 +1100,7 @@ std::pair<int, std::string> RSS::post_transport_order(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &o : orderpool->orderpool) {
     if (o->name == ord_name) {
@@ -1187,8 +1108,7 @@ std::pair<int, std::string> RSS::post_transport_order(
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
       CLOG(ERROR, rss_log) << msg;
-      return std::pair<int, std::string>(httplib::Conflict_409,
-                                         res.to_string());
+      return std::pair<int, std::string>(Conflict_409, res.to_string());
     }
   }
   for (auto &o : orderpool->ended_orderpool) {
@@ -1197,8 +1117,7 @@ std::pair<int, std::string> RSS::post_transport_order(
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
       CLOG(ERROR, rss_log) << msg;
-      return std::pair<int, std::string>(httplib::Conflict_409,
-                                         res.to_string());
+      return std::pair<int, std::string>(Conflict_409, res.to_string());
     }
   }
   try {
@@ -1254,8 +1173,7 @@ std::pair<int, std::string> RSS::post_transport_order(
           CLOG(ERROR, rss_log) << msg;
           ord->state = data::order::TransportOrder::State::UNROUTABLE;
           orderpool->ended_orderpool.push_back(ord);
-          return std::pair<int, std::string>(httplib::NotFound_404,
-                                             res.to_string());
+          return std::pair<int, std::string>(NotFound_404, res.to_string());
         } else {
           auto op = d["operation"].as_string();
           auto op_ = data::model::Actions::get_optype(op);
@@ -1270,13 +1188,13 @@ std::pair<int, std::string> RSS::post_transport_order(
               auto it = t1->type.lock()->allowed_ops.find(op_lower);
               if (it == t1->type.lock()->allowed_ops.end()) {
                 CLOG(ERROR, driver_log)
-                    << t1->name << " not support <" << op << "> type";
+                    << t1->name << " not support <" << op << "> type\n";
                 ord->state = data::order::TransportOrder::State::FAILED;
                 orderpool->ended_orderpool.push_back(ord);
                 json res = json::array();
                 auto msg = "not support type '" + op + "'.";
                 res.push_back(msg);
-                return std::pair<int, std::string>(httplib::NotFound_404,
+                return std::pair<int, std::string>(NotFound_404,
                                                    res.to_string());
               }
             }
@@ -1297,14 +1215,13 @@ std::pair<int, std::string> RSS::post_transport_order(
             ord->driverorders.push_back(dr);
           } else {
             CLOG(ERROR, rss_log)
-                << "op type <" + std::string(op) + "> is not support";
+                << "op type <" + std::string(op) + "> is not support\n";
             ord->state = data::order::TransportOrder::State::FAILED;
             orderpool->ended_orderpool.push_back(ord);
             json res = json::array();
             auto msg = "Could not support type '" + op + "'.";
             res.push_back(msg);
-            return std::pair<int, std::string>(httplib::NotFound_404,
-                                               res.to_string());
+            return std::pair<int, std::string>(NotFound_404, res.to_string());
           }
         }
       }
@@ -1365,31 +1282,102 @@ std::pair<int, std::string> RSS::post_transport_order(
       }
       res["destinations"].push_back(value);
     }
-    return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+    return std::pair<int, std::string>(OK_200, res.to_string());
   } catch (jsoncons::ser_error ec) {
     CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   } catch (jsoncons::key_not_found ec) {
     CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   } catch (jsoncons::not_an_object ec) {
     CLOG(ERROR, rss_log) << "not_an_object error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   }
 }
-
+std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
+                                                 const std::string &point) {
+  std::shared_lock<std::shared_mutex> lk(mutex);
+  if (!is_run) {
+    json res = json::array();
+    auto msg = "TCS is not running";
+    res.push_back(msg);
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
+  }
+  auto veh =
+      std::find_if(dispatcher->vehicles.begin(), dispatcher->vehicles.end(),
+                   [&](auto &v) { return v->name == vehicle; });
+  if (veh == dispatcher->vehicles.end()) {
+    json res = json::array();
+    auto msg = "Could not find vehicle '" + vehicle + "'.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
+  }
+  auto p = std::find_if(resource->points.begin(), resource->points.end(),
+                        [&](auto &p) { return p->name == point; });
+  if (p == resource->points.end()) {
+    json res = json::array();
+    auto msg = "Could not find point '" + point + "'.";
+    res.push_back(msg);
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
+  }
+  //
+  auto ord = std::make_shared<data::order::TransportOrder>(
+      "Move-" + uuids::to_string(get_uuid()));
+  ord->create_time = get_now_utc_time();
+  ord->dead_time = ord->create_time + std::chrono::minutes(60);
+  ord->intended_vehicle = *veh;
+  ord->type = "-";
+  ord->state = data::order::TransportOrder::State::RAW;
+  auto destination = orderpool->res_to_destination(
+      *p, data::order::DriverOrder::Destination::OpType::MOVE);
+  auto dr = std::make_shared<data::order::DriverOrder>("driverorder_" + point);
+  dr->destination = destination;
+  dr->transport_order = ord;
+  ord->driverorders.push_back(dr);
+  ord->peripheral_reservation_token = "null";
+  orderpool->orderpool.push_back(ord);
+  dispatcher->notify();
+  // return
+  json res;
+  res["dispensable"] = ord->dispensable;
+  res["name"] = ord->name;
+  res["type"] = ord->type;
+  res["state"] = ord->get_state();
+  res["intendedVehicle"] =
+      ord->intended_vehicle.lock() ? ord->intended_vehicle.lock()->name : "";
+  res["processingVehicle"] = ord->processing_vehicle.lock()
+                                 ? ord->processing_vehicle.lock()->name
+                                 : json::null();
+  res["peripheralReservationToken"] = json::null();
+  res["wrappingSequence"] = json::null();
+  res["destinations"] = json::array();
+  res["creationTime"] = get_time_fmt(ord->create_time);
+  res["finishTime"] = get_time_fmt(ord->create_time + std::chrono::hours(10));
+  for (auto &dest : ord->driverorders) {
+    json value;
+    value["locationName"] = dest->destination->destination.lock()->name;
+    value["operation"] = dest->destination->get_type();
+    value["state"] = dest->get_state();
+    value["properties"] = json::array();
+    for (auto &pro : dest->properties) {
+      json p;
+      p["name"] = pro.first;
+      p["value"] = pro.second;
+      value["properties"].push_back(p);
+    }
+    res["destinations"].push_back(value);
+  }
+  return std::pair<int, std::string>(OK_200, res.to_string());
+}
 std::pair<int, std::string> RSS::post_transport_order_withdrawl(
     const std::string &ord_name, bool immediate, bool) {
   std::shared_lock<std::shared_mutex> lk(mutex);
@@ -1397,24 +1385,24 @@ std::pair<int, std::string> RSS::post_transport_order_withdrawl(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &o : orderpool->orderpool) {
     if (o->name == ord_name) {
       o->state = data::order::TransportOrder::State::WITHDRAWL;
-      return std::pair<int, std::string>(httplib::OK_200, "");
+      return std::pair<int, std::string>(OK_200, "");
     }
   }
   for (auto &o : orderpool->ended_orderpool) {
     if (o->name == ord_name) {
       o->state = data::order::TransportOrder::State::WITHDRAWL;
-      return std::pair<int, std::string>(httplib::OK_200, "");
+      return std::pair<int, std::string>(OK_200, "");
     }
   }
   json res = json::array();
   auto msg = "Could not find transport order '" + ord_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
@@ -1451,7 +1439,7 @@ std::pair<int, std::string> RSS::get_ordersequences(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   if (!vehicle.empty()) {
     json res = json::array();
@@ -1465,17 +1453,16 @@ std::pair<int, std::string> RSS::get_ordersequences(
     if (res.empty()) {
       auto msg = "Could not find the intended vehicle '" + vehicle + "'.";
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::NotFound_404,
-                                         res.to_string());
+      return std::pair<int, std::string>(NotFound_404, res.to_string());
     } else {
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     }
   } else {
     json res = json::array();
     for (auto &q : orderpool->orderquence) {
       res.push_back(orderquence_to_json(q));
     }
-    return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+    return std::pair<int, std::string>(OK_200, res.to_string());
   }
 }
 
@@ -1486,18 +1473,18 @@ std::pair<int, std::string> RSS::get_ordersequence(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &q : orderpool->orderquence) {
     if (q->name == sequence_name) {
       auto res = orderquence_to_json(q);
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     }
   }
   json res = json::array();
   auto msg = "Could not find order sequence '" + sequence_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> RSS::post_ordersequence(
@@ -1507,15 +1494,14 @@ std::pair<int, std::string> RSS::post_ordersequence(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &s : orderpool->orderquence) {
     if (s->name == sequence_name) {
       json res = json::array();
       auto msg = "Order sequence '" + sequence_name + "' already exists.";
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::Conflict_409,
-                                         res.to_string());
+      return std::pair<int, std::string>(Conflict_409, res.to_string());
     }
   }
   try {
@@ -1543,35 +1529,32 @@ std::pair<int, std::string> RSS::post_ordersequence(
           // return
           auto res = orderquence_to_json(new_orderquence);
           orderpool->orderquence.push_back(new_orderquence);
-          return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+          return std::pair<int, std::string>(OK_200, res.to_string());
         }
       }
     }
     json res = json::array();
     auto msg = "Could not find Vehicle " + veh + ".";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   } catch (jsoncons::not_an_object ec) {
     CLOG(ERROR, rss_log) << "not_an_object error:" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   } catch (jsoncons::ser_error ec) {
     CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   } catch (jsoncons::key_not_found ec) {
     CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   }
 }
 
@@ -1642,14 +1625,14 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   if (state.empty()) {
     json res = json::array();
     for (auto &v : dispatcher->vehicles) {
       res.push_back(vehicle_to_json(v));
     }
-    return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+    return std::pair<int, std::string>(OK_200, res.to_string());
   } else {
     if (state == "IDLE") {
       json res = json::array();
@@ -1658,7 +1641,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     } else if (state == "ERROR") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1666,7 +1649,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     } else if (state == "EXECUTING") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1674,7 +1657,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     } else if (state == "UNKNOWN") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1682,7 +1665,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     } else if (state == "UNAVAILABLE") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1690,7 +1673,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     } else if (state == "CHARGING") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1698,13 +1681,12 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     } else {
       json res = json::array();
       auto msg = "Could not parse input.";
       res.push_back(msg);
-      return std::pair<int, std::string>(httplib::BadRequest_400,
-                                         res.to_string());
+      return std::pair<int, std::string>(BadRequest_400, res.to_string());
     }
   }
 }
@@ -1715,18 +1697,18 @@ std::pair<int, std::string> RSS::get_vehicle(const std::string &vehicle) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
       auto res = vehicle_to_json(v);
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     }
   }
   json res = json::array();
   auto msg = "Could not find vehicle '" + vehicle + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> RSS::post_vehicle_withdrawl(
@@ -1736,7 +1718,7 @@ std::pair<int, std::string> RSS::post_vehicle_withdrawl(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
@@ -1746,13 +1728,13 @@ std::pair<int, std::string> RSS::post_vehicle_withdrawl(
       for (auto &o : v->orders) {
         o->state = data::order::TransportOrder::State::WITHDRAWL;
       }
-      return std::pair<int, std::string>(httplib::OK_200, "");
+      return std::pair<int, std::string>(OK_200, "");
     }
   }
   json res = json::array();
   auto msg = "Could not find vehicle '" + vehicle + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> RSS::put_vehicle_paused(const std::string &name,
@@ -1763,7 +1745,7 @@ std::pair<int, std::string> RSS::put_vehicle_paused(const std::string &name,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &x : dispatcher->vehicles) {
     if (x->name == name) {
@@ -1784,13 +1766,13 @@ std::pair<int, std::string> RSS::put_vehicle_paused(const std::string &name,
           vda5050::instantaction::ActionBlockingType::HARD;
       paused_task->action_id = name + "_set_pasued_<" + std::to_string(p) + ">";
       x->execute_instatn_action(paused_task);
-      return std::pair<int, std::string>(httplib::OK_200, "");
+      return std::pair<int, std::string>(OK_200, "");
     }
   }
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> RSS::get_model() {
@@ -1799,7 +1781,7 @@ std::pair<int, std::string> RSS::get_model() {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   json res;
   res["name"] = resource->model_name;
@@ -1835,7 +1817,7 @@ std::pair<int, std::string> RSS::get_model() {
     point["position"]["x"] = p->position.x();
     point["position"]["y"] = p->position.y();
     point["position"]["z"] = p->position.z();
-    point["vehicleOrientationAngle"] = p->client_angle;
+    point["vehicleOrientationAngle"] = p->vehicle_orientation;
     point["type"] = data::model::Point::get_type(p->type);
     json layout;
     layout["position"]["x"] = p->layout.position.x();
@@ -2034,7 +2016,7 @@ std::pair<int, std::string> RSS::get_model() {
     }
     res["vehicles"].push_back(vehicle);
   }
-  return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+  return std::pair<int, std::string>(OK_200, res.to_string());
 }
 std::pair<int, std::string> RSS::put_model(const std::string &body) {
   std::unique_lock<std::shared_mutex> lk(mutex);
@@ -2106,12 +2088,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           point->position.z() = p["position"]["z"].as_integer<int>();
         }
         if (p.contains("vehicleOrientationAngle")) {
-          if (p["vehicleOrientationAngle"].is_number())
-            point->client_angle =
-                p["vehicleOrientationAngle"].as_integer<int>();
-          else {
-            point->client_angle = 0;
-          }
+          point->vehicle_orientation = p["vehicleOrientationAngle"].as_double();
         }
         if (p.contains("type")) {
           point->type = data::model::Point::new_type(p["type"].as_string());
@@ -2616,28 +2593,25 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     CLOG(INFO, rss_log) << "run all ...\n";
     run();
     CLOG(INFO, rss_log) << "run all ok\n";
-    return std::pair<int, std::string>(httplib::OK_200, "");
+    return std::pair<int, std::string>(OK_200, "");
   } catch (jsoncons::not_an_object ec) {
     CLOG(ERROR, rss_log) << "not_an_object error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   } catch (jsoncons::ser_error ec) {
     CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   } catch (jsoncons::key_not_found ec) {
     CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::BadRequest_400,
-                                       res.to_string());
+    return std::pair<int, std::string>(BadRequest_400, res.to_string());
   }
 }
 
@@ -2648,10 +2622,10 @@ std::pair<int, std::string> RSS::get_view() {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   auto r = get_vehicles_step();
-  return std::pair<int, std::string>(httplib::OK_200, r);
+  return std::pair<int, std::string>(OK_200, r);
 }
 
 std::string RSS::get_vehicles_step() {
@@ -2758,7 +2732,7 @@ std::pair<int, std::string> RSS::put_path_locked(const std::string &path_name,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &x : resource->paths) {
     if (x->name == path_name) {
@@ -2769,13 +2743,13 @@ std::pair<int, std::string> RSS::put_path_locked(const std::string &path_name,
         planner->reset_edge(x->name);
       }
       reroute();
-      return std::pair<int, std::string>(httplib::OK_200, "");
+      return std::pair<int, std::string>(OK_200, "");
     }
   }
   json res = json::array();
   auto msg = "Could not find path '" + path_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> RSS::put_location_locked(
@@ -2785,18 +2759,18 @@ std::pair<int, std::string> RSS::put_location_locked(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &x : resource->locations) {
     if (x->name == loc_name) {
       x->locked = new_value;
-      return std::pair<int, std::string>(httplib::OK_200, "");
+      return std::pair<int, std::string>(OK_200, "");
     }
   }
   json res = json::array();
   auto msg = "Could not find location  '" + loc_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 void RSS::reroute() {
@@ -2813,10 +2787,10 @@ std::pair<int, std::string> RSS::post_reroute() {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   reroute();
-  return std::pair<int, std::string>(httplib::OK_200, "");
+  return std::pair<int, std::string>(OK_200, "");
 }
 bool RSS::is_connect(std::shared_ptr<data::model::Point> a,
                      std::shared_ptr<data::model::Point> b) {
@@ -2830,18 +2804,18 @@ std::pair<int, std::string> RSS::post_vehicle_reroute(const std::string &name,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
       v->reroute();
-      return std::pair<int, std::string>(httplib::OK_200, "");
+      return std::pair<int, std::string>(OK_200, "");
     }
   }
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
@@ -2851,7 +2825,7 @@ std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
@@ -2860,13 +2834,13 @@ std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
       } else {
         v->state = kernel::driver::Vehicle::State::UNKNOWN;
       }
-      return std::pair<int, std::string>(httplib::OK_200, "");
+      return std::pair<int, std::string>(OK_200, "");
     }
   }
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+  return std::pair<int, std::string>(NotFound_404, res.to_string());
 }
 
 std::pair<int, std::string> RSS::put_vehicle_integration_level(
@@ -2876,7 +2850,7 @@ std::pair<int, std::string> RSS::put_vehicle_integration_level(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
@@ -2897,7 +2871,7 @@ std::pair<int, std::string> RSS::put_vehicle_integration_level(
       }
     }
   }
-  return std::pair<int, std::string>(httplib::OK_200, "");
+  return std::pair<int, std::string>(OK_200, "");
 }
 
 std::pair<int, std::string> RSS::post_vehicle_path_to_point(
@@ -2907,7 +2881,7 @@ std::pair<int, std::string> RSS::post_vehicle_path_to_point(
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(httplib::NotFound_404, res.to_string());
+    return std::pair<int, std::string>(NotFound_404, res.to_string());
   }
   json body = json::parse(p_);
   for (auto &v : dispatcher->vehicles) {
@@ -2969,10 +2943,10 @@ std::pair<int, std::string> RSS::post_vehicle_path_to_point(
           res["routes"].push_back("");
         }
       }
-      return std::pair<int, std::string>(httplib::OK_200, res.to_string());
+      return std::pair<int, std::string>(OK_200, res.to_string());
     }
   }
-  return std::pair<int, std::string>(httplib::BadRequest_400,
+  return std::pair<int, std::string>(BadRequest_400,
                                      "the vehicle does not exist");
 }
 bool RSS::is_exist_active_order() {

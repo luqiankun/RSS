@@ -20,6 +20,7 @@ class HTTPServer {
   std::function<TCSRep(std::string)> get_transport_orders;
   std::function<TCSRep(std::string)> get_transport_order;
   std::function<TCSRep(std::string, std::string)> post_transport_order;
+  std::function<TCSRep(std::string, std::string)> post_move_order;
   std::function<TCSRep(std::string, bool, bool)> post_transport_order_withdrawl;
   std::function<TCSRep(std::string)> get_ordersequences;
   std::function<TCSRep(std::string)> get_ordersequence;

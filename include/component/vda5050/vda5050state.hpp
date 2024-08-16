@@ -81,8 +81,8 @@ class InforMation {
  public:
   std::string info_type{};
   InfoLevel info_level{InfoLevel::INFO};
-  std::optional<std::string> info_description{std::nullopt};
-  std::optional<std::vector<InforRef>> info_references{std::nullopt};
+  std::string info_description{};
+  std::vector<InforRef> info_references;
   InforMation(){};
   explicit InforMation(jsoncons::json& obj) {
     info_type.assign(obj["infoType"].as_string());
@@ -93,12 +93,11 @@ class InforMation {
       info_level = InfoLevel::DEBUG;
     }
     if (obj.contains("infoReferences")) {
-      info_references = std::vector<InforRef>();
       for (auto& x : obj["infoReferences"].array_range()) {
         auto t = InforRef();
         t.reference_key = x["referenceKey"].as_string();
         t.reference_value = x["referenceValue"].as_string();
-        info_references->push_back(t);
+        info_references.push_back(t);
       }
     }
     if (obj.contains("infoDescription")) {
@@ -108,22 +107,18 @@ class InforMation {
   jsoncons::json to_json() {
     jsoncons::json res;
     res["infoType"] = info_type;
+    res["infoDescription"] = info_description;
+    res["infoReferences"] = jsoncons::json::array();
+    for (auto& x : info_references) {
+      jsoncons::json ref;
+      ref["referenceKey"] = x.reference_key;
+      ref["referenceValue"] = x.reference_value;
+      res["infoReferences"].push_back(ref);
+    }
     if (info_level == InfoLevel::INFO) {
       res["infoLevel"] = "INFO";
     } else {
       res["infoLevel"] = "DEBUG";
-    }
-    if (info_description.has_value()) {
-      res["infoDescription"] = info_description.value();
-    }
-    if (info_references.has_value()) {
-      res["infoReferences"] = jsoncons::json::array();
-      for (auto& x : info_references.value()) {
-        jsoncons::json ref;
-        ref["referenceKey"] = x.reference_key;
-        ref["referenceValue"] = x.reference_value;
-        res["infoReferences"].push_back(ref);
-      }
     }
     return res;
   }
@@ -140,8 +135,8 @@ class Error {
  public:
   ErrorLevel error_level;
   std::string error_type{};
-  std::optional<std::string> error_description{std::nullopt};
-  std::optional<std::vector<ErrorRef>> error_references{std::nullopt};
+  std::string error_description{};
+  std::vector<ErrorRef> error_references;
   Error() {}
   explicit Error(jsoncons::json& obj)
       : error_type(obj["errorType"].as_string()) {
@@ -155,34 +150,29 @@ class Error {
       error_description = obj["errorDescription"].as_string();
     }
     if (obj.contains("errorReferences")) {
-      error_references = std::vector<ErrorRef>();
       for (auto& x : obj["errorReferences"].array_range()) {
         ErrorRef ref;
         ref.reference_key = x["referenceKey"].as_string();
         ref.reference_value = x["referenceValue"].as_string();
-        error_references->push_back(ref);
+        error_references.push_back(ref);
       }
     }
   }
   jsoncons::json to_json() {
     jsoncons::json res;
     res["errorType"] = error_type;
+    res["errorDescription"] = error_description;
+    res["errorReferences"] = jsoncons::json::array();
+    for (auto& x : error_references) {
+      jsoncons::json ref;
+      ref["referenceKey"] = x.reference_key;
+      ref["referenceValue"] = x.reference_value;
+      res["errorReferences"].push_back(ref);
+    }
     if (error_level == ErrorLevel::WARNING) {
       res["errorLevel"] = "WARNING";
     } else {
       res["errorLevel"] = "FATAL";
-    }
-    if (error_description.has_value()) {
-      res["errorDescription"] = error_description.value();
-    }
-    if (error_references.has_value()) {
-      res["errorReferences"] = jsoncons::json::array();
-      for (auto& x : error_references.value()) {
-        jsoncons::json ref;
-        ref["referenceKey"] = x.reference_key;
-        ref["referenceValue"] = x.reference_value;
-        res["errorReferences"].push_back(ref);
-      }
     }
     return res;
   }
@@ -194,9 +184,9 @@ class BatteryState {
  public:
   float battery_charge;
   bool charging;
-  std::optional<float> battery_voltage{std::nullopt};
-  std::optional<float> battery_health{std::nullopt};
-  std::optional<float> reach{std::nullopt};
+  float battery_voltage{0.0};
+  int battery_health{100};
+  uint32_t reach{0};
   BatteryState() {}
   explicit BatteryState(jsoncons::json& obj) {
     battery_charge = obj["batteryCharge"].as_double();
@@ -215,15 +205,9 @@ class BatteryState {
     jsoncons::json res;
     res["batteryCharge"] = battery_charge;
     res["charging"] = charging;
-    if (battery_voltage.has_value()) {
-      res["batteryVoltage"] = battery_voltage.value();
-    }
-    if (battery_health.has_value()) {
-      res["batteryHealth"] = battery_health.value();
-    }
-    if (reach.has_value()) {
-      res["reach"] = reach.value();
-    }
+    res["batteryVoltage"] = battery_voltage;
+    res["batteryHealth"] = battery_health;
+    res["reach"] = reach;
     return res;
   }
 };
@@ -234,8 +218,8 @@ class ActionState {
  public:
   std::string action_id{};
   std::optional<std::string> action_type{std::nullopt};
-  std::optional<std::string> action_description{std::nullopt};
-  std::optional<std::string> result_description{std::nullopt};
+  std::string action_description{};
+  std::string result_description{};
   ActionStatus action_status;
   ActionState(){};
   explicit ActionState(jsoncons::json& obj)
@@ -265,6 +249,8 @@ class ActionState {
   jsoncons::json to_json() {
     jsoncons::json res;
     res["actionId"] = action_id;
+    res["resultDescription"] = result_description;
+    res["actionDescription"] = action_description;
     if (action_status == ActionStatus::WAITING) {
       res["actionStatus"] = "WAITING";
     } else if (action_status == ActionStatus::INITIALIZING) {
@@ -279,12 +265,6 @@ class ActionState {
     if (action_type.has_value()) {
       res["actionType"] = action_type.value();
     }
-    if (action_description.has_value()) {
-      res["actionDescription"] = action_description.value();
-    }
-    if (result_description.has_value()) {
-      res["resultDescription"] = result_description.value();
-    }
     return res;
   }
 };
@@ -295,7 +275,7 @@ class BoundingBox {
   float x;
   float y;
   float z;
-  std::optional<float> theta;
+  float theta;
 };
 class LoadDimensions {
  public:
@@ -307,10 +287,10 @@ class LoadDimensions {
 class Load {
  public:
   std::optional<std::string> load_id{std::nullopt};
-  std::optional<std::string> load_type{std::nullopt};
+  std::string load_type{};
   std::optional<std::string> load_position{std::nullopt};
-  std::optional<float> weight{std::nullopt};
-  std::optional<BoundingBox> bounding_boxReference{std::nullopt};
+  float weight{0.0};
+  BoundingBox bounding_boxReference{};
   std::optional<LoadDimensions> Load_dimensions{std::nullopt};
   Load(){};
   explicit Load(jsoncons::json& obj) {
@@ -348,26 +328,17 @@ class Load {
   };
   jsoncons::json to_json() {
     jsoncons::json res;
+    res["weight"] = weight;
+    res["loadType"] = load_type;
+    res["boundingBoxReference"]["x"] = bounding_boxReference.x;
+    res["boundingBoxReference"]["y"] = bounding_boxReference.y;
+    res["boundingBoxReference"]["z"] = bounding_boxReference.z;
+    res["boundingBoxReference"]["theta"] = bounding_boxReference.theta;
     if (load_id.has_value()) {
       res["loadId"] = load_id.value();
     }
-    if (load_type.has_value()) {
-      res["loadType"] = load_type.value();
-    }
     if (load_position.has_value()) {
       res["loadPosition"] = load_position.value();
-    }
-    if (weight.has_value()) {
-      res["weight"] = weight.value();
-    }
-    if (bounding_boxReference.has_value()) {
-      res["boundingBoxReference"]["x"] = bounding_boxReference.value().x;
-      res["boundingBoxReference"]["y"] = bounding_boxReference.value().y;
-      res["boundingBoxReference"]["z"] = bounding_boxReference.value().z;
-      if (bounding_boxReference.value().theta.has_value()) {
-        res["boundingBoxReference"]["theta"] =
-            bounding_boxReference.value().theta.value();
-      }
     }
     if (Load_dimensions.has_value()) {
       res["loadDimensions"]["length"] = Load_dimensions.value().length;
@@ -385,9 +356,9 @@ class Load {
 
 class Velocity {
  public:
-  std::optional<float> vx{std::nullopt};
-  std::optional<float> vy{std::nullopt};
-  std::optional<float> omega{std::nullopt};
+  float vx{0};
+  float vy{0};
+  float omega{0};
   Velocity(){};
   explicit Velocity(jsoncons::json& obj) {
     if (obj.contains("vx")) {
@@ -402,15 +373,9 @@ class Velocity {
   }
   jsoncons::json to_json() {
     jsoncons::json res;
-    if (vx.has_value()) {
-      res["vx"] = vx.value();
-    }
-    if (vy.has_value()) {
-      res["vy"] = vy.value();
-    }
-    if (omega.has_value()) {
-      res["omega"] = omega.value();
-    }
+    res["vx"] = vx;
+    res["vy"] = vy;
+    res["omega"] = omega;
     return res;
   }
 };
@@ -424,7 +389,7 @@ class AgvPosition {
   float theta;
   std::string map_id;
   bool position_initialized;
-  std::optional<std::string> map_description;
+  std::string map_description;
   std::optional<float> deviation_range;
   std::optional<float> localization_score;
   AgvPosition(){};
@@ -451,10 +416,8 @@ class AgvPosition {
     res["y"] = y;
     res["theta"] = theta;
     res["mapId"] = map_id;
+    res["mapDescription"] = map_description;
     res["positionInitialized"] = position_initialized;
-    if (map_description.has_value()) {
-      res["mapDescription"] = map_description.value();
-    }
     if (deviation_range.has_value()) {
       res["deviationRange"] = deviation_range.value();
     }
@@ -617,15 +580,15 @@ class VDA5050State {
   OperMode operating_mode;
   std::vector<Error> errors;
   SafetyState safetystate;
+  bool paused;
+  Velocity velocity;
+  float distance_since_last_node;
+  bool newbase_request;
+  std::vector<InforMation> information;
   // optional
-  std::optional<bool> paused;
-  std::optional<bool> newbase_request;
-  std::optional<float> distance_since_last_node;
   std::optional<std::string> zoneset_id;
   std::optional<AgvPosition> agv_position;
-  std::optional<Velocity> velocity;
   std::optional<std::vector<Load>> loads;
-  std::optional<std::vector<InforMation>> information;
   VDA5050State() {}
   explicit VDA5050State(jsoncons::json& obj)
       : header_id(obj["headerId"].as_integer<int>()),
@@ -703,7 +666,7 @@ class VDA5050State {
       information = std::vector<InforMation>();
       for (auto& x : obj["information"].array_range()) {
         auto info = InforMation(x);
-        information.value().push_back(info);
+        information.push_back(info);
       }
     }
   }
@@ -715,9 +678,17 @@ class VDA5050State {
     res["manufacturer"] = manufacturer;
     res["serialNumber"] = serial_number;
     res["orderId"] = order_id;
+    res["paused"] = paused;
     res["orderUpdateId"] = order_update_id;
     res["lastNodeId"] = last_node_id;
+    res["newBaseRequest"] = newbase_request;
     res["lastNodeSequenceId"] = last_node_seq_id;
+    res["distanceSinceLastNode"] = distance_since_last_node;
+    res["velocity"] = velocity.to_json();
+    res["information"] = jsoncons::json::array();
+    for (auto& x : information) {
+      res["information"].push_back(x.to_json());
+    }
     res["nodeStates"] = jsoncons::json::array();
     for (auto& x : nodestates) {
       res["nodeStates"].push_back(x.to_json());
@@ -750,34 +721,17 @@ class VDA5050State {
     res["safetyState"] = safetystate.to_json();
 
     // optinal
-    if (paused.has_value()) {
-      res["paused"] = paused.value();
-    }
-    if (newbase_request.has_value()) {
-      res["newBaseRequest"] = newbase_request.value();
-    }
-    if (distance_since_last_node.has_value()) {
-      res["distanceSinceLastNode"] = distance_since_last_node.value();
-    }
     if (zoneset_id.has_value()) {
       res["zoneSetId"] = zoneset_id.value();
     }
     if (agv_position.has_value()) {
       res["agvPosition"] = agv_position.value().to_json();
     }
-    if (velocity.has_value()) {
-      res["velocity"] = velocity.value().to_json();
-    }
     if (loads.has_value()) {
       res["loads"] = jsoncons::json::array();
       for (auto& x : loads.value()) {
         res["loads"].push_back(x.to_json());
       }
-    }
-    if (information.has_value()) {
-      res["information"] = jsoncons::json::array();
-      for (auto& x : information.value())
-        res["information"].push_back(x.to_json());
     }
     return res;
   }

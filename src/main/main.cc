@@ -205,6 +205,9 @@ int main(int argc, char** argv) {
     srv->post_transport_order =
         std::bind(&RSS::post_transport_order, rss, std::placeholders::_1,
                   std::placeholders::_2);
+    srv->post_move_order =
+        std::bind(&RSS::post_move_order, rss, std::placeholders::_1,
+                  std::placeholders::_2);
     srv->post_transport_order_withdrawl = std::bind(
         &RSS::post_transport_order_withdrawl, rss, std::placeholders::_1,
         std::placeholders::_2, std::placeholders::_3);

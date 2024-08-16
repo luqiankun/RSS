@@ -91,6 +91,25 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
                res.set_content(ret.second, "application/json");
              }
            });
+  srv.Post(url_prefix + R"(/moveOrder)", [=](const httplib::Request &req,
+                                             httplib::Response &res) {
+    if (!req.has_param("vehicle")) {
+      res.status = httplib::BadRequest_400;
+      res.set_content("[\"not has param \'vehicle\'\"]", "application/json");
+      return;
+    }
+    if (!req.has_param("point")) {
+      res.status = httplib::BadRequest_400;
+      res.set_content("[\"not has param \'point\'\"]", "application/json");
+      return;
+    }
+    auto ret = post_move_order(req.get_param_value("vehicle"),
+                               req.get_param_value("point"));
+    res.status = ret.first;
+    if (!ret.second.empty()) {
+      res.set_content(ret.second, "application/json");
+    }
+  });
   srv.Post(url_prefix + R"(/transportOrders/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
              auto m = req.matches.end() - 1;

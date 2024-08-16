@@ -834,9 +834,9 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   pos.x = start_point->position.x() / 1000.0;
   pos.y = start_point->position.y() / 1000.0;
   pos.map_id = map_id;
-  pos.theta = angle;
-  pos.allowed_deviation_xy = std::make_optional<float>(deviation_xy);
-  pos.allowed_deviation_theta = std::make_optional<float>(deviation_theta);
+  pos.theta = start_point->vehicle_orientation;
+  pos.allowed_deviation_xy = deviation_xy;
+  pos.allowed_deviation_theta = deviation_theta;
   start.node_position = pos;
   ord.nodes.push_back(start);
 
@@ -871,9 +871,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     pos2.x = end_point->position.x() / 1000.0;
     pos2.y = end_point->position.y() / 1000.0;
     if (last_steps && x == steps.back()) {
-      pos2.allowed_deviation_xy = std::make_optional<float>(dest_deviation_xy);
-      pos2.allowed_deviation_theta =
-          std::make_optional<float>(dest_deviation_theta);
+      pos2.allowed_deviation_xy = (dest_deviation_xy);
+      pos2.allowed_deviation_theta = (dest_deviation_theta);
       auto act = vda5050::order::Action();
       auto dest = driver_order->destination;
       auto t = res->find(dest->destination.lock()->name);
@@ -918,11 +917,11 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       // TODO TEST
       //  end.actions.push_back(act);
     } else {
-      pos2.allowed_deviation_xy = std::make_optional<float>(deviation_xy);
-      pos2.allowed_deviation_theta = std::make_optional<float>(deviation_theta);
+      pos2.allowed_deviation_xy = (deviation_xy);
+      pos2.allowed_deviation_theta = (deviation_theta);
     }
     pos2.map_id = map_id;
-    pos2.theta = angle;
+    pos2.theta = end_point->vehicle_orientation;
     end.node_position = pos2;
     auto e = vda5050::order::Edge();
     e.edge_id = x->path->name;
@@ -934,11 +933,13 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     e.start_node_id = last_id;
     e.end_node_id = end_point->name;
     if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-      e.max_speed = std::make_optional<float>(max_vel / 1000);
-      e.direction = std::make_optional("forward");
+      e.max_speed = (max_vel * 1.0 / 1000);
+      e.direction = ("forward");
+      e.orientation = 0;
     } else {
-      e.max_speed = std::make_optional<float>(max_reverse_vel / 1000);
-      e.direction = std::make_optional("backward");
+      e.max_speed = (max_reverse_vel * 1.0 / 1000);
+      e.direction = "backward";
+      e.orientation = M_PI;
     }
     last_id = end_point->name;
     e.sequence_id = seq_id++;
@@ -1212,96 +1213,101 @@ bool Rabbit3::action(
   auto vda_version = "v" + std::to_string(ver);
   auto prefix = mqtt_cli->interface_name + "/" + vda_version + "/" +
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
-  // auto ord = vda5050::order::VDA5050Order();
-  // ord.header_id = send_header_id++;
-  // ord.timestamp = get_time_fmt(std::chrono::system_clock::now());
-  // ord.version = mqtt_cli->version;
-  // ord.manufacturer = mqtt_cli->manufacturer;
-  // ord.serial_number = mqtt_cli->serial_number;
-  // // order_id = get_uuid();
-  // ord.order_id = dest->get_type() + "-" + uuids::to_string(order_id);
-  // update_vda_order_id++;
-  // ord.order_update_id = update_vda_order_id;
-  // seq_id = (seq_id - 1);
-  // {
-  //   auto node = vda5050::order::Node();
-  //   auto act = vda5050::order::Action();
-  //   node.node_position = vda5050::order::NodePosition();
-  //   node.node_position.value().map_id = map_id;
-  //   node.sequence_id = seq_id;
-  //   node.node_position.value().theta = angle + M_PI / 2;
-  //   auto t = resource.lock()->find(dest->destination.lock()->name);
-  //   for (auto& pro_ : dest->properties) {
-  //     auto param = vda5050::order::ActionParam();
-  //     param.key = pro_.first;
-  //     param.value = pro_.second;
-  //     act.action_parameters.value().push_back(param);
-  //   }
-  //   if (t.first == allocate::ResourceManager::ResType::Point) {
-  //     auto t1 = std::dynamic_pointer_cast<data::model::Point>(
-  //         dest->destination.lock());
-  //     node.node_id = t1->name;
-  //     node.node_position.value().x = t1->position.x() / 1000.0;
-  //     node.node_position.value().y = t1->position.y() / 1000.0;
-  //     node.node_position->allowed_deviation_xy =
-  //         std::make_optional<float>(dest_deviation_xy);
-  //     node.node_position->allowed_deviation_theta =
-  //         std::make_optional<float>(dest_deviation_xy);
-  //     act.action_parameters = std::vector<vda5050::order::ActionParam>();
-  //     auto param_x = vda5050::order::ActionParam();
-  //     param_x.key = "point_x";
-  //     param_x.value = std::to_string((float)t1->position.x() / 1000.0);
-  //     act.action_parameters->push_back(param_x);
-  //     auto param_y = vda5050::order::ActionParam();
-  //     param_y.key = "point_y";
-  //     param_y.value = std::to_string((float)t1->position.y() / 1000.0);
-  //     act.action_parameters->push_back(param_y);
-  //   } else if (t.first == allocate::ResourceManager::ResType::Location) {
-  //     auto t1 = std::dynamic_pointer_cast<data::model::Location>(
-  //         dest->destination.lock());
-  //     act.action_parameters = std::vector<vda5050::order::ActionParam>();
-  //     node.node_id = t1->link.lock()->name;
-  //     node.node_position.value().x = t1->link.lock()->position.x() / 1000.0;
-  //     node.node_position.value().y = t1->link.lock()->position.y() / 1000.0;
-  //     node.node_position->allowed_deviation_xy =
-  //         std::make_optional<float>(dest_deviation_xy);
-  //     node.node_position->allowed_deviation_theta =
-  //         std::make_optional<float>(dest_deviation_xy);
-  //     auto param_x = vda5050::order::ActionParam();
-  //     param_x.key = "location_x";
-  //     param_x.value = (float)t1->position.x() / 1000.0;
-  //     act.action_parameters->push_back(param_x);
-  //     auto param_y = vda5050::order::ActionParam();
-  //     param_y.key = "location_y";
-  //     param_y.value = (float)t1->position.y() / 1000.0;
-  //     act.action_parameters->push_back(param_y);
-  //     std::string op_type = dest->get_type();
-  //     std::transform(op_type.begin(), op_type.end(), op_type.begin(),
-  //                    ::tolower);
-  //     auto it = t1->type.lock()->allowed_ops.find(op_type);
-  //     auto params = it->second;
-  //     for (auto& param : params) {
-  //       auto p_ = vda5050::order::ActionParam();
-  //       p_.key = param.first;
-  //       p_.value = (std::string)param.second;
-  //       act.action_parameters->push_back(p_);
-  //     }
-  //   } else {
-  //     CLOG(ERROR, driver_log) << name << " "
-  //                             << "dest type is err";
-  //     return false;
-  //   }
+  auto ord = vda5050::order::VDA5050Order();
+  ord.header_id = send_header_id++;
+  ord.timestamp = get_time_fmt(std::chrono::system_clock::now());
+  ord.version = mqtt_cli->version;
+  ord.manufacturer = mqtt_cli->manufacturer;
+  ord.serial_number = mqtt_cli->serial_number;
+  if (now_order_state == nowOrder::BEGIN) {
+    ord.order_id = dest->get_type() + "-" + uuids::to_string(order_id);
+    update_vda_order_id++;
+    ord.order_update_id = update_vda_order_id;
+    seq_id = (seq_id - 1);
+  } else {
+    now_order_state = nowOrder::BEGIN;
+    seq_id = 0;
+    order_id = get_uuid();
+    ord.order_id = dest->get_type() + "-" + uuids::to_string(order_id);
+    update_vda_order_id = 0;
+    ord.order_update_id = update_vda_order_id;
+  }
+  {
+    auto node = vda5050::order::Node();
+    auto act = vda5050::order::Action();
+    node.node_position = vda5050::order::NodePosition();
+    node.node_position.value().map_id = map_id;
+    node.sequence_id = seq_id;
+    auto t = resource.lock()->find(dest->destination.lock()->name);
+    for (auto& pro_ : dest->properties) {
+      auto param = vda5050::order::ActionParam();
+      param.key = pro_.first;
+      param.value = pro_.second;
+      act.action_parameters.value().push_back(param);
+    }
+    if (t.first == allocate::ResourceManager::ResType::Point) {
+      auto t1 = std::dynamic_pointer_cast<data::model::Point>(
+          dest->destination.lock());
+      node.node_id = t1->name;
+      node.node_position.value().x = t1->position.x() / 1000.0;
+      node.node_position.value().y = t1->position.y() / 1000.0;
+      node.node_position.value().theta = t1->vehicle_orientation;
+      node.node_position->allowed_deviation_xy = dest_deviation_xy;
+      node.node_position->allowed_deviation_theta = dest_deviation_xy;
+      act.action_parameters = std::vector<vda5050::order::ActionParam>();
+      auto param_x = vda5050::order::ActionParam();
+      param_x.key = "point_x";
+      param_x.value = std::to_string((float)t1->position.x() / 1000.0);
+      act.action_parameters->push_back(param_x);
+      auto param_y = vda5050::order::ActionParam();
+      param_y.key = "point_y";
+      param_y.value = std::to_string((float)t1->position.y() / 1000.0);
+      act.action_parameters->push_back(param_y);
+    } else if (t.first == allocate::ResourceManager::ResType::Location) {
+      auto t1 = std::dynamic_pointer_cast<data::model::Location>(
+          dest->destination.lock());
+      act.action_parameters = std::vector<vda5050::order::ActionParam>();
+      node.node_id = t1->link.lock()->name;
+      node.node_position.value().x = t1->link.lock()->position.x() / 1000.0;
+      node.node_position.value().y = t1->link.lock()->position.y() / 1000.0;
+      node.node_position.value().theta = t1->link.lock()->vehicle_orientation;
+      node.node_position->allowed_deviation_xy = dest_deviation_xy;
+      node.node_position->allowed_deviation_theta = dest_deviation_xy;
+      auto param_x = vda5050::order::ActionParam();
+      param_x.key = "location_x";
+      param_x.value = (float)t1->position.x() / 1000.0;
+      act.action_parameters->push_back(param_x);
+      auto param_y = vda5050::order::ActionParam();
+      param_y.key = "location_y";
+      param_y.value = (float)t1->position.y() / 1000.0;
+      act.action_parameters->push_back(param_y);
+      std::string op_type = dest->get_type();
+      std::transform(op_type.begin(), op_type.end(), op_type.begin(),
+                     ::tolower);
+      auto it = t1->type.lock()->allowed_ops.find(op_type);
+      auto params = it->second;
+      for (auto& param : params) {
+        auto p_ = vda5050::order::ActionParam();
+        p_.key = param.first;
+        p_.value = (std::string)param.second;
+        act.action_parameters->push_back(p_);
+      }
+    } else {
+      CLOG(ERROR, driver_log) << name << " "
+                              << "dest type is err";
+      return false;
+    }
 
-  //   node.released = true;
-  //   act.action_id = ord.order_id + "-action";
-  //   act.action_type = dest->operation;
-  //   act.blocking_type = vda5050::order::ActionBlockingType::HARD;
-  //   // TODO TEST
-  //   //  node.actions.push_back(act);
-  //   ord.nodes.push_back(node);
-  // }
-  // auto msg = mqtt::make_message(prefix + "order", ord.to_json().as_string());
-  // mqtt_cli->mqtt_client->publish(msg)->wait();
+    node.released = true;
+    act.action_id = ord.order_id + "-action";
+    act.action_type = dest->operation;
+    act.blocking_type = vda5050::order::ActionBlockingType::HARD;
+    // TODO TEST
+    //  node.actions.push_back(act);
+    ord.nodes.push_back(node);
+  }
+  auto msg = mqtt::make_message(prefix + "order", ord.to_json().as_string());
+  mqtt_cli->mqtt_client->publish(msg)->wait();
   // // wait
   int n{0};
   while (task_run) {
