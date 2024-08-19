@@ -810,7 +810,11 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     ord.order_id = Pre + "-" + uuids::to_string(order_id);
     update_vda_order_id++;
     ord.order_update_id = update_vda_order_id;
-    seq_id = (seq_id - 1) - (send_queue_size - 1) * 2;
+    if (last_step_count > 0) {
+      seq_id = (seq_id - 1) - (last_step_count - 1) * 2;
+    } else {
+      seq_id = (seq_id - 1);
+    }
   } else {
     now_order_state = nowOrder::BEGIN;
     seq_id = 0;
@@ -819,6 +823,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     update_vda_order_id = 0;
     ord.order_update_id = update_vda_order_id;
   }
+  last_step_count = 0;
   std::shared_ptr<data::model::Point> start_point;
   if (steps.front()->vehicle_orientation ==
       data::order::Step::Orientation::FORWARD) {
@@ -848,6 +853,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   std::string last_id = start_point->name;
   int forward_two{0};  // 只有前两步是Base,后面都是Horizon
   for (auto& x : steps) {
+    last_step_count++;
     std::shared_ptr<data::model::Point> end_point;
     if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
       end_point = x->path->destination_point.lock();
@@ -1219,6 +1225,7 @@ bool Rabbit3::action(
   ord.version = mqtt_cli->version;
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
+  last_step_count = 0;
   if (now_order_state == nowOrder::BEGIN) {
     ord.order_id = dest->get_type() + "-" + uuids::to_string(order_id);
     update_vda_order_id++;
@@ -1237,7 +1244,7 @@ bool Rabbit3::action(
     auto act = vda5050::order::Action();
     node.node_position = vda5050::order::NodePosition();
     node.node_position.value().map_id = map_id;
-    node.sequence_id = seq_id;
+    node.sequence_id = seq_id++;
     auto t = resource.lock()->find(dest->destination.lock()->name);
     for (auto& pro_ : dest->properties) {
       auto param = vda5050::order::ActionParam();

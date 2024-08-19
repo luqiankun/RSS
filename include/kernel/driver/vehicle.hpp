@@ -136,6 +136,7 @@ class Rabbit3 : public Vehicle {
   int update_vda_order_id{0};
   bool init_pos{false};
   int rece_header_id{-1};
+  int last_step_count{0};
   double deviation_xy{1.0};
   double deviation_theta{0.17};
   double dest_deviation_xy{0.05};
