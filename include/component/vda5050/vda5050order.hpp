@@ -3,7 +3,6 @@
 #include <optional>
 #include <variant>
 
-#include "../../3rdparty/jsoncons/json.hpp"
 #include "../data/order/driverorder.hpp"
 namespace vda5050 {
 namespace order {
@@ -20,10 +19,6 @@ inline vda5050::order::ActionType get_vda5050_type_from_str(
     const std::string& t) {
   vda5050::order::ActionType res{ActionType::NOP};
   return data::model::Actions::get_optype(t).value_or(res);
-}
-
-inline float decimal_5(float data) {
-  return std::round(data * 100000) / 100000;
 }
 
 inline std::string vda5050_type_to_str(vda5050::order::ActionType t) {
@@ -109,15 +104,15 @@ class Action : public data::model::Actions::Action {
 
 class ControlPoint {
  public:
-  float x;
-  float y;
-  float weight{1.0};
+  double x;
+  double y;
+  double weight{1.0};
 };
 
 class Trajectory {
  public:
   int degree;
-  std::vector<float> knot_vector;
+  std::vector<double> knot_vector;
   std::vector<ControlPoint> control_points;
 };
 enum class orientationType { GLOBAL, TANGENTIAL };
@@ -129,16 +124,17 @@ class Edge {
   std::string start_node_id{};
   std::string end_node_id{};
   std::vector<Action> actions;
-  orientationType orientation_type;
-  std::string direction;
-  std::string edge_description;
-  float max_speed;
-  float max_height;
-  float min_height;
-  float orientation;
+  //
+  std::optional<orientationType> orientation_type;
+  std::optional<std::string> direction;
+  std::optional<std::string> edge_description;
+  std::optional<double> max_height;
+  std::optional<double> min_height;
+  std::optional<double> orientation;
+  std::optional<double> max_speed;
   std::optional<bool> rotation_allowed;
-  std::optional<float> max_rotation_speed;
-  std::optional<float> length;
+  std::optional<double> max_rotation_speed;
+  std::optional<double> length;
   std::optional<Trajectory> trajectory;
   Edge() {}
   explicit Edge(jsoncons::json& obj)
@@ -208,21 +204,35 @@ class Edge {
     res["sequenceId"] = sequence_id;
     res["released"] = released;
     res["startNodeId"] = start_node_id;
-    res["direction"] = direction;
     res["endNodeId"] = end_node_id;
-    res["edgeDescription"] = edge_description;
-    res["maxSpeed"] = max_speed;
-    res["maxHeight"] = max_height;
-    res["minHeight"] = min_height;
-    res["orientation"] = decimal_5(orientation);
+    if (max_speed.has_value()) {
+      res["maxSpeed"] = max_speed.value();
+    }
+    if (direction.has_value()) {
+      res["direction"] = direction.value();
+    }
+    if (edge_description.has_value()) {
+      res["edgeDescription"] = edge_description.value();
+    }
+    if (max_height.has_value()) {
+      res["maxHeight"] = max_height.value();
+    }
+    if (min_height.has_value()) {
+      res["minHeight"] = min_height.value();
+    }
+    if (orientation.has_value()) {
+      res["orientation"] = orientation.value();
+    }
     res["actions"] = jsoncons::json::array();
     for (auto& x : actions) {
       res["actions"].push_back(x.to_json());
     }
-    if (orientation_type == orientationType::GLOBAL) {
-      res["orientationType"] = "GLOBAL";
-    } else {
-      res["orientationType"] = "TANGENTIAL";
+    if (orientation_type.has_value()) {
+      if (orientation_type.value() == orientationType::GLOBAL) {
+        res["orientationType"] = "GLOBAL";
+      } else {
+        res["orientationType"] = "TANGENTIAL";
+      }
     }
     if (rotation_allowed.has_value()) {
       res["rotationAllowed"] = rotation_allowed.value();
@@ -235,17 +245,17 @@ class Edge {
     }
     if (trajectory.has_value()) {
       res["trajectory"]["degree"] = trajectory.value().degree;
-      res["knotVector"] = jsoncons::json::array();
-      res["controlPoints"] = jsoncons::json::array();
+      res["trajectory"]["knotVector"] = jsoncons::json::array();
+      res["trajectory"]["controlPoints"] = jsoncons::json::array();
       for (auto& x : trajectory.value().knot_vector) {
-        res["knotVector"].push_back(x);
+        res["trajectory"]["knotVector"].push_back(x);
       }
       for (auto& x : trajectory.value().control_points) {
         jsoncons::json p;
         p["x"] = x.x;
         p["y"] = x.y;
         p["weight"] = x.weight;
-        res["controlPoints"].push_back(p);
+        res["trajectory"]["controlPoints"].push_back(p);
       }
     }
     return res;
@@ -256,13 +266,13 @@ class Edge {
 
 class NodePosition {
  public:
-  float x;
-  float y;
+  double x;
+  double y;
   std::string map_id;
-  float theta;
-  float allowed_deviation_xy{0};
-  float allowed_deviation_theta{0};
-  std::string map_description;
+  std::optional<double> theta;
+  std::optional<double> allowed_deviation_xy{0};
+  std::optional<double> allowed_deviation_theta{0};
+  std::optional<std::string> map_description;
 };
 
 class Node {
@@ -271,7 +281,7 @@ class Node {
   int sequence_id;
   bool released;
   std::vector<Action> actions;
-  std::string node_description;
+  std::optional<std::string> node_description;
   std::optional<NodePosition> node_position;
   Node() {}
   explicit Node(jsoncons::json& obj)
@@ -290,8 +300,7 @@ class Node {
       node_position = NodePosition();
       node_position.value().x = obj["nodePosition"]["x"].as_double();
       node_position.value().y = obj["nodePosition"]["y"].as_double();
-      node_position.value().theta =
-          decimal_5(obj["nodePosition"]["theta"].as_double());
+      node_position.value().theta = obj["nodePosition"]["theta"].as_double();
       node_position.value().map_id = obj["nodePosition"]["mapId"].as_string();
       if (obj["nodePosition"].contains("allowedDeviationXY")) {
         node_position.value().allowed_deviation_xy =
@@ -312,7 +321,9 @@ class Node {
     res["nodeId"] = node_id;
     res["sequenceId"] = sequence_id;
     res["released"] = released;
-    res["nodeDescription"] = node_description;
+    if (node_description.has_value()) {
+      res["nodeDescription"] = node_description;
+    }
     res["actions"] = jsoncons::json::array();
     for (auto& x : actions) {
       res["actions"].push_back(x.to_json());
@@ -321,13 +332,21 @@ class Node {
       res["nodePosition"]["x"] = node_position.value().x;
       res["nodePosition"]["y"] = node_position.value().y;
       res["nodePosition"]["mapId"] = node_position.value().map_id;
-      res["nodePosition"]["mapDescription"] =
-          node_position.value().map_description;
-      res["nodePosition"]["theta"] = decimal_5(node_position.value().theta);
-      res["nodePosition"]["allowedDeviationXY"] =
-          node_position.value().allowed_deviation_xy;
-      res["nodePosition"]["allowedDeviationTheta"] =
-          decimal_5(node_position.value().allowed_deviation_theta);
+      if (node_position.value().theta.has_value()) {
+        res["nodePosition"]["theta"] = node_position.value().theta.value();
+      }
+      if (node_position.value().map_description.has_value()) {
+        res["nodePosition"]["mapDescription"] =
+            node_position.value().map_description;
+      }
+      if (node_position.value().allowed_deviation_xy.has_value()) {
+        res["nodePosition"]["allowedDeviationXY"] =
+            node_position.value().allowed_deviation_xy;
+      }
+      if (node_position.value().allowed_deviation_theta.has_value()) {
+        res["nodePosition"]["allowedDeviationTheta"] =
+            node_position.value().allowed_deviation_theta.value();
+      }
     }
     return res;
   }

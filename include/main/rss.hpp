@@ -80,7 +80,7 @@ class RSS : public std::enable_shared_from_this<RSS> {
   mutable std::shared_mutex mutex;
 };
 inline std::string get_log_path(const std::string& path) {
-  auto data = get_time_fmt(std::chrono::system_clock::now());
+  auto data = get_time_fmt(get_now_utc_time());
 #ifdef _WIN32
   return (std::string(path) + "\\" + data + ".log");
 #else

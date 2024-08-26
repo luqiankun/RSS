@@ -943,10 +943,11 @@ int main(int argc, char** argv) {
   agv2.set_mqtt_ops(agv2.serial_number, ip);
   SimRabbit3 agv3("uagv", "tx3", "2.0", "tx", "P1", 7000, 19500);
   agv3.set_mqtt_ops(agv3.serial_number, ip);
-  SimRabbit3 agv4("uagv", "tx4", "2.0", "rw", "P6", 93837, -107450);
+  SimRabbit3 agv4("uagv", "tx4", "2.0", "tx", "Point-0001", 500, 19500);
   agv4.set_mqtt_ops(agv4.serial_number, ip);
   if (only) {
     agv3.start();
+    agv4.start();
   } else {
     agv1.start();
     agv2.start();

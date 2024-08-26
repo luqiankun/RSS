@@ -1,6 +1,8 @@
 #ifndef LOCATIONTYYPE_HPP
 #define LOCATIONTYYPE_HPP
-#include "../../rssresource.hpp"
+#include <regex>
+
+#include "../../rssobject.hpp"
 namespace data {
 namespace model {
 struct LocationTypeLayout {

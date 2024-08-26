@@ -441,6 +441,16 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           property = property.next_sibling();
         }
         //
+        {
+          for (auto &_p : p->properties) {
+            if (_p.first == "vda5050:orientation.reverse") {
+              p->orientation_reverse = std::stof(_p.second) * M_PI / 180;
+            } else if (_p.first == "vda5050:orientation.forward") {
+              p->orientation_forward = std::stof(_p.second) * M_PI / 180;
+            }
+          }
+        }
+        //
         data::model::Actions acts(p->properties);
         {
           //  perop
@@ -2025,7 +2035,9 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
   init_scheduler();
   init_dispatcher();
   try {
-    json model = json::parse(body);
+    auto opt = jsoncons::json_options{}.precision(5).float_format(
+        jsoncons::float_chars_format::fixed);
+    json model = json::parse(body, opt);
     resource =
         std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
     this->resource->is_connected = std::bind(
@@ -2334,6 +2346,15 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
                     x["envelopeKey"].as_string(), envelope));
           }
         }
+        {
+          for (auto &_p : path->properties) {
+            if (_p.first == "vda5050:orientation.reverse") {
+              path->orientation_reverse = std::stof(_p.second) * M_PI / 180;
+            } else if (_p.first == "vda5050:orientation.forward") {
+              path->orientation_forward = std::stof(_p.second) * M_PI / 180;
+            }
+          }
+        }
         resource->paths.push_back(path);
       }
       CLOG(INFO, rss_log) << "init path size " << resource->paths.size();
@@ -2460,8 +2481,10 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           std::string vda_serialNumber{"rw"};
           std::string vda_version{"v1"};
           std::string vda_manufacturer{"rw"};
-          float deviationXY{1.0};
-          float deviationTheta{0.17};
+          double deviationXY{1.0};
+          double deviationTheta{0.17};
+          double orientation_reverse{3.14159};
+          double orientation_forward{0.0};
           if (v.contains("properties")) {
             for (auto &pro : v["properties"].array_range()) {
               if (pro["name"] == "vda5050:interfaceName") {
@@ -2480,6 +2503,10 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
                 deviationXY = pro["value"].as_double();
               } else if (pro["name"] == "vda5050:deviationTheta") {
                 deviationTheta = pro["value"].as_double();
+              } else if (pro["name"] == "vda5050:orientation.reverse") {
+                orientation_reverse = pro["value"].as_double();
+              } else if (pro["name"] == "vda5050:orientation.forward") {
+                orientation_forward = pro["value"].as_double();
               }
             }
           }

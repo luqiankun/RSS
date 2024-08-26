@@ -84,7 +84,7 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::model::Point> park_point{nullptr};
   std::thread run_th;
   Eigen::Vector3i position{0, 0, 0};
-  float angle{0};
+  double angle{0};
   Eigen::Vector3i layout{0, 0, 0};
   fa::taskpool_t pool{1};          // 普通任务
   fa::taskpool_t instant_pool{1};  // 立即任务
@@ -113,6 +113,10 @@ class Rabbit3 : public Vehicle {
           const std::string& serial_number, const std::string& version,
           const std::string& manufacturer)
       : Vehicle(name),
+        deviation_xy(1),
+        deviation_theta(0.17),
+        dest_deviation_xy(0.05),
+        dest_deviation_theta(0.034),
         mqtt_cli(std::make_shared<vda5050::VehicleMaster>(
             interface_name, serial_number, version, manufacturer)) {}
   bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
@@ -137,10 +141,10 @@ class Rabbit3 : public Vehicle {
   bool init_pos{false};
   int rece_header_id{-1};
   int last_step_count{0};
-  double deviation_xy{1.0};
-  double deviation_theta{0.17};
-  double dest_deviation_xy{0.05};
-  double dest_deviation_theta{0.034};
+  double deviation_xy;
+  double deviation_theta;
+  double dest_deviation_xy;
+  double dest_deviation_theta;
 };
 class InvalidVehicle : public Vehicle {
  public:

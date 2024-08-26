@@ -1,5 +1,7 @@
 #ifndef VERTEX_HPP
 #define VERTEX_HPP
+#include <optional>
+
 #include "../../component/data/model/point.hpp"
 namespace kernel {
 

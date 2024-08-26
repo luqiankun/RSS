@@ -37,7 +37,7 @@ inline std::string get_time_fmt(std::chrono::system_clock::time_point t) {
   auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
                t.time_since_epoch())
                .count();
-  time << std::put_time(std::gmtime(&tm), "%Y-%m-%dT%H:%M:%S.") << p % 1000
+  time << std::put_time(std::localtime(&tm), "%Y-%m-%dT%H:%M:%S.") << p % 1000
        << "Z";
   return time.str();
 }

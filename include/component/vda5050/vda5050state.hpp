@@ -182,9 +182,9 @@ class Error {
 
 class BatteryState {
  public:
-  float battery_charge;
+  double battery_charge;
   bool charging;
-  float battery_voltage{0.0};
+  double battery_voltage{0.0};
   int battery_health{100};
   uint32_t reach{0};
   BatteryState() {}
@@ -272,16 +272,16 @@ class ActionState {
 // loads
 class BoundingBox {
  public:
-  float x;
-  float y;
-  float z;
-  float theta;
+  double x;
+  double y;
+  double z;
+  double theta;
 };
 class LoadDimensions {
  public:
-  float length;
-  float width;
-  std::optional<float> height;
+  double length;
+  double width;
+  std::optional<double> height;
 };
 
 class Load {
@@ -289,7 +289,7 @@ class Load {
   std::optional<std::string> load_id{std::nullopt};
   std::string load_type{};
   std::optional<std::string> load_position{std::nullopt};
-  float weight{0.0};
+  double weight{0.0};
   BoundingBox bounding_boxReference{};
   std::optional<LoadDimensions> Load_dimensions{std::nullopt};
   Load(){};
@@ -356,9 +356,9 @@ class Load {
 
 class Velocity {
  public:
-  float vx{0};
-  float vy{0};
-  float omega{0};
+  double vx{0};
+  double vy{0};
+  double omega{0};
   Velocity(){};
   explicit Velocity(jsoncons::json& obj) {
     if (obj.contains("vx")) {
@@ -384,14 +384,14 @@ class Velocity {
 
 class AgvPosition {
  public:
-  float x;
-  float y;
-  float theta;
+  double x;
+  double y;
+  double theta;
   std::string map_id;
   bool position_initialized;
   std::string map_description;
-  std::optional<float> deviation_range;
-  std::optional<float> localization_score;
+  std::optional<double> deviation_range;
+  std::optional<double> localization_score;
   AgvPosition(){};
   explicit AgvPosition(jsoncons::json obj) {
     x = obj["x"].as_double();
@@ -432,15 +432,15 @@ class AgvPosition {
 
 class ControlPoint {
  public:
-  float x;
-  float y;
-  std::optional<float> weight;
+  double x;
+  double y;
+  std::optional<double> weight;
 };
 
 class Trajectory {
  public:
   int degree;
-  std::vector<float> knot_vector;
+  std::vector<double> knot_vector;
   std::vector<ControlPoint> control_points;
 };
 
@@ -510,9 +510,9 @@ class EdgeState {
 
 class NodePosition {
  public:
-  float x;
-  float y;
-  float theta;
+  double x;
+  double y;
+  double theta;
   std::string map_id;
 };
 
@@ -582,7 +582,7 @@ class VDA5050State {
   SafetyState safetystate;
   bool paused;
   Velocity velocity;
-  float distance_since_last_node;
+  double distance_since_last_node;
   bool newbase_request;
   std::vector<InforMation> information;
   // optional

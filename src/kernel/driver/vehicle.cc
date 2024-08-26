@@ -4,7 +4,6 @@
 #include "../../../include/component/vda5050/valitator.hpp"
 #include "../../../include/kernel/allocate/order.hpp"
 #include "../../../include/kernel/allocate/resource.hpp"
-#include "../../../include/kernel/dispatch/dispatch.hpp"
 namespace kernel {
 namespace driver {
 
@@ -38,12 +37,10 @@ void Vehicle::execute_action(
       current_order->state = data::order::TransportOrder::State::FAILED;
       current_order->end_time = get_now_utc_time();
       CLOG(WARNING, driver_log)
-          << name << " " << current_order->name << " action : "
-          << " failed";
+          << name << " " << current_order->name << " action : " << " failed";
     } else {
       CLOG(INFO, driver_log)
-          << name << " " << current_order->name << " action : "
-          << " ok\n";
+          << name << " " << current_order->name << " action : " << " ok\n";
     }
     if (current_command) {
       current_command->vehicle_execute_cb(op_ret);
@@ -216,20 +213,17 @@ void Vehicle::get_next_ord() {
     process_state = proState::IDEL;
     if (process_chargeing) {
       CLOG_IF(state != State::CHARGING, INFO, driver_log)
-          << name << " "
-          << "state transform to : [" << vehicle_state_to_str(State::CHARGING)
-          << "]\n";
+          << name << " " << "state transform to : ["
+          << vehicle_state_to_str(State::CHARGING) << "]\n";
       state = State::CHARGING;
     } else {
       CLOG_IF(state != State::IDEL, INFO, driver_log)
-          << name << " "
-          << "state transform to : [" << vehicle_state_to_str(State::IDEL)
-          << "]\n";
+          << name << " " << "state transform to : ["
+          << vehicle_state_to_str(State::IDEL) << "]\n";
       state = State::IDEL;
       idle_time = get_now_utc_time();
       CLOG(INFO, driver_log)
-          << name << " "
-          << "now is idle " << get_time_fmt(idle_time) << "\n";
+          << name << " " << "now is idle " << get_time_fmt(idle_time) << "\n";
     }
   }
 }
@@ -422,9 +416,8 @@ void Vehicle::receive_task(std::shared_ptr<data::order::TransportOrder> order) {
     if (engerg_level > energy_level_good) {
       //  stop 充电
       CLOG_IF(state != State::EXECUTING, INFO, driver_log)
-          << name << " "
-          << "state transform to : [" << vehicle_state_to_str(State::EXECUTING)
-          << "]";
+          << name << " " << "state transform to : ["
+          << vehicle_state_to_str(State::EXECUTING) << "]";
       state = State::EXECUTING;
       process_chargeing = false;
       next_command();
@@ -589,7 +582,9 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
   auto m = msg->get_payload();
   jsoncons::json v;
   try {
-    v = jsoncons::json::parse(m);
+    auto opt = jsoncons::json_options{}.precision(15).float_format(
+        jsoncons::float_chars_format::general);
+    v = jsoncons::json::parse(m, opt);
     CLOG(DEBUG, driver_log) << "state:" << v;
     // LOG(INFO) << "state:" << v;
     // cpu_timer t;
@@ -614,11 +609,10 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       CLOG_IF(vdastate.order_id != last_vdastate.order_id ||
                   vdastate.order_update_id != last_vdastate.order_update_id,
               INFO, driver_log)
-          << name << " "
-          << "order_id has been updated, {\'" << last_vdastate.order_id
-          << " -> update_order_id_" << last_vdastate.order_update_id
-          << "\'} ==> {\'" << vdastate.order_id << " -> update_order_id_"
-          << vdastate.order_update_id << "\'}\n";
+          << name << " " << "order_id has been updated, {\'"
+          << last_vdastate.order_id << " -> update_order_id_"
+          << last_vdastate.order_update_id << "\'} ==> {\'" << vdastate.order_id
+          << " -> update_order_id_" << vdastate.order_update_id << "\'}\n";
       // LOG(INFO) << "------" << vdastate.battery_state.battery_charge;
 
       //
@@ -677,9 +671,8 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
         }
       }
       if (last_state != state) {
-        CLOG(INFO, driver_log)
-            << name << " "
-            << "state transform to : [" << vehicle_state_to_str(state) << "]\n";
+        CLOG(INFO, driver_log) << name << " " << "state transform to : ["
+                               << vehicle_state_to_str(state) << "]\n";
       }
 
     } else {
@@ -711,8 +704,6 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
             << name << " " << mqtt_cli->serial_number + " ONLINE\n";
         if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
           veh_state = vda5050::VehicleMqttStatus::ONLINE;
-          rece_header_id = -1;
-          init_pos = false;
         }
       } else if (v["connectionState"] == "OFFLINE") {
         CLOG_IF(veh_state != vda5050::VehicleMqttStatus::OFFLINE, INFO,
@@ -729,6 +720,8 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
           }
           res->free(temp, shared_from_this());
         }
+        rece_header_id = -1;
+        init_pos = false;
       } else if (v["connectionState"] == "CONNECTIONBROKEN") {
         if (veh_state != vda5050::VehicleMqttStatus::CONNECTIONBROKEN) {
           veh_state = vda5050::VehicleMqttStatus::CONNECTIONBROKEN;
@@ -741,6 +734,8 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
           }
           res->free(temp, shared_from_this());
         }
+        rece_header_id = -1;
+        init_pos = false;
         CLOG(WARNING, driver_log)
             << name << " " << mqtt_cli->serial_number + " CONNECTIONBROKEN\n";
       }
@@ -768,7 +763,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     last_steps = true;
   }
   // 发送多步，走完一步返回
-  std::string name_{"["};
+  std::string name_{""};
 
   {
     auto x = steps.front()->path;
@@ -776,7 +771,6 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     name_.append(x->name);
     name_.append("}");
   }
-  name_.append("]");
   // CLOG(INFO, driver_log) << name << " will move step: " << name_ << "\n";
 
   if (steps.empty()) {
@@ -802,7 +796,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   auto ord = vda5050::order::VDA5050Order();
   ord.header_id = send_header_id++;
-  ord.timestamp = get_time_fmt(std::chrono::system_clock::now());
+  ord.timestamp = get_time_fmt(get_now_utc_time());
   ord.version = mqtt_cli->version;
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
@@ -902,22 +896,22 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
         }
         auto param_x = vda5050::order::ActionParam();
         param_x.key = "location_x";
-        param_x.value = (float)t1->position.x() / 1000.0;
+        param_x.value = (double)t1->position.x() / 1000.0;
         act.action_parameters->push_back(param_x);
         auto param_y = vda5050::order::ActionParam();
         param_y.key = "location_y";
-        param_y.value = (float)t1->position.y() / 1000.0;
+        param_y.value = (double)t1->position.y() / 1000.0;
         act.action_parameters->push_back(param_y);
       } else if (t.first == allocate::ResourceManager::ResType::Point) {
         auto t1 = std::dynamic_pointer_cast<data::model::Point>(
             dest->destination.lock());
         auto param_x = vda5050::order::ActionParam();
         param_x.key = "point_x";
-        param_x.value = (float)t1->position.x() / 1000.0;
+        param_x.value = (double)t1->position.x() / 1000.0;
         act.action_parameters->push_back(param_x);
         auto param_y = vda5050::order::ActionParam();
         param_y.key = "point_y";
-        param_y.value = (float)t1->position.y() / 1000.0;
+        param_y.value = (double)t1->position.y() / 1000.0;
         act.action_parameters->push_back(param_y);
       }
       // TODO TEST
@@ -938,14 +932,89 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     }
     e.start_node_id = last_id;
     e.end_node_id = end_point->name;
-    if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-      e.max_speed = (max_vel * 1.0 / 1000);
-      e.direction = ("forward");
-      e.orientation = 0;
+    if (x->path->layout.connect_type ==
+        data::model::Path::ConnectType::BEZIER) {
+      auto trajectory = vda5050::order::Trajectory();
+      trajectory.degree = 3;
+      trajectory.knot_vector.assign({0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0});
+      auto st_ctrl = vda5050::order::ControlPoint();
+      st_ctrl.x = x->path->source_point.lock()->position.x() / 1000.0;
+      st_ctrl.y = x->path->source_point.lock()->position.y() / 1000.0;
+      st_ctrl.weight = 1;
+      trajectory.control_points.push_back(st_ctrl);
+      assert(x->path->layout.control_points.size() == 2);
+      for (auto& cp : x->path->layout.control_points) {
+        auto p = vda5050::order::ControlPoint();
+        p.x = cp.x() * 50 / 1000.0;
+        p.y = -cp.y() * 50 / 1000.0;
+        p.weight = 1;
+        trajectory.control_points.push_back(p);
+      }
+      auto ed_ctrl = vda5050::order::ControlPoint();
+      ed_ctrl.x = x->path->destination_point.lock()->position.x() / 1000.0;
+      ed_ctrl.y = x->path->destination_point.lock()->position.y() / 1000.0;
+      ed_ctrl.weight = 1;
+      trajectory.control_points.push_back(ed_ctrl);
+      e.trajectory = std::make_optional(trajectory);
+      if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
+        e.max_speed = std::make_optional(max_vel * 1.0 / 1000);
+        e.direction = std::make_optional("forward");
+        e.orientation = std::make_optional(0);
+      } else {
+        e.max_speed = std::make_optional(max_reverse_vel * 1.0 / 1000);
+        e.direction = std::make_optional("backward");
+        e.orientation = std::make_optional(M_PI);
+      }
+    } else if (x->path->layout.connect_type ==
+               data::model::Path::ConnectType::BEZIER_3) {
+      if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
+        e.max_speed = std::make_optional(max_vel * 1.0 / 1000);
+        e.direction = std::make_optional("forward");
+        e.orientation = std::make_optional(0);
+      } else {
+        e.max_speed = std::make_optional(max_reverse_vel * 1.0 / 1000);
+        e.direction = std::make_optional("backward");
+        e.orientation = std::make_optional(M_PI);
+      }
+      auto trajectory = vda5050::order::Trajectory();
+      trajectory.degree = 6;
+      trajectory.knot_vector.assign({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+                                     1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+      auto st_ctrl = vda5050::order::ControlPoint();
+      st_ctrl.x = x->path->source_point.lock()->position.x() / 1000.0;
+      st_ctrl.y = x->path->source_point.lock()->position.y() / 1000.0;
+      st_ctrl.weight = 1;
+      trajectory.control_points.push_back(st_ctrl);
+      assert(x->path->layout.control_points.size() == 5);
+      for (auto& cp : x->path->layout.control_points) {
+        auto p = vda5050::order::ControlPoint();
+        p.x = cp.x() * 50 / 1000.0;
+        p.y = -cp.y() * 50 / 1000.0;
+        p.weight = 1;
+        trajectory.control_points.push_back(p);
+      }
+      auto ed_ctrl = vda5050::order::ControlPoint();
+      ed_ctrl.x = x->path->destination_point.lock()->position.x() / 1000.0;
+      ed_ctrl.y = x->path->destination_point.lock()->position.y() / 1000.0;
+      ed_ctrl.weight = 1;
+      trajectory.control_points.push_back(ed_ctrl);
+      e.trajectory = std::make_optional(trajectory);
     } else {
-      e.max_speed = (max_reverse_vel * 1.0 / 1000);
-      e.direction = "backward";
-      e.orientation = M_PI;
+      if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
+        e.max_speed = std::make_optional(max_vel * 1.0 / 1000);
+        e.direction = std::make_optional("forward");
+        if (x->path->orientation_forward.has_value()) {
+          e.orientation =
+              std::make_optional(x->path->orientation_forward.value());
+        }
+      } else {
+        e.max_speed = std::make_optional(max_reverse_vel * 1.0 / 1000);
+        e.direction = std::make_optional("backward");
+        if (x->path->orientation_forward.has_value()) {
+          e.orientation =
+              std::make_optional(x->path->orientation_reverse.value());
+        }
+      }
     }
     last_id = end_point->name;
     e.sequence_id = seq_id++;
@@ -1005,9 +1074,14 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   }
   CLOG(INFO, driver_log) << name << " " << ss.str() << "\n";
   //
-
-  auto msg =
-      mqtt::make_message(prefix + "order", ord.to_json().as_string(), 0, false);
+  auto ord_js = ord.to_json();
+  auto opt = jsoncons::json_options{}.precision(15).float_format(
+      jsoncons::float_chars_format::general);
+  std::string msg_str;
+  ord_js.dump(msg_str, opt);
+  jsoncons::json vaild = jsoncons::json::parse(msg_str, opt);
+  assert(vda5050::order_validate(vaild).empty());
+  auto msg = mqtt::make_message(prefix + "order", msg_str, 0, false);
   mqtt_cli->mqtt_client->publish(msg)->wait();
 
   // wait move and actions
@@ -1076,9 +1150,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
                 //  return false;
               } else if (x.action_status ==
                          vda5050::state::ActionStatus::FINISHED) {
-                CLOG(INFO, driver_log)
-                    << name << " "
-                    << "wait action [" << x.action_id << "] ok. \n";
+                CLOG(INFO, driver_log) << name << " " << "wait action ["
+                                       << x.action_id << "] ok. \n";
                 wait_act_ord_start.erase(wait_act_ord_start.find(x.action_id));
               }
             }
@@ -1105,8 +1178,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
                          });
         if (it == vdastate.edgestates.end() &&
             it_end_point == vdastate.nodestates.end()) {
-          CLOG(INFO, driver_log) << name << " "
-                                 << "move along " << name_ << " ok\n";
+          CLOG(INFO, driver_log)
+              << name << " " << "move along " << name_ << " ok\n";
           // per act 服务器本地调用 只调第一步
           // TODO
           auto x = steps.front();
@@ -1142,9 +1215,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
                 // return false;
               } else if (x.action_status ==
                          vda5050::state::ActionStatus::FINISHED) {
-                CLOG(INFO, driver_log)
-                    << name << " "
-                    << "wait action [" << x.action_id << "] ok.\n ";
+                CLOG(INFO, driver_log) << name << " " << "wait action ["
+                                       << x.action_id << "] ok.\n ";
                 wait_act_ord_end.erase(wait_act_ord_end.find(x.action_id));
               }
             }
@@ -1166,12 +1238,6 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       // }
 
     } else {
-      CLOG_N_TIMES(1, WARNING, driver_log)
-          << name << " "
-          << "order state has not been updated,wait_for {\'" + Pre + "-"
-          << uuids::to_string(order_id) << " -> update_order_id_"
-          << update_vda_order_id << "\'}, but now is {\'" << vdastate.order_id
-          << " -> update_order_id_" << vdastate.order_update_id << "\'}\n";
       CLOG_EVERY_N(20, WARNING, driver_log)
           << name << " "
           << "order state has not been updated,wait_for {\'" + Pre + "-"
@@ -1185,32 +1251,28 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     CLOG_EVERY_N(20, INFO, driver_log)
         << name << " waiting for move {" << steps.front()->name << "}\n";
     if (n > 2 * 60 * 100) {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "timeout";
+      CLOG(ERROR, driver_log) << name << " " << "timeout";
       task_run = false;
       return false;
     }
   }
-  CLOG(WARNING, driver_log) << name << " "
-                            << "task cancel";
+  CLOG(WARNING, driver_log) << name << " " << "task cancel";
   task_run = false;
   return false;
 }
 bool Rabbit3::action(
     std::shared_ptr<data::order::DriverOrder::Destination> dest) {
-  CLOG(INFO, driver_log) << name << " "
-                         << "action execute [" << dest->get_type() << "] at "
+  CLOG(INFO, driver_log) << name << " " << "action execute ["
+                         << dest->get_type() << "] at "
                          << dest->destination.lock()->name << "\n";
   task_run = true;
   if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << name << " "
-                            << "master not online";
+    CLOG(ERROR, driver_log) << name << " " << "master not online";
     task_run = false;
     return false;
   }
   if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << name << " "
-                            << "vehlicle not online";
+    CLOG(ERROR, driver_log) << name << " " << "vehlicle not online";
     task_run = false;
     return false;
   }
@@ -1221,7 +1283,7 @@ bool Rabbit3::action(
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   auto ord = vda5050::order::VDA5050Order();
   ord.header_id = send_header_id++;
-  ord.timestamp = get_time_fmt(std::chrono::system_clock::now());
+  ord.timestamp = get_time_fmt(get_now_utc_time());
   ord.version = mqtt_cli->version;
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
@@ -1260,15 +1322,15 @@ bool Rabbit3::action(
       node.node_position.value().y = t1->position.y() / 1000.0;
       node.node_position.value().theta = t1->vehicle_orientation;
       node.node_position->allowed_deviation_xy = dest_deviation_xy;
-      node.node_position->allowed_deviation_theta = dest_deviation_xy;
+      node.node_position->allowed_deviation_theta = dest_deviation_theta;
       act.action_parameters = std::vector<vda5050::order::ActionParam>();
       auto param_x = vda5050::order::ActionParam();
       param_x.key = "point_x";
-      param_x.value = std::to_string((float)t1->position.x() / 1000.0);
+      param_x.value = std::to_string((double)t1->position.x() / 1000.0);
       act.action_parameters->push_back(param_x);
       auto param_y = vda5050::order::ActionParam();
       param_y.key = "point_y";
-      param_y.value = std::to_string((float)t1->position.y() / 1000.0);
+      param_y.value = std::to_string((double)t1->position.y() / 1000.0);
       act.action_parameters->push_back(param_y);
     } else if (t.first == allocate::ResourceManager::ResType::Location) {
       auto t1 = std::dynamic_pointer_cast<data::model::Location>(
@@ -1279,14 +1341,14 @@ bool Rabbit3::action(
       node.node_position.value().y = t1->link.lock()->position.y() / 1000.0;
       node.node_position.value().theta = t1->link.lock()->vehicle_orientation;
       node.node_position->allowed_deviation_xy = dest_deviation_xy;
-      node.node_position->allowed_deviation_theta = dest_deviation_xy;
+      node.node_position->allowed_deviation_theta = dest_deviation_theta;
       auto param_x = vda5050::order::ActionParam();
       param_x.key = "location_x";
-      param_x.value = (float)t1->position.x() / 1000.0;
+      param_x.value = (double)t1->position.x() / 1000.0;
       act.action_parameters->push_back(param_x);
       auto param_y = vda5050::order::ActionParam();
       param_y.key = "location_y";
-      param_y.value = (float)t1->position.y() / 1000.0;
+      param_y.value = (double)t1->position.y() / 1000.0;
       act.action_parameters->push_back(param_y);
       std::string op_type = dest->get_type();
       std::transform(op_type.begin(), op_type.end(), op_type.begin(),
@@ -1300,8 +1362,7 @@ bool Rabbit3::action(
         act.action_parameters->push_back(p_);
       }
     } else {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "dest type is err";
+      CLOG(ERROR, driver_log) << name << " " << "dest type is err";
       return false;
     }
 
@@ -1313,20 +1374,25 @@ bool Rabbit3::action(
     //  node.actions.push_back(act);
     ord.nodes.push_back(node);
   }
-  auto msg = mqtt::make_message(prefix + "order", ord.to_json().as_string());
+  auto ord_js = ord.to_json();
+  auto opt = jsoncons::json_options{}.precision(15).float_format(
+      jsoncons::float_chars_format::general);
+  std::string msg_str;
+  ord_js.dump(msg_str, opt);
+  jsoncons::json vaild = jsoncons::json::parse(msg_str, opt);
+  assert(vda5050::order_validate(vaild).empty());
+  auto msg = mqtt::make_message(prefix + "order", msg_str);
   mqtt_cli->mqtt_client->publish(msg)->wait();
   // // wait
   int n{0};
   while (task_run) {
     if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "master not online\n";
+      CLOG(ERROR, driver_log) << name << " " << "master not online\n";
       task_run = false;
       return false;
     }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "vehlicle not online\n";
+      CLOG(ERROR, driver_log) << name << " " << "vehlicle not online\n";
       task_run = false;
       return false;
     }
@@ -1353,12 +1419,11 @@ bool Rabbit3::action(
         }
         auto sta = x.action_status;
         if (sta == vda5050::state::ActionStatus::FINISHED) {
-          CLOG(INFO, driver_log) << name << " "
-                                 << "action [" << dest->get_type() << "]ok\n ";
-        } else if (sta == vda5050::state::ActionStatus::FAILED) {
           CLOG(INFO, driver_log)
-              << name << " "
-              << "action failed" << dest->destination.lock()->name;
+              << name << " " << "action [" << dest->get_type() << "]ok\n ";
+        } else if (sta == vda5050::state::ActionStatus::FAILED) {
+          CLOG(INFO, driver_log) << name << " " << "action failed"
+                                 << dest->destination.lock()->name;
           task_run = false;
           // TODO TEST
           return true;
@@ -1372,15 +1437,13 @@ bool Rabbit3::action(
         }
       }
       if (all_ok) {
-        CLOG(INFO, driver_log) << name << " "
-                               << "all actions ok\n";
+        CLOG(INFO, driver_log) << name << " " << "all actions ok\n";
         task_run = false;
         return true;
       }
     } else {
       CLOG_EVERY_N(20, WARNING, driver_log)
-          << name << " "
-          << "order state has not been updated,needed {\'"
+          << name << " " << "order state has not been updated,needed {\'"
           << dest->get_type() + "-" << uuids::to_string(order_id)
           << " -> update_ord_id_" << update_vda_order_id
           << "\'}, but now is {\'" << vdastate.order_id << " ->update_ord_id_ "
@@ -1389,29 +1452,25 @@ bool Rabbit3::action(
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     n++;
     if (n > 2 * 60 * 100) {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "timeout";
+      CLOG(ERROR, driver_log) << name << " " << "timeout";
       task_run = false;
       return false;
     }
   }
   task_run = false;
-  CLOG(WARNING, driver_log) << name << " "
-                            << "task cancel";
+  CLOG(WARNING, driver_log) << name << " " << "task cancel";
   return false;
 }
 bool Rabbit3::instant_action(
     std::shared_ptr<data::model::Actions::Action> act) {
   CLOG(INFO, driver_log) << "instantaction " << act->action_id;
   if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << name << " "
-                            << "master not online";
+    CLOG(ERROR, driver_log) << name << " " << "master not online";
     instanttask_run = false;
     return false;
   }
   if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-    CLOG(ERROR, driver_log) << name << " "
-                            << "vehlicle not online";
+    CLOG(ERROR, driver_log) << name << " " << "vehlicle not online";
     instanttask_run = false;
     return false;
   }
@@ -1423,7 +1482,7 @@ bool Rabbit3::instant_action(
   insact->serial_number = mqtt_cli->serial_number;
   insact->header_id = send_header_id++;
   insact->manufacturer = mqtt_cli->manufacturer;
-  insact->timestamp = get_time_fmt(std::chrono::system_clock::now());
+  insact->timestamp = get_time_fmt(get_now_utc_time());
   insact->version = mqtt_cli->version;
   auto action = static_cast<vda5050::instantaction::Action*>(act.get());
   insact->actions.push_back(*action);
@@ -1436,14 +1495,12 @@ bool Rabbit3::instant_action(
   bool ok{false};
   while (instanttask_run) {
     if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "master not online";
+      CLOG(ERROR, driver_log) << name << " " << "master not online";
       instanttask_run = false;
       return false;
     }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "vehlicle not online";
+      CLOG(ERROR, driver_log) << name << " " << "vehlicle not online";
       instanttask_run = false;
       return false;
     }
@@ -1467,8 +1524,7 @@ bool Rabbit3::instant_action(
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     n++;
     if (n > 2 * 60 * 100) {
-      CLOG(ERROR, driver_log) << name << " "
-                              << "timeout";
+      CLOG(ERROR, driver_log) << name << " " << "timeout";
       break;
     }
   }

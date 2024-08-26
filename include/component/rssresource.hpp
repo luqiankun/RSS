@@ -1,5 +1,8 @@
 #ifndef RSSRESOURCE_HPP
 #define RSSRESOURCE_HPP
+#include <set>
+#include <vector>
+
 #include "rssobject.hpp"
 class RSSResource : public RSSObject {
  public:

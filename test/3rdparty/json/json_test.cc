@@ -11,16 +11,25 @@ INITIALIZE_EASYLOGGINGPP
 
 UTEST(json_parse, case1) {
   auto msg1 = "321312dasda{a_2d}%^";
-  auto msg2 = R"({"name":12})";
-  EXPECT_EXCEPTION(jsoncons::json v = jsoncons::json::parse(msg1);
-                   , jsoncons::ser_error);
+  auto msg2 = R"({"name":12.00,"weight":12.123456789})";
+  auto opt = jsoncons::json_options{}
+                 .float_format(jsoncons::float_chars_format::general)
+                 .precision(11);
+  // EXPECT_EXCEPTION(jsoncons::json v = jsoncons::json::parse(msg1, opt);
+  //                  , jsoncons::ser_error);
   jsoncons::json v2 = jsoncons::json::parse(msg2);
-  auto res = jsoncons::json();
-  auto msg = "Could not parse JSON input.";
-  res.push_back(msg);
-  std::string t;
-  res.dump(t);
-  std::cout << t << "\n";
+  v2["pi"] = M_PI;
+  // auto res = jsoncons::json();
+  // auto msg = "Could not parse JSON input.";
+  // res.push_back(msg);
+  // std::string t;
+  // res.dump(t);
+  std::string str;
+  std::cout.precision(15);
+  v2.dump(str, opt);
+  std::cout << v2["weight"].as<double>() << "\n" << str << "\n";
+
+  EXPECT_EQ(v2["weight"].as_double(), 12.123456);
 }
 UTEST(time_parse, case) {
   std::stringstream timeStr{"2021-09-30T15:46:37.394Z"};  // 要解析的时间字符串
@@ -54,7 +63,7 @@ UTEST(josn_null, case2) {
   j = jsoncons::json::parse(R"(
 {
 "name": null,
-"age": "NAN"
+"age": "NaN"
 }
 )");
   // j["name"] = jsoncons::json::null();

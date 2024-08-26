@@ -1,6 +1,8 @@
 #ifndef DISPATCH_HPP
 #define DISPATCH_HPP
 
+#include <condition_variable>
+
 #include "../allocate/order.hpp"
 #include "../allocate/resource.hpp"
 #include "../planner/planner.hpp"
@@ -11,9 +13,12 @@ class Dispatcher : public RSSObject {
  public:
   using RSSObject::RSSObject;
   VehPtr select_vehicle(allocate::PointPtr);
-  std::set<VehPtr> find_owners(const VehPtr&);
-  std::vector<VehPtr> deadlock_loop();       // 死锁车辆环路
-  void brake_deadlock(std::vector<VehPtr>);  // TODO 解锁
+  std::set<VehPtr> find_depends(const VehPtr&);
+  std::vector<VehPtr> deadlock_loop();        // 死锁车辆环路
+  std::vector<VehPtr> block_loop();           // 阻挡环路
+  void brake_deadlock(std::vector<VehPtr>);   // TODO 解锁
+  void brake_blocklock(std::vector<VehPtr>);  // TODO 移动避让
+
   void dispatch_once();
   void idle_detect();
   void run();

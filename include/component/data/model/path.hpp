@@ -78,6 +78,8 @@ class Path : public RSSResource {
   PathLayout layout;
   Actions acts;  // vda action
   PeripheralActions per_acts;
+  std::optional<double> orientation_reverse;
+  std::optional<double> orientation_forward;
 };
 }  // namespace model
 }  // namespace data

@@ -95,7 +95,7 @@ std::vector<VehPtr> Dispatcher::deadlock_loop() {
       }
       exist.push_back(x);
 
-      auto depens = find_owners(x);
+      auto depens = find_depends(x);
       if (!depens.empty()) {
         for (auto& x_dep : depens) {
           vs.push(x_dep);
@@ -108,7 +108,7 @@ std::vector<VehPtr> Dispatcher::deadlock_loop() {
   return res;
 }
 
-std::set<VehPtr> Dispatcher::find_owners(const VehPtr& vs) {
+std::set<VehPtr> Dispatcher::find_depends(const VehPtr& vs) {
   std::set<VehPtr> res;
   for (auto& f : vs->future_allocate_resources) {
     auto f_veh = f->owner.lock();
@@ -116,6 +116,26 @@ std::set<VehPtr> Dispatcher::find_owners(const VehPtr& vs) {
       auto veh = std::dynamic_pointer_cast<driver::Vehicle>(f_veh);
       res.insert(veh);
     }
+  }
+  return res;
+}
+
+std::vector<VehPtr> Dispatcher::block_loop() {
+  std::vector<VehPtr> res;
+  // 阻挡检测
+  for (auto& v : vehicles) {
+    res.push_back(v);
+    for (auto& x : v->future_allocate_resources) {
+      auto f_veh = x->owner.lock();
+      if (f_veh) {
+        auto veh = std::dynamic_pointer_cast<driver::Vehicle>(f_veh);
+        if (veh->state != driver::Vehicle::State::EXECUTING) {
+          res.push_back(veh);
+          return res;
+        }
+      }
+    }
+    res.pop_back();
   }
   return res;
 }
@@ -287,7 +307,11 @@ void Dispatcher::brake_deadlock(std::vector<VehPtr> d_loop) {
   if (!d_loop.empty()) {
   }
 }
-
+void Dispatcher::brake_blocklock(std::vector<VehPtr> d_loop) {
+  // TODO
+  if (!d_loop.empty()) {
+  }
+}
 void Dispatcher::run() {
   dispatch_th = std::thread([&] {
     CLOG(INFO, dispatch_log) << this->name << " run....\n";
@@ -297,17 +321,28 @@ void Dispatcher::run() {
       cv.wait_for(lock, std::chrono::seconds(1),
                   [&] { return !order_empty || dispose; });
       idle_detect();
-      auto loop = deadlock_loop();
-      if (!loop.empty()) {
+      auto deadloop = deadlock_loop();
+      if (!deadloop.empty()) {
         std::stringstream ss;
         ss << "[";
-        for (auto& v : loop) {
+        for (auto& v : deadloop) {
+          if (v == deadloop.back()) {
+            ss << v->name;
+            break;
+          }
           ss << v->name << " ,";
         }
-        ss << "]";
-        CLOG_N_TIMES(1, ERROR, dispatch_log) << "deadlock --> " << ss.str();
-        CLOG_EVERY_N(10, ERROR, dispatch_log) << "deadlock --> " << ss.str();
-        brake_deadlock(loop);
+        ss << "]\n";
+        CLOG_EVERY_N(2, ERROR, dispatch_log) << "deadlock --> " << ss.str();
+        brake_deadlock(deadloop);
+      }
+      auto blockloop = block_loop();
+      if (!blockloop.empty()) {
+        assert(blockloop.size() == 2);
+        CLOG_EVERY_N(2, ERROR, dispatch_log)
+            << "blocklock --> " << blockloop.front()->name << " blocked by "
+            << blockloop.back()->name << "\n";
+        brake_blocklock(blockloop);
       }
       dispatch_once();
     }

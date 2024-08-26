@@ -1,21 +1,9 @@
 #ifndef RSSOBJECT_HPP
 #define RSSOBJECT_HPP
-#include <condition_variable>
-#include <deque>
-#include <iostream>
-#include <list>
 #include <map>
 #include <memory>
-#include <mutex>
-#include <optional>
-#include <set>
-#include <stack>
 #include <string>
-#include <thread>
-#include <unordered_set>
-#include <vector>
 
-#include "./util/tools.hpp"
 constexpr auto rss_log{"rss"};
 constexpr auto dispatch_log{"dispatch"};
 constexpr auto allocate_log{"allocate"};

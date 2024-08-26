@@ -1,5 +1,7 @@
 #ifndef SCHEDULE_HPP
 #define SCHEDULE_HPP
+#include <condition_variable>
+
 #include "../../component/rssresource.hpp"
 #include "../allocate/resource.hpp"
 #include "../driver/command.hpp"

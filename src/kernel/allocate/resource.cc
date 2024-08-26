@@ -94,8 +94,8 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
   for (auto& r : rules) {
     // LOG(INFO) << r->name;
     if (!r->pass(res, client)) {
-      CLOG_N_TIMES(5, WARNING, allocate_log)
-          << r->name << " not pass of " << client->name;
+      CLOG_EVERY_N(200, WARNING, allocate_log)
+          << r->name << " not pass of " << client->name << "\n";
       return false;
     }
   }
