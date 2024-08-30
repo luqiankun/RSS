@@ -192,6 +192,7 @@ class Edge {
         auto p = ControlPoint();
         p.x = x["x"].as_double();
         p.y = x["y"].as_double();
+        p.orientation = x["orientation"].as_double();
         if (x.contains("weight")) {
           p.weight = x["weight"].as_double();
         }
@@ -256,6 +257,7 @@ class Edge {
         p["x"] = x.x;
         p["y"] = x.y;
         p["weight"] = x.weight;
+        p["orientation"] = x.orientation;
         res["trajectory"]["controlPoints"].push_back(p);
       }
     }

@@ -71,7 +71,7 @@ class SimRabbit3 {
   void start() {
     if (mqtt_client) {
       th_state = std::thread([&] {
-        int send_id{0};
+        long long send_id{0};
         int ver = static_cast<int>(std::stod(version));
         auto vda_version = "v" + std::to_string(ver);
         auto prefix = interface_name + "/" + vda_version + "/" + manufacturer +
@@ -82,12 +82,14 @@ class SimRabbit3 {
             con.wait_for(lock, std::chrono::milliseconds(20));
             try {
               std::unique_lock<std::mutex> lock_(mut);
+              vda_state.header_id = send_id;
               mqtt::message_ptr msg = mqtt::make_message(
                   prefix + "state", vda_state.to_json().as_string(), 0, false);
-              vda_state.header_id = send_id++;
+              // LOG(WARNING) << serial_number << " " << send_id << " "
+              //              << vda_state.header_id;
+              send_id += 1;
               vda_state.timestamp =
                   get_time_fmt(std::chrono::system_clock::now());
-              // LOG(WARNING) << msg->get_payload_ref();
               mqtt_client->publish(msg)->wait();
             } catch (mqtt::exception& ec) {
               LOG(ERROR) << ec.get_error_str();
@@ -858,11 +860,10 @@ class SimRabbit3 {
                         interface_name + "/" + vda_version + "/" +
                             manufacturer + "/" + serial_number + "/" + "state",
                         vda_state.to_json().as_string(), 0, false);
-                    vda_state.header_id = vda_state.header_id + 1;
                     vda_state.timestamp =
                         get_time_fmt(std::chrono::system_clock::now());
                     // LOG(WARNING) << msg->get_payload_ref();
-                    mqtt_client->publish(msg)->wait();
+                    // mqtt_client->publish(msg)->wait();
                     if (x.action_type ==
                         vda5050::instantaction::ActionType::STARTPAUSE) {
                       if (status == Status::RUNNING) {

@@ -604,7 +604,7 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       auto h_id = v["headerId"].as_integer<int>();
       if (h_id <= rece_header_id) {
         // 重启了？
-        //  LOG(WARNING) << h_id << " " << rece_header_id;
+        LOG(WARNING) << h_id << " " << rece_header_id;
         if (current_order) {
           current_order->state = data::order::TransportOrder::State::FAILED;
         }
@@ -658,7 +658,10 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
               if (!vdastate.agv_position.has_value()) {
                 this->position = current_point->position;
               }
-              if (state == State::IDEL) {
+              if (state == State::IDEL &&
+                  last_vdastate.last_node_id != vdastate.last_node_id) {
+                LOG(INFO) << last_vdastate.last_node_id << " "
+                          << vdastate.last_node_id;
                 std::vector<std::shared_ptr<RSSResource>> temp;
                 for (auto& a : allocated_resources) {
                   for (auto& x : a) {
@@ -712,7 +715,6 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
         CLOG(INFO, driver_log) << name << " " << "state transform to : ["
                                << vehicle_state_to_str(state) << "]\n";
       }
-
     } else {
       std::for_each(ms.begin(), ms.end(), [&](const std::string& s) {
         CLOG(WARNING, driver_log) << name << " " << s;
@@ -742,6 +744,8 @@ void Rabbit3::onconnect(mqtt::const_message_ptr msg) {
             << name << " " << mqtt_cli->serial_number + " ONLINE\n";
         if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
           veh_state = vda5050::VehicleMqttStatus::ONLINE;
+          rece_header_id = -1;
+          init_pos = false;
         }
       } else if (v["connectionState"] == "OFFLINE") {
         CLOG_IF(veh_state != vda5050::VehicleMqttStatus::OFFLINE, INFO,
@@ -970,19 +974,30 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     }
     e.start_node_id = last_id;
     e.end_node_id = end_point->name;
+    Eigen::Vector3i st_to_ed = x->path->destination_point.lock()->position -
+                               x->path->source_point.lock()->position;
+    double angle_radians = std::atan2(st_to_ed.y(), st_to_ed.x());
     if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
       e.max_speed = std::make_optional(max_vel * 1.0 / 1000);
       e.direction = std::make_optional("forward");
       if (x->path->orientation_forward.has_value()) {
         e.orientation =
             std::make_optional(x->path->orientation_forward.value());
+      } else {
+        e.orientation = std::make_optional(angle_radians);
       }
     } else {
+      // angle_radians += M_PI;
+      // if (angle_radians > M_PI) {
+      //   angle_radians -= 2 * M_PI;
+      // }
       e.max_speed = std::make_optional(max_reverse_vel * 1.0 / 1000);
       e.direction = std::make_optional("backward");
       if (x->path->orientation_forward.has_value()) {
         e.orientation =
             std::make_optional(x->path->orientation_reverse.value());
+      } else {
+        e.orientation = std::make_optional(angle_radians);
       }
     }
     if (x->path->layout.connect_type ==
@@ -1008,10 +1023,15 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       ed_ctrl.y = x->path->destination_point.lock()->position.y() / 1000.0;
       ed_ctrl.weight = 1;
       trajectory.control_points.push_back(ed_ctrl);
-      if (e.orientation.has_value()) {
+      if (x->path->orientation_forward.has_value() ||
+          x->path->orientation_reverse.has_value()) {
         for (auto& traj : trajectory.control_points) {
-          traj.orientation = M_PI;
+          traj.orientation = 3.14159;
         }
+      }
+      if (x->vehicle_orientation == data::order::Step::Orientation::BACKWARD) {
+        std::reverse(trajectory.control_points.begin(),
+                     trajectory.control_points.end());
       }
       e.trajectory = std::make_optional(trajectory);
     } else if (x->path->layout.connect_type ==
@@ -1038,10 +1058,15 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       ed_ctrl.y = x->path->destination_point.lock()->position.y() / 1000.0;
       ed_ctrl.weight = 1;
       trajectory.control_points.push_back(ed_ctrl);
-      if (e.orientation.has_value()) {
+      if (x->path->orientation_forward.has_value() ||
+          x->path->orientation_reverse.has_value()) {
         for (auto& traj : trajectory.control_points) {
-          traj.orientation = M_PI;
+          traj.orientation = 3.14159;
         }
+      }
+      if (x->vehicle_orientation == data::order::Step::Orientation::BACKWARD) {
+        std::reverse(trajectory.control_points.begin(),
+                     trajectory.control_points.end());
       }
       e.trajectory = std::make_optional(trajectory);
     }
@@ -1300,6 +1325,7 @@ bool Rabbit3::action(
   CLOG(INFO, driver_log) << name << " " << "action execute ["
                          << dest->get_type() << "] at "
                          << dest->destination.lock()->name << "\n";
+  return true;
   task_run = true;
   if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
     CLOG(ERROR, driver_log) << name << " " << "master not online";
