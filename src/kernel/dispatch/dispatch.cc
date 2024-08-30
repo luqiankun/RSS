@@ -3,9 +3,8 @@
 #include <utility>
 
 #include "../../../include/3rdparty/uuid/uuid.hpp"
-#include "../../../include/kernel/allocate/order.hpp"
+#include "../../../include/component/util/tools.hpp"
 #include "../../../include/kernel/driver/vehicle.hpp"
-#include "../../../include/main/rss.hpp"
 namespace kernel {
 namespace dispatch {
 VehPtr Dispatcher::select_vehicle(allocate::PointPtr start) {

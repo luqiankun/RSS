@@ -1,10 +1,10 @@
 #ifndef RESOURCE_HPP
 #define RESOURCE_HPP
+#include "../../../include/3rdparty/log/easylogging++.h"
 #include "../../component/data/model/location.hpp"
 #include "../../component/data/model/path.hpp"
 #include "../../component/data/model/visuallayout.hpp"
-#include "../../component/data/order/orderquence.hpp"
-#include "../../component/util/tools.hpp"
+#include "../../component/data/order/route.hpp"
 #include "../rule/rule.hpp"
 namespace kernel {
 namespace schedule {

@@ -4,11 +4,9 @@
 
 #include <regex>
 
-#include "../data/order/orderquence.hpp"
-#include "../util/tools.hpp"
-#include "./vda5050insact.hpp"
-#include "./vda5050order.hpp"
+#include "../../3rdparty/log/easylogging++.h"
 #include "./vda5050state.hpp"
+constexpr auto mqtt_log{"mqtt"};
 namespace vda5050 {
 class MqttClient : public mqtt::async_client {
  public:

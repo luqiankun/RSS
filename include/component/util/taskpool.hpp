@@ -3,9 +3,7 @@
 
 #include <atomic>
 #include <chrono>
-#include <cstdint>
 #include <functional>
-#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -13,7 +11,6 @@
 #include <thread>
 #include <tuple>
 #include <type_traits>
-#include <variant>
 #include <vector>
 
 namespace fa {
@@ -269,8 +266,8 @@ class taskpool_t {
   }
 
   template <typename F>
-  auto async_after_run(future_t<void> &&_future, F &&f)
-      -> future_t<decltype(f())> {
+  auto async_after_run(future_t<void> &&_future,
+                       F &&f) -> future_t<decltype(f())> {
     using TRet = decltype(f());
     auto _future_wrap = std::make_shared<future_t<void>>(std::move(_future));
     std::shared_ptr<promise_t<TRet>> _promise =
@@ -285,8 +282,8 @@ class taskpool_t {
   }
 
   template <typename F, typename T>
-  auto async_after_run(future_t<T> &&_future, F &&f)
-      -> future_t<decltype(f(_future.get()))> {
+  auto async_after_run(future_t<T> &&_future,
+                       F &&f) -> future_t<decltype(f(_future.get()))> {
     using TRet = decltype(f(_future.get()));
     auto _future_wrap = std::make_shared<future_t<T>>(std::move(_future));
     std::shared_ptr<promise_t<TRet>> _promise =
@@ -406,8 +403,8 @@ class taskpool_t {
 
   template <typename F>
   auto sync_after_run(future_t<void> &&_future,
-                      std::shared_ptr<std::recursive_mutex> _mutex, F &&f)
-      -> future_t<decltype(f())> {
+                      std::shared_ptr<std::recursive_mutex> _mutex,
+                      F &&f) -> future_t<decltype(f())> {
     using TRet = decltype(f());
     auto _future_wrap = std::make_shared<future_t<void>>(std::move(_future));
     std::shared_ptr<promise_t<TRet>> _promise =
@@ -425,8 +422,8 @@ class taskpool_t {
 
   template <typename T, typename F>
   auto sync_after_run(future_t<T> &&_future,
-                      std::shared_ptr<std::recursive_mutex> _mutex, F &&f)
-      -> future_t<decltype(f(_future.get()))> {
+                      std::shared_ptr<std::recursive_mutex> _mutex,
+                      F &&f) -> future_t<decltype(f(_future.get()))> {
     using TRet = decltype(f(_future.get()));
     auto _future_wrap = std::make_shared<future_t<T>>(std::move(_future));
     std::shared_ptr<promise_t<TRet>> _promise =
@@ -456,8 +453,8 @@ class taskpool_t {
   }
 
   template <typename F>
-  auto _run_timed_task_until(std::chrono::system_clock::time_point _tp, F &&f)
-      -> future_t<decltype(f())> {
+  auto _run_timed_task_until(std::chrono::system_clock::time_point _tp,
+                             F &&f) -> future_t<decltype(f())> {
     using TRet = decltype(f());
     std::unique_lock<std::recursive_mutex> ul(m_mutex, std::defer_lock);
     auto _task =

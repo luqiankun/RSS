@@ -1,6 +1,9 @@
 #include "../../../include/component/util/taskpool.hpp"
+#include "../../../include/component/util/tools.hpp"
 #include "../../../include/component/vda5050/master.hpp"
 #include "../../../include/component/vda5050/valitator.hpp"
+#include "../../../include/component/vda5050/vda5050insact.hpp"
+#include "../../../include/component/vda5050/vda5050order.hpp"
 
 class SimRabbit3 {
  public:
@@ -921,8 +924,7 @@ int main(int argc, char** argv) {
   el::Loggers::getLogger("timer");
   if (argc < 2) {
     std::cerr << "usage: ./rabbit3_test ip only\n"
-              << "ip: ip"
-              << "\n"
+              << "ip: ip" << "\n"
               << "only: true:one vehilce false:four vehilce\n";
     return -1;
   }
@@ -934,8 +936,7 @@ int main(int argc, char** argv) {
     ip = std::string(argv[1]);
     only = std::string(argv[2]) == "true" ? true : false;
   }
-  LOG(INFO) << "ip: " << ip << "\t"
-            << "only: " << only << "\n";
+  LOG(INFO) << "ip: " << ip << "\t" << "only: " << only << "\n";
 
   SimRabbit3 agv1("uagv", "tx1", "2.0", "rw", "P1", 45150, -107450);
   agv1.set_mqtt_ops(agv1.serial_number, ip);

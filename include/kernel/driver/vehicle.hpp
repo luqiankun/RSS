@@ -1,13 +1,13 @@
 #ifndef VEHICLE_HPP
 #define VEHICLE_HPP
-#include "../../../include/3rdparty/log/easylogging++.h"
+#include "../../../include/3rdparty/uuid/uuid.hpp"
 #include "../../../include/component/util/taskpool.hpp"
 #include "../../../include/component/vda5050/master.hpp"
-#include "../../component/data/order/orderquence.hpp"
-#include "../../component/rssobject.hpp"
+#include "../../../include/component/vda5050/vda5050insact.hpp"
 #include "../allocate/order.hpp"
 #include "../planner/planner.hpp"
 #include "../schedule/schedule.hpp"
+
 namespace kernel {
 namespace dispatch {
 class Dispatcher;
@@ -47,7 +47,7 @@ class Vehicle : public schedule::Client,
       std::shared_ptr<data::order::DriverOrder::Destination>) = 0;  // 执行动作
   virtual bool move(
       std::vector<std::shared_ptr<data::order::Step>>) = 0;  // 执行移动
-  virtual void init(){};  // 初始化或者配置接收外部信息更新机器人状态
+  virtual void init() {};  // 初始化或者配置接收外部信息更新机器人状态
   virtual bool instant_action(
       std::shared_ptr<data::model::Actions::Action>) = 0;
   virtual ~Vehicle();
@@ -65,6 +65,7 @@ class Vehicle : public schedule::Client,
   int engerg_level{100};
   bool process_chargeing{false};
   bool reroute_flag{false};
+  bool init_pos{false};
   integrationLevel integration_level{TO_BE_UTILIZED};
   std::string color;
   State state{State::UNKNOWN};
@@ -138,7 +139,6 @@ class Rabbit3 : public Vehicle {
   uuids::uuid order_id;
   int seq_id{0};
   int update_vda_order_id{0};
-  bool init_pos{false};
   int rece_header_id{-1};
   int last_step_count{0};
   double deviation_xy;

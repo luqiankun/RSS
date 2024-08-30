@@ -227,11 +227,19 @@ Command::Command(const std::string& n) : RSSObject(n) {
     // 获取下次要分配的资源
     std::stringstream ss;
     auto next_res = get_next_allocate_res(driver_order, veh);
+    if (order->state == data::order::TransportOrder::State::WITHDRAWL ||
+        order->state == data::order::TransportOrder::State::FAILED ||
+        order->state == data::order::TransportOrder::State::FINISHED) {
+      next_res.clear();
+    }
     std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto& a : veh->allocated_resources) {
       for (auto& x : a) {
-        if (x == veh->current_point) {
-          continue;
+        if (order->state != data::order::TransportOrder::State::WITHDRAWL ||
+            order->state != data::order::TransportOrder::State::FAILED) {
+          if (x == veh->current_point) {
+            continue;
+          }
         }
         auto dest_ = get_dest(driver_order)->operation;
         if (dest_ == data::model::Actions::OpType::CHARGE ||
@@ -255,7 +263,14 @@ Command::Command(const std::string& n) : RSSObject(n) {
         << veh->name << " free { " << ss.str() << "}\n";
   };
   cbs[State::END] = [&] {
-    assert_valid;
+    auto veh = vehicle.lock();
+    if (!veh) {
+      state = State::DISPOSABLE;
+      return;
+    }
+    if (veh->paused) {
+      return;
+    }
     veh->command_done();
     state = State::DISPOSABLE;
   };

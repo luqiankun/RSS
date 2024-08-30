@@ -1,6 +1,6 @@
 #ifndef Planner_HPP
 #define Planner_HPP
-#include "../../component/rssobject.hpp"
+#include "edge.hpp"
 #include "sovler.hpp"
 #define PI 3.1415926
 namespace kernel {

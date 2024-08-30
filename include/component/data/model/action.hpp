@@ -1,10 +1,10 @@
 #ifndef ACTION_HGPP
 #define ACTION_HGPP
+#include <optional>
 #include <regex>
 #include <variant>
 
-#include "../../../3rdparty/jsoncons/json.hpp"
-#include "../../rssresource.hpp"
+#include "../../../3rdparty/jsoncons/basic_json.hpp"
 // #include "../order/driverorder.hpp"
 namespace data {
 namespace model {
@@ -107,7 +107,7 @@ class Actions {
     ActionWhen when;
     bool vaild{false};
     std::string name;
-    virtual void init(jsoncons::json&){};
+    virtual void init(jsoncons::json&) {};
     virtual jsoncons::json to_json() { return jsoncons::json::object(); };
   };
   explicit Actions(std::map<std::string, std::string> pro) {

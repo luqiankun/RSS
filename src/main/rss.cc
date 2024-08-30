@@ -1,5 +1,6 @@
 #include "../../include/main/rss.hpp"
 
+#include "../../include/component/data/model/envelope.hpp"
 #include "../../include/kernel/driver/vehicle.hpp"
 std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
   std::unique_lock<std::shared_mutex> lock(mutex);
@@ -32,8 +33,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     //
     auto root = doc.first_child();  // <model>
     if (std::string(root.name()) != "model") {
-      CLOG(ERROR, rss_log) << "parse error: "
-                           << "'don't has model'";
+      CLOG(ERROR, rss_log) << "parse error: " << "'don't has model'";
       json res = json::array();
       auto msg =
           "Could not parse XML input '" + std::string("'don't has model'.");
@@ -1599,6 +1599,7 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   res["precisePosition"]["x"] = v->position.x();
   res["precisePosition"]["y"] = v->position.y();
   res["precisePosition"]["z"] = v->position.z();
+  res["orientation"] = v->angle * 180 / M_PI;
   res["state"] = v->get_state();
   res["procState"] = v->get_process_state();
   res["allocatedResources"] = json::array();

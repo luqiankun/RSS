@@ -1,6 +1,8 @@
 #ifndef VALIDATOR_VDA5050_HPP
 #define VALIDATOR_VDA5050_HPP
-#include "../../3rdparty/jsoncons_ext/jsonschema/jsonschema.hpp"
+#include "../../3rdparty/jsoncons_ext/jsonschema/json_schema_factory.hpp"
+#include "../../3rdparty/jsoncons_ext/jsonschema/json_validator.hpp"
+
 namespace vda5050 {
 class SchemaValidator {
  public:

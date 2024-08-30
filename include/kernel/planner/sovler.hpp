@@ -1,9 +1,8 @@
 #ifndef ASTAR_HPP
 #define ASTAR_HPP
-#include <queue>
 #include <vector>
 
-#include "edge.hpp"
+#include "vertex.hpp"
 namespace kernel {
 
 namespace planner {

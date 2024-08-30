@@ -1,7 +1,9 @@
 
 #include "../../../include/kernel/driver/vehicle.hpp"
 
+#include "../../../include/component/util/tools.hpp"
 #include "../../../include/component/vda5050/valitator.hpp"
+#include "../../../include/component/vda5050/vda5050order.hpp"
 #include "../../../include/kernel/allocate/order.hpp"
 #include "../../../include/kernel/allocate/resource.hpp"
 namespace kernel {
@@ -242,8 +244,9 @@ void Vehicle::command_done() {
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     // 订单取消
     future_allocate_resources.clear();
+    init_pos = false;
     CLOG(ERROR, driver_log)
-        << name << " " << current_order->name << " withdrawl.";
+        << name << " " << current_order->name << " withdrawl.\n";
     if (process_chargeing) {
       process_chargeing = false;
     }
@@ -600,8 +603,21 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
       // }
       auto h_id = v["headerId"].as_integer<int>();
       if (h_id <= rece_header_id) {
-        // LOG(WARNING) << h_id << " " << rece_header_id;
-        return;
+        // 重启了？
+        //  LOG(WARNING) << h_id << " " << rece_header_id;
+        if (current_order) {
+          current_order->state = data::order::TransportOrder::State::FAILED;
+        }
+        state = Vehicle::State::UNKNOWN;
+        std::vector<std::shared_ptr<RSSResource>> temp;
+        for (auto& a : allocated_resources) {
+          for (auto& x : a) {
+            temp.push_back(x);
+          }
+        }
+        res->free(temp, shared_from_this());
+        init_pos = false;
+        CLOG(WARNING, driver_log) << name << " 重启了???\n";
       }
       rece_header_id = h_id;
       auto last_vdastate = vdastate;
@@ -637,6 +653,28 @@ void Rabbit3::onstate(mqtt::const_message_ptr msg) {
                 init_pos = false;
               } else {
                 init_pos = true;
+              }
+            } else {
+              if (!vdastate.agv_position.has_value()) {
+                this->position = current_point->position;
+              }
+              if (state == State::IDEL) {
+                std::vector<std::shared_ptr<RSSResource>> temp;
+                for (auto& a : allocated_resources) {
+                  for (auto& x : a) {
+                    temp.push_back(x);
+                  }
+                }
+                res->free(temp, shared_from_this());
+                std::vector<std::shared_ptr<RSSResource>> ress;
+                ress.push_back(x);
+                res->claim(ress, shared_from_this());
+                if (!res->allocate(ress, shared_from_this())) {
+                  CLOG(ERROR, driver_log)
+                      << name
+                      << " reinit failed:{ allocate init_point failed }\n";
+                  init_pos = false;
+                }
               }
             }
           }
@@ -932,6 +970,21 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     }
     e.start_node_id = last_id;
     e.end_node_id = end_point->name;
+    if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
+      e.max_speed = std::make_optional(max_vel * 1.0 / 1000);
+      e.direction = std::make_optional("forward");
+      if (x->path->orientation_forward.has_value()) {
+        e.orientation =
+            std::make_optional(x->path->orientation_forward.value());
+      }
+    } else {
+      e.max_speed = std::make_optional(max_reverse_vel * 1.0 / 1000);
+      e.direction = std::make_optional("backward");
+      if (x->path->orientation_forward.has_value()) {
+        e.orientation =
+            std::make_optional(x->path->orientation_reverse.value());
+      }
+    }
     if (x->path->layout.connect_type ==
         data::model::Path::ConnectType::BEZIER) {
       auto trajectory = vda5050::order::Trajectory();
@@ -955,27 +1008,14 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       ed_ctrl.y = x->path->destination_point.lock()->position.y() / 1000.0;
       ed_ctrl.weight = 1;
       trajectory.control_points.push_back(ed_ctrl);
-      e.trajectory = std::make_optional(trajectory);
-      if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-        e.max_speed = std::make_optional(max_vel * 1.0 / 1000);
-        e.direction = std::make_optional("forward");
-        e.orientation = std::make_optional(0);
-      } else {
-        e.max_speed = std::make_optional(max_reverse_vel * 1.0 / 1000);
-        e.direction = std::make_optional("backward");
-        e.orientation = std::make_optional(M_PI);
+      if (e.orientation.has_value()) {
+        for (auto& traj : trajectory.control_points) {
+          traj.orientation = M_PI;
+        }
       }
+      e.trajectory = std::make_optional(trajectory);
     } else if (x->path->layout.connect_type ==
                data::model::Path::ConnectType::BEZIER_3) {
-      if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-        e.max_speed = std::make_optional(max_vel * 1.0 / 1000);
-        e.direction = std::make_optional("forward");
-        e.orientation = std::make_optional(0);
-      } else {
-        e.max_speed = std::make_optional(max_reverse_vel * 1.0 / 1000);
-        e.direction = std::make_optional("backward");
-        e.orientation = std::make_optional(M_PI);
-      }
       auto trajectory = vda5050::order::Trajectory();
       trajectory.degree = 6;
       trajectory.knot_vector.assign({0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
@@ -998,24 +1038,14 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
       ed_ctrl.y = x->path->destination_point.lock()->position.y() / 1000.0;
       ed_ctrl.weight = 1;
       trajectory.control_points.push_back(ed_ctrl);
-      e.trajectory = std::make_optional(trajectory);
-    } else {
-      if (x->vehicle_orientation == data::order::Step::Orientation::FORWARD) {
-        e.max_speed = std::make_optional(max_vel * 1.0 / 1000);
-        e.direction = std::make_optional("forward");
-        if (x->path->orientation_forward.has_value()) {
-          e.orientation =
-              std::make_optional(x->path->orientation_forward.value());
-        }
-      } else {
-        e.max_speed = std::make_optional(max_reverse_vel * 1.0 / 1000);
-        e.direction = std::make_optional("backward");
-        if (x->path->orientation_forward.has_value()) {
-          e.orientation =
-              std::make_optional(x->path->orientation_reverse.value());
+      if (e.orientation.has_value()) {
+        for (auto& traj : trajectory.control_points) {
+          traj.orientation = M_PI;
         }
       }
+      e.trajectory = std::make_optional(trajectory);
     }
+
     last_id = end_point->name;
     e.sequence_id = seq_id++;
     end.sequence_id = seq_id++;
@@ -1097,6 +1127,11 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
       CLOG(ERROR, driver_log) << name << " vehlicle not online\n";
+      task_run = false;
+      return false;
+    }
+    if (current_order->state == data::order::TransportOrder::State::FAILED) {
+      CLOG(ERROR, driver_log) << name << " order failed\n";
       task_run = false;
       return false;
     }
@@ -1250,7 +1285,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     n++;
     CLOG_EVERY_N(20, INFO, driver_log)
         << name << " waiting for move {" << steps.front()->name << "}\n";
-    if (n > 2 * 60 * 100) {
+    if (n > 120000) {  // 100min
       CLOG(ERROR, driver_log) << name << " " << "timeout";
       task_run = false;
       return false;
@@ -1393,6 +1428,11 @@ bool Rabbit3::action(
     }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
       CLOG(ERROR, driver_log) << name << " " << "vehlicle not online\n";
+      task_run = false;
+      return false;
+    }
+    if (current_order->state == data::order::TransportOrder::State::FAILED) {
+      CLOG(ERROR, driver_log) << name << " order failed\n";
       task_run = false;
       return false;
     }

@@ -10,7 +10,6 @@ constexpr auto allocate_log{"allocate"};
 constexpr auto order_log{"order"};
 constexpr auto planner_log{"planner"};
 constexpr auto driver_log{"driver"};
-constexpr auto mqtt_log{"mqtt"};
 
 class RSSObject {
  public:

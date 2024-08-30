@@ -3,9 +3,9 @@
 #include <shared_mutex>
 
 #include "../3rdparty/xml/pugixml.hpp"
+#include "../component/util/tools.hpp"
 #include "../kernel/dispatch/dispatch.hpp"
 #include "../kernel/schedule/schedule.hpp"
-
 using json = jsoncons::json;
 using RET = std::pair<int, std::string>;
 inline std::string MQTT_IP{"127.0.0.1"};

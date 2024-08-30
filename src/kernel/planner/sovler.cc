@@ -1,11 +1,9 @@
 #include "../../../include/kernel/planner/sovler.hpp"
 
 #include <algorithm>
-#include <iostream>
+#include <queue>
 #include <stack>
-#include <utility>
 
-#include "../../../include/component/util/tools.hpp"
 namespace kernel {
 namespace planner {
 #if defined(_MSC_VER)

@@ -1,7 +1,8 @@
 #ifndef POINT_HPP
 #define POINT_HPP
+#include <Eigen/Eigen>
+
 #include "../../rssresource.hpp"
-#include "./envelope.hpp"
 namespace data {
 namespace model {
 using namespace Eigen;

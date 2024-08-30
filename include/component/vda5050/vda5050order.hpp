@@ -107,6 +107,7 @@ class ControlPoint {
   double x;
   double y;
   double weight{1.0};
+  double orientation{0.0};
 };
 
 class Trajectory {

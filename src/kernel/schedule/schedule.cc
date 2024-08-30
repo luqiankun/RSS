@@ -1,6 +1,7 @@
 
 #include "../../../include/kernel/schedule/schedule.hpp"
 
+#include "../../../include/component/util/tools.hpp"
 #include "../../../include/kernel/driver/command.hpp"
 #include "../../../include/kernel/driver/vehicle.hpp"
 

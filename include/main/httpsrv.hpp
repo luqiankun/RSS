@@ -2,7 +2,7 @@
 #define HTTPSERVER_HPP
 #define CPPHTTPLIB_THREAD_POOL_COUNT 20
 #include "../3rdparty/http/httplib.h"
-#include "../component/util/tools.hpp"
+#include "../3rdparty/log/easylogging++.h"
 const auto http_log{"http"};
 using TCSRep = std::pair<int, std::string>;
 class HTTPServer {

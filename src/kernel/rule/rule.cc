@@ -1,7 +1,7 @@
 #include "../../../include/kernel/rule/rule.hpp"
 
+#include "../../../include/component/data/model/envelope.hpp"
 #include "../../../include/kernel/allocate/resource.hpp"
-#include "../../../include/kernel/driver/vehicle.hpp"
 #include "../../../include/kernel/schedule/schedule.hpp"
 
 namespace kernel {

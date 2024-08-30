@@ -1,6 +1,8 @@
 #ifndef RULE_HPP
 #define RULE_HPP
-#include "../../component/data/order/orderquence.hpp"
+#include <unordered_set>
+
+#include "../../component/rssresource.hpp"
 namespace kernel {
 namespace schedule {
 class Client;
