@@ -191,7 +191,7 @@ void Vehicle::get_next_ord() {
       current_order = orders.front();
       orders.pop_front();
       if (current_order->state !=
-          data::order::TransportOrder::State::BEING_PROCESSED) {
+          data::order::TransportOrder::State::DISPATCHABLE) {
         if (process_chargeing) process_chargeing = false;
         current_order.reset();
         continue;
@@ -210,6 +210,8 @@ void Vehicle::get_next_ord() {
   }
   if (current_order) {
     // state = State::EXECUTING;
+    // current_order->state =
+    // data::order::TransportOrder::State::BEING_PROCESSED;
     next_command();
   } else {
     process_state = proState::IDEL;
@@ -368,6 +370,12 @@ void Vehicle::next_command() {
   if (!current_order) {
     get_next_ord();
     return;
+  }
+  if (current_order->state ==
+      data::order::TransportOrder::State::DISPATCHABLE) {
+    current_order->state = data::order::TransportOrder::State::BEING_PROCESSED;
+    CLOG(INFO, order_log) << current_order->name
+                          << " status: {begin_processed}\n";
   }
   if (current_order->state !=
       data::order::TransportOrder::State::BEING_PROCESSED) {

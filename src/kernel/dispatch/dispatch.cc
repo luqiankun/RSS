@@ -269,9 +269,9 @@ void Dispatcher::dispatch_once() {
       }
     }
     if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
-      current->state = data::order::TransportOrder::State::BEING_PROCESSED;
-      CLOG(INFO, dispatch_log)
-          << current->name << " status: [being_processed]\n";
+      // current->state = data::order::TransportOrder::State::BEING_PROCESSED;
+      // CLOG(INFO, dispatch_log)
+      //     << current->name << " status: [being_processed]\n";
       // TODO
       if (current->intended_vehicle.lock()->state ==
           driver::Vehicle::State::UNAVAILABLE) {

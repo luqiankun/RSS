@@ -28,7 +28,6 @@ void Planner::rebuild() {
   // std::cout << "generate " << vertexs.size() << " vertex\n";
   for (auto &x : res.lock()->paths) {
     bool ban{false};  // 路段是否禁止
-    bool single{false};
     if (x->locked) {
       ban = true;
     }

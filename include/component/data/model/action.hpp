@@ -148,8 +148,8 @@ class Actions {
             } else {
               a.blocking_type = ActionBlockingType::HARD;
             }
+            has = true;
           }
-          has = true;
         }
         if (!has) {
           Action act;

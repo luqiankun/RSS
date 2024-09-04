@@ -3,9 +3,9 @@
 #include "../../rssresource.hpp"
 namespace data {
 namespace model {
-class VisualLayout : public RSSResource {
+class VisualLayout : public RSSObject {
  public:
-  using RSSResource::RSSResource;
+  using RSSObject::RSSObject;
   class Layer {
    public:
     int id;
