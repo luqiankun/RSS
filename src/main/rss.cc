@@ -201,8 +201,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           }
           std::string name_ = allow_ops.attribute("name").as_string();
           std::transform(name_.begin(), name_.end(), name_.begin(), ::tolower);
-          auto name_t = lt->allowed_ops[name_] =
-              std::map<std::string, std::string>();
+          lt->allowed_ops[name_] = std::map<std::string, std::string>();
           allow_ops = allow_ops.next_sibling();
         }
         auto allow_per_ops = loc_type.find_child([](pugi::xml_node node) {
