@@ -193,7 +193,6 @@ Planner::find_paths_with_vertex(
            << " vertex number : " << x.size() << "\n";
         std::vector<VertexPtr> temp;
         ss << "| path:[";
-        temp.reserve(x.size());
         for (auto &p : x) {
           if (p == *(x.end() - 1)) {
             ss << p->name << "";
@@ -204,8 +203,8 @@ Planner::find_paths_with_vertex(
         }
         ss << "]\n";
         if (x.back()->F != std::numeric_limits<float>::max()) {
-          res.push_back(std::pair<std::vector<VertexPtr>, double>(
-              std::move(temp), x.back()->F));
+          res.push_back(
+              std::pair<std::vector<VertexPtr>, double>(temp, temp.back()->F));
         } else {
           ss << "this path is not open";
         }
@@ -399,9 +398,9 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
       ss << "| path:[";
       for (auto &p : x.first) {
         if (p == *(x.first.end() - 1)) {
-          ss << p->name << "";
+          ss << p->name << "" << "<" << x.second << ">";
         } else {
-          ss << p->name << " -> ";
+          ss << p->name << "<" << p->F << "> -> ";
         }
       }
       ss << "]\n";

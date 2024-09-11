@@ -37,25 +37,23 @@ void Solver::solver(const VertexPtr& begin) {
         if (x.lock()->type != AType::ATYPE_OPENED) {
           x.lock()->set_parent(cur_node);
           x.lock()->H = 0;
-          x.lock()->G = x.lock()->get_g_value().has_value()
-                            ? x.lock()->get_g_value().value()
-                            : std::numeric_limits<float>::max();
+          x.lock()->G = x.lock()->get_g_value().value_or(
+              std::numeric_limits<float>::max());
           x.lock()->F = x.lock()->G + x.lock()->H;
           x.lock()->type = AType::ATYPE_OPENED;
           open_list.push(x.lock());
         } else {
           auto p = (*x.lock())[cur_node];
-          float p2 =
-              p.has_value() ? p.value() : std::numeric_limits<float>::max();
+          float p2 = p.value_or(std::numeric_limits<float>::max());
           if (x.lock()->G > (cur_node->G + p2)) {
             x.lock()->set_parent(cur_node);
             x.lock()->H = 0;
-            x.lock()->G = x.lock()->get_g_value().has_value()
-                              ? x.lock()->get_g_value().value()
-                              : std::numeric_limits<float>::max();
+            x.lock()->G = x.lock()->get_g_value().value_or(
+                std::numeric_limits<float>::max());
             x.lock()->F = x.lock()->H + x.lock()->G;
           } else if (x.lock()->G == (cur_node->G + p2)) {
             x.lock()->add_parent(cur_node);
+            x.lock()->F = x.lock()->H + x.lock()->G;
           }
         }
       }

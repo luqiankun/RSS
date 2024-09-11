@@ -393,6 +393,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         //                             source_point.lock()->position.y() -
         //                                 destination_point.lock()->position.y())
         //                 .norm();
+        p->length = length;
         p->max_vel = maxVelocity;
         p->max_reverse_vel = maxReverseVelocity;
         p->locked = locked;
