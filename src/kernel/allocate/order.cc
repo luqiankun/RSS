@@ -31,14 +31,27 @@ void OrderPool::cancel_order(size_t order_uuid) {
   }
 }
 
-TransOrderPtr OrderPool::pop() {
+void OrderPool::pop(TransOrderPtr order) {
+  for (auto iter = orderpool.begin(); iter != orderpool.end();) {
+    if (*iter == order) {
+      iter = orderpool.erase(iter);
+      ended_orderpool.push_back(order);
+    } else {
+      iter++;
+    }
+  }
+}
+
+TransOrderPtr OrderPool::get_one_order() {
   update_quence();
   if (orderpool.empty()) {
     return nullptr;
   } else {
-    auto current = orderpool.front();
-    ended_orderpool.push_back(current);
-    orderpool.pop_front();
+    auto current = orderpool.at(cur_index);
+    cur_index++;
+    if (cur_index >= orderpool.size()) {
+      cur_index = 0;
+    }
     return current;
   }
 }

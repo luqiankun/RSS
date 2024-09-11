@@ -40,6 +40,7 @@ class Dispatcher : public RSSObject {
   std::function<void(const std::string&, VehPtr)> go_home;
   std::function<allocate::PointPtr(allocate::PointPtr)> get_park_point;
   std::function<void(const std::string&, VehPtr)> go_charge;
+  std::function<void(allocate::TransOrderPtr)> pop_order;
   std::function<allocate::TransOrderPtr()> get_next_ord;
   std::function<bool()> order_empty;
 };

@@ -35,6 +35,7 @@ std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
   if (!res->steps.empty()) {
     res->current_step = res->steps.front();
   }
+  res->step_number = res->steps.size();
   return res;
 }
 

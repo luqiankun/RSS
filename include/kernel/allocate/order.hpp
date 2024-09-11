@@ -16,7 +16,8 @@ class OrderPool : public RSSObject {
                              OpType op);
   void cancel_all_order();
   void cancel_order(size_t order_uuid);
-  TransOrderPtr pop();
+  void pop(TransOrderPtr order);
+  TransOrderPtr get_one_order();
   ~OrderPool() { CLOG(INFO, allocate_log) << name << " close\n"; }
   void update_quence();
   bool is_empty() { return orderpool.empty(); }
@@ -26,6 +27,7 @@ class OrderPool : public RSSObject {
   std::deque<TransOrderPtr> orderpool;
   std::deque<TransOrderPtr> ended_orderpool;
   std::deque<OrderSeqPtr> orderquence;
+  int cur_index{0};
 };
 }  // namespace allocate
 }  // namespace kernel

@@ -210,31 +210,13 @@ void Dispatcher::dispatch_once() {
     return;
   } else {
     if (current->state == data::order::TransportOrder::State::RAW) {
-      CLOG(INFO, dispatch_log) << current->name << " status: [raw]\n";
+      // 重写
       if (current->driverorders.empty()) {
-        current->state = data::order::TransportOrder::State::FINISHED;
-        CLOG(INFO, dispatch_log) << current->name << " status: [finished]\n";
-      } else {
-        current->state = data::order::TransportOrder::State::ACTIVE;
-        CLOG(INFO, dispatch_log) << current->name << " status: [active]\n";
+        return;
       }
-    }
-    if (current->state == data::order::TransportOrder::State::ACTIVE) {
       auto v = current->intended_vehicle.lock();
-      if (v) {
-        // 订单指定了车辆
-        current->state = data::order::TransportOrder::State::DISPATCHABLE;
-        CLOG(INFO, dispatch_log)
-            << current->name << " status: [dispatchable]\n";
-        if (v->integration_level !=
-            driver::Vehicle::integrationLevel::TO_BE_UTILIZED) {
-          current->state = data::order::TransportOrder::State::FAILED;
-          CLOG(ERROR, dispatch_log)
-              << current->name
-              << " status: [failed] the vehicle {TO_BE_UTILIZED} ";
-        }
-      } else {
-        if (auto_select) {  // 自动分配车辆
+      if (!v) {
+        if (auto_select) {
           auto dest = current->driverorders[current->current_driver_index]
                           ->destination->destination.lock();
           auto dest_check = find_res(dest->name);
@@ -249,24 +231,26 @@ void Dispatcher::dispatch_once() {
                         ->link.lock();
           }
           auto v_select = select_vehicle(start);
-          if (v_select) {
-            current->intended_vehicle = v_select;
-            current->state = data::order::TransportOrder::State::DISPATCHABLE;
-            CLOG(INFO, dispatch_log)
-                << current->name << " status: [dispatchable]\n";
-          } else {
-            current->state = data::order::TransportOrder::State::FAILED;
-            CLOG(ERROR, dispatch_log)
-                << current->name
-                << " status: [failed] not exist vehicle for using  \n";
+          if (!v_select) {
+            return;
           }
-        } else {
-          current->state = data::order::TransportOrder::State::FAILED;
-          CLOG(ERROR, dispatch_log)
-              << current->name
-              << " status: [failed] not exist vehicle for using\n";
         }
       }
+      current->state = data::order::TransportOrder::State::ACTIVE;
+      CLOG(INFO, dispatch_log) << current->name << " status: [active]\n";
+    }
+    if (current->state == data::order::TransportOrder::State::ACTIVE) {
+      for (auto& x : current->dependencies) {
+        auto dep = x.lock();
+        if (dep) {
+          if (dep->state != data::order::TransportOrder::State::FINISHED) {
+            LOG(INFO) << "------------";
+            return;
+          }
+        }
+      }
+      current->state = data::order::TransportOrder::State::DISPATCHABLE;
+      CLOG(INFO, dispatch_log) << current->name << " status: [dispatchable]\n";
     }
     if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
       // current->state = data::order::TransportOrder::State::BEING_PROCESSED;
@@ -286,18 +270,29 @@ void Dispatcher::dispatch_once() {
       // TODO
     }
     if (current->state == data::order::TransportOrder::State::BEING_PROCESSED) {
+      pop_order(current);
+      CLOG(INFO, dispatch_log)
+          << current->name << " status: [beging_processed]\n";
+
       // wait  do nothing
     }
     if (current->state == data::order::TransportOrder::State::WITHDRAWL) {
+      CLOG(WARNING, dispatch_log) << current->name << " status: [withdrawl]\n";
       // TODO
     } else if (current->state == data::order::TransportOrder::State::FINISHED) {
+      CLOG(WARNING, dispatch_log) << current->name << " status: [finished]\n";
       // TODO
     } else if (current->state == data::order::TransportOrder::State::FAILED) {
+      CLOG(WARNING, dispatch_log) << current->name << " status: [failed]\n";
+
       // TODO
     } else if (current->state ==
                data::order::TransportOrder::State::UNROUTABLE) {
+      CLOG(WARNING, dispatch_log) << current->name << " status: [unroutable]\n";
+
       // TODO
     } else {
+      CLOG(WARNING, dispatch_log) << current->name << " status: [unknow]\n";
     }
   }
 }

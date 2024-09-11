@@ -19,6 +19,7 @@ class Route : public RSSObject {
   std::deque<std::shared_ptr<Step>> steps;
   std::shared_ptr<Step> current_step;
   int64_t costs{0};
+  int step_number{0};
 };
 }  // namespace order
 }  // namespace data

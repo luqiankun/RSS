@@ -826,7 +826,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     dispatcher->go_charge = std::bind(
         &RSS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->get_next_ord =
-        std::bind(&kernel::allocate::OrderPool::pop, orderpool);
+        std::bind(&kernel::allocate::OrderPool::get_one_order, orderpool);
+    dispatcher->pop_order = std::bind(&kernel::allocate::OrderPool::pop,
+                                      orderpool, std::placeholders::_1);
     dispatcher->get_park_point =
         std::bind(&kernel::allocate::ResourceManager::get_recent_park_point,
                   resource, std::placeholders::_1);
@@ -1260,6 +1262,7 @@ std::pair<int, std::string> RSS::post_transport_order(
             ? req["peripheralReservationToken"].as_string()
             : "";
     ord->state = data::order::TransportOrder::State::RAW;
+    CLOG(INFO, dispatch_log) << ord->name << " status: [raw]\n";
     orderpool->orderpool.push_back(ord);
     dispatcher->notify();
     // return
@@ -2604,7 +2607,9 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     dispatcher->order_empty =
         std::bind(&kernel::allocate::OrderPool::is_empty, orderpool);
     dispatcher->get_next_ord =
-        std::bind(&kernel::allocate::OrderPool::pop, orderpool);
+        std::bind(&kernel::allocate::OrderPool::get_one_order, orderpool);
+    dispatcher->pop_order = std::bind(&kernel::allocate::OrderPool::pop,
+                                      orderpool, std::placeholders::_1);
     dispatcher->go_charge = std::bind(
         &RSS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
     dispatcher->get_park_point =

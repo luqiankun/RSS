@@ -868,6 +868,8 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     ord.order_update_id = update_vda_order_id;
   }
   last_step_count = 0;
+  std::set<std::string> wait_act_ord_start;
+  std::set<std::string> wait_act_ord_end;
   std::shared_ptr<data::model::Point> start_point;
   if (steps.front()->vehicle_orientation ==
       data::order::Step::Orientation::FORWARD) {
@@ -887,10 +889,35 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   pos.allowed_deviation_xy = deviation_xy;
   pos.allowed_deviation_theta = deviation_theta;
   start.node_position = pos;
+  {
+    if (steps.front()->route_index == 0) {
+      // 起点
+      // vda 遍历当前动作
+      for (auto& x : steps.front()->path->acts.actions) {
+        auto action = static_cast<vda5050::order::Action*>(&x);
+        if (action->when == vda5050::order::ActionWhen::ORDER_START) {
+          if (action->blocking_type !=
+              vda5050::order::ActionBlockingType::NONE) {
+            wait_act_ord_start.insert(action->action_id);
+          }
+          start.actions.push_back(*action);
+        }
+      }
+      for (auto& x : driver_order->route->steps) {
+        for (auto& act : x->path->acts.actions) {
+          auto action = static_cast<vda5050::order::Action*>(&act);
+          if (action->when == vda5050::order::ActionWhen::ORDER_START) {
+            if (action->blocking_type !=
+                vda5050::order::ActionBlockingType::NONE) {
+              wait_act_ord_start.insert(action->action_id);
+            }
+            start.actions.push_back(*action);
+          }
+        }
+      }
+    }
+  }
   ord.nodes.push_back(start);
-
-  std::set<std::string> wait_act_ord_start;
-  std::set<std::string> wait_act_ord_end;
 
   std::stringstream ss;
   ss << "begin move along [" << start_point->name << " --> ";
@@ -921,6 +948,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     pos2.x = end_point->position.x() / 1000.0;
     pos2.y = end_point->position.y() / 1000.0;
     if (last_steps && x == steps.back()) {
+      // 订单的动作，不是路径的动作
       pos2.allowed_deviation_xy = (dest_deviation_xy);
       pos2.allowed_deviation_theta = (dest_deviation_theta);
       auto act = vda5050::order::Action();
@@ -965,7 +993,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
         act.action_parameters->push_back(param_y);
       }
       // TODO TEST
-      //  end.actions.push_back(act);
+      end.actions.push_back(act);
     } else {
       pos2.allowed_deviation_xy = (deviation_xy);
       pos2.allowed_deviation_theta = (deviation_theta);
@@ -1082,50 +1110,23 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     last_id = end_point->name;
     e.sequence_id = seq_id++;
     end.sequence_id = seq_id++;
-
     {
       // peraction  服务器本地调用
-      if (x == steps.front()) {
-        // 只执行第一步的外围动作
-        if (!x->path->per_acts.acts.empty()) {
-          for (auto& op : x->path->per_acts.acts) {
-            if (op.execution_trigger == "AFTER_ALLOCATION") {
-              // TODO
-              CLOG(INFO, driver_log)
-                  << "do " << op.location_name << "[" << op.op_name << "]";
-              if (op.completion_required) {
-              }
-            }
-          }
-        }
-      }
-      // action vda5050
-      if (!x->path->acts.actions.empty()) {
-        CLOG(INFO, driver_log) << name << " at this node has "
-                               << x->path->acts.actions.size() << " actions:\n";
-        for (auto& act : x->path->acts.actions) {
-          if (!act.vaild) continue;
-          CLOG(INFO, driver_log)
-              << name << " has a action at [" << x->path->name << "] name:["
-              << act.action_id << "] act:[ " << act.name << "] type:["
-              << data::model::Actions::get_type(act.action_type) << "]\n";
-          auto action = static_cast<vda5050::order::Action*>(&act);
-          if (action->when == vda5050::order::ActionWhen::ORDER_START) {
-            // TODO TEST
-            //  ord.nodes.back().actions.push_back(*action);
-          } else {
-            // TODO TEST
-            //  end.actions.push_back(*action);
-          }
-          if (x == steps.front()) {
-            // 只等待第一步的动作
 
-            if (act.blocking_type != vda5050::order::ActionBlockingType::NONE) {
-              if (act.when == vda5050::order::ActionWhen::ORDER_START) {
-                wait_act_ord_start.insert(action->action_id);
-              } else {
-                wait_act_ord_end.insert(action->action_id);
-              }
+      if (!x->path->per_acts.acts.empty()) {
+        for (auto& op : x->path->per_acts.acts) {
+          if (op.execution_trigger == "AFTER_ALLOCATION") {
+            // TODO
+            CLOG(INFO, driver_log)
+                << "do " << op.location_name << "[" << op.op_name << "]";
+            if (op.completion_required) {
+              // wait_act_ord_start.insert(op.op_name);
+            }
+          } else {
+            CLOG(INFO, driver_log)
+                << "do " << op.location_name << "[" << op.op_name << "]";
+            if (op.completion_required) {
+              // wait_act_ord_end.insert(op.op_name);
             }
           }
         }
@@ -1134,6 +1135,34 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
     ord.nodes.push_back(end);
     ord.edges.push_back(e);
     forward_two++;
+  }
+  {
+    if (steps.front()->route_index == driver_order->route->step_number - 1) {
+      // 终点
+      // 遍历当前动作
+      for (auto& x : steps.front()->path->acts.actions) {
+        auto action = static_cast<vda5050::order::Action*>(&x);
+        if (action->when == vda5050::order::ActionWhen::ORDER_END) {
+          if (action->blocking_type !=
+              vda5050::order::ActionBlockingType::NONE) {
+            wait_act_ord_end.insert(action->action_id);
+          }
+          ord.nodes.back().actions.push_back(*action);
+        }
+      }
+      for (auto& x : driver_order->route->steps) {
+        for (auto& act : x->path->acts.actions) {
+          auto action = static_cast<vda5050::order::Action*>(&act);
+          if (action->when == vda5050::order::ActionWhen::ORDER_END) {
+            if (action->blocking_type !=
+                vda5050::order::ActionBlockingType::NONE) {
+              wait_act_ord_end.insert(action->action_id);
+            }
+            ord.nodes.back().actions.push_back(*action);
+          }
+        }
+      }
+    }
   }
   CLOG(INFO, driver_log) << name << " " << ss.str() << "\n";
   //
@@ -1212,10 +1241,10 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
                          vda5050::state::ActionStatus::FAILED) {
                 CLOG(ERROR, driver_log)
                     << name << " action:[" << x.action_id << "] failed\n";
-                act_start_ok = true;
+                // act_start_ok = true;
                 // TODO TEST
-                //  task_run = false;
-                //  return false;
+                task_run = false;
+                return false;
               } else if (x.action_status ==
                          vda5050::state::ActionStatus::FINISHED) {
                 CLOG(INFO, driver_log) << name << " " << "wait action ["
@@ -1248,18 +1277,20 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
             it_end_point == vdastate.nodestates.end()) {
           CLOG(INFO, driver_log)
               << name << " " << "move along " << name_ << " ok\n";
-          // per act 服务器本地调用 只调第一步
+          run_ok = true;
+          // per act 服务器本地调用 只等待第一步的
           // TODO
-          auto x = steps.front();
-          for (auto& op : x->path->per_acts.acts) {
-            if (op.execution_trigger == "AFTER_MOVEMENT") {
-              CLOG(INFO, driver_log)
-                  << "do " << op.location_name << "[" << op.op_name << "]";
-              if (op.completion_required) {
+          for (auto& x : steps) {
+            for (auto& op : x->path->per_acts.acts) {
+              if (op.execution_trigger == "AFTER_MOVEMENT") {
+                CLOG(INFO, driver_log)
+                    << "do " << op.location_name << "[" << op.op_name << "]";
+                if (op.completion_required && x == steps.front()) {
+                  wait_act_ord_end.insert(op.op_name);
+                }
               }
             }
           }
-          run_ok = true;
         }
       }
       if (!act_end_ok) {
@@ -1277,10 +1308,10 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
                          vda5050::state::ActionStatus::FAILED) {
                 CLOG(ERROR, driver_log)
                     << name << " action:[" << x.action_id << "] failed\n";
-                act_end_ok = true;
-                // task_run = false;
+                // act_end_ok = true;
+                task_run = false;
                 // TODO TEST
-                // return false;
+                return false;
               } else if (x.action_status ==
                          vda5050::state::ActionStatus::FINISHED) {
                 CLOG(INFO, driver_log) << name << " " << "wait action ["
@@ -1296,14 +1327,14 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
         }
       }
       // TODO TEST
-      if (run_ok) {
+      // if (run_ok) {
+      //   task_run = false;
+      //   return true;
+      // }
+      if (act_start_ok && act_end_ok && run_ok) {
         task_run = false;
         return true;
       }
-      // if (act_start_ok && act_end_ok && run_ok) {
-      // task_run = false;
-      //   return true;
-      // }
 
     } else {
       CLOG_EVERY_N(20, WARNING, driver_log)
