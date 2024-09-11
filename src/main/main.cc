@@ -26,7 +26,7 @@ bool init_enable{false};
 std::string log_level{"info"};
 std::string init_xml_path{""};
 // mqtt value
-std::string mqtt_ip{"127.0.0.1"};
+std::string mqtt_ip{"192.168.0.200"};
 int mqtt_port{1883};
 
 // http value
@@ -84,8 +84,8 @@ void read_params(std::string path) {
     }
     CLOG(INFO, rss_log) << "read yaml param success\n";
   } catch (Yaml::Exception& ec) {
-    CLOG(ERROR, rss_log) << "load param from <" << path << "> failed :"
-                         << " " << ec.Message() << ", will use deafult params.";
+    CLOG(ERROR, rss_log) << "load param from <" << path << "> failed :" << " "
+                         << ec.Message() << ", will use deafult params.";
   }
 }
 

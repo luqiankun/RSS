@@ -10,9 +10,9 @@
 
 #include "../../jsoncons/config/jsoncons_config.hpp"
 #include "../../jsoncons/json.hpp"
-#include "../../jsoncons_ext/jsonpointer/jsonpointer.hpp"
-#include "../../jsoncons_ext/jsonschema/common/schema_validators.hpp"
-#include "../../jsoncons_ext/jsonschema/jsonschema_error.hpp"
+#include "../jsonpointer/jsonpointer.hpp"
+#include "./common/schema_validators.hpp"
+#include "./jsonschema_error.hpp"
 
 namespace jsoncons {
 namespace jsonschema {
@@ -88,10 +88,10 @@ struct error_reporter_adaptor : public error_reporter {
   }
 };
 
-template <class Json>
+template <typename Json>
 class json_validator;
 
-template <class Json>
+template <typename Json>
 class json_schema {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using document_schema_validator_type =
@@ -141,7 +141,7 @@ class json_schema {
   }
 
   // Validate input JSON against a JSON Schema with a provided error reporter
-  template <class MsgReporter>
+  template <typename MsgReporter>
   typename std::enable_if<
       extension_traits::is_unary_function_object_exact<
           MsgReporter, walk_result, validation_message>::value,
@@ -158,7 +158,7 @@ class json_schema {
   }
 
   // Validate input JSON against a JSON Schema with a provided error reporter
-  template <class MsgReporter>
+  template <typename MsgReporter>
   typename std::enable_if<
       extension_traits::is_unary_function_object_exact<
           MsgReporter, walk_result, validation_message>::value,
@@ -202,7 +202,7 @@ class json_schema {
     visitor.flush();
   }
 
-  template <class WalkReporter>
+  template <typename WalkReporter>
   void walk(const Json& instance, const WalkReporter& reporter) const {
     jsonpointer::json_pointer instance_location{};
 

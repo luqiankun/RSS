@@ -15,12 +15,12 @@
 
 #include "../../../jsoncons/json.hpp"
 #include "../../../jsoncons/uri.hpp"
-#include "../../../jsoncons_ext/jsonpointer/jsonpointer.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/compilation_context.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/schema_builder.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/schema_validators.hpp"
-#include "../../../jsoncons_ext/jsonschema/draft4/schema_draft4.hpp"
-#include "../../../jsoncons_ext/jsonschema/json_schema.hpp"
+#include "../../jsonpointer/jsonpointer.hpp"
+#include "../common/compilation_context.hpp"
+#include "../common/schema_builder.hpp"
+#include "../common/schema_validators.hpp"
+#include "../draft4/schema_draft4.hpp"
+#include "../json_schema.hpp"
 #if defined(JSONCONS_HAS_STD_REGEX)
 #include <regex>
 #endif
@@ -29,7 +29,7 @@ namespace jsoncons {
 namespace jsonschema {
 namespace draft4 {
 
-template <class Json>
+template <typename Json>
 class schema_builder_4 : public schema_builder<Json> {
  public:
   using schema_store_type = typename schema_builder<Json>::schema_store_type;

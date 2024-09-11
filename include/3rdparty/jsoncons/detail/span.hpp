@@ -7,24 +7,24 @@
 #include <type_traits>  // std::enable_if, std::true_type, std::false_type
 #include <utility>      // std::swap
 
-#include "../../jsoncons/config/compiler_support.hpp"
-#include "../../jsoncons/extension_traits.hpp"
+#include "../config/compiler_support.hpp"
+#include "../extension_traits.hpp"
 
 namespace jsoncons {
 namespace detail {
 constexpr std::size_t dynamic_extent =
     (std::numeric_limits<std::size_t>::max)();
 
-template <class T, std::size_t Extent = dynamic_extent>
+template <typename T, std::size_t Extent = dynamic_extent>
 class span;
 
-template <class T>
+template <typename T>
 struct is_span : std::false_type {};
 
-template <class T>
+template <typename T>
 struct is_span<span<T>> : std::true_type {};
 
-template <class T, std::size_t Extent>
+template <typename T, std::size_t Extent>
 class span {
  public:
   using element_type = T;
@@ -84,7 +84,7 @@ class span {
           extension_traits::has_data_and_size<C>::value>::type* = 0)
       : data_(c.data()), size_(c.size()) {}
 
-  template <class U, std::size_t N>
+  template <typename U, std::size_t N>
   constexpr span(
       const span<U, N>& s,
       typename std::enable_if<

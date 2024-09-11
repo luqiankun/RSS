@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -31,7 +31,7 @@ namespace jsoncons {
 
 namespace detail {
 
-template <class InputIt, class Container>
+template <typename InputIt, typename Container>
 typename std::enable_if<
     std::is_same<typename std::iterator_traits<InputIt>::value_type,
                  uint8_t>::value,
@@ -86,7 +86,7 @@ encode_base64_generic(InputIt first, InputIt last, const char alphabet[65],
   return count;
 }
 
-template <class InputIt, class F, class Container>
+template <typename InputIt, typename F, typename Container>
 typename std::enable_if<
     extension_traits::is_back_insertable_byte_container<Container>::value,
     decode_result<InputIt>>::type
@@ -136,7 +136,7 @@ decode_base64_generic(InputIt first, InputIt last,
 
 }  // namespace detail
 
-template <class InputIt, class Container>
+template <typename InputIt, typename Container>
 typename std::enable_if<
     std::is_same<typename std::iterator_traits<InputIt>::value_type,
                  uint8_t>::value,
@@ -152,7 +152,7 @@ encode_base16(InputIt first, InputIt last, Container& result) {
   return (last - first) * 2;
 }
 
-template <class InputIt, class Container>
+template <typename InputIt, typename Container>
 typename std::enable_if<
     std::is_same<typename std::iterator_traits<InputIt>::value_type,
                  uint8_t>::value,
@@ -166,7 +166,7 @@ encode_base64url(InputIt first, InputIt last, Container& result) {
   return detail::encode_base64_generic(first, last, alphabet, result);
 }
 
-template <class InputIt, class Container>
+template <typename InputIt, typename Container>
 typename std::enable_if<
     std::is_same<typename std::iterator_traits<InputIt>::value_type,
                  uint8_t>::value,
@@ -180,12 +180,12 @@ encode_base64(InputIt first, InputIt last, Container& result) {
   return detail::encode_base64_generic(first, last, alphabet, result);
 }
 
-template <class Char>
+template <typename Char>
 bool is_base64(Char c) {
   return (c >= 0 && c < 128) && (isalnum((int)c) || c == '+' || c == '/');
 }
 
-template <class Char>
+template <typename Char>
 bool is_base64url(Char c) {
   return (c >= 0 && c < 128) && (isalnum((int)c) || c == '-' || c == '_');
 }
@@ -196,7 +196,7 @@ inline static bool is_base64url(int c) {
 
 // decode
 
-template <class InputIt, class Container>
+template <typename InputIt, typename Container>
 typename std::enable_if<
     extension_traits::is_back_insertable_byte_container<Container>::value,
     decode_result<InputIt>>::type
@@ -232,7 +232,7 @@ decode_base64url(InputIt first, InputIt last, Container& result) {
              : decode_result<InputIt>{retval.it, conv_errc::not_base64url};
 }
 
-template <class InputIt, class Container>
+template <typename InputIt, typename Container>
 typename std::enable_if<
     extension_traits::is_back_insertable_byte_container<Container>::value,
     decode_result<InputIt>>::type
@@ -268,7 +268,7 @@ decode_base64(InputIt first, InputIt last, Container& result) {
              : decode_result<InputIt>{retval.it, conv_errc::not_base64};
 }
 
-template <class InputIt, class Container>
+template <typename InputIt, typename Container>
 typename std::enable_if<
     extension_traits::is_back_insertable_byte_container<Container>::value,
     decode_result<InputIt>>::type
@@ -317,7 +317,7 @@ struct byte_traits {
 
 // basic_byte_string
 
-template <class Allocator>
+template <typename Allocator>
 class basic_byte_string;
 
 // byte_string_view
@@ -343,7 +343,7 @@ class byte_string_view {
   constexpr byte_string_view(const uint8_t* data, std::size_t length) noexcept
       : data_(data), size_(length) {}
 
-  template <class Container>
+  template <typename Container>
   constexpr explicit byte_string_view(
       const Container& cont,
       typename std::enable_if<
@@ -351,7 +351,7 @@ class byte_string_view {
       : data_(reinterpret_cast<const uint8_t*>(cont.data())),
         size_(cont.size()) {}
 
-  template <class Allocator>
+  template <typename Allocator>
   constexpr byte_string_view(const basic_byte_string<Allocator>& bytes);
 
   constexpr byte_string_view(const byte_string_view&) noexcept = default;
@@ -376,10 +376,6 @@ class byte_string_view {
   }
 
   constexpr const uint8_t* data() const noexcept { return data_; }
-#if !defined(JSONCONS_NO_DEPRECATED)
-  JSONCONS_DEPRECATED_MSG("Instead, use size()")
-  std::size_t length() const { return size_; }
-#endif
   constexpr size_t size() const noexcept { return size_; }
 
   // iterator support
@@ -414,14 +410,14 @@ class byte_string_view {
     return rc != 0 ? rc : (size_ == s.size() ? 0 : size_ < s.size() ? -1 : 1);
   }
 
-  template <class Allocator>
+  template <typename Allocator>
   int compare(const basic_byte_string<Allocator>& s) const noexcept {
     const int rc =
         traits_type::compare(data_, s.data(), (std::min)(size_, s.size()));
     return rc != 0 ? rc : (size_ == s.size() ? 0 : size_ < s.size() ? -1 : 1);
   }
 
-  template <class CharT>
+  template <typename CharT>
   friend std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& os,
                                                const byte_string_view& bstr) {
     std::basic_ostringstream<CharT> ss;
@@ -443,7 +439,7 @@ class byte_string_view {
 };
 
 // basic_byte_string
-template <class Allocator = std::allocator<uint8_t>>
+template <typename Allocator = std::allocator<uint8_t>>
 class basic_byte_string {
   using byte_allocator_type =
       typename std::allocator_traits<Allocator>::template rebind_alloc<uint8_t>;
@@ -534,11 +530,6 @@ class basic_byte_string {
 
   std::size_t size() const { return data_.size(); }
 
-#if !defined(JSONCONS_NO_DEPRECATED)
-  JSONCONS_DEPRECATED_MSG("Instead, use size()")
-  std::size_t length() const { return data_.size(); }
-#endif
-
   int compare(const byte_string_view& s) const noexcept {
     const int rc =
         traits_type::compare(data(), s.data(), (std::min)(size(), s.size()));
@@ -551,7 +542,7 @@ class basic_byte_string {
     return rc != 0 ? rc : (size() == s.size() ? 0 : size() < s.size() ? -1 : 1);
   }
 
-  template <class CharT>
+  template <typename CharT>
   friend std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& os,
                                                const basic_byte_string& o) {
     os << byte_string_view(o);
@@ -559,7 +550,7 @@ class basic_byte_string {
   }
 };
 
-template <class Allocator>
+template <typename Allocator>
 constexpr byte_string_view::byte_string_view(
     const basic_byte_string<Allocator>& bytes)
     : data_(bytes.data()), size_(bytes.size()) {}
@@ -569,17 +560,17 @@ inline bool operator==(const byte_string_view& lhs,
                        const byte_string_view& rhs) noexcept {
   return lhs.compare(rhs) == 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator==(const byte_string_view& lhs,
                 const basic_byte_string<Allocator>& rhs) noexcept {
   return lhs.compare(rhs) == 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator==(const basic_byte_string<Allocator>& lhs,
                 const byte_string_view& rhs) noexcept {
   return rhs.compare(lhs) == 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator==(const basic_byte_string<Allocator>& lhs,
                 const basic_byte_string<Allocator>& rhs) noexcept {
   return rhs.compare(lhs) == 0;
@@ -591,17 +582,17 @@ inline bool operator!=(const byte_string_view& lhs,
                        const byte_string_view& rhs) noexcept {
   return lhs.compare(rhs) != 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator!=(const byte_string_view& lhs,
                 const basic_byte_string<Allocator>& rhs) noexcept {
   return lhs.compare(rhs) != 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator!=(const basic_byte_string<Allocator>& lhs,
                 const byte_string_view& rhs) noexcept {
   return rhs.compare(lhs) != 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator!=(const basic_byte_string<Allocator>& lhs,
                 const basic_byte_string<Allocator>& rhs) noexcept {
   return rhs.compare(lhs) != 0;
@@ -613,17 +604,17 @@ inline bool operator<=(const byte_string_view& lhs,
                        const byte_string_view& rhs) noexcept {
   return lhs.compare(rhs) <= 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator<=(const byte_string_view& lhs,
                 const basic_byte_string<Allocator>& rhs) noexcept {
   return lhs.compare(rhs) <= 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator<=(const basic_byte_string<Allocator>& lhs,
                 const byte_string_view& rhs) noexcept {
   return rhs.compare(lhs) >= 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator<=(const basic_byte_string<Allocator>& lhs,
                 const basic_byte_string<Allocator>& rhs) noexcept {
   return rhs.compare(lhs) >= 0;
@@ -635,17 +626,17 @@ inline bool operator<(const byte_string_view& lhs,
                       const byte_string_view& rhs) noexcept {
   return lhs.compare(rhs) < 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator<(const byte_string_view& lhs,
                const basic_byte_string<Allocator>& rhs) noexcept {
   return lhs.compare(rhs) < 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator<(const basic_byte_string<Allocator>& lhs,
                const byte_string_view& rhs) noexcept {
   return rhs.compare(lhs) > 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator<(const basic_byte_string<Allocator>& lhs,
                const basic_byte_string<Allocator>& rhs) noexcept {
   return rhs.compare(lhs) > 0;
@@ -657,17 +648,17 @@ inline bool operator>=(const byte_string_view& lhs,
                        const byte_string_view& rhs) noexcept {
   return lhs.compare(rhs) >= 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator>=(const byte_string_view& lhs,
                 const basic_byte_string<Allocator>& rhs) noexcept {
   return lhs.compare(rhs) >= 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator>=(const basic_byte_string<Allocator>& lhs,
                 const byte_string_view& rhs) noexcept {
   return rhs.compare(lhs) <= 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator>=(const basic_byte_string<Allocator>& lhs,
                 const basic_byte_string<Allocator>& rhs) noexcept {
   return rhs.compare(lhs) <= 0;
@@ -679,17 +670,17 @@ inline bool operator>(const byte_string_view& lhs,
                       const byte_string_view& rhs) noexcept {
   return lhs.compare(rhs) > 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator>(const byte_string_view& lhs,
                const basic_byte_string<Allocator>& rhs) noexcept {
   return lhs.compare(rhs) > 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator>(const basic_byte_string<Allocator>& lhs,
                const byte_string_view& rhs) noexcept {
   return rhs.compare(lhs) < 0;
 }
-template <class Allocator>
+template <typename Allocator>
 bool operator>(const basic_byte_string<Allocator>& lhs,
                const basic_byte_string<Allocator>& rhs) noexcept {
   return rhs.compare(lhs) < 0;

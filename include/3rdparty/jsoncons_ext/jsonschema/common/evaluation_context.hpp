@@ -11,13 +11,13 @@
 #include "../../../jsoncons/config/jsoncons_config.hpp"
 #include "../../../jsoncons/json.hpp"
 #include "../../../jsoncons/uri.hpp"
-#include "../../../jsoncons_ext/jsonpointer/jsonpointer.hpp"
-#include "../../../jsoncons_ext/jsonschema/jsonschema_error.hpp"
+#include "../../jsonpointer/jsonpointer.hpp"
+#include "../jsonschema_error.hpp"
 
 namespace jsoncons {
 namespace jsonschema {
 
-template <class Json>
+template <typename Json>
 class schema_validator;
 
 enum class evaluation_flags : uint32_t {
@@ -59,7 +59,7 @@ inline evaluation_flags operator|=(evaluation_flags& a, evaluation_flags b) {
   return a;
 }
 
-template <class Json>
+template <typename Json>
 class evaluation_context {
  private:
   std::vector<const schema_validator<Json>*> dynamic_scope_;

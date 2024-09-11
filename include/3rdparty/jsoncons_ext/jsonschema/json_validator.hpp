@@ -18,8 +18,8 @@
 #include "../../jsoncons/config/jsoncons_config.hpp"
 #include "../../jsoncons/json.hpp"
 #include "../../jsoncons/uri.hpp"
-#include "../../jsoncons_ext/jsonpointer/jsonpointer.hpp"
-#include "../../jsoncons_ext/jsonschema/json_schema.hpp"
+#include "../jsonpointer/jsonpointer.hpp"
+#include "./json_schema.hpp"
 
 namespace jsoncons {
 namespace jsonschema {
@@ -91,7 +91,7 @@ struct validation_message_to_validation_output : public error_reporter {
   }
 };
 
-template <class Json>
+template <typename Json>
 class json_validator {
   std::shared_ptr<json_schema<Json>> root_;
 
@@ -126,7 +126,7 @@ class json_validator {
   }
 
   // Validate input JSON against a JSON Schema with a provided error reporter
-  template <class MsgReporter>
+  template <typename MsgReporter>
   typename std::enable_if<extension_traits::is_unary_function_object<
                               MsgReporter, validation_output>::value,
                           Json>::type

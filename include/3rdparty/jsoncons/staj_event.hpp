@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -19,6 +19,7 @@
 
 #include "./bigint.hpp"
 #include "./detail/write_number.hpp"
+#include "./item_event_visitor.hpp"
 #include "./json_exception.hpp"
 #include "./json_parser.hpp"
 #include "./json_type_traits.hpp"
@@ -44,13 +45,9 @@ enum class staj_event_type {
   uint64_value,
   half_value,
   double_value
-#if !defined(JSONCONS_NO_DEPRECATED)
-  ,
-  name = key
-#endif
 };
 
-template <class CharT>
+template <typename CharT>
 std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& os,
                                       staj_event_type tag) {
   static constexpr const CharT* begin_array_name =
@@ -137,7 +134,7 @@ std::basic_ostream<CharT>& operator<<(std::basic_ostream<CharT>& os,
   return os;
 }
 
-template <class CharT>
+template <typename CharT>
 class basic_staj_event {
   staj_event_type event_type_;
   semantic_tag tag_;
@@ -238,7 +235,7 @@ class basic_staj_event {
 
   std::size_t size() const { return length_; }
 
-  template <class T>
+  template <typename T>
   T get() const {
     std::error_code ec;
     T val = get<T>(ec);
@@ -248,12 +245,12 @@ class basic_staj_event {
     return val;
   }
 
-  template <class T>
+  template <typename T>
   T get(std::error_code& ec) const {
     return get_<T>(std::allocator<char>{}, ec);
   }
 
-  template <class T, class Allocator, class CharT_ = CharT>
+  template <typename T, typename Allocator, typename CharT_ = CharT>
   typename std::enable_if<
       extension_traits::is_string<T>::value &&
           std::is_same<typename T::value_type, CharT_>::value,
@@ -303,7 +300,7 @@ class basic_staj_event {
     }
   }
 
-  template <class T, class Allocator, class CharT_ = CharT>
+  template <typename T, typename Allocator, typename CharT_ = CharT>
   typename std::enable_if<
       extension_traits::is_string_view<T>::value &&
           std::is_same<typename T::value_type, CharT_>::value,
@@ -322,7 +319,7 @@ class basic_staj_event {
     return s;
   }
 
-  template <class T, class Allocator>
+  template <typename T, typename Allocator>
   typename std::enable_if<std::is_same<T, byte_string_view>::value, T>::type
   get_(Allocator, std::error_code& ec) const {
     T s;
@@ -337,9 +334,9 @@ class basic_staj_event {
     return s;
   }
 
-  template <class T, class Allocator>
+  template <typename T, typename Allocator>
   typename std::enable_if<
-      extension_traits::is_list_like<T>::value &&
+      extension_traits::is_array_like<T>::value &&
           std::is_same<typename T::value_type, uint8_t>::value,
       T>::type
   get_(Allocator, std::error_code& ec) const {
@@ -361,7 +358,7 @@ class basic_staj_event {
     }
   }
 
-  template <class IntegerType, class Allocator>
+  template <typename IntegerType, typename Allocator>
   typename std::enable_if<extension_traits::is_integer<IntegerType>::value,
                           IntegerType>::type
   get_(Allocator, std::error_code& ec) const {
@@ -392,26 +389,17 @@ class basic_staj_event {
     }
   }
 
-  template <class T, class Allocator>
+  template <typename T, typename Allocator>
   typename std::enable_if<std::is_floating_point<T>::value, T>::type get_(
       Allocator, std::error_code& ec) const {
     return static_cast<T>(as_double(ec));
   }
 
-  template <class T, class Allocator>
+  template <typename T, typename Allocator>
   typename std::enable_if<extension_traits::is_bool<T>::value, T>::type get_(
       Allocator, std::error_code& ec) const {
     return as_bool(ec);
   }
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-  template <class T>
-  JSONCONS_DEPRECATED_MSG("Instead, use get<T>()")
-  T as() const {
-    return get<T>();
-  }
-  semantic_tag get_semantic_tag() const noexcept { return tag_; }
-#endif
 
   staj_event_type event_type() const noexcept { return event_type_; }
 
@@ -459,41 +447,78 @@ class basic_staj_event {
     }
   }
 
-  friend bool send_json_event(const basic_staj_event<CharT>& ev,
-                              basic_json_visitor<CharT>& visitor,
-                              const ser_context& context, std::error_code& ec) {
-    switch (ev.event_type()) {
+ public:
+  bool send_json_event(basic_json_visitor<CharT>& visitor,
+                       const ser_context& context, std::error_code& ec) const {
+    switch (event_type()) {
       case staj_event_type::begin_array:
-        return visitor.begin_array(ev.tag(), context);
+        return visitor.begin_array(tag(), context);
       case staj_event_type::end_array:
         return visitor.end_array(context);
       case staj_event_type::begin_object:
-        return visitor.begin_object(ev.tag(), context, ec);
+        return visitor.begin_object(tag(), context, ec);
       case staj_event_type::end_object:
         return visitor.end_object(context, ec);
       case staj_event_type::key:
-        return visitor.key(string_view_type(ev.value_.string_data_, ev.length_),
+        return visitor.key(string_view_type(value_.string_data_, length_),
                            context);
       case staj_event_type::string_value:
         return visitor.string_value(
-            string_view_type(ev.value_.string_data_, ev.length_), ev.tag(),
-            context);
+            string_view_type(value_.string_data_, length_), tag(), context);
       case staj_event_type::byte_string_value:
         return visitor.byte_string_value(
-            byte_string_view(ev.value_.byte_string_data_, ev.length_), ev.tag(),
+            byte_string_view(value_.byte_string_data_, length_), tag(),
             context);
       case staj_event_type::null_value:
-        return visitor.null_value(ev.tag(), context);
+        return visitor.null_value(tag(), context);
       case staj_event_type::bool_value:
-        return visitor.bool_value(ev.value_.bool_value_, ev.tag(), context);
+        return visitor.bool_value(value_.bool_value_, tag(), context);
       case staj_event_type::int64_value:
-        return visitor.int64_value(ev.value_.int64_value_, ev.tag(), context);
+        return visitor.int64_value(value_.int64_value_, tag(), context);
       case staj_event_type::uint64_value:
-        return visitor.uint64_value(ev.value_.uint64_value_, ev.tag(), context);
+        return visitor.uint64_value(value_.uint64_value_, tag(), context);
       case staj_event_type::half_value:
-        return visitor.half_value(ev.value_.half_value_, ev.tag(), context);
+        return visitor.half_value(value_.half_value_, tag(), context);
       case staj_event_type::double_value:
-        return visitor.double_value(ev.value_.double_value_, ev.tag(), context);
+        return visitor.double_value(value_.double_value_, tag(), context);
+      default:
+        return false;
+    }
+  }
+
+  bool send_value_event(basic_item_event_visitor<CharT>& visitor,
+                        const ser_context& context, std::error_code& ec) const {
+    switch (event_type()) {
+      case staj_event_type::key:
+        return visitor.string_value(
+            string_view_type(value_.string_data_, length_), tag(), context);
+      case staj_event_type::begin_array:
+        return visitor.begin_array(tag(), context);
+      case staj_event_type::end_array:
+        return visitor.end_array(context);
+      case staj_event_type::begin_object:
+        return visitor.begin_object(tag(), context, ec);
+      case staj_event_type::end_object:
+        return visitor.end_object(context, ec);
+      case staj_event_type::string_value:
+        return visitor.string_value(
+            string_view_type(value_.string_data_, length_), tag(), context);
+      case staj_event_type::byte_string_value:
+        return visitor.byte_string_value(
+            byte_string_view(value_.byte_string_data_, length_), tag(),
+            context);
+      case staj_event_type::null_value:
+        return visitor.null_value(tag(), context);
+      case staj_event_type::bool_value:
+        return visitor.bool_value(value_.bool_value_, tag(), context);
+      case staj_event_type::int64_value:
+        return visitor.int64_value(value_.int64_value_, tag(), context);
+      case staj_event_type::uint64_value:
+        return visitor.uint64_value(value_.uint64_value_, tag(), context);
+      case staj_event_type::half_value:
+        return visitor.half_value(value_.half_value_, tag(), context);
+      case staj_event_type::double_value:
+        return visitor.double_value(value_.double_value_, tag(), context);
       default:
         return false;
     }

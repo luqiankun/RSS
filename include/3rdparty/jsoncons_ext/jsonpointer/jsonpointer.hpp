@@ -19,7 +19,7 @@
 
 #include "../../jsoncons/detail/write_number.hpp"
 #include "../../jsoncons/json.hpp"
-#include "./jsonpointer_error.hpp"
+#include "jsonpointer_error.hpp"
 
 namespace jsoncons {
 namespace jsonpointer {
@@ -30,7 +30,7 @@ enum class pointer_state { start, escaped, new_token, part };
 
 }  // namespace detail
 
-template <class CharT>
+template <typename CharT>
 std::basic_string<CharT> escape_string(const std::basic_string<CharT>& s) {
   std::basic_string<CharT> result;
   for (auto c : s) {
@@ -53,7 +53,7 @@ std::basic_string<CharT> escape_string(const std::basic_string<CharT>& s) {
 
 // basic_json_pointer
 
-template <class CharT>
+template <typename CharT>
 class basic_json_pointer {
  public:
   // Member types
@@ -187,7 +187,7 @@ class basic_json_pointer {
     return *this;
   }
 
-  template <class IntegerType>
+  template <typename IntegerType>
   typename std::enable_if<extension_traits::is_integer<IntegerType>::value,
                           basic_json_pointer&>::type
   append(IntegerType val) {
@@ -203,7 +203,7 @@ class basic_json_pointer {
     return *this;
   }
 
-  template <class IntegerType>
+  template <typename IntegerType>
   typename std::enable_if<extension_traits::is_integer<IntegerType>::value,
                           basic_json_pointer&>::type
   operator/=(IntegerType val) {
@@ -289,7 +289,7 @@ class basic_json_pointer {
   }
 };
 
-template <class CharT, class IntegerType>
+template <typename CharT, typename IntegerType>
 typename std::enable_if<extension_traits::is_integer<IntegerType>::value,
                         basic_json_pointer<CharT>>::type
 operator/(const basic_json_pointer<CharT>& lhs, IntegerType rhs) {
@@ -309,22 +309,9 @@ inline std::wstring to_wstring(const wjson_pointer& ptr) {
   return ptr.to_string();
 }
 
-#if !defined(JSONCONS_NO_DEPRECATED)
-template <class CharT>
-using basic_address = basic_json_pointer<CharT>;
-template <class CharT>
-using basic_json_ptr = basic_json_pointer<CharT>;
-JSONCONS_DEPRECATED_MSG("Instead, use json_pointer")
-typedef json_pointer address;
-JSONCONS_DEPRECATED_MSG("Instead, use json_pointer")
-typedef json_pointer json_ptr;
-JSONCONS_DEPRECATED_MSG("Instead, use wjson_pointer")
-typedef wjson_pointer wjson_ptr;
-#endif
-
 namespace detail {
 
-template <class Json>
+template <typename Json>
 const Json* resolve(const Json* current,
                     const typename Json::string_view_type& buffer,
                     std::error_code& ec) {
@@ -334,7 +321,7 @@ const Json* resolve(const Json* current,
       return current;
     }
     std::size_t index{0};
-    auto result = jsoncons::detail::to_integer_decimal(buffer.data(),
+    auto result = jsoncons::detail::decimal_to_integer(buffer.data(),
                                                        buffer.length(), index);
     if (!result) {
       ec = jsonpointer_errc::invalid_index;
@@ -358,7 +345,7 @@ const Json* resolve(const Json* current,
   return current;
 }
 
-template <class Json>
+template <typename Json>
 Json* resolve(Json* current, const typename Json::string_view_type& buffer,
               bool create_if_missing, std::error_code& ec) {
   if (current->is_array()) {
@@ -367,7 +354,7 @@ Json* resolve(Json* current, const typename Json::string_view_type& buffer,
       return current;
     }
     std::size_t index{0};
-    auto result = jsoncons::detail::to_integer_decimal(buffer.data(),
+    auto result = jsoncons::detail::decimal_to_integer(buffer.data(),
                                                        buffer.length(), index);
     if (!result) {
       ec = jsonpointer_errc::invalid_index;
@@ -401,7 +388,7 @@ Json* resolve(Json* current, const typename Json::string_view_type& buffer,
 
 // get
 
-template <class Json>
+template <typename Json>
 Json& get(Json& root,
           const basic_json_pointer<typename Json::char_type>& location,
           bool create_if_missing, std::error_code& ec) {
@@ -421,7 +408,7 @@ Json& get(Json& root,
   return *current;
 }
 
-template <class Json, class StringSource>
+template <typename Json, typename StringSource>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -436,7 +423,7 @@ get(Json& root, const StringSource& location_str, bool create_if_missing,
   return get(root, jsonptr, create_if_missing, ec);
 }
 
-template <class Json>
+template <typename Json>
 const Json& get(const Json& root,
                 const basic_json_pointer<typename Json::char_type>& location,
                 std::error_code& ec) {
@@ -455,7 +442,7 @@ const Json& get(const Json& root,
   return *current;
 }
 
-template <class Json, class StringSource>
+template <typename Json, typename StringSource>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -469,14 +456,14 @@ get(const Json& root, const StringSource& location_str, std::error_code& ec) {
   return get(root, jsonptr, ec);
 }
 
-template <class Json>
+template <typename Json>
 Json& get(Json& root,
           const basic_json_pointer<typename Json::char_type>& location,
           std::error_code& ec) {
   return get(root, location, false, ec);
 }
 
-template <class Json, class StringSource>
+template <typename Json, typename StringSource>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -485,7 +472,7 @@ get(Json& root, const StringSource& location_str, std::error_code& ec) {
   return get(root, location_str, false, ec);
 }
 
-template <class Json>
+template <typename Json>
 Json& get(Json& root,
           const basic_json_pointer<typename Json::char_type>& location,
           bool create_if_missing = false) {
@@ -497,7 +484,7 @@ Json& get(Json& root,
   return j;
 }
 
-template <class Json, class StringSource>
+template <typename Json, typename StringSource>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -512,7 +499,7 @@ get(Json& root, const StringSource& location_str,
   return result;
 }
 
-template <class Json>
+template <typename Json>
 const Json& get(const Json& root,
                 const basic_json_pointer<typename Json::char_type>& location) {
   std::error_code ec;
@@ -523,7 +510,7 @@ const Json& get(const Json& root,
   return j;
 }
 
-template <class Json, class StringSource>
+template <typename Json, typename StringSource>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -539,7 +526,7 @@ get(const Json& root, const StringSource& location_str) {
 
 // contains
 
-template <class Json>
+template <typename Json>
 bool contains(const Json& root,
               const basic_json_pointer<typename Json::char_type>& location) {
   std::error_code ec;
@@ -547,7 +534,7 @@ bool contains(const Json& root,
   return !ec ? true : false;
 }
 
-template <class Json, class StringSource>
+template <typename Json, typename StringSource>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -558,7 +545,7 @@ contains(const Json& root, const StringSource& location_str) {
   return !ec ? true : false;
 }
 
-template <class Json, class T>
+template <typename Json, typename T>
 void add(Json& root,
          const basic_json_pointer<typename Json::char_type>& location,
          T&& value, bool create_if_missing, std::error_code& ec) {
@@ -582,7 +569,7 @@ void add(Json& root,
       current = std::addressof(current->at(current->size() - 1));
     } else {
       std::size_t index{0};
-      auto result = jsoncons::detail::to_integer_decimal(
+      auto result = jsoncons::detail::decimal_to_integer(
           buffer.data(), buffer.length(), index);
       if (!result) {
         ec = jsonpointer_errc::invalid_index;
@@ -611,7 +598,7 @@ void add(Json& root,
 }
 
 // add
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -626,14 +613,14 @@ add(Json& root, const StringSource& location_str, T&& value,
   add(root, jsonptr, std::forward<T>(value), create_if_missing, ec);
 }
 
-template <class Json, class T>
+template <typename Json, typename T>
 void add(Json& root,
          const basic_json_pointer<typename Json::char_type>& location,
          T&& value, std::error_code& ec) {
   add(root, location, std::forward<T>(value), false, ec);
 }
 
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -643,7 +630,7 @@ add(Json& root, const StringSource& location_str, T&& value,
   add(root, location_str, std::forward<T>(value), false, ec);
 }
 
-template <class Json, class T>
+template <typename Json, typename T>
 void add(Json& root,
          const basic_json_pointer<typename Json::char_type>& location,
          T&& value, bool create_if_missing = false) {
@@ -654,7 +641,7 @@ void add(Json& root,
   }
 }
 
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -670,7 +657,7 @@ add(Json& root, const StringSource& location_str, T&& value,
 
 // add_if_absent
 
-template <class Json, class T>
+template <typename Json, typename T>
 void add_if_absent(Json& root,
                    const basic_json_pointer<typename Json::char_type>& location,
                    T&& value, bool create_if_missing, std::error_code& ec) {
@@ -695,7 +682,7 @@ void add_if_absent(Json& root,
       current = std::addressof(current->at(current->size() - 1));
     } else {
       std::size_t index{0};
-      auto result = jsoncons::detail::to_integer_decimal(
+      auto result = jsoncons::detail::decimal_to_integer(
           buffer.data(), buffer.length(), index);
       if (!result) {
         ec = jsonpointer_errc::invalid_index;
@@ -728,7 +715,7 @@ void add_if_absent(Json& root,
   }
 }
 
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -743,7 +730,7 @@ add_if_absent(Json& root, const StringSource& location_str, T&& value,
   add_if_absent(root, jsonptr, std::forward<T>(value), create_if_missing, ec);
 }
 
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -753,7 +740,7 @@ add_if_absent(Json& root, const StringSource& location, T&& value,
   add_if_absent(root, location, std::forward<T>(value), false, ec);
 }
 
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -768,14 +755,14 @@ add_if_absent(Json& root, const StringSource& location_str, T&& value,
   }
 }
 
-template <class Json, class T>
+template <typename Json, typename T>
 void add_if_absent(Json& root,
                    const basic_json_pointer<typename Json::char_type>& location,
                    T&& value, std::error_code& ec) {
   add_if_absent(root, location, std::forward<T>(value), false, ec);
 }
 
-template <class Json, class T>
+template <typename Json, typename T>
 void add_if_absent(Json& root,
                    const basic_json_pointer<typename Json::char_type>& location,
                    T&& value, bool create_if_missing = false) {
@@ -788,7 +775,7 @@ void add_if_absent(Json& root,
 
 // remove
 
-template <class Json>
+template <typename Json>
 void remove(Json& root,
             const basic_json_pointer<typename Json::char_type>& location,
             std::error_code& ec) {
@@ -813,7 +800,7 @@ void remove(Json& root,
       return;
     } else {
       std::size_t index{0};
-      auto result = jsoncons::detail::to_integer_decimal(
+      auto result = jsoncons::detail::decimal_to_integer(
           buffer.data(), buffer.length(), index);
       if (!result) {
         ec = jsonpointer_errc::invalid_index;
@@ -838,7 +825,7 @@ void remove(Json& root,
   }
 }
 
-template <class Json, class StringSource>
+template <typename Json, typename StringSource>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -852,7 +839,7 @@ remove(Json& root, const StringSource& location_str, std::error_code& ec) {
   remove(root, jsonptr, ec);
 }
 
-template <class Json, class StringSource>
+template <typename Json, typename StringSource>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -865,7 +852,7 @@ remove(Json& root, const StringSource& location_str) {
   }
 }
 
-template <class Json>
+template <typename Json>
 void remove(Json& root,
             const basic_json_pointer<typename Json::char_type>& location) {
   std::error_code ec;
@@ -877,7 +864,7 @@ void remove(Json& root,
 
 // replace
 
-template <class Json, class T>
+template <typename Json, typename T>
 void replace(Json& root,
              const basic_json_pointer<typename Json::char_type>& location,
              T&& value, bool create_if_missing, std::error_code& ec) {
@@ -902,7 +889,7 @@ void replace(Json& root,
       return;
     } else {
       std::size_t index{};
-      auto result = jsoncons::detail::to_integer_decimal(
+      auto result = jsoncons::detail::decimal_to_integer(
           buffer.data(), buffer.length(), index);
       if (!result) {
         ec = jsonpointer_errc::invalid_index;
@@ -932,7 +919,7 @@ void replace(Json& root,
   }
 }
 
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -947,7 +934,7 @@ replace(Json& root, const StringSource& location_str, T&& value,
   replace(root, jsonptr, std::forward<T>(value), create_if_missing, ec);
 }
 
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -957,7 +944,7 @@ replace(Json& root, const StringSource& location_str, T&& value,
   replace(root, location_str, std::forward<T>(value), false, ec);
 }
 
-template <class Json, class StringSource, class T>
+template <typename Json, typename StringSource, typename T>
 typename std::enable_if<
     std::is_convertible<StringSource, jsoncons::basic_string_view<
                                           typename Json::char_type>>::value,
@@ -971,14 +958,14 @@ replace(Json& root, const StringSource& location_str, T&& value,
   }
 }
 
-template <class Json, class T>
+template <typename Json, typename T>
 void replace(Json& root,
              const basic_json_pointer<typename Json::char_type>& location,
              T&& value, std::error_code& ec) {
   replace(root, location, std::forward<T>(value), false, ec);
 }
 
-template <class Json, class T>
+template <typename Json, typename T>
 void replace(Json& root,
              const basic_json_pointer<typename Json::char_type>& location,
              T&& value, bool create_if_missing = false) {
@@ -989,7 +976,7 @@ void replace(Json& root,
   }
 }
 
-template <class String, class Result>
+template <typename String, typename Result>
 typename std::enable_if<std::is_convertible<
     typename String::value_type, typename Result::value_type>::value>::type
 escape(const String& s, Result& result) {
@@ -1006,7 +993,7 @@ escape(const String& s, Result& result) {
   }
 }
 
-template <class CharT>
+template <typename CharT>
 std::basic_string<CharT> escape(const jsoncons::basic_string_view<CharT>& s) {
   std::basic_string<CharT> result;
 
@@ -1026,7 +1013,7 @@ std::basic_string<CharT> escape(const jsoncons::basic_string_view<CharT>& s) {
 
 // flatten
 
-template <class Json>
+template <typename Json>
 void flatten_(const std::basic_string<typename Json::char_type>& parent_key,
               const Json& parent_value, Json& result) {
   using char_type = typename Json::char_type;
@@ -1078,7 +1065,7 @@ void flatten_(const std::basic_string<typename Json::char_type>& parent_key,
   }
 }
 
-template <class Json>
+template <typename Json>
 Json flatten(const Json& value) {
   Json result;
   std::basic_string<typename Json::char_type> parent_key;
@@ -1088,16 +1075,9 @@ Json flatten(const Json& value) {
 
 // unflatten
 
-enum class unflatten_options {
-  none,
-  assume_object = 1
-#if !defined(JSONCONS_NO_DEPRECATED)
-  ,
-  object = assume_object
-#endif
-};
+enum class unflatten_options { none, assume_object = 1 };
 
-template <class Json>
+template <typename Json>
 Json safe_unflatten(Json& value) {
   if (!value.is_object() || value.empty()) {
     return value;
@@ -1106,7 +1086,7 @@ Json safe_unflatten(Json& value) {
   std::size_t index = 0;
   for (const auto& item : value.object_range()) {
     std::size_t n;
-    auto r = jsoncons::detail::to_integer_decimal(item.key().data(),
+    auto r = jsoncons::detail::decimal_to_integer(item.key().data(),
                                                   item.key().size(), n);
     if (!r || (index++ != n)) {
       safe = false;
@@ -1134,7 +1114,7 @@ Json safe_unflatten(Json& value) {
   }
 }
 
-template <class Json>
+template <typename Json>
 jsoncons::optional<Json> try_unflatten_array(const Json& value) {
   using char_type = typename Json::char_type;
 
@@ -1151,7 +1131,7 @@ jsoncons::optional<Json> try_unflatten_array(const Json& value) {
     for (auto it = ptr.begin(); it != ptr.end();) {
       auto s = *it;
       size_t n{0};
-      auto r = jsoncons::detail::to_integer_decimal(s.data(), s.size(), n);
+      auto r = jsoncons::detail::decimal_to_integer(s.data(), s.size(), n);
       if (r.ec == jsoncons::detail::to_integer_errc() && (index++ == n)) {
         if (!part->is_array()) {
           *part = Json(json_array_arg);
@@ -1184,7 +1164,7 @@ jsoncons::optional<Json> try_unflatten_array(const Json& value) {
   return result;
 }
 
-template <class Json>
+template <typename Json>
 Json unflatten_to_object(const Json& value,
                          unflatten_options options = unflatten_options::none) {
   using char_type = typename Json::char_type;
@@ -1213,7 +1193,7 @@ Json unflatten_to_object(const Json& value,
   return options == unflatten_options::none ? safe_unflatten(result) : result;
 }
 
-template <class Json>
+template <typename Json>
 Json unflatten(const Json& value,
                unflatten_options options = unflatten_options::none) {
   if (options == unflatten_options::none) {
@@ -1223,49 +1203,6 @@ Json unflatten(const Json& value,
     return unflatten_to_object(value, options);
   }
 }
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-
-template <class Json>
-JSONCONS_DEPRECATED_MSG(
-    "Instead, use add(Json&, const typename Json::string_view_type&, const "
-    "Json&)")
-void insert_or_assign(
-    Json& root, const std::basic_string<typename Json::char_type>& location,
-    const Json& value) {
-  add(root, location, value);
-}
-
-template <class Json>
-JSONCONS_DEPRECATED_MSG(
-    "Instead, use add(Json&, const typename Json::string_view_type&, const "
-    "Json&, std::error_code&)")
-void insert_or_assign(
-    Json& root, const std::basic_string<typename Json::char_type>& location,
-    const Json& value, std::error_code& ec) {
-  add(root, location, value, ec);
-}
-template <class Json, class T>
-void insert(Json& root,
-            const std::basic_string<typename Json::char_type>& location,
-            T&& value, bool create_if_missing, std::error_code& ec) {
-  add_if_absent(root, location, std::forward<T>(value), create_if_missing, ec);
-}
-
-template <class Json, class T>
-void insert(Json& root,
-            const std::basic_string<typename Json::char_type>& location,
-            T&& value, std::error_code& ec) {
-  add_if_absent(root, location, std::forward<T>(value), ec);
-}
-
-template <class Json, class T>
-void insert(Json& root,
-            const std::basic_string<typename Json::char_type>& location,
-            T&& value, bool create_if_missing = false) {
-  add_if_absent(root, location, std::forward<T>(value), create_if_missing);
-}
-#endif
 
 }  // namespace jsonpointer
 }  // namespace jsoncons

@@ -42,7 +42,8 @@ minor modifications.
 #include <cmath>
 #include <cstdint>
 #include <cstring>  // std::memmove
-// #include "./write_number.hpp"
+
+#include "./write_number.hpp"
 
 namespace jsoncons {
 namespace detail {

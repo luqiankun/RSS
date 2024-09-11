@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -24,7 +24,7 @@
 
 namespace jsoncons {
 
-template <class CharT>
+template <typename CharT>
 class basic_null_istream : public std::basic_istream<CharT> {
   class null_buffer : public std::basic_streambuf<CharT> {
     null_buffer(const null_buffer&) = delete;
@@ -55,7 +55,7 @@ class basic_null_istream : public std::basic_istream<CharT> {
   basic_null_istream& operator=(basic_null_istream&&) noexcept { return *this; }
 };
 
-template <class CharT>
+template <typename CharT>
 struct char_result {
   CharT value;
   bool eof;
@@ -63,7 +63,7 @@ struct char_result {
 
 // text sources
 
-template <class CharT>
+template <typename CharT>
 class stream_source {
   static constexpr std::size_t default_max_buffer_size = 16384;
 
@@ -269,7 +269,7 @@ class stream_source {
 
 // string_source
 
-template <class CharT>
+template <typename CharT>
 class string_source {
  public:
   using value_type = CharT;
@@ -287,7 +287,7 @@ class string_source {
  public:
   string_source() : data_(nullptr), current_(nullptr), end_(nullptr) {}
 
-  template <class Sourceable>
+  template <typename Sourceable>
   string_source(const Sourceable& s,
                 typename std::enable_if<extension_traits::is_sequence_of<
                     Sourceable, value_type>::value>::type* = 0)
@@ -348,7 +348,7 @@ class string_source {
 
 // iterator source
 
-template <class IteratorT>
+template <typename IteratorT>
 class iterator_source {
  public:
   using value_type = typename std::iterator_traits<IteratorT>::value_type;
@@ -412,7 +412,7 @@ class iterator_source {
     return span<const value_type>(buffer_.data(), length);
   }
 
-  template <class Category = iterator_category>
+  template <typename Category = iterator_category>
   typename std::enable_if<
       std::is_same<Category, std::random_access_iterator_tag>::value,
       std::size_t>::type
@@ -434,7 +434,7 @@ class iterator_source {
     return count;
   }
 
-  template <class Category = iterator_category>
+  template <typename Category = iterator_category>
   typename std::enable_if<
       !std::is_same<Category, std::random_access_iterator_tag>::value,
       std::size_t>::type
@@ -474,7 +474,7 @@ class bytes_source {
  public:
   bytes_source() : data_(nullptr), current_(nullptr), end_(nullptr) {}
 
-  template <class Sourceable>
+  template <typename Sourceable>
   bytes_source(
       const Sourceable& source,
       typename std::enable_if<
@@ -531,7 +531,7 @@ class bytes_source {
 
 // binary_iterator source
 
-template <class IteratorT>
+template <typename IteratorT>
 class binary_iterator_source {
  public:
   using value_type = uint8_t;
@@ -597,7 +597,7 @@ class binary_iterator_source {
     return span<const value_type>(buffer_.data(), length);
   }
 
-  template <class Category = iterator_category>
+  template <typename Category = iterator_category>
   typename std::enable_if<
       std::is_same<Category, std::random_access_iterator_tag>::value,
       std::size_t>::type
@@ -618,7 +618,7 @@ class binary_iterator_source {
     return count;
   }
 
-  template <class Category = iterator_category>
+  template <typename Category = iterator_category>
   typename std::enable_if<
       !std::is_same<Category, std::random_access_iterator_tag>::value,
       std::size_t>::type
@@ -638,12 +638,12 @@ class binary_iterator_source {
   }
 };
 
-template <class Source>
+template <typename Source>
 struct source_reader {
   using value_type = typename Source::value_type;
   static constexpr std::size_t max_buffer_length = 16384;
 
-  template <class Container>
+  template <typename Container>
   static typename std::enable_if<
       std::is_convertible<value_type, typename Container::value_type>::value &&
           extension_traits::has_reserve<Container>::value &&
@@ -664,7 +664,7 @@ struct source_reader {
     return length - unread;
   }
 
-  template <class Container>
+  template <typename Container>
   static typename std::enable_if<
       std::is_convertible<value_type, typename Container::value_type>::value &&
           extension_traits::has_reserve<Container>::value &&
@@ -695,12 +695,8 @@ struct source_reader {
 #if __cplusplus >= 201703L
 // not needed for C++17
 #else
-template <class Source>
+template <typename Source>
 constexpr std::size_t source_reader<Source>::max_buffer_length;
-#endif
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-using bin_stream_source = binary_stream_source;
 #endif
 
 }  // namespace jsoncons

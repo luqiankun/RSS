@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -10,11 +10,11 @@
 
 #include <memory>
 
-#include "../jsoncons/tag_type.hpp"
+#include "./tag_type.hpp"
 
 namespace jsoncons {
 
-template <class Allocator, class TempAllocator>
+template <typename Allocator, typename TempAllocator>
 class allocator_set {
   Allocator result_alloc_;
   TempAllocator temp_alloc_;
@@ -43,20 +43,20 @@ combine_allocators() {
       std::allocator<char>(), std::allocator<char>());
 }
 
-template <class Allocator>
+template <typename Allocator>
 allocator_set<Allocator, std::allocator<char>> combine_allocators(
     const Allocator& alloc) {
   return allocator_set<Allocator, std::allocator<char>>(alloc,
                                                         std::allocator<char>());
 }
 
-template <class Allocator, class TempAllocator>
+template <typename Allocator, typename TempAllocator>
 allocator_set<Allocator, TempAllocator> combine_allocators(
     const Allocator& alloc, const TempAllocator& temp_alloc) {
   return allocator_set<Allocator, TempAllocator>(alloc, temp_alloc);
 }
 
-template <class TempAllocator>
+template <typename TempAllocator>
 allocator_set<std::allocator<char>, TempAllocator> temp_allocator_only(
     const TempAllocator& temp_alloc) {
   return allocator_set<std::allocator<char>, TempAllocator>(

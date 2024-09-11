@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -65,7 +65,7 @@ class optional {
 
   // converting
   template <
-      class U,
+      typename U,
       typename std::enable_if<
           !std::is_same<T, U>::value &&
               std::is_constructible<T, const U&>::value &&
@@ -80,7 +80,7 @@ class optional {
   }
 
   template <
-      class U,
+      typename U,
       typename std::enable_if<
           !std::is_same<T, U>::value &&
               std::is_constructible<T, const U&>::value &&
@@ -95,7 +95,7 @@ class optional {
   }
 
   // move constructors
-  template <class T2 = T>
+  template <typename T2 = T>
   optional(optional<T>&& other,
            typename std::enable_if<std::is_move_constructible<
                typename std::decay<T2>::type>::value>::type* = 0)
@@ -106,7 +106,7 @@ class optional {
   }
 
   // converting
-  template <class U>
+  template <typename U>
   optional(
       optional<U>&& value,
       typename std::enable_if<
@@ -116,7 +116,7 @@ class optional {
           int>::type = 0)  // (8)
       : has_value_(true), value_(std::forward<U>(value)) {}
 
-  template <class U>
+  template <typename U>
   explicit optional(
       optional<U>&& value,
       typename std::enable_if<
@@ -127,7 +127,7 @@ class optional {
       : has_value_(true), value_(std::forward<U>(value)) {}
 
   // value constructors
-  template <class T2>
+  template <typename T2>
   optional(
       T2&& value,
       typename std::enable_if<
@@ -137,7 +137,7 @@ class optional {
           int>::type = 0)  // (8)
       : has_value_(true), value_(std::forward<T2>(value)) {}
 
-  template <class T2>
+  template <typename T2>
   explicit optional(
       T2&& value,
       typename std::enable_if<
@@ -224,17 +224,17 @@ class optional {
 #endif  // _MSC_VER
 
   T& value() & {
-    return static_cast<bool>(*this)
-               ? get()
-               : JSONCONS_THROW(std::runtime_error("Bad optional access")),
-           get();
+    if (has_value_) {
+      return get();
+    }
+    JSONCONS_THROW(std::runtime_error("Bad optional access"));
   }
 
-  constexpr const T& value() const& {
-    return static_cast<bool>(*this)
-               ? get()
-               : JSONCONS_THROW(std::runtime_error("Bad optional access")),
-           get();
+  JSONCONS_CONSTEXPR const T& value() const& {
+    if (has_value_) {
+      return get();
+    }
+    JSONCONS_THROW(std::runtime_error("Bad optional access"));
   }
 
   template <typename U>
@@ -266,7 +266,7 @@ class optional {
 
   T* operator->() { return std::addressof(this->value_); }
 
-  constexpr const T& operator*() const& { return value(); }
+  JSONCONS_CONSTEXPR const T& operator*() const& { return value(); }
 
   T& operator*() & { return value(); }
 
@@ -323,95 +323,95 @@ swap(optional<T>& lhs, optional<T>& rhs) noexcept {
   lhs.swap(rhs);
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator==(const optional<T1>& lhs,
                           const optional<T2>& rhs) noexcept {
   return lhs.has_value() == rhs.has_value() &&
          (!lhs.has_value() || *lhs == *rhs);
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator!=(const optional<T1>& lhs,
                           const optional<T2>& rhs) noexcept {
   return lhs.has_value() != rhs.has_value() ||
          (lhs.has_value() && *lhs != *rhs);
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator<(const optional<T1>& lhs,
                          const optional<T2>& rhs) noexcept {
   return rhs.has_value() && (!lhs.has_value() || *lhs < *rhs);
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator>(const optional<T1>& lhs,
                          const optional<T2>& rhs) noexcept {
   return lhs.has_value() && (!rhs.has_value() || *lhs > *rhs);
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator<=(const optional<T1>& lhs,
                           const optional<T2>& rhs) noexcept {
   return !lhs.has_value() || (rhs.has_value() && *lhs <= *rhs);
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator>=(const optional<T1>& lhs,
                           const optional<T2>& rhs) noexcept {
   return !rhs.has_value() || (lhs.has_value() && *lhs >= *rhs);
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator==(const optional<T1>& lhs, const T2& rhs) noexcept {
   return lhs ? *lhs == rhs : false;
 }
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator==(const T1& lhs, const optional<T2>& rhs) noexcept {
   return rhs ? lhs == *rhs : false;
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator!=(const optional<T1>& lhs, const T2& rhs) noexcept {
   return lhs ? *lhs != rhs : true;
 }
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator!=(const T1& lhs, const optional<T2>& rhs) noexcept {
   return rhs ? lhs != *rhs : true;
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator<(const optional<T1>& lhs, const T2& rhs) noexcept {
   return lhs ? *lhs < rhs : true;
 }
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator<(const T1& lhs, const optional<T2>& rhs) noexcept {
   return rhs ? lhs < *rhs : false;
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator<=(const optional<T1>& lhs, const T2& rhs) noexcept {
   return lhs ? *lhs <= rhs : true;
 }
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator<=(const T1& lhs, const optional<T2>& rhs) noexcept {
   return rhs ? lhs <= *rhs : false;
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator>(const optional<T1>& lhs, const T2& rhs) noexcept {
   return lhs ? *lhs > rhs : false;
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator>(const T1& lhs, const optional<T2>& rhs) noexcept {
   return rhs ? lhs > *rhs : true;
 }
 
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator>=(const optional<T1>& lhs, const T2& rhs) noexcept {
   return lhs ? *lhs >= rhs : false;
 }
-template <class T1, class T2>
+template <typename T1, typename T2>
 constexpr bool operator>=(const T1& lhs, const optional<T2>& rhs) noexcept {
   return rhs ? lhs >= *rhs : true;
 }

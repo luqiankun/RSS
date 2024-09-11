@@ -13,16 +13,16 @@
 #include "../../../jsoncons/config/jsoncons_config.hpp"
 #include "../../../jsoncons/json.hpp"
 #include "../../../jsoncons/uri.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/evaluation_context.hpp"
-#include "../../../jsoncons_ext/jsonschema/jsonschema_error.hpp"
-#include "../../../jsoncons_ext/jsonschema/validation_message.hpp"
+#include "../jsonschema_error.hpp"
+#include "../validation_message.hpp"
+#include "./evaluation_context.hpp"
 
 namespace jsoncons {
 namespace jsonschema {
 
 enum class walk_result { advance, abort };
 
-template <class Json>
+template <typename Json>
 struct json_schema_traits {
   using walk_reporter_type = std::function<walk_result(
       const std::string& keyword, const Json& schema,
@@ -138,17 +138,17 @@ struct evaluation_results {
   }
 };
 
-template <class Json>
+template <typename Json>
 class schema_validator;
 
-template <class Json>
+template <typename Json>
 class ref {
  public:
   virtual ~ref() = default;
   virtual void set_referred_schema(const schema_validator<Json>* target) = 0;
 };
 
-template <class Json>
+template <typename Json>
 class validator_base {
  public:
   using walk_reporter_type =
@@ -187,7 +187,7 @@ class validator_base {
       const walk_reporter_type& /*reporter*/) const = 0;
 };
 
-template <class Json>
+template <typename Json>
 class keyword_validator : public validator_base<Json> {
  public:
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
@@ -199,7 +199,7 @@ class keyword_validator : public validator_base<Json> {
   virtual bool always_succeeds() const { return false; }
 };
 
-template <class Json>
+template <typename Json>
 class keyword_validator_base : public keyword_validator<Json> {
   using walk_reporter_type =
       typename json_schema_traits<Json>::walk_reporter_type;
@@ -232,7 +232,7 @@ class keyword_validator_base : public keyword_validator<Json> {
   const uri& schema_location() const final { return schema_location_; }
 };
 
-template <class Json>
+template <typename Json>
 class ref_validator : public keyword_validator_base<Json>,
                       public virtual ref<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
@@ -305,7 +305,7 @@ class ref_validator : public keyword_validator_base<Json>,
   }
 };
 
-template <class Json>
+template <typename Json>
 class keyword_base {
   using walk_reporter_type =
       typename json_schema_traits<Json>::walk_reporter_type;
@@ -343,7 +343,7 @@ class keyword_base {
   }
 };
 
-template <class Json>
+template <typename Json>
 class schema_validator : public validator_base<Json> {
  public:
   using schema_validator_type =

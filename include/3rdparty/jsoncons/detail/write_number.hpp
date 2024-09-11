@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -18,10 +18,11 @@
 #include <string>
 
 #include "../config/jsoncons_config.hpp"
-#include "../detail/grisu3.hpp"
+// #include "../detail/grisu3.hpp"
 #include "../detail/parse_number.hpp"
 #include "../extension_traits.hpp"
 #include "../json_options.hpp"
+#include "grisu3.hpp"
 
 namespace jsoncons {
 namespace detail {
@@ -32,7 +33,7 @@ inline char to_hex_character(uint8_t c) {
 
 // from_integer
 
-template <class Integer, class Result>
+template <typename Integer, typename Result>
 typename std::enable_if<extension_traits::is_integer<Integer>::value,
                         std::size_t>::type
 from_integer(Integer value, Result& result) {
@@ -69,7 +70,7 @@ from_integer(Integer value, Result& result) {
 
 // integer_to_string_hex
 
-template <class Integer, class Result>
+template <typename Integer, typename Result>
 typename std::enable_if<extension_traits::is_integer<Integer>::value,
                         std::size_t>::type
 integer_to_string_hex(Integer value, Result& result) {
@@ -107,7 +108,7 @@ integer_to_string_hex(Integer value, Result& result) {
 // write_double
 
 // fast exponent
-template <class Result>
+template <typename Result>
 void fill_exponent(int K, Result& result) {
   if (K < 0) {
     result.push_back('-');
@@ -134,7 +135,7 @@ void fill_exponent(int K, Result& result) {
   }
 }
 
-template <class Result>
+template <typename Result>
 void prettify_string(const char* buffer, std::size_t length, int k, int min_exp,
                      int max_exp, Result& result) {
   int nb_digits = (int)length;
@@ -191,7 +192,7 @@ void prettify_string(const char* buffer, std::size_t length, int k, int min_exp,
   }
 }
 
-template <class Result>
+template <typename Result>
 void dump_buffer(const char* buffer, std::size_t length, char decimal_point,
                  Result& result) {
   const char* sbeg = buffer;
@@ -235,7 +236,7 @@ void dump_buffer(const char* buffer, std::size_t length, char decimal_point,
   }
 }
 
-template <class Result>
+template <typename Result>
 bool dtoa_scientific(double val, char decimal_point, Result& result) {
   if (val == 0) {
     result.push_back('0');
@@ -263,7 +264,7 @@ bool dtoa_scientific(double val, char decimal_point, Result& result) {
   return true;
 }
 
-template <class Result>
+template <typename Result>
 bool dtoa_general(double val, char decimal_point, Result& result,
                   std::false_type) {
   if (val == 0) {
@@ -292,7 +293,7 @@ bool dtoa_general(double val, char decimal_point, Result& result,
   return true;
 }
 
-template <class Result>
+template <typename Result>
 bool dtoa_general(double v, char decimal_point, Result& result,
                   std::true_type) {
   if (v == 0) {
@@ -323,7 +324,7 @@ bool dtoa_general(double v, char decimal_point, Result& result,
   }
 }
 
-template <class Result>
+template <typename Result>
 bool dtoa_fixed(double val, char decimal_point, Result& result,
                 std::false_type) {
   if (val == 0) {
@@ -352,7 +353,7 @@ bool dtoa_fixed(double val, char decimal_point, Result& result,
   return true;
 }
 
-template <class Result>
+template <typename Result>
 bool dtoa_fixed(double v, char decimal_point, Result& result, std::true_type) {
   if (v == 0) {
     result.push_back('0');
@@ -380,14 +381,14 @@ bool dtoa_fixed(double v, char decimal_point, Result& result, std::true_type) {
   }
 }
 
-template <class Result>
+template <typename Result>
 bool dtoa_fixed(double v, char decimal_point, Result& result) {
   return dtoa_fixed(
       v, decimal_point, result,
       std::integral_constant<bool, std::numeric_limits<double>::is_iec559>());
 }
 
-template <class Result>
+template <typename Result>
 bool dtoa_general(double v, char decimal_point, Result& result) {
   return dtoa_general(
       v, decimal_point, result,
@@ -417,7 +418,7 @@ class write_double {
 
   write_double& operator=(const write_double&) = default;
 
-  template <class Result>
+  template <typename Result>
   std::size_t operator()(double val, Result& result) {
     std::size_t count = 0;
 

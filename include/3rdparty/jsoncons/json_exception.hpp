@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -28,10 +28,10 @@ class json_exception {
 
 // json_runtime_error
 
-template <class Base, class Enable = void>
+template <typename Base, typename Enable = void>
 class json_runtime_error {};
 
-template <class Base>
+template <typename Base>
 class json_runtime_error<
     Base,
     typename std::enable_if<
@@ -49,7 +49,7 @@ class key_not_found : public std::out_of_range, public virtual json_exception {
   mutable std::string what_;
 
  public:
-  template <class CharT>
+  template <typename CharT>
   explicit key_not_found(const CharT* key, std::size_t length) noexcept
       : std::out_of_range("Key not found") {
     JSONCONS_TRY {
@@ -82,7 +82,7 @@ class not_an_object : public std::runtime_error, public virtual json_exception {
   mutable std::string what_;
 
  public:
-  template <class CharT>
+  template <typename CharT>
   explicit not_an_object(const CharT* key, std::size_t length) noexcept
       : std::runtime_error(
             "Attempting to access a member of a value that is not an object") {
@@ -152,26 +152,7 @@ class ser_error : public std::system_error, public virtual json_exception {
   std::size_t line() const noexcept { return line_number_; }
 
   std::size_t column() const noexcept { return column_number_; }
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-  JSONCONS_DEPRECATED_MSG("Instead, use line()")
-  std::size_t line_number() const noexcept { return line(); }
-
-  JSONCONS_DEPRECATED_MSG("Instead, use column()")
-  std::size_t column_number() const noexcept { return column(); }
-#endif
 };
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-JSONCONS_DEPRECATED_MSG("Instead, use ser_error")
-typedef ser_error serialization_error;
-JSONCONS_DEPRECATED_MSG("Instead, use ser_error")
-typedef ser_error json_parse_exception;
-JSONCONS_DEPRECATED_MSG("Instead, use ser_error")
-typedef ser_error parse_exception;
-JSONCONS_DEPRECATED_MSG("Instead, use ser_error") typedef ser_error parse_error;
-typedef ser_error codec_error;
-#endif
 
 }  // namespace jsoncons
 

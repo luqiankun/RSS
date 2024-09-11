@@ -35,7 +35,7 @@ Chichester: John Wiley.
 
 namespace detail {
 
-template <class Allocator>
+template <typename Allocator>
 class basic_bigint_base {
  public:
   using allocator_type = Allocator;
@@ -63,7 +63,7 @@ class basic_bigint_base {
 
 }  // namespace detail
 
-template <class Allocator = std::allocator<uint64_t>>
+template <typename Allocator = std::allocator<uint64_t>>
 class basic_bigint : protected detail::basic_bigint_base<Allocator> {
   using base_t = detail::basic_bigint_base<Allocator>;
 
@@ -103,7 +103,7 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
     short_storage()
         : is_dynamic_(false), is_negative_(false), length_(0), values_{0, 0} {}
 
-    template <class T>
+    template <typename T>
     short_storage(T n,
                   typename std::enable_if<std::is_integral<T>::value &&
                                           sizeof(T) <= sizeof(int64_t) &&
@@ -114,7 +114,7 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
       values_[1] = 0;
     }
 
-    template <class T>
+    template <typename T>
     short_storage(T n,
                   typename std::enable_if<std::is_integral<T>::value &&
                                           sizeof(T) <= sizeof(int64_t) &&
@@ -124,7 +124,7 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
       values_[1] = 0;
     }
 
-    template <class T>
+    template <typename T>
     short_storage(T n,
                   typename std::enable_if<std::is_integral<T>::value &&
                                           sizeof(int64_t) < sizeof(T) &&
@@ -143,7 +143,7 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
       ;
     }
 
-    template <class T>
+    template <typename T>
     short_storage(T n,
                   typename std::enable_if<std::is_integral<T>::value &&
                                           sizeof(int64_t) < sizeof(T) &&
@@ -290,7 +290,7 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
     }
   }
 
-  template <class Integer>
+  template <typename Integer>
   basic_bigint(
       Integer n,
       typename std::enable_if<std::is_integral<Integer>::value>::type* = 0) {
@@ -319,18 +319,18 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
     return is_dynamic() ? dynamic_stor_.data_ : short_stor_.values_;
   }
 
-  template <class CharT>
+  template <typename CharT>
   static basic_bigint<Allocator> from_string(
       const std::basic_string<CharT>& s) {
     return from_string(s.data(), s.length());
   }
 
-  template <class CharT>
+  template <typename CharT>
   static basic_bigint<Allocator> from_string(const CharT* s) {
     return from_string(s, std::char_traits<CharT>::length(s));
   }
 
-  template <class CharT>
+  template <typename CharT>
   static basic_bigint<Allocator> from_string(const CharT* data,
                                              size_type length) {
     bool neg;
@@ -371,7 +371,7 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
     return v;
   }
 
-  template <class CharT>
+  template <typename CharT>
   static basic_bigint<Allocator> from_string_radix(const CharT* data,
                                                    size_type length,
                                                    uint8_t radix) {
@@ -1173,7 +1173,7 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
     return x < q ? x : q;
   }
 
-  template <class CharT>
+  template <typename CharT>
   friend std::basic_ostream<CharT>& operator<<(
       std::basic_ostream<CharT>& os, const basic_bigint<Allocator>& v) {
     std::basic_string<CharT> s;
@@ -1431,10 +1431,6 @@ class basic_bigint : protected detail::basic_bigint_base<Allocator> {
 };
 
 using bigint = basic_bigint<std::allocator<uint8_t>>;
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-JSONCONS_DEPRECATED_MSG("Instead, use bigint") typedef bigint bignum;
-#endif
 
 }  // namespace jsoncons
 

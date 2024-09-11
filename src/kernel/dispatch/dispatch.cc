@@ -233,8 +233,13 @@ void Dispatcher::dispatch_once() {
           auto v_select = select_vehicle(start);
           if (!v_select) {
             return;
+          } else {
+            current->intended_vehicle = v_select;
           }
         }
+      }
+      if (!current->intended_vehicle.lock()) {
+        return;
       }
       current->state = data::order::TransportOrder::State::ACTIVE;
       CLOG(INFO, dispatch_log) << current->name << " status: [active]\n";

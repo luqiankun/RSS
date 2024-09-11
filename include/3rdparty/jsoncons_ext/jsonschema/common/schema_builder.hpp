@@ -10,17 +10,17 @@
 
 #include <memory>
 
-#include "../../../jsoncons_ext/jsonschema/common/compilation_context.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/schema_validators.hpp"
-#include "../../../jsoncons_ext/jsonschema/evaluation_options.hpp"
+#include "../evaluation_options.hpp"
+#include "./compilation_context.hpp"
+#include "schema_validators.hpp"
 
 namespace jsoncons {
 namespace jsonschema {
 
-template <class Json>
+template <typename Json>
 using schema_resolver = std::function<Json(const jsoncons::uri& /*id*/)>;
 
-template <class Json>
+template <typename Json>
 class schema_builder {
  public:
   using schema_store_type = std::map<jsoncons::uri, schema_validator<Json>*>;

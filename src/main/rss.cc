@@ -388,11 +388,11 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         p->source_point = source_point;
         p->destination_point = destination_point;
         //  xmllength不准
-        p->length = Eigen::Vector2d(source_point.lock()->position.x() -
-                                        destination_point.lock()->position.x(),
-                                    source_point.lock()->position.y() -
-                                        destination_point.lock()->position.y())
-                        .norm();
+        // p->length = Eigen::Vector2d(source_point.lock()->position.x() -
+        //                                 destination_point.lock()->position.x(),
+        //                             source_point.lock()->position.y() -
+        //                                 destination_point.lock()->position.y())
+        //                 .norm();
         p->max_vel = maxVelocity;
         p->max_reverse_vel = maxReverseVelocity;
         p->locked = locked;
@@ -1133,6 +1133,7 @@ std::pair<int, std::string> RSS::post_transport_order(
   }
   try {
     auto req = json::parse(body);
+    LOG(WARNING) << "\n" << pretty_print(req) << "\n";
     // 字段检查
     auto ord = std::make_shared<data::order::TransportOrder>(ord_name);
     ord->create_time = get_now_utc_time();
@@ -2103,7 +2104,12 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           point->position.z() = p["position"]["z"].as_integer<int>();
         }
         if (p.contains("vehicleOrientationAngle")) {
-          point->vehicle_orientation = p["vehicleOrientationAngle"].as_double();
+          if (p["vehicleOrientationAngle"].is_number()) {
+            point->vehicle_orientation =
+                p["vehicleOrientationAngle"].as_double();
+          } else if (p["vehicleOrientationAngle"].is_null()) {
+            point->vehicle_orientation = 0;
+          }
         }
         if (p.contains("type")) {
           point->type = data::model::Point::new_type(p["type"].as_string());

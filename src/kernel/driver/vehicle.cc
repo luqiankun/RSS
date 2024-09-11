@@ -1167,6 +1167,7 @@ bool Rabbit3::move(std::vector<std::shared_ptr<data::order::Step>> steps) {
   CLOG(INFO, driver_log) << name << " " << ss.str() << "\n";
   //
   auto ord_js = ord.to_json();
+  // LOG(INFO) << ord_js.to_string();
   auto opt = jsoncons::json_options{}.precision(15).float_format(
       jsoncons::float_chars_format::general);
   std::string msg_str;

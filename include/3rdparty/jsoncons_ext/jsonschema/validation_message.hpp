@@ -18,7 +18,7 @@
 #include "../../jsoncons/config/jsoncons_config.hpp"
 #include "../../jsoncons/json.hpp"
 #include "../../jsoncons/uri.hpp"
-#include "../../jsoncons_ext/jsonpointer/jsonpointer.hpp"
+#include "../jsonpointer/jsonpointer.hpp"
 
 namespace jsoncons {
 namespace jsonschema {

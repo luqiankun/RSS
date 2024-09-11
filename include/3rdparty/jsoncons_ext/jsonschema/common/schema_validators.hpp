@@ -13,14 +13,14 @@
 #include "../../../jsoncons/config/jsoncons_config.hpp"
 #include "../../../jsoncons/json.hpp"
 #include "../../../jsoncons/uri.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/evaluation_context.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/keyword_validators.hpp"
-#include "../../../jsoncons_ext/jsonschema/jsonschema_error.hpp"
+#include "../jsonschema_error.hpp"
+#include "evaluation_context.hpp"
+#include "keyword_validators.hpp"
 
 namespace jsoncons {
 namespace jsonschema {
 
-template <class Json>
+template <typename Json>
 class document_schema_validator : public schema_validator<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using schema_validator_type = std::unique_ptr<schema_validator<Json>>;
@@ -105,7 +105,7 @@ class document_schema_validator : public schema_validator<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class boolean_schema_validator : public schema_validator<Json> {
  public:
   using schema_validator_type =
@@ -175,7 +175,7 @@ class boolean_schema_validator : public schema_validator<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class object_schema_validator : public schema_validator<Json> {
  public:
   using schema_validator_type =

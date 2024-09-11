@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -16,7 +16,8 @@
 #include <string>
 
 #include "../config/compiler_support.hpp"
-#include "../encode_traits.hpp"
+#include "../extension_traits.hpp"
+
 namespace jsoncons {
 namespace detail {
 
@@ -25,7 +26,7 @@ inline char* align_up(char* ptr, std::size_t alignment) noexcept {
       ~(alignment - 1) & (reinterpret_cast<uintptr_t>(ptr) + alignment - 1));
 }
 
-template <class Extra, class Allocator>
+template <typename Extra, typename Allocator>
 struct heap_string_base {
   Extra extra_;
   Allocator alloc_;
@@ -40,7 +41,7 @@ struct heap_string_base {
   ~heap_string_base() noexcept = default;
 };
 
-template <class CharT, class Extra, class Allocator>
+template <typename CharT, typename Extra, typename Allocator>
 struct heap_string : public heap_string_base<Extra, Allocator> {
   using char_type = CharT;
   using allocator_type =
@@ -51,6 +52,7 @@ struct heap_string : public heap_string_base<Extra, Allocator> {
   pointer p_;
   std::size_t length_;
   uint8_t offset_;
+  uint8_t align_pad_;
 
   ~heap_string() noexcept = default;
 
@@ -81,7 +83,7 @@ struct jsoncons_aligned_storage {
 };
 
 // From boost 1_71
-template <class T, class U>
+template <typename T, typename U>
 T launder_cast(U* u) {
 #if defined(__cpp_lib_launder) && __cpp_lib_launder >= 201606
   return std::launder(reinterpret_cast<T>(u));
@@ -94,7 +96,7 @@ T launder_cast(U* u) {
 
 // heap_string_factory
 
-template <class CharT, class Extra, class Allocator>
+template <typename CharT, typename Extra, typename Allocator>
 class heap_string_factory {
  public:
   using char_type = CharT;
@@ -129,16 +131,29 @@ class heap_string_factory {
     std::size_t len = aligned_size(length * sizeof(char_type));
 
     std::size_t align = alignof(storage_type);
-    std::size_t mem_len = (align - 1) + len;
-
+    char* q = nullptr;
+    char* storage = nullptr;
     byte_allocator_type byte_alloc(alloc);
-    byte_pointer ptr = byte_alloc.allocate(mem_len);
+    uint8_t align_pad = 0;
 
-    char* q = extension_traits::to_plain_pointer(ptr);
+    if (align <= 8) {
+      byte_pointer ptr = byte_alloc.allocate(len);
+      q = extension_traits::to_plain_pointer(ptr);
 
-    char* storage = align_up(q, align);
+      if (reinterpret_cast<uintptr_t>(q) % align == 0) {
+        storage = q;
+      } else {
+        byte_alloc.deallocate(ptr, len);
+      }
+    }
 
-    JSONCONS_ASSERT(storage >= q);
+    if (storage == nullptr) {
+      align_pad = uint8_t(align - 1);
+      byte_pointer ptr = byte_alloc.allocate(align_pad + len);
+      q = extension_traits::to_plain_pointer(ptr);
+      storage = align_up(q, align);
+      JSONCONS_ASSERT(storage >= q);
+    }
 
     heap_string_type* ps = new (storage) heap_string_type(extra, byte_alloc);
 
@@ -151,6 +166,7 @@ class heap_string_factory {
         std::pointer_traits<typename heap_string_type::pointer>::pointer_to(*p);
     ps->length_ = length;
     ps->offset_ = (uint8_t)(storage - q);
+    ps->align_pad_ = align_pad;
     return std::pointer_traits<pointer>::pointer_to(*ps);
   }
 
@@ -162,8 +178,8 @@ class heap_string_factory {
 
       char* p = q - ptr->offset_;
 
-      std::size_t mem_size = (alignof(storage_type) - 1) +
-                             aligned_size(ptr->length_ * sizeof(char_type));
+      std::size_t mem_size =
+          ptr->align_pad_ + aligned_size(ptr->length_ * sizeof(char_type));
       byte_allocator_type byte_alloc(ptr->get_allocator());
       byte_alloc.deallocate(p, mem_size + ptr->offset_);
     }

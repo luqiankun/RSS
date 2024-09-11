@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -13,12 +13,12 @@
 
 namespace jsoncons {
 
-template <class CharT, class Allocator = std::allocator<char>>
+template <typename CharT, typename Allocator = std::allocator<char>>
 class basic_item_event_visitor_to_json_visitor;
 
-template <class CharT>
+template <typename CharT>
 class basic_item_event_visitor {
-  template <class Ch, class Allocator>
+  template <typename Ch, typename Allocator>
   friend class basic_item_event_visitor_to_json_visitor;
 
  public:
@@ -137,7 +137,7 @@ class basic_item_event_visitor {
     return more;
   }
 
-  template <class Source>
+  template <typename Source>
   bool byte_string_value(
       const Source& b, semantic_tag tag = semantic_tag::none,
       const ser_context& context = ser_context(),
@@ -153,7 +153,7 @@ class basic_item_event_visitor {
     return more;
   }
 
-  template <class Source>
+  template <typename Source>
   bool byte_string_value(
       const Source& b, uint64_t ext_tag,
       const ser_context& context = ser_context(),
@@ -257,7 +257,7 @@ class basic_item_event_visitor {
     return visit_string(value, tag, context, ec);
   }
 
-  template <class Source>
+  template <typename Source>
   bool byte_string_value(
       const Source& b, semantic_tag tag, const ser_context& context,
       std::error_code& ec,
@@ -268,7 +268,7 @@ class basic_item_event_visitor {
         tag, context, ec);
   }
 
-  template <class Source>
+  template <typename Source>
   bool byte_string_value(
       const Source& b, uint64_t ext_tag, const ser_context& context,
       std::error_code& ec,
@@ -299,7 +299,7 @@ class basic_item_event_visitor {
     return visit_double(value, tag, context, ec);
   }
 
-  template <class T>
+  template <typename T>
   bool typed_array(const jsoncons::span<T>& data,
                    semantic_tag tag = semantic_tag::none,
                    const ser_context& context = ser_context()) {
@@ -311,7 +311,7 @@ class basic_item_event_visitor {
     return more;
   }
 
-  template <class T>
+  template <typename T>
   bool typed_array(const jsoncons::span<T>& data, semantic_tag tag,
                    const ser_context& context, std::error_code& ec) {
     return visit_typed_array(data, tag, context, ec);
@@ -595,7 +595,7 @@ class basic_item_event_visitor {
   }
 };
 
-template <class CharT, class Allocator>
+template <typename CharT, typename Allocator>
 class basic_item_event_visitor_to_json_visitor
     : public basic_item_event_visitor<CharT> {
  public:
@@ -1431,7 +1431,7 @@ class basic_item_event_visitor_to_json_visitor
   }
 };
 
-template <class CharT>
+template <typename CharT>
 class basic_default_item_event_visitor
     : public basic_item_event_visitor<CharT> {
   bool parse_more_;
@@ -1560,7 +1560,7 @@ class basic_default_item_event_visitor
 
 // basic_json_visitor_to_item_event_visitor
 
-template <class CharT>
+template <typename CharT>
 class basic_json_visitor_to_item_event_visitor
     : public basic_json_visitor<CharT> {
  public:

@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -110,7 +110,7 @@ enum class json_parse_state : uint8_t {
   done
 };
 
-template <class CharT, class TempAllocator = std::allocator<char>>
+template <typename CharT, typename TempAllocator = std::allocator<char>>
 class basic_json_parser : public ser_context {
  public:
   using char_type = CharT;
@@ -131,13 +131,12 @@ class basic_json_parser : public ser_context {
   using parse_state_allocator_type = typename std::allocator_traits<
       temp_allocator_type>::template rebind_alloc<json_parse_state>;
 
-  static constexpr std::size_t initial_string_buffer_capacity_ = 1024;
-  static constexpr std::size_t default_initial_stack_capacity_ = 100;
+  static constexpr std::size_t initial_string_buffer_capacity = 256;
+  static constexpr int default_initial_stack_capacity = 66;
 
   basic_json_decode_options<char_type> options_;
 
   std::function<bool(json_errc, const ser_context&)> err_handler_;
-  int initial_stack_capacity_;
   int nesting_depth_;
   uint32_t cp_;
   uint32_t cp2_;
@@ -185,7 +184,6 @@ class basic_json_parser : public ser_context {
       const TempAllocator& temp_alloc = TempAllocator())
       : options_(options),
         err_handler_(err_handler),
-        initial_stack_capacity_(default_initial_stack_capacity_),
         nesting_depth_(0),
         cp_(0),
         cp2_(0),
@@ -201,9 +199,13 @@ class basic_json_parser : public ser_context {
         done_(false),
         string_buffer_(temp_alloc),
         state_stack_(temp_alloc) {
-    string_buffer_.reserve(initial_string_buffer_capacity_);
+    string_buffer_.reserve(initial_string_buffer_capacity);
 
-    state_stack_.reserve(initial_stack_capacity_);
+    std::size_t initial_stack_capacity =
+        (options.max_nesting_depth() + 2) <= default_initial_stack_capacity
+            ? (options.max_nesting_depth() + 2)
+            : default_initial_stack_capacity;
+    state_stack_.reserve(initial_stack_capacity);
     push_state(json_parse_state::root);
 
     if (options_.enable_str_to_nan()) {
@@ -412,7 +414,6 @@ class basic_json_parser : public ser_context {
 
   void reset() {
     state_stack_.clear();
-    state_stack_.reserve(initial_stack_capacity_);
     push_state(json_parse_state::root);
     state_ = json_parse_state::start;
     more_ = true;
@@ -2123,7 +2124,7 @@ class basic_json_parser : public ser_context {
   string_u1:
     while (input_ptr_ < local_input_end) {
       switch (*input_ptr_) {
-      JSONCONS_ILLEGAL_CONTROL_CHARACTER : {
+      JSONCONS_ILLEGAL_CONTROL_CHARACTER: {
         position_ += (input_ptr_ - sb + 1);
         more_ = err_handler_(json_errc::illegal_control_character, *this);
         if (!more_) {
@@ -2514,35 +2515,6 @@ class basic_json_parser : public ser_context {
     }
   }
 
-#if !defined(JSONCONS_NO_DEPRECATED)
-
-  JSONCONS_DEPRECATED_MSG(
-      "Instead, use finish_parse(basic_json_visitor<char_type>&)")
-  void end_parse(basic_json_visitor<char_type>& visitor) {
-    std::error_code ec;
-    finish_parse(visitor, ec);
-    if (ec) {
-      JSONCONS_THROW(ser_error(ec, line_, column()));
-    }
-  }
-
-  JSONCONS_DEPRECATED_MSG(
-      "Instead, use finish_parse(basic_json_visitor<char_type>&, "
-      "std::error_code&)")
-  void end_parse(basic_json_visitor<char_type>& visitor, std::error_code& ec) {
-    while (!finished()) {
-      parse_some(visitor, ec);
-    }
-  }
-
-  JSONCONS_DEPRECATED_MSG("Instead, use update(const char_type*, std::size_t)")
-  void set_source(const char_type* data, std::size_t length) {
-    begin_input_ = data;
-    end_input_ = data + length;
-    input_ptr_ = begin_input_;
-  }
-#endif
-
   std::size_t line() const override { return line_; }
 
   std::size_t column() const override {
@@ -2710,7 +2682,12 @@ class basic_json_parser : public ser_context {
     }
   }
 
-  void push_state(json_parse_state state) { state_stack_.push_back(state); }
+  void push_state(json_parse_state state) {
+    state_stack_.push_back(state);
+    // std::cout << "max_nesting_depth: " << options_.max_nesting_depth() << ",
+    // capacity: " << state_stack_.capacity() << ", nesting_depth: " <<
+    // nesting_depth_ << ", stack size: " << state_stack_.size() << "\n";
+  }
 
   json_parse_state pop_state() {
     JSONCONS_ASSERT(!state_stack_.empty())

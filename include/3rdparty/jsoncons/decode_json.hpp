@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -17,12 +17,13 @@
 #include "./allocator_set.hpp"
 #include "./decode_traits.hpp"
 #include "./json_cursor.hpp"
+#include "basic_json.hpp"
 
 namespace jsoncons {
 
 // decode_json
 
-template <class T, class Source>
+template <typename T, typename Source>
 typename std::enable_if<
     extension_traits::is_basic_json<T>::value &&
         extension_traits::is_sequence_of<Source, typename T::char_type>::value,
@@ -44,7 +45,7 @@ decode_json(
   return decoder.get_result();
 }
 
-template <class T, class Source>
+template <typename T, typename Source>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value &&
                             extension_traits::is_char_sequence<Source>::value,
                         T>::type
@@ -66,7 +67,7 @@ decode_json(
   return val;
 }
 
-template <class T, class CharT>
+template <typename T, typename CharT>
 typename std::enable_if<extension_traits::is_basic_json<T>::value, T>::type
 decode_json(std::basic_istream<CharT>& is,
             const basic_json_decode_options<CharT>& options =
@@ -81,7 +82,7 @@ decode_json(std::basic_istream<CharT>& is,
   return decoder.get_result();
 }
 
-template <class T, class CharT>
+template <typename T, typename CharT>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value, T>::type
 decode_json(std::basic_istream<CharT>& is,
             const basic_json_decode_options<CharT>& options =
@@ -97,7 +98,7 @@ decode_json(std::basic_istream<CharT>& is,
   return val;
 }
 
-template <class T, class InputIt>
+template <typename T, typename InputIt>
 typename std::enable_if<extension_traits::is_basic_json<T>::value, T>::type
 decode_json(InputIt first, InputIt last,
             const basic_json_decode_options<
@@ -117,7 +118,7 @@ decode_json(InputIt first, InputIt last,
   return decoder.get_result();
 }
 
-template <class T, class InputIt>
+template <typename T, typename InputIt>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value, T>::type
 decode_json(InputIt first, InputIt last,
             const basic_json_decode_options<
@@ -139,7 +140,8 @@ decode_json(InputIt first, InputIt last,
 
 // With leading allocator_set parameter
 
-template <class T, class Source, class Allocator, class TempAllocator>
+template <typename T, typename Source, typename Allocator,
+          typename TempAllocator>
 typename std::enable_if<
     extension_traits::is_basic_json<T>::value &&
         extension_traits::is_sequence_of<Source, typename T::char_type>::value,
@@ -163,7 +165,8 @@ decode_json(
   return decoder.get_result();
 }
 
-template <class T, class Source, class Allocator, class TempAllocator>
+template <typename T, typename Source, typename Allocator,
+          typename TempAllocator>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value &&
                             extension_traits::is_char_sequence<Source>::value,
                         T>::type
@@ -188,7 +191,8 @@ decode_json(
   return val;
 }
 
-template <class T, class CharT, class Allocator, class TempAllocator>
+template <typename T, typename CharT, typename Allocator,
+          typename TempAllocator>
 typename std::enable_if<extension_traits::is_basic_json<T>::value, T>::type
 decode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
             std::basic_istream<CharT>& is,
@@ -207,7 +211,8 @@ decode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
   return decoder.get_result();
 }
 
-template <class T, class CharT, class Allocator, class TempAllocator>
+template <typename T, typename CharT, typename Allocator,
+          typename TempAllocator>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value, T>::type
 decode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
             std::basic_istream<CharT>& is,

@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -17,6 +17,41 @@
 #include "./detail/parse_number.hpp"
 #include "./detail/write_number.hpp"
 #include "./json_exception.hpp"
+
+namespace jsoncons {
+
+enum class uri_errc {
+  success = 0,
+  invalid_uri = 1,
+};
+
+class uri_error_category_impl : public std::error_category {
+ public:
+  const char* name() const noexcept override { return "jsoncons/uri"; }
+  std::string message(int ev) const override {
+    switch (static_cast<uri_errc>(ev)) {
+      case uri_errc::invalid_uri:
+        return "Invalid URI";
+      default:
+        return "Unknown uri error";
+    }
+  }
+};
+
+inline const std::error_category& uri_error_category() {
+  static uri_error_category_impl instance;
+  return instance;
+}
+
+inline std::error_code make_error_code(uri_errc result) {
+  return std::error_code(static_cast<int>(result), uri_error_category());
+}
+}  // namespace jsoncons
+
+namespace std {
+template <>
+struct is_error_code_enum<jsoncons::uri_errc> : public true_type {};
+}  // namespace std
 
 namespace jsoncons {
 
@@ -39,7 +74,15 @@ class uri {
   part_type fragment_;
 
  public:
-  uri() = default;
+  uri()
+      : uri_string_{},
+        scheme_{0, 0},
+        userinfo_{0, 0},
+        host_{0, 0},
+        port_{0, 0},
+        path_{0, 0},
+        query_{0, 0},
+        fragment_{0, 0} {}
 
   uri(const uri& other)
       : uri_string_(other.uri_string_),
@@ -80,7 +123,13 @@ class uri {
     }
   }
 
-  /*explicit*/ uri(const std::string& uri) { *this = parse(uri); }
+  /*explicit*/ uri(const std::string& uri) {
+    std::error_code ec;
+    *this = parse(uri, ec);
+    if (ec) {
+      JSONCONS_THROW(std::system_error(ec));
+    }
+  }
 
   uri(jsoncons::string_view scheme, jsoncons::string_view userinfo,
       jsoncons::string_view host, jsoncons::string_view port,
@@ -219,6 +268,11 @@ class uri {
                        (scheme_.second - scheme_.first));
   }
 
+  string_view encoded_scheme() const noexcept {
+    return string_view(uri_string_.data() + scheme_.first,
+                       (scheme_.second - scheme_.first));
+  }
+
   std::string userinfo() const { return decode_part(encoded_userinfo()); }
 
   string_view encoded_userinfo() const noexcept {
@@ -231,7 +285,17 @@ class uri {
                        (host_.second - host_.first));
   }
 
+  string_view encoded_host() const noexcept {
+    return string_view(uri_string_.data() + host_.first,
+                       (host_.second - host_.first));
+  }
+
   string_view port() const noexcept {
+    return string_view(uri_string_.data() + port_.first,
+                       (port_.second - port_.first));
+  }
+
+  string_view encoded_port() const noexcept {
     return string_view(uri_string_.data() + port_.first,
                        (port_.second - port_.first));
   }
@@ -394,7 +458,7 @@ class uri {
         auto hex = encoded.substr(i + 1, 2);
 
         uint8_t n;
-        jsoncons::detail::to_integer_base16(hex.data(), hex.size(), n);
+        jsoncons::detail::hex_to_integer(hex.data(), hex.size(), n);
         decoded.push_back((char)n);
         i += 3;
       } else {
@@ -404,35 +468,7 @@ class uri {
     }
     return decoded;
   }
-
- private:
-  enum class parse_state {
-    expect_scheme,
-    expect_first_slash,
-    expect_second_slash,
-    expect_authority,
-    expect_host_ipv6,
-    expect_userinfo,
-    expect_host,
-    expect_port,
-    expect_path,
-    expect_query,
-    expect_fragment
-  };
-
-  uri(const std::string& uri, part_type scheme, part_type userinfo,
-      part_type host, part_type port, part_type path, part_type query,
-      part_type fragment)
-      : uri_string_(uri),
-        scheme_(scheme),
-        userinfo_(userinfo),
-        host_(host),
-        port_(port),
-        path_(path),
-        query_(query),
-        fragment_(fragment) {}
-
-  static uri parse(const std::string& s) {
+  static uri parse(const std::string& s, std::error_code& ec) {
     part_type scheme;
     part_type userinfo;
     part_type host;
@@ -569,11 +605,15 @@ class uri {
               break;
             case '#':
               path = std::make_pair(start, i);
-              query = std::make_pair(start, start);
+              query = std::make_pair(i, i);
               state = parse_state::expect_fragment;
               start = i + 1;
               break;
             default:
+              if (!(is_pchar(c, s.data() + i, s.size() - i) || c == '/')) {
+                ec = uri_errc::invalid_uri;
+                return uri{};
+              }
               break;
           }
           break;
@@ -603,9 +643,9 @@ class uri {
         break;
       case parse_state::expect_userinfo:
         userinfo = std::make_pair(start, start);
-        host = std::make_pair(start, start);
-        port = std::make_pair(start, start);
-        path = std::make_pair(start, s.size());
+        host = std::make_pair(start, s.size());
+        port = std::make_pair(s.size(), s.size());
+        path = std::make_pair(s.size(), s.size());
         query = std::make_pair(s.size(), s.size());
         fragment = std::make_pair(s.size(), s.size());
         break;
@@ -622,12 +662,39 @@ class uri {
         fragment = std::make_pair(start, s.size());
         break;
       default:
-        JSONCONS_THROW(std::invalid_argument("Invalid uri"));
+        ec = uri_errc::invalid_uri;
         break;
     }
 
     return uri(s, scheme, userinfo, host, port, path, query, fragment);
   }
+
+ private:
+  enum class parse_state {
+    expect_scheme,
+    expect_first_slash,
+    expect_second_slash,
+    expect_authority,
+    expect_host_ipv6,
+    expect_userinfo,
+    expect_host,
+    expect_port,
+    expect_path,
+    expect_query,
+    expect_fragment
+  };
+
+  uri(const std::string& uri, part_type scheme, part_type userinfo,
+      part_type host, part_type port, part_type path, part_type query,
+      part_type fragment)
+      : uri_string_(uri),
+        scheme_(scheme),
+        userinfo_(userinfo),
+        host_(host),
+        port_(port),
+        path_(path),
+        query_(query),
+        fragment_(fragment) {}
 
   static std::string remove_dot_segments(const jsoncons::string_view& input) {
     std::string result = std::string(input);
@@ -771,8 +838,39 @@ class uri {
     }
   }
 
-  static bool is_escaped(const char* s, std::size_t length) {
+  static bool is_pct_encoded(const char* s, std::size_t length) {
     return length < 3 ? false : s[0] == '%' && is_hex(s[1]) && is_hex(s[2]);
+  }
+
+  // sub-delims    = "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" /
+  // "="
+  static bool is_sub_delim(char c) {
+    switch (c) {
+      case '!':
+        return true;
+      case '$':
+        return true;
+      case '&':
+        return true;
+      case '\'':
+        return true;
+      case '(':
+        return true;
+      case ')':
+        return true;
+      case '*':
+        return true;
+      case '+':
+        return true;
+      case ',':
+        return true;
+      case ';':
+        return true;
+      case '=':
+        return true;
+      default:
+        return false;
+    }
   }
 
  public:
@@ -794,7 +892,7 @@ class uri {
           encoded.push_back(sv[i]);
           break;
         default: {
-          bool escaped = is_escaped(sv.data() + i, 3);
+          bool escaped = is_pct_encoded(sv.data() + i, 3);
           if (!is_unreserved(ch) && !is_punct(ch) && !escaped) {
             encoded.push_back('%');
             if (uint8_t(ch) <= 15) {
@@ -846,7 +944,7 @@ class uri {
     for (; i < length1; ++i) {
       char ch = sv[i];
 
-      bool escaped = is_escaped(sv.data() + i, 3);
+      bool escaped = is_pct_encoded(sv.data() + i, 3);
       if (!is_unreserved(ch) && !is_punct(ch) && !escaped) {
         encoded.push_back('%');
         if (uint8_t(ch) <= 15) {
@@ -886,7 +984,7 @@ class uri {
     for (; i < length1; ++i) {
       char ch = sv[i];
 
-      bool escaped = is_escaped(sv.data() + i, 3);
+      bool escaped = is_pct_encoded(sv.data() + i, 3);
       if (!is_unreserved(ch) && !is_reserved(ch) && !escaped) {
         encoded.push_back('%');
         if (uint8_t(ch) <= 15) {
@@ -913,6 +1011,26 @@ class uri {
         encoded.push_back(ch);
       }
     }
+  }
+
+  // rel_segment   = 1*( unreserved | escaped | ";" | "@" | "&" | "=" | "+" |
+  // "$" | "," )
+  static bool is_rel_segment(char c, const char* s, std::size_t length) {
+    return is_unreserved(c) || is_pct_encoded(s, length) || c == ';' ||
+           c == '@' || c == '&' || c == '=' || c == '+' || c == '$' || c == ',';
+  }
+
+  // userinfo      = *( unreserved | escaped | ";" | ":" | "&" | "=" | "+" | "$"
+  // | "," )
+
+  static bool is_userinfo(char c, const char* s, std::size_t length) {
+    return is_unreserved(c) || is_pct_encoded(s, length) || c == ';' ||
+           c == ':' || c == '&' || c == '=' || c == '+' || c == '$' || c == ',';
+  }
+
+  static bool is_pchar(char c, const char* s, std::size_t length) {
+    return is_unreserved(c) || is_pct_encoded(s, length) || is_sub_delim(c) ||
+           c == ':' || c == '@';
   }
 };
 

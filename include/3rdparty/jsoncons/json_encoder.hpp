@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -13,12 +13,11 @@
 #include <limits>  // std::numeric_limits
 #include <memory>
 #include <string>
-#include <utility>  // std::move
+#include <utility>  // std::move">
 #include <vector>
 
 #include "./bigint.hpp"
 #include "./byte_string.hpp"
-#include "./config/jsoncons_config.hpp"
 #include "./detail/write_number.hpp"
 #include "./json_error.hpp"
 #include "./json_exception.hpp"
@@ -33,7 +32,7 @@ inline bool is_control_character(uint32_t c) { return c <= 0x1F || c == 0x7f; }
 
 inline bool is_non_ascii_codepoint(uint32_t cp) { return cp >= 0x80; }
 
-template <class CharT, class Sink>
+template <typename CharT, typename Sink>
 std::size_t escape_string(const CharT* s, std::size_t length,
                           bool escape_all_non_ascii, bool escape_solidus,
                           Sink& sink) {
@@ -176,8 +175,8 @@ inline byte_string_chars_format resolve_byte_string_chars_format(
 
 }  // namespace detail
 
-template <class CharT, class Sink = jsoncons::stream_sink<CharT>,
-          class Allocator = std::allocator<char>>
+template <typename CharT, typename Sink = jsoncons::stream_sink<CharT>,
+          typename Allocator = std::allocator<char>>
 class basic_json_encoder final : public basic_json_visitor<CharT> {
   static const jsoncons::basic_string_view<CharT> null_constant() {
     static const jsoncons::basic_string_view<CharT> k =
@@ -361,10 +360,10 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
 
  private:
   // Implementing methods
-  void visit_flush() override { sink_.flush(); }
+  void visit_flush() final { sink_.flush(); }
 
   bool visit_begin_object(semantic_tag, const ser_context&,
-                          std::error_code& ec) override {
+                          std::error_code& ec) final {
     if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth())) {
       ec = json_errc::max_nesting_depth_exceeded;
       return false;
@@ -414,9 +413,8 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
                             column_ + open_object_brace_str_.length());
       }
     } else {
-      stack_.emplace_back(container_type::object, line_split_kind::multi_line,
-                          false, column_,
-                          column_ + open_object_brace_str_.length());
+      stack_.emplace_back(container_type::object, options_.line_splits(), false,
+                          column_, column_ + open_object_brace_str_.length());
     }
     indent();
 
@@ -426,7 +424,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
     return true;
   }
 
-  bool visit_end_object(const ser_context&, std::error_code&) override {
+  bool visit_end_object(const ser_context&, std::error_code&) final {
     JSONCONS_ASSERT(!stack_.empty());
     --nesting_depth_;
 
@@ -444,7 +442,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_begin_array(semantic_tag, const ser_context&,
-                         std::error_code& ec) override {
+                         std::error_code& ec) final {
     if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth())) {
       ec = json_errc::max_nesting_depth_exceeded;
       return false;
@@ -504,9 +502,8 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
         }
       }
     } else {
-      stack_.emplace_back(container_type::array, line_split_kind::multi_line,
-                          false, column_,
-                          column_ + open_array_bracket_str_.length());
+      stack_.emplace_back(container_type::array, options_.line_splits(), false,
+                          column_, column_ + open_array_bracket_str_.length());
     }
     indent();
     sink_.append(open_array_bracket_str_.data(),
@@ -515,7 +512,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
     return true;
   }
 
-  bool visit_end_array(const ser_context&, std::error_code&) override {
+  bool visit_end_array(const ser_context&, std::error_code&) final {
     JSONCONS_ASSERT(!stack_.empty());
     --nesting_depth_;
 
@@ -532,7 +529,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_key(const string_view_type& name, const ser_context&,
-                 std::error_code&) override {
+                 std::error_code&) final {
     JSONCONS_ASSERT(!stack_.empty());
     if (stack_.back().count() > 0) {
       sink_.append(comma_str_.data(), comma_str_.length());
@@ -561,7 +558,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
     return true;
   }
 
-  bool visit_null(semantic_tag, const ser_context&, std::error_code&) override {
+  bool visit_null(semantic_tag, const ser_context&, std::error_code&) final {
     if (!stack_.empty()) {
       if (stack_.back().is_array()) {
         begin_scalar_value();
@@ -580,7 +577,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_string(const string_view_type& sv, semantic_tag tag,
-                    const ser_context&, std::error_code&) override {
+                    const ser_context& context, std::error_code& ec) final {
     if (!stack_.empty()) {
       if (stack_.back().is_array()) {
         begin_scalar_value();
@@ -591,6 +588,14 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
       }
     }
 
+    write_string(sv, tag, context, ec);
+
+    end_value();
+    return true;
+  }
+
+  bool write_string(const string_view_type& sv, semantic_tag tag,
+                    const ser_context&, std::error_code&) {
     switch (tag) {
       case semantic_tag::bigint:
         write_bigint_value(sv);
@@ -614,12 +619,11 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
       }
     }
 
-    end_value();
     return true;
   }
 
   bool visit_byte_string(const byte_string_view& b, semantic_tag tag,
-                         const ser_context&, std::error_code&) override {
+                         const ser_context&, std::error_code&) final {
     if (!stack_.empty()) {
       if (stack_.back().is_array()) {
         begin_scalar_value();
@@ -682,7 +686,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_double(double value, semantic_tag, const ser_context& context,
-                    std::error_code& ec) override {
+                    std::error_code& ec) final {
     if (!stack_.empty()) {
       if (stack_.back().is_array()) {
         begin_scalar_value();
@@ -700,7 +704,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
                        options_.nan_to_num().length());
           column_ += options_.nan_to_num().length();
         } else if (options_.enable_nan_to_str()) {
-          visit_string(options_.nan_to_str(), semantic_tag::none, context, ec);
+          write_string(options_.nan_to_str(), semantic_tag::none, context, ec);
         } else {
           sink_.append(null_constant().data(), null_constant().size());
           column_ += null_constant().size();
@@ -711,7 +715,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
                        options_.inf_to_num().length());
           column_ += options_.inf_to_num().length();
         } else if (options_.enable_inf_to_str()) {
-          visit_string(options_.inf_to_str(), semantic_tag::none, context, ec);
+          write_string(options_.inf_to_str(), semantic_tag::none, context, ec);
         } else {
           sink_.append(null_constant().data(), null_constant().size());
           column_ += null_constant().size();
@@ -722,7 +726,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
                        options_.neginf_to_num().length());
           column_ += options_.neginf_to_num().length();
         } else if (options_.enable_neginf_to_str()) {
-          visit_string(options_.neginf_to_str(), semantic_tag::none, context,
+          write_string(options_.neginf_to_str(), semantic_tag::none, context,
                        ec);
         } else {
           sink_.append(null_constant().data(), null_constant().size());
@@ -739,7 +743,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_int64(int64_t value, semantic_tag, const ser_context&,
-                   std::error_code&) override {
+                   std::error_code&) final {
     if (!stack_.empty()) {
       if (stack_.back().is_array()) {
         begin_scalar_value();
@@ -756,7 +760,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_uint64(uint64_t value, semantic_tag, const ser_context&,
-                    std::error_code&) override {
+                    std::error_code&) final {
     if (!stack_.empty()) {
       if (stack_.back().is_array()) {
         begin_scalar_value();
@@ -773,7 +777,7 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_bool(bool value, semantic_tag, const ser_context&,
-                  std::error_code&) override {
+                  std::error_code&) final {
     if (!stack_.empty()) {
       if (stack_.back().is_array()) {
         begin_scalar_value();
@@ -902,19 +906,19 @@ class basic_json_encoder final : public basic_json_visitor<CharT> {
   }
 };
 
-template <class CharT, class Sink = jsoncons::stream_sink<CharT>,
-          class Allocator = std::allocator<char>>
+template <typename CharT, typename Sink = jsoncons::stream_sink<CharT>,
+          typename Allocator = std::allocator<char>>
 class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
   static const std::array<CharT, 4>& null_constant() {
-    static constexpr std::array<CharT, 4> k{'n', 'u', 'l', 'l'};
+    static constexpr std::array<CharT, 4> k{{'n', 'u', 'l', 'l'}};
     return k;
   }
   static const std::array<CharT, 4>& true_constant() {
-    static constexpr std::array<CharT, 4> k{'t', 'r', 'u', 'e'};
+    static constexpr std::array<CharT, 4> k{{'t', 'r', 'u', 'e'}};
     return k;
   }
   static const std::array<CharT, 5>& false_constant() {
-    static constexpr std::array<CharT, 5> k{'f', 'a', 'l', 's', 'e'};
+    static constexpr std::array<CharT, 5> k{{'f', 'a', 'l', 's', 'e'}};
     return k;
   }
 
@@ -989,10 +993,10 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
 
  private:
   // Implementing methods
-  void visit_flush() override { sink_.flush(); }
+  void visit_flush() final { sink_.flush(); }
 
   bool visit_begin_object(semantic_tag, const ser_context&,
-                          std::error_code& ec) override {
+                          std::error_code& ec) final {
     if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth())) {
       ec = json_errc::max_nesting_depth_exceeded;
       return false;
@@ -1007,7 +1011,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
     return true;
   }
 
-  bool visit_end_object(const ser_context&, std::error_code&) override {
+  bool visit_end_object(const ser_context&, std::error_code&) final {
     JSONCONS_ASSERT(!stack_.empty());
     --nesting_depth_;
 
@@ -1021,7 +1025,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_begin_array(semantic_tag, const ser_context&,
-                         std::error_code& ec) override {
+                         std::error_code& ec) final {
     if (JSONCONS_UNLIKELY(++nesting_depth_ > options_.max_nesting_depth())) {
       ec = json_errc::max_nesting_depth_exceeded;
       return false;
@@ -1035,7 +1039,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
     return true;
   }
 
-  bool visit_end_array(const ser_context&, std::error_code&) override {
+  bool visit_end_array(const ser_context&, std::error_code&) final {
     JSONCONS_ASSERT(!stack_.empty());
     --nesting_depth_;
 
@@ -1048,7 +1052,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_key(const string_view_type& name, const ser_context&,
-                 std::error_code&) override {
+                 std::error_code&) final {
     if (!stack_.empty() && stack_.back().count() > 0) {
       sink_.push_back(',');
     }
@@ -1062,7 +1066,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
     return true;
   }
 
-  bool visit_null(semantic_tag, const ser_context&, std::error_code&) override {
+  bool visit_null(semantic_tag, const ser_context&, std::error_code&) final {
     if (!stack_.empty() && stack_.back().is_array() &&
         stack_.back().count() > 0) {
       sink_.push_back(',');
@@ -1128,7 +1132,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_string(const string_view_type& sv, semantic_tag tag,
-                    const ser_context&, std::error_code&) override {
+                    const ser_context&, std::error_code&) final {
     if (!stack_.empty() && stack_.back().is_array() &&
         stack_.back().count() > 0) {
       sink_.push_back(',');
@@ -1162,8 +1166,34 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
     return true;
   }
 
+  bool write_string(const string_view_type& sv, semantic_tag tag,
+                    const ser_context&, std::error_code&) {
+    switch (tag) {
+      case semantic_tag::bigint:
+        write_bigint_value(sv);
+        break;
+      case semantic_tag::bigdec: {
+        // output lossless number
+        if (options_.bigint_format() == bigint_chars_format::number) {
+          write_bigint_value(sv);
+          break;
+        }
+        JSONCONS_FALLTHROUGH;
+      }
+      default: {
+        sink_.push_back('\"');
+        jsoncons::detail::escape_string(sv.data(), sv.length(),
+                                        options_.escape_all_non_ascii(),
+                                        options_.escape_solidus(), sink_);
+        sink_.push_back('\"');
+        break;
+      }
+    }
+    return true;
+  }
+
   bool visit_byte_string(const byte_string_view& b, semantic_tag tag,
-                         const ser_context&, std::error_code&) override {
+                         const ser_context&, std::error_code&) final {
     if (!stack_.empty() && stack_.back().is_array() &&
         stack_.back().count() > 0) {
       sink_.push_back(',');
@@ -1220,7 +1250,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_double(double value, semantic_tag, const ser_context& context,
-                    std::error_code& ec) override {
+                    std::error_code& ec) final {
     if (!stack_.empty() && stack_.back().is_array() &&
         stack_.back().count() > 0) {
       sink_.push_back(',');
@@ -1232,7 +1262,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
           sink_.append(options_.nan_to_num().data(),
                        options_.nan_to_num().length());
         } else if (options_.enable_nan_to_str()) {
-          visit_string(options_.nan_to_str(), semantic_tag::none, context, ec);
+          write_string(options_.nan_to_str(), semantic_tag::none, context, ec);
         } else {
           sink_.append(null_constant().data(), null_constant().size());
         }
@@ -1241,7 +1271,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
           sink_.append(options_.inf_to_num().data(),
                        options_.inf_to_num().length());
         } else if (options_.enable_inf_to_str()) {
-          visit_string(options_.inf_to_str(), semantic_tag::none, context, ec);
+          write_string(options_.inf_to_str(), semantic_tag::none, context, ec);
         } else {
           sink_.append(null_constant().data(), null_constant().size());
         }
@@ -1250,7 +1280,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
           sink_.append(options_.neginf_to_num().data(),
                        options_.neginf_to_num().length());
         } else if (options_.enable_neginf_to_str()) {
-          visit_string(options_.neginf_to_str(), semantic_tag::none, context,
+          write_string(options_.neginf_to_str(), semantic_tag::none, context,
                        ec);
         } else {
           sink_.append(null_constant().data(), null_constant().size());
@@ -1267,7 +1297,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_int64(int64_t value, semantic_tag, const ser_context&,
-                   std::error_code&) override {
+                   std::error_code&) final {
     if (!stack_.empty() && stack_.back().is_array() &&
         stack_.back().count() > 0) {
       sink_.push_back(',');
@@ -1280,7 +1310,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_uint64(uint64_t value, semantic_tag, const ser_context&,
-                    std::error_code&) override {
+                    std::error_code&) final {
     if (!stack_.empty() && stack_.back().is_array() &&
         stack_.back().count() > 0) {
       sink_.push_back(',');
@@ -1293,7 +1323,7 @@ class basic_compact_json_encoder final : public basic_json_visitor<CharT> {
   }
 
   bool visit_bool(bool value, semantic_tag, const ser_context&,
-                  std::error_code&) override {
+                  std::error_code&) final {
     if (!stack_.empty() && stack_.back().is_array() &&
         stack_.back().count() > 0) {
       sink_.push_back(',');
@@ -1329,68 +1359,6 @@ using compact_json_string_encoder =
     basic_compact_json_encoder<char, jsoncons::string_sink<std::string>>;
 using compact_wjson_string_encoder =
     basic_compact_json_encoder<wchar_t, jsoncons::string_sink<std::wstring>>;
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-template <class CharT, class Sink = jsoncons::stream_sink<CharT>>
-using basic_json_serializer = basic_json_encoder<CharT, Sink>;
-
-template <class CharT, class Sink = jsoncons::stream_sink<CharT>>
-using basic_json_compressed_serializer =
-    basic_compact_json_encoder<CharT, Sink>;
-
-template <class CharT, class Sink = jsoncons::stream_sink<CharT>>
-using basic_json_compressed_encoder = basic_compact_json_encoder<CharT, Sink>;
-
-JSONCONS_DEPRECATED_MSG("Instead, use compact_json_stream_encoder")
-typedef basic_compact_json_encoder<
-    char, jsoncons::stream_sink<char>> json_compressed_stream_encoder;
-JSONCONS_DEPRECATED_MSG("Instead, use compact_wjson_stream_encoder")
-typedef basic_compact_json_encoder<
-    wchar_t, jsoncons::stream_sink<wchar_t>> wjson_compressed_stream_encoder;
-JSONCONS_DEPRECATED_MSG("Instead, use compact_json_string_encoder")
-typedef basic_compact_json_encoder<
-    char, jsoncons::string_sink<char>> json_compressed_string_encoder;
-JSONCONS_DEPRECATED_MSG("Instead, use compact_wjson_string_encoder")
-typedef basic_compact_json_encoder<
-    wchar_t, jsoncons::string_sink<wchar_t>> wjson_compressed_string_encoder;
-
-JSONCONS_DEPRECATED_MSG("Instead, use json_stream_encoder")
-typedef json_stream_encoder json_encoder;
-JSONCONS_DEPRECATED_MSG("Instead, use wjson_stream_encoder")
-typedef wjson_stream_encoder wjson_encoder;
-JSONCONS_DEPRECATED_MSG("Instead, use compact_json_stream_encoder")
-typedef compact_json_stream_encoder compact_json_encoder;
-JSONCONS_DEPRECATED_MSG("Instead, use compact_wjson_stream_encoder")
-typedef compact_wjson_stream_encoder wcompact_json_encoder;
-
-JSONCONS_DEPRECATED_MSG("Instead, use json_stream_encoder")
-typedef basic_json_encoder<char, jsoncons::stream_sink<char>> json_serializer;
-JSONCONS_DEPRECATED_MSG("Instead, use wjson_stream_encoder")
-typedef basic_json_encoder<wchar_t,
-                           jsoncons::stream_sink<wchar_t>> wjson_serializer;
-
-JSONCONS_DEPRECATED_MSG("Instead, use compact_json_stream_encoder")
-typedef basic_compact_json_encoder<
-    char, jsoncons::stream_sink<char>> json_compressed_serializer;
-JSONCONS_DEPRECATED_MSG("Instead, use compact_wjson_stream_encoder")
-typedef basic_compact_json_encoder<
-    wchar_t, jsoncons::stream_sink<wchar_t>> wjson_compressed_serializer;
-
-JSONCONS_DEPRECATED_MSG("Instead, use json_string_encoder")
-typedef basic_json_encoder<
-    char, jsoncons::string_sink<std::string>> json_string_serializer;
-JSONCONS_DEPRECATED_MSG("Instead, use wjson_string_encoder")
-typedef basic_json_encoder<
-    wchar_t, jsoncons::string_sink<std::wstring>> wjson_string_serializer;
-
-JSONCONS_DEPRECATED_MSG("Instead, use compact_json_string_encoder")
-typedef basic_compact_json_encoder<
-    char, jsoncons::string_sink<std::string>> json_compressed_string_serializer;
-JSONCONS_DEPRECATED_MSG("Instead, use wcompact_json_string_encoder")
-typedef basic_compact_json_encoder<
-    wchar_t,
-    jsoncons::string_sink<std::wstring>> wjson_compressed_string_serializer;
-#endif
 
 }  // namespace jsoncons
 

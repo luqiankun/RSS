@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -35,7 +35,7 @@ namespace jsoncons {
 
 enum class staj_cursor_state { typed_array = 1, multi_dim, shape };
 
-template <class CharT>
+template <typename CharT>
 class basic_staj_visitor : public basic_json_visitor<CharT> {
   using super_type = basic_json_visitor<CharT>;
 
@@ -196,7 +196,7 @@ class basic_staj_visitor : public basic_json_visitor<CharT> {
     bool more = true;
     if (is_typed_array()) {
       if (index_ != 0) {
-        more = send_json_event(event(), visitor, context, ec);
+        more = event().send_json_event(visitor, context, ec);
         while (more && is_typed_array()) {
           if (index_ < data_.size()) {
             switch (data_.type()) {
@@ -307,7 +307,7 @@ class basic_staj_visitor : public basic_json_visitor<CharT> {
         data_ = typed_array_view();
       }
     } else {
-      more = send_json_event(event(), visitor, context, ec);
+      more = event().send_json_event(visitor, context, ec);
     }
     return more;
   }
@@ -544,7 +544,7 @@ class basic_staj_visitor : public basic_json_visitor<CharT> {
 
 // basic_staj_cursor
 
-template <class CharT>
+template <typename CharT>
 class basic_staj_cursor {
  public:
   virtual ~basic_staj_cursor() noexcept = default;
@@ -572,7 +572,7 @@ class basic_staj_cursor {
   virtual const ser_context& context() const = 0;
 };
 
-template <class CharT>
+template <typename CharT>
 class basic_staj_filter_view : basic_staj_cursor<CharT> {
   basic_staj_cursor<CharT>* cursor_;
   std::function<bool(const basic_staj_event<CharT>&, const ser_context&)> pred_;
@@ -635,37 +635,6 @@ using wstaj_cursor = basic_staj_cursor<wchar_t>;
 
 using staj_filter_view = basic_staj_filter_view<char>;
 using wstaj_filter_view = basic_staj_filter_view<wchar_t>;
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-
-JSONCONS_DEPRECATED_MSG("Instead, use staj_event_type")
-typedef staj_event_type stream_event_type;
-
-template <class CharT>
-using basic_stream_event = basic_staj_event<CharT>;
-
-template <class CharT>
-using basic_stream_reader = basic_staj_cursor<CharT>;
-
-template <class CharT>
-using basic_staj_reader = basic_staj_cursor<CharT>;
-
-JSONCONS_DEPRECATED_MSG("Instead, use staj_event")
-typedef basic_staj_event<char> stream_event;
-JSONCONS_DEPRECATED_MSG("Instead, use wstaj_event")
-typedef basic_staj_event<wchar_t> wstream_event;
-
-JSONCONS_DEPRECATED_MSG("Instead, use staj_cursor")
-typedef basic_staj_cursor<char> stream_reader;
-JSONCONS_DEPRECATED_MSG("Instead, use wstaj_cursor")
-typedef basic_staj_cursor<wchar_t> wstream_reader;
-
-JSONCONS_DEPRECATED_MSG("Instead, use staj_cursor")
-typedef basic_staj_cursor<char> staj_reader;
-JSONCONS_DEPRECATED_MSG("Instead, use wstaj_cursor")
-typedef basic_staj_cursor<wchar_t> wstaj_reader;
-
-#endif
 
 }  // namespace jsoncons
 

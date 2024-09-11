@@ -16,8 +16,8 @@
 #include "../../../jsoncons/config/jsoncons_config.hpp"
 #include "../../../jsoncons/json.hpp"
 #include "../../../jsoncons/uri.hpp"
-#include "../../../jsoncons_ext/jsonpointer/jsonpointer.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/validator.hpp"
+#include "../../jsonpointer/jsonpointer.hpp"
+#include "./validator.hpp"
 #if defined(JSONCONS_HAS_STD_REGEX)
 #include <regex>
 #endif
@@ -953,9 +953,9 @@ inline walk_result uri_check(const jsonpointer::json_pointer& eval_path,
                              const uri& schema_location,
                              const jsonpointer::json_pointer& instance_location,
                              const std::string& str, error_reporter& reporter) {
-  try {
-    uri u(str);
-  } catch (std::exception& ec) {
+  std::error_code ec;
+  uri::parse(str, ec);
+  if (ec) {
     walk_result result = reporter.error(
         validation_message("uri", eval_path, schema_location, instance_location,
                            "'" + str + "' is not a valid URI."));
@@ -963,7 +963,6 @@ inline walk_result uri_check(const jsonpointer::json_pointer& eval_path,
       return result;
     }
   }
-
   return walk_result::advance;
 }
 

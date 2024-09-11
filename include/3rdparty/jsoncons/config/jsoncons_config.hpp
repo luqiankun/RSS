@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -11,11 +11,11 @@
 #include <limits>
 #include <type_traits>
 
-#include "./binary_config.hpp"
-#include "./compiler_support.hpp"
+#include "../config/binary_config.hpp"
+#include "../config/compiler_support.hpp"
 
 #if !defined(JSONCONS_HAS_STD_STRING_VIEW)
-#include <jsoncons/detail/string_view.hpp>
+#include "../detail/string_view.hpp"
 namespace jsoncons {
 using jsoncons::detail::basic_string_view;
 using string_view = jsoncons::detail::string_view;
@@ -31,7 +31,7 @@ using std::wstring_view;
 #endif
 
 #if !defined(JSONCONS_HAS_STD_SPAN)
-#include "../../jsoncons/detail/span.hpp"
+#include "../detail/span.hpp"
 namespace jsoncons {
 using jsoncons::detail::span;
 }
@@ -53,7 +53,7 @@ namespace jsoncons {
 using boost::optional;
 }
 #else
-#include <jsoncons/detail/optional.hpp>
+#include "../detail/optional.hpp"
 namespace jsoncons {
 using jsoncons::detail::optional;
 }
@@ -80,34 +80,34 @@ using std::endian;
 
 namespace jsoncons {
 
-template <class T>
+template <typename T>
 struct unique_if {
   using value_is_not_array = std::unique_ptr<T>;
 };
 
-template <class T>
+template <typename T>
 struct unique_if<T[]> {
   typedef std::unique_ptr<T[]> value_is_array_of_unknown_bound;
 };
 
-template <class T, std::size_t N>
+template <typename T, std::size_t N>
 struct unique_if<T[N]> {
   using value_is_array_of_known_bound = void;
 };
 
-template <class T, class... Args>
+template <typename T, typename... Args>
 typename unique_if<T>::value_is_not_array make_unique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
 
-template <class T>
+template <typename T>
 typename unique_if<T>::value_is_array_of_unknown_bound make_unique(
     std::size_t n) {
   using U = typename std::remove_extent<T>::type;
   return std::unique_ptr<T>(new U[n]());
 }
 
-template <class T, class... Args>
+template <typename T, typename... Args>
 typename unique_if<T>::value_is_array_of_known_bound make_unique(Args&&...) =
     delete;
 }  // namespace jsoncons
@@ -126,7 +126,7 @@ namespace binary {
 
 // native_to_big
 
-template <typename T, class OutputIt, class Endian = endian>
+template <typename T, typename OutputIt, typename Endian = endian>
 typename std::enable_if<Endian::native == Endian::big, void>::type
 native_to_big(T val, OutputIt d_first) {
   uint8_t buf[sizeof(T)];
@@ -136,7 +136,7 @@ native_to_big(T val, OutputIt d_first) {
   }
 }
 
-template <typename T, class OutputIt, class Endian = endian>
+template <typename T, typename OutputIt, typename Endian = endian>
 typename std::enable_if<Endian::native == Endian::little, void>::type
 native_to_big(T val, OutputIt d_first) {
   T val2 = byte_swap(val);
@@ -149,7 +149,7 @@ native_to_big(T val, OutputIt d_first) {
 
 // native_to_little
 
-template <typename T, class OutputIt, class Endian = endian>
+template <typename T, typename OutputIt, typename Endian = endian>
 typename std::enable_if<Endian::native == Endian::little, void>::type
 native_to_little(T val, OutputIt d_first) {
   uint8_t buf[sizeof(T)];
@@ -159,7 +159,7 @@ native_to_little(T val, OutputIt d_first) {
   }
 }
 
-template <typename T, class OutputIt, class Endian = endian>
+template <typename T, typename OutputIt, typename Endian = endian>
 typename std::enable_if<Endian::native == Endian::big, void>::type
 native_to_little(T val, OutputIt d_first) {
   T val2 = byte_swap(val);
@@ -172,7 +172,7 @@ native_to_little(T val, OutputIt d_first) {
 
 // big_to_native
 
-template <class T, class Endian = endian>
+template <typename T, typename Endian = endian>
 typename std::enable_if<Endian::native == Endian::big, T>::type big_to_native(
     const uint8_t* first, std::size_t count) {
   if (sizeof(T) > count) {
@@ -183,7 +183,7 @@ typename std::enable_if<Endian::native == Endian::big, T>::type big_to_native(
   return val;
 }
 
-template <class T, class Endian = endian>
+template <typename T, typename Endian = endian>
 typename std::enable_if<Endian::native == Endian::little, T>::type
 big_to_native(const uint8_t* first, std::size_t count) {
   if (sizeof(T) > count) {
@@ -196,7 +196,7 @@ big_to_native(const uint8_t* first, std::size_t count) {
 
 // little_to_native
 
-template <class T, class Endian = endian>
+template <typename T, typename Endian = endian>
 typename std::enable_if<Endian::native == Endian::little, T>::type
 little_to_native(const uint8_t* first, std::size_t count) {
   if (sizeof(T) > count) {
@@ -207,7 +207,7 @@ little_to_native(const uint8_t* first, std::size_t count) {
   return val;
 }
 
-template <class T, class Endian = endian>
+template <typename T, typename Endian = endian>
 typename std::enable_if<Endian::native == Endian::big, T>::type
 little_to_native(const uint8_t* first, std::size_t count) {
   if (sizeof(T) > count) {

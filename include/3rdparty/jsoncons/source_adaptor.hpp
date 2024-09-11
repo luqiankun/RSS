@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -25,7 +25,7 @@ namespace jsoncons {
 
 // text_source_adaptor
 
-template <class Source>
+template <typename Source>
 class text_source_adaptor {
  public:
   using value_type = typename Source::value_type;
@@ -37,7 +37,7 @@ class text_source_adaptor {
  public:
   text_source_adaptor() : bof_(true) {}
 
-  template <class Sourceable>
+  template <typename Sourceable>
   text_source_adaptor(Sourceable&& source)
       : source_(std::forward<Sourceable>(source)), bof_(true) {}
 
@@ -71,7 +71,7 @@ class text_source_adaptor {
 
 // json_source_adaptor
 
-template <class Source>
+template <typename Source>
 class json_source_adaptor {
  public:
   using value_type = typename Source::value_type;
@@ -83,7 +83,7 @@ class json_source_adaptor {
  public:
   json_source_adaptor() : bof_(true) {}
 
-  template <class Sourceable>
+  template <typename Sourceable>
   json_source_adaptor(Sourceable&& source)
       : source_(std::forward<Sourceable>(source)), bof_(true) {}
 

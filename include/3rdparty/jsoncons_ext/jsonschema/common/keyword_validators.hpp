@@ -18,10 +18,10 @@
 #include "../../../jsoncons/config/jsoncons_config.hpp"
 #include "../../../jsoncons/json.hpp"
 #include "../../../jsoncons/uri.hpp"
-#include "../../../jsoncons_ext/jsonpointer/jsonpointer.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/format_validator.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/uri_wrapper.hpp"
-#include "../../../jsoncons_ext/jsonschema/common/validator.hpp"
+#include "../../jsonpointer/jsonpointer.hpp"
+#include "./format_validator.hpp"
+#include "./uri_wrapper.hpp"
+#include "./validator.hpp"
 #if defined(JSONCONS_HAS_STD_REGEX)
 #include <regex>
 #endif
@@ -29,7 +29,7 @@
 namespace jsoncons {
 namespace jsonschema {
 
-template <class Json>
+template <typename Json>
 class recursive_ref_validator : public keyword_validator_base<Json>,
                                 public virtual ref<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
@@ -118,7 +118,7 @@ class recursive_ref_validator : public keyword_validator_base<Json>,
   }
 };
 
-template <class Json>
+template <typename Json>
 class dynamic_ref_validator : public keyword_validator_base<Json>,
                               public virtual ref<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
@@ -229,7 +229,7 @@ class dynamic_ref_validator : public keyword_validator_base<Json>,
 
 // contentEncoding
 
-template <class Json>
+template <typename Json>
 class content_encoding_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -293,7 +293,7 @@ class content_encoding_validator : public keyword_validator_base<Json> {
 
 // contentMediaType
 
-template <class Json>
+template <typename Json>
 class content_media_type_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -363,7 +363,7 @@ class content_media_type_validator : public keyword_validator_base<Json> {
 
 // format
 
-template <class Json>
+template <typename Json>
 class format_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -414,7 +414,7 @@ class format_validator : public keyword_validator_base<Json> {
 // pattern
 
 #if defined(JSONCONS_HAS_STD_REGEX)
-template <class Json>
+template <typename Json>
 class pattern_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -469,7 +469,7 @@ class pattern_validator : public keyword_validator_base<Json> {
   }
 };
 #else
-template <class Json>
+template <typename Json>
 class pattern_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -498,7 +498,7 @@ class pattern_validator : public keyword_validator_base<Json> {
 
 // maxLength
 
-template <class Json>
+template <typename Json>
 class max_length_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -551,7 +551,7 @@ class max_length_validator : public keyword_validator_base<Json> {
 
 // maxItems
 
-template <class Json>
+template <typename Json>
 class max_items_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -603,7 +603,7 @@ class max_items_validator : public keyword_validator_base<Json> {
 
 // minItems
 
-template <class Json>
+template <typename Json>
 class min_items_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -656,7 +656,7 @@ class min_items_validator : public keyword_validator_base<Json> {
 
 // items
 
-template <class Json>
+template <typename Json>
 class items_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -768,7 +768,7 @@ class items_validator : public keyword_validator_base<Json> {
 
 // uniqueItems
 
-template <class Json>
+template <typename Json>
 class unique_items_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -829,7 +829,7 @@ class unique_items_validator : public keyword_validator_base<Json> {
 
 // minLength
 
-template <class Json>
+template <typename Json>
 class min_length_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -882,7 +882,7 @@ class min_length_validator : public keyword_validator_base<Json> {
 
 // not
 
-template <class Json>
+template <typename Json>
 class not_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -949,7 +949,7 @@ class not_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class any_of_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -1041,7 +1041,7 @@ class any_of_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class one_of_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -1148,7 +1148,7 @@ class one_of_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class all_of_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -1250,7 +1250,7 @@ class all_of_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class maximum_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1334,7 +1334,7 @@ class maximum_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class exclusive_maximum_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1419,7 +1419,7 @@ class exclusive_maximum_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class minimum_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1503,7 +1503,7 @@ class minimum_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class exclusive_minimum_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1588,7 +1588,7 @@ class exclusive_minimum_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class multiple_of_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1646,7 +1646,7 @@ class multiple_of_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class required_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1704,7 +1704,7 @@ class required_validator : public keyword_validator_base<Json> {
 
 // maxProperties
 
-template <class Json>
+template <typename Json>
 class max_properties_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1756,7 +1756,7 @@ class max_properties_validator : public keyword_validator_base<Json> {
 
 // minProperties
 
-template <class Json>
+template <typename Json>
 class min_properties_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1806,7 +1806,7 @@ class min_properties_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class conditional_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -1922,7 +1922,7 @@ class conditional_validator : public keyword_validator_base<Json> {
 
 // enum_validator
 
-template <class Json>
+template <typename Json>
 class enum_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -1977,7 +1977,7 @@ class enum_validator : public keyword_validator_base<Json> {
 
 // const_validator
 
-template <class Json>
+template <typename Json>
 class const_validator : public keyword_validator_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -2051,7 +2051,7 @@ inline std::string to_string(json_schema_type type) {
   }
 }
 
-template <class Json>
+template <typename Json>
 class type_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -2204,7 +2204,7 @@ class type_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class properties_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -2367,7 +2367,7 @@ class properties_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class pattern_properties_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -2491,7 +2491,7 @@ class pattern_properties_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class additional_properties_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -2673,7 +2673,7 @@ class additional_properties_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class dependent_required_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -2752,7 +2752,7 @@ class dependent_required_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class dependent_schemas_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -2830,7 +2830,7 @@ class dependent_schemas_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class property_names_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -2915,7 +2915,7 @@ class property_names_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class dependencies_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -2988,7 +2988,7 @@ class dependencies_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class max_contains_keyword : public keyword_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using walk_reporter_type =
@@ -3032,7 +3032,7 @@ class max_contains_keyword : public keyword_base<Json> {
 
 // minItems
 
-template <class Json>
+template <typename Json>
 class min_contains_keyword : public keyword_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -3076,7 +3076,7 @@ class min_contains_keyword : public keyword_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class contains_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -3232,7 +3232,7 @@ class contains_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class items_keyword : public keyword_base<Json> {
   using keyword_validator_type = std::unique_ptr<keyword_validator<Json>>;
   using schema_validator_type =
@@ -3338,7 +3338,7 @@ class items_keyword : public keyword_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class prefix_items_validator : public keyword_validator_base<Json> {
   using schema_validator_type =
       typename schema_validator<Json>::schema_validator_type;
@@ -3464,7 +3464,7 @@ class prefix_items_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class unevaluated_properties_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;
@@ -3565,7 +3565,7 @@ class unevaluated_properties_validator : public keyword_validator_base<Json> {
   }
 };
 
-template <class Json>
+template <typename Json>
 class unevaluated_items_validator : public keyword_validator_base<Json> {
   using keyword_validator_type =
       typename keyword_validator<Json>::keyword_validator_type;

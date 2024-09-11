@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -16,12 +16,13 @@
 
 #include "./encode_traits.hpp"
 #include "./json_cursor.hpp"
+#include "basic_json.hpp"
 
 namespace jsoncons {
 
 // to string
 
-template <class T, class CharContainer>
+template <typename T, typename CharContainer>
 typename std::enable_if<extension_traits::is_basic_json<T>::value &&
                         extension_traits::is_back_insertable_char_container<
                             CharContainer>::value>::type
@@ -43,7 +44,7 @@ encode_json(const T& val, CharContainer& cont,
   }
 }
 
-template <class T, class CharContainer>
+template <typename T, typename CharContainer>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value &&
                         extension_traits::is_back_insertable_char_container<
                             CharContainer>::value>::type
@@ -67,7 +68,7 @@ encode_json(const T& val, CharContainer& cont,
 
 // to stream
 
-template <class T, class CharT>
+template <typename T, typename CharT>
 typename std::enable_if<extension_traits::is_basic_json<T>::value>::type
 encode_json(const T& val, std::basic_ostream<CharT>& os,
             const basic_json_encode_options<CharT>& options =
@@ -82,7 +83,7 @@ encode_json(const T& val, std::basic_ostream<CharT>& os,
   }
 }
 
-template <class T, class CharT>
+template <typename T, typename CharT>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value>::type
 encode_json(const T& val, std::basic_ostream<CharT>& os,
             const basic_json_encode_options<CharT>& options =
@@ -99,7 +100,8 @@ encode_json(const T& val, std::basic_ostream<CharT>& os,
 
 // to string with allocator_set
 
-template <class T, class CharContainer, class Allocator, class TempAllocator>
+template <typename T, typename CharContainer, typename Allocator,
+          typename TempAllocator>
 typename std::enable_if<extension_traits::is_basic_json<T>::value &&
                         extension_traits::is_back_insertable_char_container<
                             CharContainer>::value>::type
@@ -124,7 +126,8 @@ encode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
   }
 }
 
-template <class T, class CharContainer, class Allocator, class TempAllocator>
+template <typename T, typename CharContainer, typename Allocator,
+          typename TempAllocator>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value &&
                         extension_traits::is_back_insertable_char_container<
                             CharContainer>::value>::type
@@ -151,7 +154,8 @@ encode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
 
 // to stream with allocator_set
 
-template <class T, class CharT, class Allocator, class TempAllocator>
+template <typename T, typename CharT, typename Allocator,
+          typename TempAllocator>
 typename std::enable_if<extension_traits::is_basic_json<T>::value>::type
 encode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
             const T& val, std::basic_ostream<CharT>& os,
@@ -169,7 +173,8 @@ encode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
   }
 }
 
-template <class T, class CharT, class Allocator, class TempAllocator>
+template <typename T, typename CharT, typename Allocator,
+          typename TempAllocator>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value>::type
 encode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
             const T& val, std::basic_ostream<CharT>& os,
@@ -189,7 +194,7 @@ encode_json(const allocator_set<Allocator, TempAllocator>& alloc_set,
 
 // to encoder
 
-template <class T, class CharT>
+template <typename T, typename CharT>
 void encode_json(const T& val, basic_json_visitor<CharT>& encoder) {
   std::error_code ec;
   encode_traits<T, CharT>::encode(val, encoder, basic_json<CharT>(), ec);
@@ -201,7 +206,7 @@ void encode_json(const T& val, basic_json_visitor<CharT>& encoder) {
 
 // encode_json_pretty
 
-template <class T, class CharContainer>
+template <typename T, typename CharContainer>
 typename std::enable_if<extension_traits::is_basic_json<T>::value &&
                         extension_traits::is_back_insertable_char_container<
                             CharContainer>::value>::type
@@ -217,7 +222,7 @@ encode_json_pretty(
   val.dump(encoder);
 }
 
-template <class T, class CharContainer>
+template <typename T, typename CharContainer>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value &&
                         extension_traits::is_back_insertable_char_container<
                             CharContainer>::value>::type
@@ -232,7 +237,7 @@ encode_json_pretty(
   encode_json(val, encoder);
 }
 
-template <class T, class CharT>
+template <typename T, typename CharT>
 typename std::enable_if<extension_traits::is_basic_json<T>::value>::type
 encode_json_pretty(const T& val, std::basic_ostream<CharT>& os,
                    const basic_json_encode_options<CharT>& options =
@@ -241,7 +246,7 @@ encode_json_pretty(const T& val, std::basic_ostream<CharT>& os,
   val.dump(encoder);
 }
 
-template <class T, class CharT>
+template <typename T, typename CharT>
 typename std::enable_if<!extension_traits::is_basic_json<T>::value>::type
 encode_json_pretty(const T& val, std::basic_ostream<CharT>& os,
                    const basic_json_encode_options<CharT>& options =
@@ -252,7 +257,7 @@ encode_json_pretty(const T& val, std::basic_ostream<CharT>& os,
 
 // legacy
 
-template <class T, class CharContainer>
+template <typename T, typename CharContainer>
 void encode_json(const T& val, CharContainer& cont, indenting indent) {
   if (indent == indenting::indent) {
     encode_json_pretty(val, cont);
@@ -261,7 +266,7 @@ void encode_json(const T& val, CharContainer& cont, indenting indent) {
   }
 }
 
-template <class T, class CharT>
+template <typename T, typename CharT>
 void encode_json(const T& val, std::basic_ostream<CharT>& os,
                  indenting indent) {
   if (indent == indenting::indent) {

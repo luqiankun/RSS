@@ -1,4 +1,4 @@
-// Copyright 2013-2023 Daniel Parker
+// Copyright 2013-2024 Daniel Parker
 // Distributed under the Boost license, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -16,11 +16,12 @@
 #include <vector>
 
 #include "./json_exception.hpp"
-#include "./json_object.hpp"
 #include "./json_visitor.hpp"
+#include "json_object.hpp"
+
 namespace jsoncons {
 
-template <class Json, class TempAllocator = std::allocator<char>>
+template <typename Json, typename TempAllocator = std::allocator<char>>
 class json_decoder final : public basic_json_visitor<typename Json::char_type> {
  public:
   using char_type = typename Json::char_type;
@@ -93,13 +94,6 @@ class json_decoder final : public basic_json_visitor<typename Json::char_type> {
     structure_stack_.emplace_back(structure_type::root_t, 0);
   }
 
-#if !defined(JSONCONS_NO_DEPRECATED)
-  JSONCONS_DEPRECATED_MSG(
-      "Instead, use json_decoder(allocator, temp_allocator)")
-  json_decoder(result_allocator_arg_t, const allocator_type& alloc,
-               const temp_allocator_type& temp_alloc = temp_allocator_type())
-      : json_decoder(alloc, temp_alloc) {}
-#endif
   void reset() {
     is_valid_ = false;
     index_ = 0;
@@ -115,11 +109,6 @@ class json_decoder final : public basic_json_visitor<typename Json::char_type> {
     is_valid_ = false;
     return std::move(result_);
   }
-
-#if !defined(JSONCONS_NO_DEPRECATED)
-  JSONCONS_DEPRECATED_MSG("Instead, use get_result()")
-  Json& root() { return result_; }
-#endif
 
  private:
   void visit_flush() override {}
