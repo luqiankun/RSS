@@ -4,14 +4,13 @@
 #include <queue>
 #include <stack>
 
-namespace kernel {
-namespace planner {
+namespace kernel::planner {
 #if defined(_MSC_VER)
 // 防止包含window.h中的宏定义冲突
 #undef max
 #undef min
 #endif
-void Solver::solver(const VertexPtr& begin) {
+void Solver::solver(const VertexPtr &begin) {
   this->begin_node = begin;
   if (begin_node == nullptr) {
     return;
@@ -29,7 +28,7 @@ void Solver::solver(const VertexPtr& begin) {
       open_list.pop();
       cur_node->type = AType::ATYPE_CLOSED;
       // 获取相邻的点
-      for (auto& x : cur_node->next_node) {
+      for (auto &x : cur_node->next_node) {
         if (x.lock()->type == AType::ATYPE_CLOSED ||
             x.lock()->type == AType::ATYPE_BARRIER) {
           continue;
@@ -61,7 +60,7 @@ void Solver::solver(const VertexPtr& begin) {
     // CLOG(INFO, planner_log) << "planner solver path end";
   }
 }
-std::vector<std::vector<VertexPtr>> Solver::get_paths(const VertexPtr& end) {
+std::vector<std::vector<VertexPtr>> Solver::get_paths(const VertexPtr &end) {
   end_node = end;
   std::stack<VertexPtr> stack;
   stack.push(end_node);
@@ -69,7 +68,7 @@ std::vector<std::vector<VertexPtr>> Solver::get_paths(const VertexPtr& end) {
   std::vector<std::vector<VertexPtr>> paths;
   // 前序便利
   while (!stack.empty()) {
-    auto& x = stack.top();
+    auto &x = stack.top();
     // std::cout << "cur " << x->name << "\n";
     path.emplace_back(x);
     stack.pop();
@@ -82,10 +81,10 @@ std::vector<std::vector<VertexPtr>> Solver::get_paths(const VertexPtr& end) {
           auto first = path.front();
           // 找前置点
           std::vector<VertexPtr> temp;
-          for (auto& p : temp_path) {
+          for (auto &p : temp_path) {
             bool check{false};
             temp.push_back(p);
-            for (auto& v : p->parents) {
+            for (auto &v : p->parents) {
               if (first == v.lock()) {
                 check = true;
                 break;
@@ -105,7 +104,7 @@ std::vector<std::vector<VertexPtr>> Solver::get_paths(const VertexPtr& end) {
       path.clear();
       continue;
     }
-    for (auto& t : x->parents) {
+    for (auto &t : x->parents) {
       stack.push(t.lock());
     }
   }
@@ -124,5 +123,4 @@ std::vector<std::vector<VertexPtr>> Solver::get_paths(const VertexPtr& end) {
   }
   return paths;
 }
-}  // namespace planner
-}  // namespace kernel
+}

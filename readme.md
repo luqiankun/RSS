@@ -1,4 +1,5 @@
 ----
+
 ### 编译
 
 依赖：
@@ -20,7 +21,7 @@ ubuntu 安装依赖
 mkdir build
 cd build
 mkdir install
-cmake -DTEST=ON -DCMAKE_INSTALL_PREFIX=./install .. 
+cmake -DTEST=ON -DCMAKE_INSTALL_PREFIX=./install ..
 make install -j4
 ```
 
@@ -77,33 +78,33 @@ ls
 不同的tcs:preferredAdapterClass对应不同的车辆模型
 使用虚拟车辆注意修改初始点和停靠点
 ```xml
-    <vehicle name="Vehicle-0005" length="1000" energyLevelCritical="30" energyLevelGood="90"
-        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
-        maxReverseVelocity="1000">
-        <property name="tcs:preferredAdapterClass"
-            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
-        <property name="loopback:initialPosition" value="P7" />
-        <property name="tcs:preferredParkingPosition" value="P7" />
-        <vehicleLayout color="#FF00FF" />
-    </vehicle>
+<vehicle name="Vehicle-0005" length="1000" energyLevelCritical="30" energyLevelGood="90"
+energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+maxReverseVelocity="1000">
+<property name="tcs:preferredAdapterClass"
+value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+<property name="loopback:initialPosition" value="P7" />
+<property name="tcs:preferredParkingPosition" value="P7" />
+<vehicleLayout color="#FF00FF" />
+</vehicle>
 ```
 使用vda车辆注意修改车辆属性中的MQTT代理的ip(暂定)
 ```xml
- <vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
-        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
-        maxReverseVelocity="1000">
-        <property name="tcs:preferredAdapterClass"
-            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
-        <property name="vda5050:interfaceName" value="uagv" />
-        <property name="vda5050:manufacturer" value="rw" />
-        <property name="vda5050:minVisualizationInterval" value="1000" />
-        <property name="vda5050:orderQueueSize" value="2" />
-        <property name="vda5050:serialNumber" value="tx4" />
-        <property name="vda5050:version" value="2.0" />
-        <property name="vda5050:ip" value="192.168.0.39" />
-        <property name="vda5050:port" value="1883" />
-        <vehicleLayout color="#FFFF00" />
-    </vehicle>
+<vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
+energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+maxReverseVelocity="1000">
+<property name="tcs:preferredAdapterClass"
+value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+<property name="vda5050:interfaceName" value="uagv" />
+<property name="vda5050:manufacturer" value="rw" />
+<property name="vda5050:minVisualizationInterval" value="1000" />
+<property name="vda5050:orderQueueSize" value="2" />
+<property name="vda5050:serialNumber" value="tx4" />
+<property name="vda5050:version" value="2.0" />
+<property name="vda5050:ip" value="192.168.0.39" />
+<property name="vda5050:port" value="1883" />
+<vehicleLayout color="#FFFF00" />
+</vehicle>
 ```
 
 ![view](imgs/upload.png)
@@ -153,94 +154,94 @@ body config中的map.xml内容
 上传模型文件内容格式示例：
 - Point 路径点
 ```xml
- <point name="Point-0091" xPosition="77250" yPosition="-70950" zPosition="0"
-        vehicleOrientationAngle="NaN" type="HALT_POSITION">
-        <outgoingPath name="Point-0091 --- Point-0005" />
-        <pointLayout xPosition="77250" yPosition="-70950" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0" />
- </point>
+<point name="Point-0091" xPosition="77250" yPosition="-70950" zPosition="0"
+vehicleOrientationAngle="NaN" type="HALT_POSITION">
+<outgoingPath name="Point-0091 --- Point-0005" />
+<pointLayout xPosition="77250" yPosition="-70950" xLabelOffset="-10" yLabelOffset="-20"
+layerId="0" />
+</point>
 ```
 - Path 路径点组成的路线
 ```xml
- <path name="Point-0027 --- Point-0036" sourcePoint="Point-0027" destinationPoint="Point-0036"
-        length="10351" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-        <property name="vda5050:action.01" value="Door" />
-        <property name="vda5050:action.01.blockingType" value="SOFT" />
-        <property name="vda5050:action.01.parameter.script" value="robot_pose" />
-        <property name="vda5050:action.01.when" value="ORDER_START" />
-        <property name="vda5050:action.02" value="Door" />
-        <property name="vda5050:action.02.blockingType" value="NONE" />
-        <property name="vda5050:action.02.parameter.script" value="robot_pose" />
-        <property name="vda5050:action.02.when" value="ORDER_END" />
-    </path>
-     <path name="Point-0090 --- Point-0004" sourcePoint="Point-0090" destinationPoint="Point-0004"
-        length="7250" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0" />
-        <peripheralOperation completionRequired="true" executionTrigger="AFTER_ALLOCATION"
-            locationName="Location-0001" name="up" />
-        <peripheralOperation completionRequired="false" executionTrigger="AFTER_MOVEMENT"
-            locationName="Location-0001" name="down" />
-    </path>
+<path name="Point-0027 --- Point-0036" sourcePoint="Point-0027" destinationPoint="Point-0036"
+length="10351" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+<pathLayout connectionType="DIRECT" layerId="0" />
+<property name="vda5050:action.01" value="Door" />
+<property name="vda5050:action.01.blockingType" value="SOFT" />
+<property name="vda5050:action.01.parameter.script" value="robot_pose" />
+<property name="vda5050:action.01.when" value="ORDER_START" />
+<property name="vda5050:action.02" value="Door" />
+<property name="vda5050:action.02.blockingType" value="NONE" />
+<property name="vda5050:action.02.parameter.script" value="robot_pose" />
+<property name="vda5050:action.02.when" value="ORDER_END" />
+</path>
+<path name="Point-0090 --- Point-0004" sourcePoint="Point-0090" destinationPoint="Point-0004"
+length="7250" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+<pathLayout connectionType="DIRECT" layerId="0" />
+<peripheralOperation completionRequired="true" executionTrigger="AFTER_ALLOCATION"
+locationName="Location-0001" name="up" />
+<peripheralOperation completionRequired="false" executionTrigger="AFTER_MOVEMENT"
+locationName="Location-0001" name="down" />
+</path>
 ```
 - Location 操作点,停靠点
 ```xml
- <location name="Location-0001" xPosition="32600" yPosition="-57700" zPosition="0" locked="false"
-        type="LIFT">
-        <link point="Point-0038" />
-        <property name="tcs:defaultLocationSymbol" value="DEFAULT" />
-        <locationLayout xPosition="32600" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
-            locationRepresentation="DEFAULT" layerId="0" />
-    </location>
+<location name="Location-0001" xPosition="32600" yPosition="-57700" zPosition="0" locked="false"
+type="LIFT">
+<link point="Point-0038" />
+<property name="tcs:defaultLocationSymbol" value="DEFAULT" />
+<locationLayout xPosition="32600" yPosition="-57700" xLabelOffset="-10" yLabelOffset="-20"
+locationRepresentation="DEFAULT" layerId="0" />
+</location>
 ```
 - Vehicle 车辆
 ```xml
-    <vehicle name="Vehicle-0003" length="1000" energyLevelCritical="30" energyLevelGood="90"
-        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
-        maxReverseVelocity="1000" envelope="3A">
-        <property name="tcs:preferredAdapterClass"
-            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
-        <property name="vda5050:interfaceName" value="uagv" />
-        <property name="vda5050:manufacturer" value="rw" />
-        <property name="vda5050:minVisualizationInterval" value="1000" />
-        <property name="vda5050:orderQueueSize" value="2" />
-        <property name="vda5050:serialNumber" value="tx3" />
-        <property name="vda5050:version" value="2.0" />
-        <property name="vda5050:ip" value="192.168.0.39" />
-        <property name="vda5050:port" value="1883" />
-        <vehicleLayout color="#00FFFF" />
-    </vehicle>
+<vehicle name="Vehicle-0003" length="1000" energyLevelCritical="30" energyLevelGood="90"
+energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+maxReverseVelocity="1000" envelope="3A">
+<property name="tcs:preferredAdapterClass"
+value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+<property name="vda5050:interfaceName" value="uagv" />
+<property name="vda5050:manufacturer" value="rw" />
+<property name="vda5050:minVisualizationInterval" value="1000" />
+<property name="vda5050:orderQueueSize" value="2" />
+<property name="vda5050:serialNumber" value="tx3" />
+<property name="vda5050:version" value="2.0" />
+<property name="vda5050:ip" value="192.168.0.39" />
+<property name="vda5050:port" value="1883" />
+<vehicleLayout color="#00FFFF" />
+</vehicle>
 ```
 - Block 规则区域
 ```xml
- <block name="Block-0006" type="SINGLE_VEHICLE_ONLY">
-        <member name="Point-0079" />
-        <member name="Point-0079 --- Point-0080" />
-        <member name="Point-0080" />
-        <member name="Point-0085" />
-        <member name="Point-0085 --- Point-0079" />
-        <blockLayout color="#9900CC" />
-    </block>
+<block name="Block-0006" type="SINGLE_VEHICLE_ONLY">
+<member name="Point-0079" />
+<member name="Point-0079 --- Point-0080" />
+<member name="Point-0080" />
+<member name="Point-0085" />
+<member name="Point-0085 --- Point-0079" />
+<blockLayout color="#9900CC" />
+</block>
 ```
 - LocationType 操作点类型
 ```xml
- <locationType name="LIFT">
-        <allowedPeripheralOperation name="up" />
-        <allowedPeripheralOperation name="down" />
-        <property name="tcs:defaultLocationTypeSymbol" value="NONE" />
-        <locationTypeLayout locationRepresentation="NONE" />
-    </locationType>
-    <locationType name="Transfer">
-        <allowedOperation name="NOP" />
-        <allowedOperation name="pick" />
-        <allowedOperation name="drop" />
-        <property name="tcs:defaultLocationTypeSymbol" value="LOAD_TRANSFER_ALT_2" />
-        <property name="vda5050:destinationAction.drop.parameter.angle" value="1.57" />
-        <property name="vda5050:destinationAction.drop.parameter.script" value="robot_rotate" />
-        <property name="vda5050:destinationAction.pick.parameter.angle" value="1.57" />
-        <property name="vda5050:destinationAction.pick.parameter.script" value="robot_rotate" />
-        <locationTypeLayout locationRepresentation="LOAD_TRANSFER_ALT_2" />
-    </locationType>
+<locationType name="LIFT">
+<allowedPeripheralOperation name="up" />
+<allowedPeripheralOperation name="down" />
+<property name="tcs:defaultLocationTypeSymbol" value="NONE" />
+<locationTypeLayout locationRepresentation="NONE" />
+</locationType>
+<locationType name="Transfer">
+<allowedOperation name="NOP" />
+<allowedOperation name="pick" />
+<allowedOperation name="drop" />
+<property name="tcs:defaultLocationTypeSymbol" value="LOAD_TRANSFER_ALT_2" />
+<property name="vda5050:destinationAction.drop.parameter.angle" value="1.57" />
+<property name="vda5050:destinationAction.drop.parameter.script" value="robot_rotate" />
+<property name="vda5050:destinationAction.pick.parameter.angle" value="1.57" />
+<property name="vda5050:destinationAction.pick.parameter.script" value="robot_rotate" />
+<locationTypeLayout locationRepresentation="LOAD_TRANSFER_ALT_2" />
+</locationType>
 ```
 
 如果操作成功会显示地图
@@ -252,11 +253,11 @@ body config中的map.xml内容
 ### 打开车辆客户端
 
 #### 虚拟车辆
- 通过配置模型文件车辆“intendedVehicle”属性
- 上传模型后自动加载虚拟车辆，不需要另外开启客户端
- 虚拟车辆可以下单
+通过配置模型文件车辆“intendedVehicle”属性
+上传模型后自动加载虚拟车辆，不需要另外开启客户端
+虚拟车辆可以下单
 
-#### vda模拟车辆 
+#### vda模拟车辆
 需要另外开启测试车辆客户端
 单辆车
 ```
@@ -322,13 +323,13 @@ body 订单具体内容
 
 当前
 ```
-      NOP,     // 啥也不干
-      pick,    // 去某location load
-      drop,  // 去某location unload
-      MOVE,    // 去某point,并停在那里，未完成
-      Charge,  // 充电
-      CLOSE, //关门
-      OPEN, //开门
+NOP,     // 啥也不干
+pick,    // 去某location load
+drop,  // 去某location unload
+MOVE,    // 去某point,并停在那里，未完成
+Charge,  // 充电
+CLOSE, //关门
+OPEN, //开门
 ```
 其中close和open是路径属性中的定义的动作自动下发，其他的可以由运输订单来下发
 如果路径点上定义了相应的动作，根据触发时机会发送动作到车辆

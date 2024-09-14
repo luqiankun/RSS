@@ -2,18 +2,15 @@
 
 #include "../../../include/kernel/planner/edge.hpp"
 
-namespace kernel {
-namespace planner {
+namespace kernel::planner {
 
 Vertex::Vertex(const std::shared_ptr<data::model::Point> &p)
-    : equal_point(p),
-      location(Eigen::Vector2i(p->position.x(), p->position.y())),
-      name(p->name),
-      layout(p->layout.position) {}
+    : location(Eigen::Vector2i(p->position.x(), p->position.y())),
+      layout(p->layout.position), equal_point(p), name(p->name) {}
 
 void Vertex::set_type(AType type) { this->type = type; }
 
-bool Vertex::operator==(Vertex vertex) {
+bool Vertex::operator==(const Vertex &vertex) const {
   if (vertex.location != this->location) {
     return false;
   }
@@ -70,11 +67,10 @@ std::optional<float> Vertex::get_g_value() {
   if (parents.empty()) {
     return std::nullopt;
   }
-  auto parent = this->parents.begin()->lock();
-  if (parent) {
+  if (auto parent = this->parents.begin()->lock()) {
     std::optional<float> x = (*this)[parent];
     if (x.has_value()) {
-      return std::optional(parent->G + x.value());
+      return {parent->G + x.value()};
     } else {
       return std::nullopt;
     }
@@ -82,5 +78,4 @@ std::optional<float> Vertex::get_g_value() {
     return std::nullopt;
   }
 }
-}  // namespace planner
-}  // namespace kernel
+}

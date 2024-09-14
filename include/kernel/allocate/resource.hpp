@@ -23,11 +23,11 @@ class ResourceManager : public RSSObject {
   enum class ResType { Point = 0, Location = 1, Err = 2, Path = 3 };
   ~ResourceManager() { CLOG(INFO, allocate_log) << name << " close\n"; }
   bool claim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
-  bool allocate(std::vector<TCSResourcePtr>, ClientPtr);
+  bool allocate(std::vector<TCSResourcePtr>,const ClientPtr&);
   bool unclaim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
   bool free(const std::vector<TCSResourcePtr>&, const ClientPtr&);
-  PointPtr get_recent_park_point(PointPtr);
-  LocationPtr get_recent_charge_loc(PointPtr);
+  PointPtr get_recent_park_point(const PointPtr&) const;
+  LocationPtr get_recent_charge_loc(const PointPtr&) const;
   std::shared_ptr<data::order::Route> paths_to_route(std::vector<PointPtr> ps);
   std::pair<ResType, std::shared_ptr<RSSResource>> find(
       const std::string& name);

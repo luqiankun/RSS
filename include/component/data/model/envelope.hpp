@@ -3,30 +3,27 @@
 #include <Eigen/Eigen>
 
 #include "../../rssresource.hpp"
-namespace data {
-namespace model {
+namespace data::model {
 class Envelope : public RSSResource {
- public:
+public:
   using RSSResource ::RSSResource;
   using Vertex = Eigen::Vector2f;
-  explicit Envelope(const std::string& name) : RSSResource(name) {}
-  inline void add_vertex(double x, double y) {
-    vertexs.push_back(Eigen::Vector2f(x, y));
-  }
-  bool collide(const Envelope& other) const {
+  explicit Envelope(const std::string &name) : RSSResource(name) {}
+  inline void add_vertex(double x, double y) { vertexs.emplace_back(x, y); }
+  [[nodiscard]] bool collide(const Envelope &other) const {
     auto it = std::any_of(vertexs.begin(), vertexs.end(),
-                          [&](const Vertex& v) { return other.inside(v); });
+                          [&](const Vertex &v) { return other.inside(v); });
     if (it) {
       return true;
     }
     auto if_it = std::any_of(other.vertexs.begin(), other.vertexs.end(),
-                             [&](const Vertex& v) { return inside(v); });
+                             [&](const Vertex &v) { return inside(v); });
     if (if_it) {
       return true;
     }
     return false;
   }
-  bool inside(const Vertex& p) const {
+  [[nodiscard]] bool inside(const Vertex &p) const {
     bool flag = false;
     int n = vertexs.size() - 1;
     for (int i = 0; i < n; ++i) {
@@ -59,9 +56,8 @@ class Envelope : public RSSResource {
     return flag;
   }
 
- public:
+public:
   std::vector<Vertex> vertexs;
 };
-}  // namespace model
-}  // namespace data
+} // namespace data::model
 #endif

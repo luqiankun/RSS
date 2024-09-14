@@ -2,8 +2,7 @@
 
 #include "../../../include/component/util/tools.hpp"
 #include "../../../include/kernel/allocate/resource.hpp"
-namespace kernel {
-namespace planner {
+namespace kernel::planner {
 #if defined(_MSC_VER)
 #undef max
 #undef min
@@ -16,7 +15,7 @@ Planner::~Planner() { CLOG(INFO, planner_log) << "Planner close\n"; }
 
 void Planner::rebuild() {
   cpu_timer t("generate map");
-  // std::cout << "begining generate map\n";
+  // std::cout << "beginning generate map\n";
   solver = std::make_unique<Solver>();
   vertexs.clear();
   consoles.clear();
@@ -27,7 +26,7 @@ void Planner::rebuild() {
   }
   // std::cout << "generate " << vertexs.size() << " vertex\n";
   for (auto &x : res.lock()->paths) {
-    bool ban{false};  // 路段是否禁止
+    bool ban{false}; // 路段是否禁止
     if (x->locked) {
       ban = true;
     }
@@ -59,14 +58,15 @@ void Planner::rebuild() {
     }
   }
   // std::cout << "generate " << edges.size() << " edge\n";
-  for (auto &x : res.lock()->locations) {
+  for (const auto &x : res.lock()->locations) {
     auto console = std::make_shared<Console>(
         Eigen::Vector2i(x->position.x(), x->position.y()), x->layout.position,
         x->name);
     VertexPtr link;
-    auto it = std::find_if(vertexs.begin(), vertexs.end(), [=](VertexPtr a) {
-      return a->equal_point == x->link.lock();
-    });
+    auto it =
+        std::find_if(vertexs.begin(), vertexs.end(), [=](const VertexPtr &a) {
+          return a->equal_point == x->link.lock();
+        });
     if (it != vertexs.end()) {
       link = *it;
     }
@@ -126,21 +126,19 @@ uint32_t Planner::calculate_turns(const std::vector<VertexPtr> &path,
     return 0;
   }
   std::vector<Eigen::Vector2i> edge_vec;
-  for (auto it = path.begin(); it != path.end() - 1; it++) {
-    auto from = *it;
-    auto to = *(it + 1);
-    edge_vec.emplace_back(
-        Eigen::Vector2i(to->location.x() - from->location.x(),
-                        to->location.y() - from->location.y()));
+  for (auto it = path.begin(); it != path.end() - 1; ++it) {
+    const auto &from = *it;
+    const auto to = *(it + 1);
+    edge_vec.emplace_back(to->location.x() - from->location.x(),
+                          to->location.y() - from->location.y());
   }
   if (edge_vec.size() < 2) {
     return 0;
   }
   uint32_t con{0};
-  for (auto it = edge_vec.begin(); it != edge_vec.end() - 1; it++) {
-    long cos = (*it).dot(*(it + 1)) / ((*it).norm() * (*(it + 1)).norm());
-    float angle = std::fabs(std::acos(cos));
-    if (angle > th) {
+  for (auto it = edge_vec.begin(); it != edge_vec.end() - 1; ++it) {
+    const long cos = it->dot(*(it + 1)) / (it->norm() * ((it + 1))->norm());
+    if (const double angle = std::fabs(std::acos(cos)); angle > th) {
       con++;
     }
   }
@@ -170,7 +168,7 @@ Planner::find_paths_with_vertex(
     CLOG(WARNING, planner_log) << "The starting point and"
                                   "the ending point are the same\n ";
     res.emplace_back(std::pair<std::vector<VertexPtr>, double>(
-        std::vector<VertexPtr>{st}, 0));
+        {std::vector<VertexPtr>{st}, 0}));
     return res;
   }
   {
@@ -203,8 +201,8 @@ Planner::find_paths_with_vertex(
         }
         ss << "]\n";
         if (x.back()->F != std::numeric_limits<float>::max()) {
-          res.push_back(
-              std::pair<std::vector<VertexPtr>, double>(temp, temp.back()->F));
+          res.emplace_back(std::pair<std::vector<VertexPtr>, double>(
+              {temp, temp.back()->F}));
         } else {
           ss << "this path is not open";
         }
@@ -272,10 +270,10 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
         // ss << "| path:[";
         temp.reserve(x.size());
         for (auto &p : x) {
-          if (p == *(x.end() - 1)) {
-            // ss << p->name << "";
-          } else {
+          if (p != *(x.end() - 1)) {
             // ss << p->name << " -> ";
+          } else {
+            // ss << p->name << "";
           }
           temp.push_back(p->equal_point);
         }
@@ -302,12 +300,12 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
 
 std::vector<std::vector<std::shared_ptr<data::model::Point>>>
 Planner::to_model_path(
-    std::vector<std::pair<std::vector<VertexPtr>, double>> src) {
+    std::vector<std::pair<std::vector<VertexPtr>, double>> src) const {
   std::vector<std::vector<std::shared_ptr<data::model::Point>>> res;
   std::transform(src.begin(), src.end(), std::back_inserter(res), [](auto &x) {
     std::vector<std::shared_ptr<data::model::Point>> temp;
     std::transform(x.first.begin(), x.first.end(), std::back_inserter(temp),
-                   [](const auto &x) { return x->equal_point; });
+                   [](const auto &x_) { return x_->equal_point; });
     return temp;
   });
   return res;
@@ -369,23 +367,24 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
     //  CLOG(INFO, planner_log) << "find " << temp.size() << " s paths\n";
     if (!temp.empty()) {
       std::sort(temp.begin(), temp.end(),
-                [](std::pair<std::vector<VertexPtr>, double> a,
-                   std::pair<std::vector<VertexPtr>, double> b) {
+                [](const std::pair<std::vector<VertexPtr>, double> &a,
+                   const std::pair<std::vector<VertexPtr>, double> &b) {
                   return a.second < b.second;
                 });
-      auto last = std::unique(temp.begin(), temp.end(),
-                              [](std::pair<std::vector<VertexPtr>, double> a,
-                                 std::pair<std::vector<VertexPtr>, double> b) {
-                                if (a.first.size() != b.first.size()) {
-                                  return false;
-                                }
-                                for (int i = 0; i < a.first.size(); ++i) {
-                                  if (a.first[i]->name != b.first[i]->name) {
-                                    return false;
-                                  }
-                                }
-                                return true;
-                              });
+      auto last =
+          std::unique(temp.begin(), temp.end(),
+                      [](const std::pair<std::vector<VertexPtr>, double> &a,
+                         const std::pair<std::vector<VertexPtr>, double> &b) {
+                        if (a.first.size() != b.first.size()) {
+                          return false;
+                        }
+                        for (int i = 0; i < a.first.size(); ++i) {
+                          if (a.first[i]->name != b.first[i]->name) {
+                            return false;
+                          }
+                        }
+                        return true;
+                      });
       temp.erase(last, temp.end());
       paths.push_back(temp.front());
     }
@@ -398,7 +397,8 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
       ss << "| path:[";
       for (auto &p : x.first) {
         if (p == *(x.first.end() - 1)) {
-          ss << p->name << "" << "<" << x.second << ">";
+          ss << p->name << ""
+             << "<" << x.second << ">";
         } else {
           ss << p->name << "<" << p->F << "> -> ";
         }
@@ -415,5 +415,4 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
   }
 }
 
-}  // namespace planner
-}  // namespace kernel
+}

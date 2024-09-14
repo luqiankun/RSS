@@ -3,13 +3,12 @@
 #include <Eigen/Eigen>
 
 #include "../../rssresource.hpp"
-namespace data {
-namespace model {
+namespace data::model {
 using namespace Eigen;
 class Path;
 class Location;
 class Point : public RSSResource {
- public:
+public:
   using RSSResource::RSSResource;
   struct Layout {
     Vector2i position{0, 0};
@@ -39,7 +38,7 @@ class Point : public RSSResource {
       return "UNKNOWN";
     }
   }
-  static Type new_type(const std::string& name) {
+  static Type new_type(const std::string &name) {
     if (name == "HALT_POSITION") {
       return Type::HALT_POSITION;
     } else if (name == "NORMAL_POSITION") {
@@ -55,8 +54,8 @@ class Point : public RSSResource {
     }
   }
 
- public:
-  Vector3i position{0, 0, 0};  // x y
+public:
+  Vector3i position{0, 0, 0}; // x y
   Layout layout;
   Type type{Type::UNKNOWN};
   double vehicle_orientation{NAN};
@@ -64,6 +63,5 @@ class Point : public RSSResource {
   std::vector<std::shared_ptr<Path>> outgoing_paths;
   std::vector<std::shared_ptr<Location>> attached_links;
 };
-}  // namespace model
-}  // namespace data
+} // namespace data::model
 #endif

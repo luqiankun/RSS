@@ -26,7 +26,7 @@ bool init_enable{false};
 std::string log_level{"info"};
 std::string init_xml_path{""};
 // mqtt value
-std::string mqtt_ip{"192.168.0.200"};
+std::string mqtt_ip{"192.168.0.39"};
 int mqtt_port{1883};
 
 // http value
@@ -36,9 +36,9 @@ int http_port{55200};
 
 std::regex reg{R"(^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$)"};
 
-void read_params(std::string path) {
-  Yaml::Node root;
+void read_params(const std::string &path) {
   try {
+    Yaml::Node root;
     Yaml::Parse(root, path.c_str());
     if (!root["httpserver"]["ip"].IsNone()) {
       http_ip = root["httpserver"]["ip"].As<std::string>();
@@ -83,13 +83,13 @@ void read_params(std::string path) {
       mqtt_port = root["rss"]["mqtt_addr"]["port"].As<int>();
     }
     CLOG(INFO, rss_log) << "read yaml param success\n";
-  } catch (Yaml::Exception& ec) {
-    CLOG(ERROR, rss_log) << "load param from <" << path << "> failed :" << " "
-                         << ec.Message() << ", will use deafult params.";
+  } catch (Yaml::Exception &ec) {
+    CLOG(ERROR, rss_log) << "load param from <" << path << "> failed :"
+                         << " " << ec.Message() << ", will use default params.";
   }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   el::Loggers::getLogger("rss");
   el::Loggers::getLogger("timer");
   el::Loggers::getLogger("order");
@@ -146,17 +146,17 @@ int main(int argc, char** argv) {
     try {
       auto dir_it = ghc::filesystem::directory_iterator(log_path);
       std::vector<ghc::filesystem::directory_entry> ns;
-      for (auto& x : dir_it) {
+      for (auto &x : dir_it) {
         if (!x.is_directory() && x.path().filename() != "tcs_main.log") {
           ns.push_back(x);
         }
       }
       std::sort(ns.begin(), ns.end(),
-                [](ghc::filesystem::directory_entry& a,
-                   ghc::filesystem::directory_entry& b) {
+                [](const ghc::filesystem::directory_entry &a,
+                   const ghc::filesystem::directory_entry &b) {
                   return a.last_write_time() < b.last_write_time();
                 });
-      for (auto& x : ns) {
+      for (auto &x : ns) {
         // LOG(INFO) << x.path().filename();
         logs_name.push_back(x.path().filename());
       }
@@ -165,12 +165,12 @@ int main(int argc, char** argv) {
         logs_name.pop_front();
         ghc::filesystem::remove(ghc::filesystem::path(log_path) / obj);
       }
-    } catch (std::exception& ec) {
+    } catch (std::exception &ec) {
       LOG(WARNING) << ec.what();
     }
   }
   el::Helpers::installPreRollOutCallback(
-      [&](const char* filename, std::size_t size) {
+      [&](const char *filename, std::size_t size) {
         auto dest = get_log_path(log_path);
         logs_name.push_back(dest);
         ghc::filesystem::copy(get_log_name(log_path), dest);
@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
   {
     std::smatch m;
     if (!std::regex_match(http_ip, reg)) {
-      CLOG(ERROR, rss_log) << "ip's format is wrong";
+      CLOG(ERROR, rss_log) << "ip is format is wrong";
       return -1;
     }
     srv->ip = http_ip;
@@ -198,58 +198,60 @@ int main(int argc, char** argv) {
 
   // bind
   {
-    srv->get_transport_order =
-        std::bind(&RSS::get_transport_order, rss, std::placeholders::_1);
-    srv->get_transport_orders =
-        std::bind(&RSS::get_transport_orders, rss, std::placeholders::_1);
+    srv->get_transport_order = std::bind(&RSS::get_transport_order,
+                                         std::ref(rss), std::placeholders::_1);
+    srv->get_transport_orders = std::bind(&RSS::get_transport_orders,
+                                          std::ref(rss), std::placeholders::_1);
     srv->post_transport_order =
-        std::bind(&RSS::post_transport_order, rss, std::placeholders::_1,
-                  std::placeholders::_2);
+        std::bind(&RSS::post_transport_order, std::ref(rss),
+                  std::placeholders::_1, std::placeholders::_2);
     srv->post_move_order =
-        std::bind(&RSS::post_move_order, rss, std::placeholders::_1,
+        std::bind(&RSS::post_move_order, std::ref(rss), std::placeholders::_1,
                   std::placeholders::_2);
     srv->post_transport_order_withdrawl = std::bind(
-        &RSS::post_transport_order_withdrawl, rss, std::placeholders::_1,
-        std::placeholders::_2, std::placeholders::_3);
-    srv->get_ordersequences =
-        std::bind(&RSS::get_ordersequences, rss, std::placeholders::_1);
-    srv->get_ordersequence =
-        std::bind(&RSS::get_ordersequence, rss, std::placeholders::_1);
+        &RSS::post_transport_order_withdrawl, std::ref(rss),
+        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    srv->get_ordersequences = std::bind(&RSS::get_ordersequences, std::ref(rss),
+                                        std::placeholders::_1);
+    srv->get_ordersequence = std::bind(&RSS::get_ordersequence, std::ref(rss),
+                                       std::placeholders::_1);
     srv->post_ordersequence =
-        std::bind(&RSS::post_ordersequence, rss, std::placeholders::_1,
-                  std::placeholders::_2);
+        std::bind(&RSS::post_ordersequence, std::ref(rss),
+                  std::placeholders::_1, std::placeholders::_2);
     srv->get_vehicles =
-        std::bind(&RSS::get_vehicles, rss, std::placeholders::_1);
-    srv->get_vehicle = std::bind(&RSS::get_vehicle, rss, std::placeholders::_1);
-    srv->post_vehicle_withdrawl =
-        std::bind(&RSS::post_vehicle_withdrawl, rss, std::placeholders::_1,
-                  std::placeholders::_2, std::placeholders::_3);
-    srv->get_model = std::bind(&RSS::get_model, rss);
-    srv->put_model = std::bind(&RSS::put_model, rss, std::placeholders::_1);
+        std::bind(&RSS::get_vehicles, std::ref(rss), std::placeholders::_1);
+    srv->get_vehicle =
+        std::bind(&RSS::get_vehicle, std::ref(rss), std::placeholders::_1);
+    srv->post_vehicle_withdrawl = std::bind(
+        &RSS::post_vehicle_withdrawl, std::ref(rss), std::placeholders::_1,
+        std::placeholders::_2, std::placeholders::_3);
+    srv->get_model = std::bind(&RSS::get_model, std::ref(rss));
+    srv->put_model =
+        std::bind(&RSS::put_model, std::ref(rss), std::placeholders::_1);
     srv->put_model_xml =
-        std::bind(&RSS::put_model_xml, rss, std::placeholders::_1);
+        std::bind(&RSS::put_model_xml, std::ref(rss), std::placeholders::_1);
     srv->put_path_locked =
-        std::bind(&RSS::put_path_locked, rss, std::placeholders::_1,
+        std::bind(&RSS::put_path_locked, std::ref(rss), std::placeholders::_1,
                   std::placeholders::_2);
     srv->put_location_locked =
-        std::bind(&RSS::put_location_locked, rss, std::placeholders::_1,
-                  std::placeholders::_2);
-    srv->get_view = std::bind(&RSS::get_view, rss);
+        std::bind(&RSS::put_location_locked, std::ref(rss),
+                  std::placeholders::_1, std::placeholders::_2);
+    srv->get_view = std::bind(&RSS::get_view, std::ref(rss));
     srv->put_vehicle_paused =
-        std::bind(&RSS::put_vehicle_paused, rss, std::placeholders::_1,
-                  std::placeholders::_2);
-    srv->post_reroute = std::bind(&RSS::post_reroute, rss);
+        std::bind(&RSS::put_vehicle_paused, std::ref(rss),
+                  std::placeholders::_1, std::placeholders::_2);
+    srv->post_reroute = std::bind(&RSS::post_reroute, std::ref(rss));
     srv->post_vheicle_reroute =
-        std::bind(&RSS::post_vehicle_reroute, rss, std::placeholders::_1,
-                  std::placeholders::_2);
+        std::bind(&RSS::post_vehicle_reroute, std::ref(rss),
+                  std::placeholders::_1, std::placeholders::_2);
     srv->put_vehicle_enabled =
-        std::bind(&::RSS::put_vehicle_enable, rss, std::placeholders::_1,
-                  std::placeholders::_2);
+        std::bind(&::RSS::put_vehicle_enable, std::ref(rss),
+                  std::placeholders::_1, std::placeholders::_2);
     srv->put_vehicle_integration_level =
-        std::bind(&::RSS::put_vehicle_integration_level, rss,
+        std::bind(&::RSS::put_vehicle_integration_level, std::ref(rss),
                   std::placeholders::_1, std::placeholders::_2);
     srv->post_vehicle_path_to_point =
-        std::bind(&::RSS::post_vehicle_path_to_point, rss,
+        std::bind(&::RSS::post_vehicle_path_to_point, std::ref(rss),
                   std::placeholders::_1, std::placeholders::_2);
   }
   std::thread th{[&] { srv->listen(); }};

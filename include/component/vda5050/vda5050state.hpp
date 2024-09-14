@@ -134,10 +134,10 @@ class ErrorRef {
 class Error {
  public:
   ErrorLevel error_level;
-  std::string error_type{};
+  std::string error_type{1};
   std::string error_description{};
   std::vector<ErrorRef> error_references;
-  Error() {}
+  Error() : error_level() {}
   explicit Error(jsoncons::json& obj)
       : error_type(obj["errorType"].as_string()) {
     auto level = obj["errorLevel"].as_string();
@@ -187,7 +187,7 @@ class BatteryState {
   double battery_voltage{0.0};
   int battery_health{100};
   uint32_t reach{0};
-  BatteryState() {}
+  BatteryState() : battery_charge(100), charging(false) {}
   explicit BatteryState(jsoncons::json& obj) {
     battery_charge = obj["batteryCharge"].as_double();
     charging = obj["charging"].as_bool();
@@ -221,7 +221,7 @@ class ActionState {
   std::string action_description{};
   std::string result_description{};
   ActionStatus action_status;
-  ActionState(){};
+  ActionState() : action_status(ActionStatus::WAITING){};
   explicit ActionState(jsoncons::json& obj)
       : action_id(obj["actionId"].as_string()) {
     auto status = obj["actionStatus"].as_string();
@@ -307,7 +307,7 @@ class Load {
       weight = obj["weight"].as_double();
     }
     if (obj.contains("boundingBoxReference")) {
-      BoundingBox box;
+      BoundingBox box{};
       box.x = obj["boundingBoxReference"]["x"].as_double();
       box.y = obj["boundingBoxReference"]["y"].as_double();
       box.z = obj["boundingBoxReference"]["z"].as_double();
@@ -384,11 +384,11 @@ class Velocity {
 
 class AgvPosition {
  public:
-  double x;
-  double y;
-  double theta;
+  double x{};
+  double y{};
+  double theta{};
   std::string map_id;
-  bool position_initialized;
+  bool position_initialized{};
   std::string map_description;
   std::optional<double> deviation_range;
   std::optional<double> localization_score;

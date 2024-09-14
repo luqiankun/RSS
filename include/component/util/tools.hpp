@@ -6,15 +6,16 @@
 #include <optional>
 #include <regex>
 #include <sstream>
+#include <utility>
 
 #include "../../../include/3rdparty/uuid/uuid.hpp"
 #include "../../3rdparty/log/easylogging++.h"
 constexpr auto timer_log{"timer"};
 
 class cpu_timer {
- public:
-  explicit cpu_timer(const std::string& n = "")
-      : name(n), start(std::chrono::steady_clock::now()) {}
+public:
+  explicit cpu_timer(std::string n = "")
+      : name(std::move(n)), start(std::chrono::steady_clock::now()) {}
   ~cpu_timer() {
     auto end = std::chrono::steady_clock::now();
     auto dur =
@@ -26,24 +27,24 @@ class cpu_timer {
                           << "(ms) " << us << "(us)\n";
   }
 
- private:
-  std::string name{""};
+private:
+  std::string name;
   std::chrono::time_point<std::chrono::steady_clock> start;
 };
 
 inline std::string get_time_fmt(std::chrono::system_clock::time_point t) {
-  auto tm = std::chrono::system_clock::to_time_t(t);
+  const auto tm = std::chrono::system_clock::to_time_t(t);
   std::stringstream time;
-  auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
-               t.time_since_epoch())
-               .count();
+  const auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
+                     t.time_since_epoch())
+                     .count();
   time << std::put_time(std::localtime(&tm), "%Y-%m-%dT%H:%M:%S.") << p % 1000
        << "Z";
   return time.str();
 }
 inline std::string get_date_fmt() {
-  auto t = std::chrono::system_clock::now();
-  auto tm = std::chrono::system_clock::to_time_t(t);
+  const auto t = std::chrono::system_clock::now();
+  const auto tm = std::chrono::system_clock::to_time_t(t);
   std::stringstream time;
   // auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
   //              t.time_since_epoch())
@@ -52,10 +53,11 @@ inline std::string get_date_fmt() {
   return time.str();
 }
 
-inline std::optional<std::chrono::system_clock::time_point> get_time_from_str(
-    const std::string& msg) {
-  std::regex match_reg{R"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{1,10}Z)"};
-  std::regex search_reg{
+inline std::optional<std::chrono::system_clock::time_point>
+get_time_from_str(const std::string &msg) {
+  const std::regex match_reg{
+      R"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{1,10}Z)"};
+  const std::regex search_reg{
       R"(((\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}).(\d{1,10})Z))"};
   if (!std::regex_match(msg, match_reg)) {
     return std::nullopt;
@@ -71,7 +73,7 @@ inline std::optional<std::chrono::system_clock::time_point> get_time_from_str(
     auto duration = std::chrono::seconds(timeSinceEpoch);
     auto time_point = std::chrono::system_clock::time_point(duration) + ms;
     return time_point;
-  } catch (std::exception& ec) {
+  } catch (std::exception &ec) {
     CLOG(ERROR, timer_log) << ec.what();
     return std::nullopt;
   }
@@ -93,7 +95,7 @@ inline static std::chrono::system_clock::time_point get_now_utc_time() {
                 .count() %
             1000;
   std::time_t currentTime = std::time(nullptr);
-  std::tm* localTm = std::gmtime(&currentTime);
+  std::tm *localTm = std::gmtime(&currentTime);
   std::time_t utcTime = std::mktime(localTm);
   auto p =
       std::chrono::time_point<std::chrono::system_clock>::clock::from_time_t(

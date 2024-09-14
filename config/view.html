@@ -6,32 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>rss_view</title>
     <script type="application/javascript">
-        class Queue {
-            constructor() {
-                this.items = {};
-                this.headIndex = 0;
-                this.tailIndex = 0;
-            }
-
-            enqueue(item) {
-                this.items[this.tailIndex] = item;
-                this.tailIndex++;
-            }
-
-            dequeue() {
-                const item = this.items[this.headIndex];
-                delete this.items[this.headIndex];
-                this.headIndex++;
-                return item;
-            }
-
-            peek() {
-                return this.items[this.headIndex];
-            }
-            get length() {
-                return this.tailIndex - this.headIndex;
-            }
-        }
         class Point {
             constructor(name, x, y, t) {
                 this.name = name;
@@ -41,6 +15,7 @@
 
             }
         }
+
         class Path {
             constructor(name, start, end, max_vel, max_res_vel, t, p) {
                 this.name = name;
@@ -53,6 +28,7 @@
                 this.ctrl_point = p
             }
         }
+
         class Location {
             constructor(name, x, y, link, t) {
                 this.name = name;
@@ -63,6 +39,7 @@
                 this.type = t;
             }
         }
+
         class Vehicle {
             constructor(name, x, y, level, res) {
                 this.name = name;
@@ -75,6 +52,7 @@
                 this.res = res
             }
         }
+
         class Block {
             constructor(obj) {
                 this.name = obj["name"];
@@ -82,14 +60,14 @@
                 this.member = obj['memberNames'];
             }
         }
+
         let visual_scale = 50
         let points = [];
         let paths = [];
         let locations = [];
         let vehicles = [];
         let blocks = [];
-        let orders = new Map();
-        let order_quence = new Queue();
+        let order_quence = [];
         let xmin = 0;
         let xman = 0;
         let ymin = 0;
@@ -108,6 +86,7 @@
         let timer_draw_vehlice = setInterval(() => {
             clearInterval(timer_draw_vehlice);
         }, 500)
+
         function add_wheel(ctx) {
             let canvas = document.getElementById(ctx);
             canvas.addEventListener('wheel', function (event) {
@@ -127,26 +106,28 @@
 
             });
         }
-        function format(date) {
-            if (!date) return;
-            var date2 = new Date(date);
-            var y = date2.getUTCFullYear();
-            var m = date2.getMonth() + 1;
-            m = m < 10 ? "θ" + m : m;
-            var d = date2.getDate();
-            d = d < 10 ? "θ" + d : d;
-            var h = date2.getHours();
-            h = h < 10 ? "θ" + h : h;
-            var minute = date2.getMinutes();
-            minute = minute < 10 ? "0" + minute : minute;
-            var sec = date2.getSeconds();
-            sec = sec < 10 ? "0" + sec : sec
-            var mseconds = date2.getMilliseconds(); //获取当前毫秒数（0 - 999）
-            mseconds = mseconds < 10 ? "0" + mseconds : mseconds;
-            return y + "-" + m + "-" + d + "T" + h + ":" + minute + ":" + sec + "." + mseconds + "Z";
-        }
+
+        // function format(date) {
+        //     if (!date) return;
+        //     var date2 = new Date(date);
+        //     var y = date2.getUTCFullYear();
+        //     var m = date2.getMonth() + 1;
+        //     m = m < 10 ? "θ" + m : m;
+        //     var d = date2.getDate();
+        //     d = d < 10 ? "θ" + d : d;
+        //     var h = date2.getHours();
+        //     h = h < 10 ? "θ" + h : h;
+        //     var minute = date2.getMinutes();
+        //     minute = minute < 10 ? "0" + minute : minute;
+        //     var sec = date2.getSeconds();
+        //     sec = sec < 10 ? "0" + sec : sec
+        //     var mseconds = date2.getMilliseconds(); //获取当前毫秒数（0 - 999）
+        //     mseconds = mseconds < 10 ? "0" + mseconds : mseconds;
+        //     return y + "-" + m + "-" + d + "T" + h + ":" + minute + ":" + sec + "." + mseconds + "Z";
+        // }
+
         function order(veh, dest, op) {
-            ord = {
+            return {
                 "incompleteName": false,
                 "dispensable": false,
                 "deadline": "2028-01-31T18:42:40.396Z",
@@ -158,17 +139,14 @@
                     {
                         "locationName": dest,
                         "operation": op,
-                        "properties": [
-                        ]
+                        "properties": []
                     }
                 ],
-                "properties": [
-                ],
-                "dependencies": [
-                ]
-            }
-            return ord;
+                "properties": [],
+                "dependencies": []
+            };
         }
+
         function add_mouse(ctx) {
             document.querySelector("body").style.cursor = "grab"
             let canvas = document.getElementById(ctx);
@@ -179,7 +157,7 @@
             canvas.addEventListener('mouseup', (event) => {
                 if (!is_running) return
                 if (mouse_flag) {
-                    if (event.button == 0) {
+                    if (event.button === 0) {
                         mouse_flag = false
                         document.querySelector("body").style.cursor = "grab"
                         for (const point of points) {
@@ -191,10 +169,9 @@
                                 let ip = document.getElementById("ip_btn").value;
                                 Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + crypto.randomUUID(), true);
                                 Http.onload = function () {
-                                    if (Http.readyState == 4 && Http.status == 200) {
+                                    if (Http.readyState === 4 && Http.status === 200) {
                                         console.log("send order ok");
-                                    }
-                                    else {
+                                    } else {
                                         console.log("send order err");
                                     }
                                 }
@@ -210,10 +187,9 @@
                                 let ip = document.getElementById("ip_btn").value;
                                 Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + crypto.randomUUID(), true);
                                 Http.onload = function () {
-                                    if (Http.readyState == 4 && Http.status == 200) {
+                                    if (Http.readyState === 4 && Http.status === 200) {
                                         console.log("send order ok");
-                                    }
-                                    else {
+                                    } else {
                                         console.log("send order err");
                                     }
                                 }
@@ -225,7 +201,7 @@
                     // console.log("-------", format(new Date().getTime()))
                 }
                 if (mouse_2_flag) {
-                    if (event.button == 2) {
+                    if (event.button === 2) {
                         mouse_2_flag = false
                         document.querySelector("body").style.cursor = "grab"
                     }
@@ -233,7 +209,7 @@
             });
             canvas.addEventListener('mousedown', (event) => {
                 if (!is_running) return
-                if (event.button == 0) {
+                if (event.button === 0) {
                     //左键
                     for (const veh of vehicles) {
                         let x = (veh.x - xmin) / resolution;
@@ -248,7 +224,7 @@
                         }
                     }
                     document.querySelector("body").style.cursor = "crosshair"
-                } else if (event.button == 2) {
+                } else if (event.button === 2) {
                     //右键
                     mouse_2_flag = true;
                     last_mouse_x = event.offsetX
@@ -309,7 +285,7 @@
             });
             canvas.addEventListener('dblclick', (event) => {
                 if (!is_running) return
-                if (event.button == 0) {
+                if (event.button === 0) {
                     let m_x = event.offsetX
                     let m_y = event.offsetY
                     for (const path of paths) {
@@ -345,11 +321,10 @@
                             let ip = document.getElementById("ip_btn").value;
                             req.open('PUT', "http://" + ip + url, true)
                             req.onload = function () {
-                                if (req.readyState == 4 && req.status == 200) {
+                                if (req.readyState === 4 && req.status === 200) {
                                     // console.log("send order ok");
                                     clicked()
-                                }
-                                else {
+                                } else {
                                     console.log("send order err");
                                 }
                             }
@@ -375,11 +350,10 @@
                             let ip = document.getElementById("ip_btn").value;
                             req.open('PUT', "http://" + ip + url, true)
                             req.onload = function () {
-                                if (req.readyState == 4 && req.status == 200) {
+                                if (req.readyState === 4 && req.status === 200) {
                                     // console.log("send order ok");
                                     clicked()
-                                }
-                                else {
+                                } else {
                                     console.log("send order err");
                                 }
                             }
@@ -390,6 +364,7 @@
                 }
             })
         }
+
         function get_img_limit() {
             let x_min = 9999999;
             let x_max = -9999999;
@@ -431,7 +406,7 @@
 
         function get_block_path(name) {
             for (let x of paths) {
-                if (name == x.name) {
+                if (name === x.name) {
                     return x;
                 }
             }
@@ -440,7 +415,7 @@
 
         function get_block_point(name) {
             for (let x of points) {
-                if (name == x.name) {
+                if (name === x.name) {
                     return x;
                 }
             }
@@ -449,20 +424,22 @@
 
         function get_point(name) {
             for (let x of points) {
-                if (x.name == name) {
+                if (x.name === name) {
                     return x;
                 }
             }
             return null
         }
+
         function get_location(name) {
             for (let x of locations) {
-                if (x.name == name) {
+                if (x.name === name) {
                     return x;
                 }
             }
             return null
         }
+
         function get_model() {
             if (is_running) {
                 is_running = false;
@@ -479,7 +456,6 @@
                 unconnect('map');
                 unconnect('Vehicle');
                 unconnect('Order');
-                orders.clear();
                 document.getElementById('ip_btn').value = "";
                 return
             }
@@ -487,12 +463,11 @@
             // console.log('http://' + ip + '/plantModel')
             Http.withCredentials = false;
             Http.onload = function () {
-                if (Http.readyState == 4 && Http.status == 200) {
+                if (Http.readyState === 4 && Http.status === 200) {
                     points = [];
                     paths = [];
                     locations = []
                     blocks = []
-                    orders.clear();
                     let model = JSON.parse(Http.responseText);
                     // console.log(model);
                     visual_scale = model["visualLayout"]["scaleX"]
@@ -544,12 +519,11 @@
                         get_order();
                         draw_order();
                     }, 300)
-                }
-                else {
+                } else {
                     console.log("get model failed");
                 }
             }
-            Http.onerror = function (e) {
+            Http.onerror = function () {
                 alert("请求失败,检查服务器地址和请求参数")
                 unconnect('map');
                 unconnect('Vehicle');
@@ -567,6 +541,7 @@
             }
             Http.send();
         }
+
         function get_view() {
             let Http = new XMLHttpRequest();
             let ip = document.getElementById("ip_btn").value;
@@ -579,7 +554,7 @@
             Http.open('GET', 'http://' + ip + '/v1/getView', true);
             Http.withCredentials = false;
             Http.onload = function () {
-                if (Http.readyState == 4 && Http.status == 200) {
+                if (Http.readyState === 4 && Http.status === 200) {
                     vehicles = [];
                     let model = JSON.parse(Http.responseText);
                     for (let v of model) {
@@ -606,6 +581,7 @@
             // }
             Http.send();
         }
+
         function get_order() {
             let Http = new XMLHttpRequest();
             let ip = document.getElementById("ip_btn").value;
@@ -613,32 +589,21 @@
             Http.open('GET', 'http://' + ip + '/v1/transportOrders', true);
             Http.withCredentials = false;
             Http.onload = function () {
-                if (Http.readyState == 4 && Http.status == 200) {
+                if (Http.readyState === 4 && Http.status === 200) {
                     let model = JSON.parse(Http.responseText);
                     for (let order of model) {
-                        if (orders.has(order["name"])) {
-                            // console.log(a, b, a === b)
-                            if (orders.get(order["name"]) != order["state"]) {
-                                //update
-                                console.log(orders.get(order["name"]), order["state"])
-                                orders.set(order["name"], order["state"]);
-                                for (let i = order_quence.headIndex; i < order_quence.tailIndex; i++) {
-                                    if (order_quence.items[i][0] == order["name"]) {
-                                        order_quence.items[i][1] = order["state"];
-                                        break
-                                    }
-                                }
-                                while (order_quence.length > 5) {
-                                    order_quence.dequeue();
-                                }
-                            } else { }
-                        }
-                        else {
-                            orders.set(order["name"], order["state"]);
-                            order_quence.enqueue([order["name"], order["state"]]);
-                            while (order_quence.length > 5) {
-                                order_quence.dequeue();
+                        let has = false;
+                        for (let ord of order_quence) {
+                            if (ord[0] === order["name"]) {
+                                ord[1] = order["state"];
+                                has = true;
                             }
+                        }
+                        if (!has) {
+                            order_quence.push([order["name"], order["state"]]);
+                        }
+                        while (order_quence.length > 5) {
+                            order_quence.shift();
                         }
                     }
                 }
@@ -648,6 +613,7 @@
             }
             Http.send();
         }
+
         function drawArrowheadVirtual(ctx, x1, y1, x2, y2, size, color) {
             let l = 10 * (50 / resolution); // 
             let a = Math.atan2((y2 - y1), (x2 - x1));
@@ -666,6 +632,7 @@
             ctx.strokeStyle = color;
             ctx.stroke();
         }
+
         function drawArrowhead(ctx, x1, y1, x2, y2, size, color) {
             let l = 10 * (50 / resolution); // 
             let a = Math.atan2((y2 - y1), (x2 - x1));
@@ -684,6 +651,7 @@
             ctx.strokeStyle = color;
             ctx.stroke();
         }
+
         function drawBezierCurve(ctx, x1, y1, x2, y2, ctrl_p, size, color, height) {
             let l = 10 * (50 / resolution); // 
             let a = Math.atan2((y2 - (height - (-ctrl_p[1]["y"] * visual_scale - ymin) / resolution)), (x2 - (ctrl_p[1]["x"] * visual_scale - xmin) / resolution));
@@ -703,6 +671,7 @@
             ctx.lineTo(x4, y4);
             ctx.stroke();
         }
+
         function drawBezierCurveVirtual(ctx, x1, y1, x2, y2, ctrl_p, size, color, height) {
             let l = 10 * (50 / resolution); // 
             let a = Math.atan2((y2 - (height - (-ctrl_p[1]["y"] * visual_scale - ymin) / resolution)), (x2 - (ctrl_p[1]["x"] * visual_scale - xmin) / resolution));
@@ -722,6 +691,7 @@
             ctx.lineTo(x4, y4);
             ctx.stroke();
         }
+
         function drawBezierCurve3(ctx, x1, y1, x2, y2, ctrl_p, size, color, height) {
             let l = 10 * (50 / resolution); // 
             let a = Math.atan2((y2 - (height - (-ctrl_p[3]["y"] * visual_scale - ymin) / resolution)), (x2 - (ctrl_p[3]["x"] * visual_scale - xmin) / resolution));
@@ -741,6 +711,7 @@
             ctx.lineTo(x4, y4);
             ctx.stroke();
         }
+
         function drawBezierCurve3Virtual(ctx, x1, y1, x2, y2, ctrl_p, size, color, height) {
             let l = 10 * (50 / resolution); // 
             let a = Math.atan2((y2 - (height - (-ctrl_p[3]["y"] * visual_scale - ymin) / resolution)), (x2 - (ctrl_p[3]["x"] * visual_scale - xmin) / resolution));
@@ -770,10 +741,13 @@
             unconnect('Vehicle');
             document.getElementById('stop_btn').style.display = 'none';
             document.getElementById('ok_btn').style.display = '';
-            window.onresize = (e) => {
-                if (is_running) { clicked(); }
+            window.onresize = () => {
+                if (is_running) {
+                    clicked();
+                }
             }
         }
+
         function draw_map() {
             let canvas = document.getElementById("map");
             // canvas.width = (xman - xmin) / resolution
@@ -781,6 +755,7 @@
             canvas.width =
                 document.body.clientWidth - 40;
             canvas.height = document.documentElement.clientHeight - 200
+            let path;
             if (canvas.getContext) {
                 let ctx = canvas.getContext("2d");
                 // console.log(canvas.width + " " + canvas.height + " " + points.length)
@@ -800,7 +775,7 @@
                         ctx.lineWidth = 1;
                     }
                     ctx.arc(x, y, radius, 0, 2 * Math.PI, true)
-                    if (point.type == "PARK_POSITION") {
+                    if (point.type === "PARK_POSITION") {
                         ctx.arc(x, y, radius + 3, 0, 2 * Math.PI, true)
                     }
                     ctx.stroke()
@@ -814,7 +789,7 @@
                     ctx.fillText(point.name, x + 10 * (50 / resolution), y + 23 * (50 / resolution), point.name.length * font_size);
                 }
                 for (let x of paths) {
-                    color = 'orange'
+                    let color = 'orange'
                     if (x.locked) {
                         color = "rgba(102, 102, 102, 0.3)"
                     }
@@ -830,7 +805,7 @@
                     // console.log(len);
 
                     // console.log(x.type)
-                    if (x.type == "DIRECT") {
+                    if (x.type === "DIRECT") {
                         let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
                         let norm_x = (end_x - start_x) / len;
                         let norm_y = (end_y - start_y) / len;
@@ -838,20 +813,24 @@
                         start_y = start_y + norm_y * 15 * (50 / resolution);
                         end_x = end_x - norm_x * 15 * (50 / resolution);
                         end_y = end_y - norm_y * 15 * (50 / resolution);
-                        if (x.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), color); }
-                        if (x.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), color); }
-                    } else if (x.type == "BEZIER") {
+                        if (x.max_vel) {
+                            drawArrowhead(ctx, start_x, start_y, end_x, end_y, (50 / resolution), color);
+                        }
+                        if (x.max_res_vel) {
+                            drawArrowhead(ctx, end_x, end_y, start_x, start_y, (50 / resolution), color);
+                        }
+                    } else if (x.type === "BEZIER") {
                         if (x.max_vel)
-                            drawBezierCurve(ctx, start_x, start_y, end_x, end_y, x.ctrl_point, 1 * (50 / resolution), color, canvas.height);
+                            drawBezierCurve(ctx, start_x, start_y, end_x, end_y, x.ctrl_point, (50 / resolution), color, canvas.height);
                         if (x.max_res_vel) {
                             let ctrl_pp = []
                             ctrl_pp[0] = x.ctrl_point[1]
                             ctrl_pp[1] = x.ctrl_point[0]
-                            drawBezierCurve(ctx, end_x, end_y, start_x, start_y, ctrl_pp, 1 * (50 / resolution), color, canvas.height);
+                            drawBezierCurve(ctx, end_x, end_y, start_x, start_y, ctrl_pp, (50 / resolution), color, canvas.height);
                         }
-                    } else if (x.type == "BEZIER_3") {
+                    } else if (x.type === "BEZIER_3") {
                         if (x.max_vel) {
-                            drawBezierCurve3(ctx, start_x, start_y, end_x, end_y, x.ctrl_point, 1 * (50 / resolution), color, canvas.height);
+                            drawBezierCurve3(ctx, start_x, start_y, end_x, end_y, x.ctrl_point, (50 / resolution), color, canvas.height);
                         }
                         if (x.max_res_vel) {
                             let ctrl_pp = []
@@ -860,7 +839,7 @@
                             ctrl_pp[2] = x.ctrl_point[2]
                             ctrl_pp[3] = x.ctrl_point[1]
                             ctrl_pp[4] = x.ctrl_point[0]
-                            drawBezierCurve3(ctx, end_x, end_y, start_x, start_y, ctrl_pp, 1 * (50 / resolution), color, canvas.height);
+                            drawBezierCurve3(ctx, end_x, end_y, start_x, start_y, ctrl_pp, (50 / resolution), color, canvas.height);
                         }
                     }
                 }
@@ -913,9 +892,12 @@
                             start_y = start_y + norm_y * 15 * (50 / resolution);
                             end_x = end_x - norm_x * 15 * (50 / resolution);
                             end_y = end_y - norm_y * 15 * (50 / resolution);
-                            if (path.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 1 * (50 / resolution), x_.color); }
-                            if (path.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 1 * (50 / resolution), x_.color); }
-                            continue
+                            if (path.max_vel) {
+                                drawArrowhead(ctx, start_x, start_y, end_x, end_y, (50 / resolution), x_.color);
+                            }
+                            if (path.max_res_vel) {
+                                drawArrowhead(ctx, end_x, end_y, start_x, start_y, (50 / resolution), x_.color);
+                            }
                         }
                     }
 
@@ -923,14 +905,14 @@
                 }
 
                 for (let loc of locations) {
-                    color = '#233bc2'
+                    let color = '#233bc2'
                     if (loc.locked) {
                         color = "rgba(102, 102, 102, 0.3)"
                     }
                     let start_x = (loc.x - xmin) / resolution;
                     let start_y = canvas.height - (loc.y - ymin) / resolution;
                     ctx.beginPath()
-                    ctx.lineWidth = 1 * (50 / resolution);
+                    ctx.lineWidth = (50 / resolution);
                     if (ctx.lineWidth < 1) {
                         ctx.lineWidth = 1;
                     }
@@ -940,13 +922,13 @@
                     ctx.arc(start_x, start_y, radius, 0, 2 * Math.PI, true)
                     ctx.stroke()
                     ctx.lineWidth = 2 * (50 / resolution);
-                    if (loc.type == "charge") {
+                    if (loc.type === "charge") {
                         ctx.arc(start_x, start_y, radius + 3, 0, 2 * Math.PI, true)
-                    } else if (loc.type == "LIFT") {
+                    } else if (loc.type === "LIFT") {
                         ctx.strokeRect(start_x - 8, start_y - 8, 16, 16);
                     }
                     ctx.stroke()
-                    ctx.lineWidth = 1 * (50 / resolution);
+                    ctx.lineWidth = (50 / resolution);
                     ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
                     let link = get_point(loc.link);
                     if (link == null) {
@@ -1000,8 +982,8 @@
             if (canvas.getContext) {
                 let ctx = canvas.getContext("2d");
                 let index = 20;
-                for (let i = order_quence.headIndex; i < order_quence.tailIndex; i++) {
-                    msg = order_quence.items[i][0] + " : [" + order_quence.items[i][1] + "]";
+                for (let ord of order_quence) {
+                    let msg = ord[0] + " : [" + ord[1] + "]";
                     ctx.fillStyle = "rgba(113, 125, 126,0.3)";
                     let font_size = (20 * 60 / resolution).toFixed(0);
                     if (font_size < 1) {
@@ -1016,6 +998,7 @@
                 }
             }
         }
+
         function draw_vehicle() {
             let canvas = document.getElementById("Vehicle");
             // canvas.width = (xman - xmin) / resolution
@@ -1053,17 +1036,16 @@
                         let end_y = canvas.height - (end.y - ymin) / resolution;
 
                         console.log(step["type"])
-                        if (step["type"] == "BEZIER") {
-                            if (ori == "FORWARD") {
+                        if (step["type"] === "BEZIER") {
+                            if (ori === "FORWARD") {
                                 drawBezierCurveVirtual(ctx, start_x, start_y, end_x, end_y, step["control_point"], 5 * (50 / resolution), v.color, canvas.height);
-                            } else if (ori == "BACKWARD") {
+                            } else if (ori === "BACKWARD") {
                                 let ctrl_p = []
                                 ctrl_p[0] = step["control_point"][1];
                                 ctrl_p[1] = step["control_point"][0];
                                 drawBezierCurveVirtual(ctx, end_x, end_y, start_x, start_y, ctrl_p, 5 * (50 / resolution), v.color, canvas.height);
                             }
-                        }
-                        else if (step["type"] == "DIRECT") {
+                        } else if (step["type"] === "DIRECT") {
                             let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
                             // console.log(len);
                             let norm_x = (end_x - start_x) / len;
@@ -1072,11 +1054,15 @@
                             start_y = start_y + norm_y * 15;
                             end_x = end_x - norm_x * 15;
                             end_y = end_y - norm_y * 15;
-                            if (ori == "FORWARD") { drawArrowheadVirtual(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color); }
-                            else if (ori == "BACKWARD") { drawArrowheadVirtual(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color); }
-                        } else if (step["type"] == "BEZIER_3") {
-                            if (ori == "FORWARD") { drawBezierCurve3Virtual(ctx, start_x, start_y, end_x, end_y, step["control_point"], 5 * (50 / resolution), v.color, canvas.height); }
-                            else if (ori == "BACKWARD") {
+                            if (ori === "FORWARD") {
+                                drawArrowheadVirtual(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color);
+                            } else if (ori === "BACKWARD") {
+                                drawArrowheadVirtual(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color);
+                            }
+                        } else if (step["type"] === "BEZIER_3") {
+                            if (ori === "FORWARD") {
+                                drawBezierCurve3Virtual(ctx, start_x, start_y, end_x, end_y, step["control_point"], 5 * (50 / resolution), v.color, canvas.height);
+                            } else if (ori === "BACKWARD") {
                                 let ctrl_p = []
                                 ctrl_p[0] = step["control_point"][4];
                                 ctrl_p[1] = step["control_point"][3];
@@ -1088,7 +1074,7 @@
                         }
                     }
                     // console.log(v.destination);
-                    if (v.destination != undefined) {
+                    if (v.destination !== undefined) {
                         let loc = get_location(v.destination["dest"]);
                         let start_x = (loc.x - xmin) / resolution;
                         let start_y = canvas.height - (loc.y - ymin) / resolution;
@@ -1140,19 +1126,17 @@
                             ctx.fill()
                             ctx.arc(x, y, radius + 3, 0, 2 * Math.PI, true)
                             ctx.stroke()
-                        }
-                        else if (get_block_path(res) != null) {
+                        } else if (get_block_path(res) != null) {
                             let path = get_block_path(res);
                             console.log(path)
                             let start = get_point(path.start);
                             let end = get_point(path.end);
-                            if (path.name.startsWith()) { }
                             let start_x = (start.x - xmin) / resolution;
                             let start_y = canvas.height - (start.y - ymin) / resolution;
                             let end_x = (end.x - xmin) / resolution;
                             let end_y = canvas.height - (end.y - ymin) / resolution;
 
-                            if (path["type"] == "BEZIER") {
+                            if (path["type"] === "BEZIER") {
                                 if (path.max_vel) {
                                     drawBezierCurve(ctx, start_x, start_y, end_x, end_y, path.ctrl_point, 5 * (50 / resolution), v.color, canvas.height);
                                 } else if (path.max_res_vel) {
@@ -1161,8 +1145,7 @@
                                     ctrl_p[1] = path.ctrl_point[0];
                                     drawBezierCurve(ctx, end_x, end_y, start_x, start_y, ctrl_p, 5 * (50 / resolution), v.color, canvas.height);
                                 }
-                            }
-                            else if (path["type"] == "DIRECT") {
+                            } else if (path["type"] === "DIRECT") {
                                 let len = Math.sqrt((end_x - start_x) * (end_x - start_x) + (end_y - start_y) * (end_y - start_y))
                                 let norm_x = (end_x - start_x) / len;
                                 let norm_y = (end_y - start_y) / len;
@@ -1170,11 +1153,15 @@
                                 start_y = start_y + norm_y * 15;
                                 end_x = end_x - norm_x * 15;
                                 end_y = end_y - norm_y * 15;
-                                if (path.max_vel) { drawArrowhead(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color); }
-                                else if (path.max_res_vel) { drawArrowhead(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color); }
-                            } else if (path["type"] == "BEZIER_3") {
-                                if (path.max_vel) { drawBezierCurve3(ctx, start_x, start_y, end_x, end_y, path.ctrl_point, 5 * (50 / resolution), v.color, canvas.height); }
-                                else if (path.max_res_vel) {
+                                if (path.max_vel) {
+                                    drawArrowhead(ctx, start_x, start_y, end_x, end_y, 5 * (50 / resolution), v.color);
+                                } else if (path.max_res_vel) {
+                                    drawArrowhead(ctx, end_x, end_y, start_x, start_y, 5 * (50 / resolution), v.color);
+                                }
+                            } else if (path["type"] === "BEZIER_3") {
+                                if (path.max_vel) {
+                                    drawBezierCurve3(ctx, start_x, start_y, end_x, end_y, path.ctrl_point, 5 * (50 / resolution), v.color, canvas.height);
+                                } else if (path.max_res_vel) {
                                     let ctrl_p = []
                                     ctrl_p[0] = path.ctrl_point[4];
                                     ctrl_p[1] = path.ctrl_point[3];
@@ -1185,13 +1172,12 @@
                                 }
                             }
 
-                        }
-                        else if (get_location(res) != null) {
+                        } else if (get_location(res) != null) {
                             let loc = get_location(res);
                             let start_x = (loc.x - xmin) / resolution;
                             let start_y = canvas.height - (loc.y - ymin) / resolution;
                             ctx.beginPath()
-                            ctx.lineWidth = 1 * (50 / resolution);
+                            ctx.lineWidth = (50 / resolution);
                             if (ctx.lineWidth < 1) {
                                 ctx.lineWidth = 1;
                             }
@@ -1201,9 +1187,9 @@
                             ctx.arc(start_x, start_y, radius, 0, 2 * Math.PI, true)
                             ctx.stroke()
                             ctx.lineWidth = 2 * (50 / resolution);
-                            if (loc.type == "charge") {
+                            if (loc.type === "charge") {
                                 ctx.arc(start_x, start_y, radius + 3, 0, 2 * Math.PI, true)
-                            } else if (loc.type == "LIFT") {
+                            } else if (loc.type === "LIFT") {
                                 ctx.strokeRect(start_x - 8, start_y - 8, 16, 16);
                             }
                             ctx.stroke()
@@ -1214,9 +1200,11 @@
                 }
             }
         }
+
         function clicked() {
             get_model();
         }
+
         function stop_() {
             if (is_running) {
                 is_running = false
@@ -1232,8 +1220,8 @@
             let file = ele.files[0];
             // console.log(file)
             const filereader = new FileReader()
-            filereader.onload = (e) => {
-                let xml = filereader.result;
+            filereader.onload = () => {
+                let xml = filereader.result.toString();
                 let parser = new DOMParser();
                 let xmlDoc = parser.parseFromString(xml, "text/xml");
                 // console.log(xmlDoc)
@@ -1241,11 +1229,10 @@
                 let ip = document.getElementById("ip_btn").value;
                 http.open("PUT", "http://" + ip + "/v1/plantModel?type=xml", true);
                 http.onload = function () {
-                    if (http.readyState == 4 && http.status == 200) {
+                    if (http.readyState === 4 && http.status === 200) {
                         // console.log("send order ok");
                         clicked()
-                    }
-                    else {
+                    } else {
                         console.log("send order err");
                     }
                 }
@@ -1259,31 +1246,32 @@
 
 
 <body onload="start()">
-    <div class="main">
-        <div class="ip">
-            <input type="text" id="ip_btn" class="label" value="127.0.0.1:55200" placeholder="服务器地址：端口号">
-        </div>
-        <div>
-            <button class="button" id="ok_btn" onclick="clicked()">确定</button>
-            <button class="button" id="stop_btn" onclick="stop_()">停止</button>
-            <span class="upload-file">
+<div class="main">
+    <div class="ip">
+        <label> <input type="text" id="ip_btn" class="label" value="127.0.0.1:55200"
+                       placeholder="服务器地址：端口号"></label>
+    </div>
+    <div>
+        <button class="button" id="ok_btn" onclick="clicked()">确定</button>
+        <button class="button" id="stop_btn" onclick="stop_()">停止</button>
+        <span class="upload-file">
                 <input type="file" class="input-file" accept=".xml" id="model_file" onchange="file_read()">
                 <span class="tip">选择模型文件</span>
             </span>
-        </div>
-
-
-        <div class="view">
-            <canvas id="map" width="400" height="800">
-            </canvas>
-            <canvas id="Order" width="400" height="800">
-            </canvas>
-            <canvas id="Vehicle" width="400" height="800">
-            </canvas>
-        </div>
     </div>
+
+
+    <div class="view">
+        <canvas id="map" width="400" height="800">
+        </canvas>
+        <canvas id="Order" width="400" height="800">
+        </canvas>
+        <canvas id="Vehicle" width="400" height="800">
+        </canvas>
+    </div>
+</div>
 </body>
-<style type="text/css">
+<style>
     body {
         background: #ffffff;
         height: 100%;
@@ -1351,8 +1339,8 @@
 
     #map {
         position: absolute;
-        left: 0px;
-        top: 0px;
+        left: 0;
+        top: 0;
         margin: 20px;
         background: #effbff;
         border: thin solid #1b7cdd;
@@ -1360,16 +1348,16 @@
 
     #Order {
         position: absolute;
-        left: 0px;
-        top: 0px;
+        left: 0;
+        top: 0;
         margin: 20px;
         border: thin solid #1b7cdd;
     }
 
     #Vehicle {
         position: absolute;
-        left: 0px;
-        top: 0px;
+        left: 0;
+        top: 0;
         margin: 20px;
         border: thin solid #1b7cdd;
     }

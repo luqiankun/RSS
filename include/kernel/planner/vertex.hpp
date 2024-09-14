@@ -16,10 +16,10 @@ enum class AType {
   ATYPE_UNKNOWN,
   ATYPE_CLOSED,
   ATYPE_OPENED,
-  ATYPE_BARRIER  // 障碍
+  ATYPE_BARRIER // 障碍
 };
 class Vertex : public ::std::enable_shared_from_this<Vertex> {
- public:
+public:
   Eigen::Vector2i location{};
   Eigen::Vector2i layout{};
   AType type{AType::ATYPE_UNKNOWN};
@@ -32,10 +32,10 @@ class Vertex : public ::std::enable_shared_from_this<Vertex> {
   std::vector<VertexWeakPtr> parents{};
   std::string name{};
 
- public:
+public:
   Vertex() = delete;
   explicit Vertex(const std::shared_ptr<data::model::Point> &);
-  bool operator==(Vertex node);
+  bool operator==(const Vertex &node) const;
   std::optional<float> operator[](const VertexPtr &node);
   float get_h_vlaue(const VertexPtr &node);
   std::optional<float> get_g_value();
@@ -53,6 +53,6 @@ class Vertex : public ::std::enable_shared_from_this<Vertex> {
   }
   void add_parent(const VertexPtr &n) { this->parents.push_back(n); }
 };
-}  // namespace planner
-}  // namespace kernel
+} // namespace planner
+} // namespace kernel
 #endif

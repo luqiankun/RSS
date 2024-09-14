@@ -15,8 +15,8 @@ class Dispatcher;
 namespace driver {
 class Vehicle : public schedule::Client,
                 public std::enable_shared_from_this<Vehicle> {
- public:
-  Vehicle(const std::string& n) : schedule::Client(n) {}
+public:
+  explicit Vehicle(const std::string &n) : schedule::Client(n) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDEL, EXECUTING, CHARGING };
   enum class proState { AWAITING_ORDER, IDEL, PROCESSING_ORDER };
   enum class nowOrder { BEGIN, END };
@@ -26,44 +26,47 @@ class Vehicle : public schedule::Client,
     TO_BE_RESPECTED,
     TO_BE_UTILIZED
   };
-  std::string get_state();
-  std::string get_process_state();
-  void receive_task(std::shared_ptr<data::order::TransportOrder>);
+  std::string get_state() const;
+  std::string get_process_state() const;
+  void receive_task(const std::shared_ptr<data::order::TransportOrder> &);
   void next_command();
   void execute_move(
-      std::vector<std::shared_ptr<data::order::Step>>);  // 执行移动回调
-  void execute_action(
-      std::shared_ptr<data::order::DriverOrder::Destination>);  // 执行移动回调
-                                                                // //
-  void execute_instatn_action(std::shared_ptr<vda5050::instantaction::Action>);
-  void command_done();  // 命令完成回调
-  void plan_route();
+      const std::vector<std::shared_ptr<data::order::Step>> &); // 执行移动回调
+  void
+  execute_action(const std::shared_ptr<data::order::DriverOrder::Destination>
+                     &); // 执行移动回调
+                         // //
+  void execute_instatn_action(
+      const std::shared_ptr<vda5050::instantaction::Action> &);
+  void command_done(); // 命令完成回调
+  void plan_route() const;
   void reroute();
   void get_next_ord();
   void run();
   void cancel_all_order();
   void close();
-  virtual bool action(
-      std::shared_ptr<data::order::DriverOrder::Destination>) = 0;  // 执行动作
-  virtual bool move(
-      std::vector<std::shared_ptr<data::order::Step>>) = 0;  // 执行移动
-  virtual void init() {};  // 初始化或者配置接收外部信息更新机器人状态
-  virtual bool instant_action(
-      std::shared_ptr<data::model::Actions::Action>) = 0;
-  virtual ~Vehicle();
+  virtual bool
+  action(const std::shared_ptr<data::order::DriverOrder::Destination>
+             &) = 0; // 执行动作
+  virtual bool
+  move(const std::vector<std::shared_ptr<data::order::Step>> &) = 0; // 执行移动
+  virtual void init(){}; // 初始化或者配置接收外部信息更新机器人状态
+  virtual bool
+  instant_action(const std::shared_ptr<data::model::Actions::Action> &) = 0;
+  ~Vehicle() override;
 
- public:
+public:
   int priority_level{0};
-  int length{0};  // mm
+  int length{0}; // mm
   int width{0};
   int max_vel{0};
   int max_reverse_vel{0};
-  int energy_level_good{70};      // 接收订单，无订单自动充电
-  int energy_level_critical{15};  // 低于值不可移动
-  int engrgy_level_recharge{35};  // 只充电不接订单
-  int engrgy_level_full{90};      // 满电
-  int engerg_level{100};
-  bool process_chargeing{false};
+  int energy_level_good{70};     // 接收订单，无订单自动充电
+  int energy_level_critical{15}; // 低于值不可移动
+  int energy_level_recharge{35}; // 只充电不接订单
+  int energy_level_full{90};     // 满电
+  int energy_level{100};
+  bool process_charging{false};
   bool reroute_flag{false};
   bool init_pos{false};
   integrationLevel integration_level{TO_BE_UTILIZED};
@@ -83,52 +86,54 @@ class Vehicle : public schedule::Client,
   std::shared_ptr<data::model::Point> last_point;
   std::shared_ptr<vda5050::instantaction::Action> current_action;
   std::shared_ptr<data::model::Point> park_point{nullptr};
-  std::thread run_th;
+  // std::thread run_th;
   Eigen::Vector3i position{0, 0, 0};
   double angle{0};
   Eigen::Vector3i layout{0, 0, 0};
-  fa::taskpool_t pool{1};          // 普通任务
-  fa::taskpool_t instant_pool{1};  // 立即任务
+  tools::threadpool pool{1};      // 普通任务
+  tools::threadpool instant_pool; // 立即任务
   bool task_run{false};
   uint32_t send_queue_size{2};
-  bool instanttask_run{false};
+  bool instant_task_run{false};
   std::chrono::system_clock::time_point idle_time;
   std::vector<std::string> allowed_order_type;
 };
 class SimVehicle : public Vehicle {
- public:
+public:
   using Vehicle::Vehicle;
-  SimVehicle(int rate, const std::string& name) : rate(rate), Vehicle(name) {}
-  bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
-  bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
-  bool instant_action(std::shared_ptr<data::model::Actions::Action>) override;
+  SimVehicle(int rate, const std::string &name) : Vehicle(name), rate(rate) {}
+  bool action(
+      const std::shared_ptr<data::order::DriverOrder::Destination> &) override;
+  bool move(const std::vector<std::shared_ptr<data::order::Step>> &) override;
+  bool instant_action(
+      const std::shared_ptr<data::model::Actions::Action> &) override;
   void init() override;
 
- public:
-  int rate{5};  // 时间快进比例
+public:
+  int rate{5}; // 时间快进比例
 };
 
 class Rabbit3 : public Vehicle {
- public:
-  Rabbit3(const std::string& name, const std::string& interface_name,
-          const std::string& serial_number, const std::string& version,
-          const std::string& manufacturer)
+public:
+  Rabbit3(const std::string &name, const std::string &interface_name,
+          const std::string &serial_number, const std::string &version,
+          const std::string &manufacturer)
       : Vehicle(name),
-        deviation_xy(1),
-        deviation_theta(0.17),
-        dest_deviation_xy(0.05),
-        dest_deviation_theta(0.034),
         mqtt_cli(std::make_shared<vda5050::VehicleMaster>(
-            interface_name, serial_number, version, manufacturer)) {}
-  bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override;
-  bool move(std::vector<std::shared_ptr<data::order::Step>>) override;
-  bool instant_action(std::shared_ptr<data::model::Actions::Action>) override;
+            interface_name, serial_number, version, manufacturer)),
+        deviation_xy(1), deviation_theta(0.17), dest_deviation_xy(0.05),
+        dest_deviation_theta(0.034) {}
+  bool action(
+      const std::shared_ptr<data::order::DriverOrder::Destination> &) override;
+  bool move(const std::vector<std::shared_ptr<data::order::Step>> &) override;
+  bool instant_action(
+      const std::shared_ptr<data::model::Actions::Action> &) override;
   void init() override;
-  void onstate(mqtt::const_message_ptr);
-  void onconnect(mqtt::const_message_ptr);
-  ~Rabbit3();
+  void onstate(const mqtt::const_message_ptr &);
+  void onconnect(const mqtt::const_message_ptr &);
+  ~Rabbit3() override;
 
- public:
+public:
   std::shared_ptr<vda5050::VehicleMaster> mqtt_cli;
   vda5050::VehicleMqttStatus veh_state{vda5050::VehicleMqttStatus::OFFLINE};
   std::string broker_ip{"127.0.0.1"};
@@ -147,15 +152,17 @@ class Rabbit3 : public Vehicle {
   double dest_deviation_theta;
 };
 class InvalidVehicle : public Vehicle {
- public:
-  explicit InvalidVehicle(const std::string& name) : Vehicle(name) {}
-  bool action(std::shared_ptr<data::order::DriverOrder::Destination>) override {
+public:
+  explicit InvalidVehicle(const std::string &name) : Vehicle(name) {}
+  bool action(
+      const std::shared_ptr<data::order::DriverOrder::Destination> &) override {
     return false;
   }
-  bool move(std::vector<std::shared_ptr<data::order::Step>>) override {
+  bool move(const std::vector<std::shared_ptr<data::order::Step>> &) override {
     return false;
   }
-  bool instant_action(std::shared_ptr<data::model::Actions::Action>) override {
+  bool instant_action(
+      const std::shared_ptr<data::model::Actions::Action> &) override {
     return false;
   }
   void init() override {

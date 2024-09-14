@@ -5,8 +5,7 @@
 #include "../../../include/kernel/driver/command.hpp"
 #include "../../../include/kernel/driver/vehicle.hpp"
 
-namespace kernel {
-namespace schedule {
+namespace kernel::schedule {
 void Scheduler::run() {
   CLOG(INFO, "schedule") << this->name << " run....\n";
   schedule_th = std::thread([&] {
@@ -21,7 +20,7 @@ void Scheduler::run() {
           it = commands.erase(it);
         } else {
           (*it)->run_once();
-          it++;
+          ++it;
         }
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -29,7 +28,7 @@ void Scheduler::run() {
   });
 }
 
-void Scheduler::add_command(std::shared_ptr<driver::Command> cmd) {
+void Scheduler::add_command(const std::shared_ptr<driver::Command> &cmd) {
   if (cmd) {
     CLOG(DEBUG, "schedule") << "add new cmd " << cmd->name << "\n";
     commands.push_back(cmd);
@@ -37,7 +36,7 @@ void Scheduler::add_command(std::shared_ptr<driver::Command> cmd) {
   }
 }
 std::shared_ptr<driver::Command> Scheduler::new_command(
-    std::shared_ptr<driver::Vehicle> v) {
+    const std::shared_ptr<driver::Vehicle> &v) {
   if (!v->current_order) {
     CLOG(WARNING, "schedule") << "no ord there";
     return nullptr;
@@ -55,11 +54,8 @@ std::shared_ptr<driver::Command> Scheduler::new_command(
   cmd->vehicle = v;
   cmd->order = v->current_order;
   cmd->scheduler = shared_from_this();
-  cmd->move =
-      std::bind(&driver::Vehicle::execute_move, v, std::placeholders::_1);
-  cmd->action =
-      std::bind(&driver::Vehicle::execute_action, v, std::placeholders::_1);
+  cmd->move = [=](auto step) { v->execute_move(step); };
+  cmd->action = [=](auto step) { v->execute_action(step); };
   return cmd;
 }
-}  // namespace schedule
-}  // namespace kernel
+}  // namespace kernel::schedule

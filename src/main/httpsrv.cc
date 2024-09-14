@@ -1,14 +1,12 @@
 #include "../../include/main/httpsrv.hpp"
 std::string dump_headers(const httplib::Headers &headers) {
   std::string s;
-  char buf[BUFSIZ];
-
-  for (auto it = headers.begin(); it != headers.end(); ++it) {
-    const auto &x = *it;
-    snprintf(buf, sizeof(buf), "%s: %s\n", x.first.c_str(), x.second.c_str());
+  for (const auto &h : headers) {
+    char buf[BUFSIZ];
+    const auto &[header, body] = h;
+    snprintf(buf, sizeof(buf), "%s: %s\n", header.c_str(), body.c_str());
     s += buf;
   }
-
   return s;
 }
 std::string log(const httplib::Request &req, const httplib::Response &res) {
@@ -55,20 +53,25 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
   this->ip = ip;
   this->port = port;
   const std::string url_prefix = "/v1";
+  int opt = 1;
+  srv.set_socket_options([&](socket_t sock) {
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt,
+               static_cast<socklen_t>(opt));
+  });
   srv.set_default_headers({{"Access-Control-Allow-Origin", "*"},
                            {"Access-Control-Allow-Credentials", "false"},
                            {"Allow", "GET, POST, HEAD, OPTIONS,PUT"}});
   srv.Get(url_prefix + "/transportOrders",
           [=](const httplib::Request &req, httplib::Response &res) {
             //
-            std::string veh{""};
+            std::string veh;
             if (req.has_param("intendedVehicle")) {
               veh = req.get_param_value("intendedVehicle");
             }
-            auto ret = get_transport_orders(veh);
-            res.status = ret.first;
-            if (!ret.second.empty()) {
-              res.set_content(ret.second, "application/json");
+            const auto [id, msg] = get_transport_orders(veh);
+            res.status = id;
+            if (!msg.empty()) {
+              res.set_content(msg, "application/json");
             }
           });
   srv.Get(url_prefix + R"(/transportOrders/([^/]+))",
@@ -95,12 +98,12 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
                                              httplib::Response &res) {
     if (!req.has_param("vehicle")) {
       res.status = httplib::BadRequest_400;
-      res.set_content("[\"not has param \'vehicle\'\"]", "application/json");
+      res.set_content(R"(["not has param 'vehicle'"])", "application/json");
       return;
     }
     if (!req.has_param("point")) {
       res.status = httplib::BadRequest_400;
-      res.set_content("[\"not has param \'point\'\"]", "application/json");
+      res.set_content(R"(["not has param 'point'"])", "application/json");
       return;
     }
     auto ret = post_move_order(req.get_param_value("vehicle"),
@@ -138,72 +141,68 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
 
   srv.Get(url_prefix + R"(/orderSequences)",
           [=](const httplib::Request &req, httplib::Response &res) {
-            std::string veh{""};
+            std::string veh;
             if (req.has_param("intendedVehicle")) {
               veh = req.get_param_value("intendedVehicle");
             }
-            auto ret = get_ordersequences(veh);
-            res.status = ret.first;
-            if (!ret.second.empty()) {
-              res.set_content(ret.second, "application/json");
+            const auto [id, s] = get_ordersequences(veh);
+            res.status = id;
+            if (!s.empty()) {
+              res.set_content(s, "application/json");
             }
           });
   srv.Get(url_prefix + R"(/orderSequences/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
-            std::string veh{""};
-            auto m = req.matches.end() - 1;
-            veh = *m;
-            auto ret = get_ordersequence(veh);
-            res.status = ret.first;
-            if (!ret.second.empty()) {
-              res.set_content(ret.second, "application/json");
+            const auto m = req.matches.end() - 1;
+            const std::string veh = *m;
+            const auto [code, msg] = get_ordersequence(veh);
+            res.status = code;
+            if (!msg.empty()) {
+              res.set_content(msg, "application/json");
             }
           });
   srv.Post(url_prefix + R"(/orderSequences/([^/]+))",
            [=](const httplib::Request &req, httplib::Response &res) {
-             std::string veh{""};
-             auto m = req.matches.end() - 1;
-             veh = *m;
-             auto ret = post_ordersequence(veh, req.body);
-             res.status = ret.first;
-             if (!ret.second.empty()) {
-               res.set_content(ret.second, "application/json");
+             const auto m = req.matches.end() - 1;
+             const std::string veh = *m;
+             const auto [id, msg] = post_ordersequence(veh, req.body);
+             res.status = id;
+             if (!msg.empty()) {
+               res.set_content(msg, "application/json");
              }
            });
   srv.Get(url_prefix + R"(/vehicles)",
           [=](const httplib::Request &req, httplib::Response &res) {
-            std::string state{""};
+            std::string state;
             if (req.has_param("procState")) {
               state = req.get_param_value("procState");
             }
-            auto ret = get_vehicles(state);
-            res.status = ret.first;
-            if (!ret.second.empty()) {
-              res.set_content(ret.second, "application/json");
+            const auto [id, msg] = get_vehicles(state);
+            res.status = id;
+            if (!msg.empty()) {
+              res.set_content(msg, "application/json");
             }
           });
   srv.Get(url_prefix + R"(/vehicles/([^/]+))",
           [=](const httplib::Request &req, httplib::Response &res) {
-            std::string state{""};
-            state = *(req.matches.end() - 1);
-            auto ret = get_vehicle(state);
-            res.status = ret.first;
-            if (!ret.second.empty()) {
-              res.set_content(ret.second, "application/json");
+            const std::string state = *(req.matches.end() - 1);
+            const auto [id, msg] = get_vehicle(state);
+            res.status = id;
+            if (!msg.empty()) {
+              res.set_content(msg, "application/json");
             }
           });
   srv.Put(url_prefix + R"(/vehicles/([^/]+)/paused)",
           [=](const httplib::Request &req, httplib::Response &res) {
-            std::string name;
-            name = *(req.matches.end() - 1);
-            bool state;
+            const std::string name = *(req.matches.end() - 1);
+            bool state{false};
             if (req.has_param("newValue")) {
               state = req.get_param_value("newValue") == "true" ? true : false;
             }
-            auto ret = put_vehicle_paused(name, state);
-            res.status = ret.first;
-            if (!ret.second.empty()) {
-              res.set_content(ret.second, "application/json");
+            const auto [id, msg] = put_vehicle_paused(name, state);
+            res.status = id;
+            if (!msg.empty()) {
+              res.set_content(msg, "application/json");
             }
           });
   srv.Options(url_prefix + R"(/vehicles/([^/]+)/paused)",
@@ -213,8 +212,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
               });
   srv.Post(url_prefix + R"(/vehicles/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
-             std::string name{""};
-             name = *(req.matches.end() - 1);
+             const std::string name = *(req.matches.end() - 1);
              bool immediate{false};
              bool disableVehicle{false};
              if (req.has_param("immediate")) {

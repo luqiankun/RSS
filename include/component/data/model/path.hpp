@@ -3,10 +3,9 @@
 #include "../../rssresource.hpp"
 #include "./action.hpp"
 #include "point.hpp"
-namespace data {
-namespace model {
+namespace data::model {
 class Path : public RSSResource {
- public:
+public:
   enum class ConnectType {
     /**
      * A direct connection.
@@ -53,7 +52,7 @@ class Path : public RSSResource {
       return "SLANTED";
     }
   }
-  static ConnectType new_connect_type(const std::string& name) {
+  static ConnectType new_connect_type(const std::string &name) {
     if (name == "BEZIER") {
       return ConnectType::BEZIER;
     } else if (name == "BEZIER_3") {
@@ -67,7 +66,7 @@ class Path : public RSSResource {
     }
   }
 
- public:
+public:
   using RSSResource::RSSResource;
   std::weak_ptr<Point> source_point;
   std::weak_ptr<Point> destination_point;
@@ -76,11 +75,10 @@ class Path : public RSSResource {
   int max_reverse_vel{0};
   bool locked{false};
   PathLayout layout;
-  Actions acts;  // vda action
+  Actions acts; // vda action
   PeripheralActions per_acts;
   std::optional<double> orientation_reverse;
   std::optional<double> orientation_forward;
 };
-}  // namespace model
-}  // namespace data
+} // namespace data::model
 #endif

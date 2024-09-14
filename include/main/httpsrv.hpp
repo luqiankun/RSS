@@ -6,8 +6,8 @@
 const auto http_log{"http"};
 using TCSRep = std::pair<int, std::string>;
 class HTTPServer {
- public:
-  HTTPServer(const std::string& ip = "0.0.0.0", int port = 8080);
+public:
+  explicit HTTPServer(const std::string &ip = "0.0.0.0", int port = 8080);
   void listen();
   ~HTTPServer() {
     if (srv.is_running()) {
@@ -16,7 +16,7 @@ class HTTPServer {
     }
   }
 
- public:
+public:
   std::function<TCSRep(std::string)> get_transport_orders;
   std::function<TCSRep(std::string)> get_transport_order;
   std::function<TCSRep(std::string, std::string)> post_transport_order;
@@ -41,7 +41,7 @@ class HTTPServer {
   std::function<TCSRep(std::string, std::string)> put_vehicle_integration_level;
   std::function<TCSRep(std::string, std::string)> post_vehicle_path_to_point;
 
- public:
+public:
   std::string ip{"0.0.0.0"};
   int port{8080};
   httplib::Server srv;

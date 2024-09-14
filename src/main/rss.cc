@@ -2,48 +2,53 @@
 
 #include "../../include/component/data/model/envelope.hpp"
 #include "../../include/kernel/driver/vehicle.hpp"
-std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
-  std::unique_lock<std::shared_mutex> lock(mutex);
-  stop();
-  init_orderpool();
-  init_planner();
-  init_scheduler();
-  init_dispatcher();
+
+bool RSS::init_resource() {
   this->resource =
       std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
-  this->resource->is_connected = std::bind(
-      &RSS::is_connect, this, std::placeholders::_1, std::placeholders::_2);
-  auto control_rule =
+  this->resource->is_connected = [&](const kernel::allocate::PointPtr &e1,
+                                     const kernel::allocate::PointPtr &e2) {
+    return is_connect(e1, e2);
+  };
+  const auto control_rule =
       std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
-  auto envelope_rule = std::make_shared<kernel::allocate::CollisionRule>(
+  const auto envelope_rule = std::make_shared<kernel::allocate::CollisionRule>(
       "collision_rule", resource);
   resource->rules.push_back(control_rule);
   resource->rules.push_back(envelope_rule);
-  pugi::xml_document doc;
+  return true;
+}
+
+std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
+  std::unique_lock<std::shared_mutex> lock(mutex);
+  stop();
+  init();
   try {
-    auto ret = doc.load_string(body.c_str());
-    if (ret.status != pugi::status_ok) {
+    pugi::xml_document doc;
+    if (auto ret = doc.load_string(body.c_str());
+        ret.status != pugi::status_ok) {
       CLOG(ERROR, rss_log) << "parse error: " << ret.description();
       json res = json::array();
       auto msg =
           "Could not parse XML input '" + std::string(ret.description()) + "'.";
       res.push_back(msg);
-      return std::pair<int, std::string>(BadRequest_400, res.to_string());
+      return {BadRequest_400, res.to_string()};
     }
     //
-    auto root = doc.first_child();  // <model>
+    auto root = doc.first_child(); // <model>
     if (std::string(root.name()) != "model") {
-      CLOG(ERROR, rss_log) << "parse error: " << "'don't has model'";
+      CLOG(ERROR, rss_log) << "parse error: "
+                           << "'don't has model'";
       json res = json::array();
       auto msg =
           "Could not parse XML input '" + std::string("'don't has model'.");
       res.push_back(msg);
-      return std::pair<int, std::string>(BadRequest_400, res.to_string());
+      return {BadRequest_400, res.to_string()};
     }
     { resource->model_name = root.attribute("name").as_string(); }
     {
-      // visulize
-      auto visual_layout = root.find_child([](pugi::xml_node node) {
+      // visualize
+      auto visual_layout = root.find_child([](const pugi::xml_node node) {
         return std::string(node.name()) == "visualLayout";
       });
       while (visual_layout.type() != pugi::node_null) {
@@ -56,7 +61,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         auto visuallayout = std::make_shared<data::model::VisualLayout>(name);
         visuallayout->scale_x = scale_x;
         visuallayout->scale_y = scale_y;
-        auto layer = visual_layout.find_child([](pugi::xml_node node) {
+        auto layer = visual_layout.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "layer";
         });
         while (layer.type() != pugi::node_null) {
@@ -65,32 +70,33 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           }
           auto layer_id = layer.attribute("id").as_int();
           auto ordinal = layer.attribute("ordinal").as_int();
-          auto name = layer.attribute("name").as_string();
+          auto name_ = layer.attribute("name").as_string();
           auto group_id = layer.attribute("groupId").as_int();
           auto layer_visible = layer.attribute("visible").as_bool();
           auto ly = data::model::VisualLayout::Layer();
           ly.id = layer_id;
           ly.ordinal = ordinal;
-          ly.name = name;
+          ly.name = name_;
           ly.group_id = group_id;
           ly.visible = layer_visible;
           visuallayout->layers.push_back(ly);
           layer = layer.next_sibling();
         }
 
-        auto layer_group = visual_layout.find_child([](pugi::xml_node node) {
-          return std::string(node.name()) == "layerGroup";
-        });
+        auto layer_group =
+            visual_layout.find_child([](const pugi::xml_node node) {
+              return std::string(node.name()) == "layerGroup";
+            });
         while (layer_group.type() != pugi::node_null) {
           if (std::string(layer_group.name()) != "layerGroup") {
             break;
           }
           auto id = layer_group.attribute("id").as_int();
-          auto name = layer_group.attribute("name").as_string();
+          auto name_ = layer_group.attribute("name").as_string();
           auto visible = layer_group.attribute("visible").as_bool();
           auto layer_group_ = data::model::VisualLayout::LayerGroup();
           layer_group_.id = id;
-          layer_group_.name = name;
+          layer_group_.name = name_;
           layer_group_.visible = visible;
           visuallayout->layer_groups.push_back(layer_group_);
           layer_group = layer_group.next_sibling();
@@ -99,8 +105,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         visual_layout = visual_layout.next_sibling();
       }
     }
-    {  // point
-      auto point = root.find_child([](pugi::xml_node node) {
+    {
+      // point
+      auto point = root.find_child([](const pugi::xml_node node) {
         return std::string(node.name()) == "point";
       });
       while (point.type() != pugi::node_null) {
@@ -113,7 +120,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             point.attribute("vehicleOrientation").as_double();
         int xPosition = point.attribute("xPosition").as_int();
         int yPosition = point.attribute("yPosition").as_int();
-        int zPosition = point.attribute("zPosition").as_int();
+        // int zPosition = point.attribute("zPosition").as_int();
         int xPosition_layout =
             point.child("pointLayout").attribute("xPosition").as_int();
         int yPosition_layout =
@@ -134,16 +141,16 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         p->type = data::model::Point::new_type(type);
         p->vehicle_orientation = vehicle_orientation;
         // envelope
-        auto envelope = point.find_child([](pugi::xml_node node) {
+        auto envelope = point.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "vehicleEnvelope";
         });
         while (envelope.type() != pugi::node_null) {
           if (std::string(envelope.name()) != "vehicleEnvelope") {
             break;
           }
-          auto name = envelope.attribute("name").as_string();
-          auto envl = std::make_shared<data::model::Envelope>(name);
-          auto vertex = envelope.find_child([](pugi::xml_node node) {
+          auto name_ = envelope.attribute("name").as_string();
+          auto envelope_ = std::make_shared<data::model::Envelope>(name_);
+          auto vertex = envelope.find_child([](const pugi::xml_node node) {
             return std::string(node.name()) == "vertex";
           });
           while (vertex.type() != pugi::node_null) {
@@ -152,16 +159,16 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             }
             auto x = vertex.attribute("x").as_double();
             auto y = vertex.attribute("y").as_double();
-            envl->add_vertex(x, y);
+            envelope_->add_vertex(x, y);
             vertex = vertex.next_sibling();
           }
           p->envelopes.insert(
               std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
-                  name, envl));
+                  name_, envelope_));
           envelope = envelope.next_sibling();
         }
         // pro
-        auto property = point.find_child([](pugi::xml_node node) {
+        auto property = point.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "property";
         });
         while (property.type() != pugi::node_null) {
@@ -169,9 +176,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             break;
           }
           auto name_ = property.attribute("name").as_string();
-          auto vlaue_ = property.attribute("value").as_string();
+          auto value_ = property.attribute("value").as_string();
           p->properties.insert(
-              std::pair<std::string, std::string>(name_, vlaue_));
+              std::pair<std::string, std::string>(name_, value_));
           property = property.next_sibling();
         }
         resource->points.push_back(p);
@@ -179,10 +186,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       }
       CLOG(INFO, rss_log) << "init point size " << resource->points.size();
     }
-
     {
-      // locatintype
-      auto loc_type = root.find_child([](pugi::xml_node node) {
+      // locationally
+      auto loc_type = root.find_child([](const pugi::xml_node node) {
         return std::string(node.name()) == "locationType";
       });
       while (loc_type.type() != pugi::node_null) {
@@ -192,7 +198,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         auto name = loc_type.attribute("name").as_string();
         auto lt = std::make_shared<data::model::LocationType>(name);
         // allow
-        auto allow_ops = loc_type.find_child([](pugi::xml_node node) {
+        auto allow_ops = loc_type.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "allowedOperation";
         });
         while (allow_ops.type() != pugi::node_null) {
@@ -204,7 +210,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           lt->allowed_ops[name_] = std::map<std::string, std::string>();
           allow_ops = allow_ops.next_sibling();
         }
-        auto allow_per_ops = loc_type.find_child([](pugi::xml_node node) {
+        auto allow_per_ops = loc_type.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "allowedPeripheralOperation";
         });
         while (allow_per_ops.type() != pugi::node_null) {
@@ -218,7 +224,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           allow_per_ops = allow_per_ops.next_sibling();
         }
         // pro
-        auto property = loc_type.find_child([](pugi::xml_node node) {
+        auto property = loc_type.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "property";
         });
         while (property.type() != pugi::node_null) {
@@ -226,9 +232,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             break;
           }
           auto name_ = property.attribute("name").as_string();
-          auto vlaue_ = property.attribute("value").as_string();
+          auto value_ = property.attribute("value").as_string();
           lt->properties.insert(
-              std::pair<std::string, std::string>(name_, vlaue_));
+              std::pair<std::string, std::string>(name_, value_));
           property = property.next_sibling();
         }
         lt->get_param();
@@ -249,8 +255,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       CLOG(INFO, rss_log) << "init loc_type size "
                           << resource->location_types.size();
     }
-    {  // location
-      auto location = root.find_child([](pugi::xml_node node) {
+    {
+      // location
+      auto location = root.find_child([](const pugi::xml_node node) {
         return std::string(node.name()) == "location";
       });
       while (location.type() != pugi::node_null) {
@@ -286,7 +293,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
 
         auto loc = std::make_shared<data::model::Location>(name);
         std::weak_ptr<data::model::Point> link;
-        auto property = location.find_child([](pugi::xml_node node) {
+        auto property = location.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "property";
         });
         while (property.type() != pugi::node_null) {
@@ -294,9 +301,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             break;
           }
           auto name_ = property.attribute("name").as_string();
-          auto vlaue_ = property.attribute("value").as_string();
+          auto value_ = property.attribute("value").as_string();
           loc->properties.insert(
-              std::pair<std::string, std::string>(name_, vlaue_));
+              std::pair<std::string, std::string>(name_, value_));
           property = property.next_sibling();
         }
         for (auto &p : resource->points) {
@@ -309,14 +316,14 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         for (auto &t : resource->location_types) {
           if (t->name == type) {
             loc->type = t;
-            for (auto &a_op : t->allowed_ops) {
+            for (auto &[op, param] : t->allowed_ops) {
               for (auto &per : loc->properties) {
-                a_op.second.insert(per);
+                param.insert(per);
               }
             }
-            for (auto &a_op : t->allowrd_per_ops) {
+            for (auto &[op, param] : t->allowrd_per_ops) {
               for (auto &per : loc->properties) {
-                a_op.second.insert(per);
+                param.insert(per);
               }
             }
           }
@@ -333,8 +340,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       CLOG(INFO, rss_log) << "init location size "
                           << resource->locations.size();
     }
-    {  // path
-      auto path = root.find_child([](pugi::xml_node node) {
+    {
+      // path
+      auto path = root.find_child([](const pugi::xml_node node) {
         return std::string(node.name()) == "path";
       });
       while (path.type() != pugi::node_null) {
@@ -379,7 +387,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             }
             auto x = ctrl_point.attribute("x").as_int();
             auto y = ctrl_point.attribute("y").as_int();
-            layout.control_points.push_back(Eigen::Vector2i(x, y));
+            layout.control_points.emplace_back(x, y);
             ctrl_point = ctrl_point.next_sibling();
           }
         }
@@ -387,7 +395,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         p->layout = layout;
         p->source_point = source_point;
         p->destination_point = destination_point;
-        //  xmllength不准
+        //  xml length不准
         // p->length = Eigen::Vector2d(source_point.lock()->position.x() -
         //                                 destination_point.lock()->position.x(),
         //                             source_point.lock()->position.y() -
@@ -400,16 +408,16 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         p->source_point.lock()->incoming_paths.push_back(p);
         p->destination_point.lock()->outgoing_paths.push_back(p);
         // envelope
-        auto envelope = path.find_child([](pugi::xml_node node) {
+        auto envelope = path.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "vehicleEnvelope";
         });
         while (envelope.type() != pugi::node_null) {
           if (std::string(envelope.name()) != "vehicleEnvelope") {
             break;
           }
-          auto name = envelope.attribute("name").as_string();
-          auto envl = std::make_shared<data::model::Envelope>(name);
-          auto vertex = envelope.find_child([](pugi::xml_node node) {
+          auto name_ = envelope.attribute("name").as_string();
+          auto envelope_ = std::make_shared<data::model::Envelope>(name_);
+          auto vertex = envelope.find_child([](const pugi::xml_node node) {
             return std::string(node.name()) == "vertex";
           });
           while (vertex.type() != pugi::node_null) {
@@ -418,16 +426,16 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             }
             auto x = vertex.attribute("x").as_double();
             auto y = vertex.attribute("y").as_double();
-            envl->add_vertex(x, y);
+            envelope_->add_vertex(x, y);
             vertex = vertex.next_sibling();
           }
           p->envelopes.insert(
               std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
-                  name, envl));
+                  name_, envelope_));
           envelope = envelope.next_sibling();
         }
         // pro
-        auto property = path.find_child([](pugi::xml_node node) {
+        auto property = path.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "property";
         });
         while (property.type() != pugi::node_null) {
@@ -435,26 +443,26 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             break;
           }
           auto name_ = property.attribute("name").as_string();
-          auto vlaue_ = property.attribute("value").as_string();
+          auto value_ = property.attribute("value").as_string();
           p->properties.insert(
-              std::pair<std::string, std::string>(name_, vlaue_));
+              std::pair<std::string, std::string>(name_, value_));
           property = property.next_sibling();
         }
         //
         {
-          for (auto &_p : p->properties) {
-            if (_p.first == "vda5050:orientation.reverse") {
-              p->orientation_reverse = std::stof(_p.second) * M_PI / 180;
-            } else if (_p.first == "vda5050:orientation.forward") {
-              p->orientation_forward = std::stof(_p.second) * M_PI / 180;
+          for (auto &[key, value] : p->properties) {
+            if (key == "vda5050:orientation.reverse") {
+              p->orientation_reverse = std::stof(value) * M_PI / 180;
+            } else if (key == "vda5050:orientation.forward") {
+              p->orientation_forward = std::stof(value) * M_PI / 180;
             }
           }
         }
         //
         data::model::Actions acts(p->properties);
         {
-          //  perop
-          auto peripher_op = path.find_child([](pugi::xml_node node) {
+          //  per op
+          auto peripher_op = path.find_child([](const pugi::xml_node node) {
             return std::string(node.name()) == "peripheralOperation";
           });
 
@@ -496,7 +504,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     }
     {
       // block
-      auto block = root.find_child([](pugi::xml_node node) -> bool {
+      auto block = root.find_child([](const pugi::xml_node node) -> bool {
         return std::string(node.name()) == "block";
       });
       while (block.type() != pugi::node_null) {
@@ -506,7 +514,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         auto color = block.child("blockLayout").attribute("color").as_string();
         // member
         std::unordered_set<std::shared_ptr<RSSResource>> rs;
-        auto member = block.find_child([](pugi::xml_node node) {
+        auto member = block.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "member";
         });
         while (member.type() != pugi::node_null) {
@@ -542,8 +550,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           std::string direction =
               block.child("direct").attribute("value").as_string();
           for (auto &x : resource->paths) {
-            auto p = rs.find(x);
-            if (p != rs.end()) {
+            if (auto p = rs.find(x); p != rs.end()) {
               auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
               if (direction == "FRONT") {
                 path->max_reverse_vel = 0;
@@ -558,7 +565,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     }
     //
     {
-      auto vehicle = root.find_child([](pugi::xml_node node) {
+      auto vehicle = root.find_child([](const pugi::xml_node node) {
         return std::string(node.name()) == "vehicle";
       });
       while (vehicle.type() != pugi::node_null) {
@@ -581,17 +588,17 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             vehicle.attribute("energyLevelSufficientlyRecharged").as_int();
         std::string envelope = vehicle.attribute("envelopeKey").as_string();
         //
-        auto init_pos = vehicle.find_child([](pugi::xml_node node) {
+        auto init_pos = vehicle.find_child([](const pugi::xml_node node) {
           return (std::string(node.name()) == "property" &&
                   node.attribute("name").as_string() ==
                       std::string("loopback:initialPosition"));
         });
-        auto park_pos = vehicle.find_child([](pugi::xml_node node) {
+        auto park_pos = vehicle.find_child([](const pugi::xml_node node) {
           return (std::string(node.name()) == "property" &&
                   node.attribute("name").as_string() ==
                       std::string("tcs:preferredParkingPosition"));
         });
-        auto adapter = vehicle.find_child([](pugi::xml_node node) {
+        auto adapter = vehicle.find_child([](const pugi::xml_node node) {
           return (std::string(node.name()) == "property" &&
                   node.attribute("name").as_string() ==
                       std::string("tcs:preferredAdapterClass"));
@@ -600,18 +607,18 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           vehicle = vehicle.next_sibling();
           continue;
         }
-        std::string adapter_class = adapter.attribute("value").as_string();
-        if (adapter_class.find("virtual") != std::string::npos) {
+        if (std::string adapter_class = adapter.attribute("value").as_string();
+            adapter_class.find("virtual") != std::string::npos) {
           ///////////////////
           /// // 使用虚拟车辆
           //////////////////
           auto veh = std::make_shared<kernel::driver::SimVehicle>(5, name);
           if (init_pos.type() != pugi::node_null) {
             auto init_pos_ = init_pos.attribute("value").as_string();
-            auto p = resource->find(init_pos_);
-            if (p.first == kernel::allocate::ResourceManager::ResType::Point) {
+            if (auto [type, res_] = resource->find(init_pos_);
+                type == kernel::allocate::ResourceManager::ResType::Point) {
               veh->last_point =
-                  std::dynamic_pointer_cast<data::model::Point>(p.second);
+                  std::dynamic_pointer_cast<data::model::Point>(res_);
             }
           } else {
             CLOG(ERROR, rss_log) << "vehicle " << name << " no init_pos";
@@ -619,18 +626,18 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             continue;
           }
           veh->length = length;
-          veh->width = 2.0 * length / 4;
+          veh->width = static_cast<int>(2.0 * length / 4);
           veh->max_reverse_vel = maxReverseVelocity;
           veh->max_vel = maxVelocity;
           veh->color = color;
           veh->energy_level_critical = energyLevelCritical;
           veh->energy_level_good = energyLevelGood;
-          veh->engrgy_level_full = energyLevelFullyRecharged;
-          veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
+          veh->energy_level_full = energyLevelFullyRecharged;
+          veh->energy_level_recharge = energyLevelSufficientlyRecharged;
           veh->send_queue_size = 2;
           veh->envelope_key = envelope;
           // pro
-          auto property = vehicle.find_child([](pugi::xml_node node) {
+          auto property = vehicle.find_child([](const pugi::xml_node node) {
             return std::string(node.name()) == "property";
           });
           while (property.type() != pugi::node_null) {
@@ -638,62 +645,63 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
               break;
             }
             auto name_ = property.attribute("name").as_string();
-            auto vlaue_ = property.attribute("value").as_string();
+            auto value_ = property.attribute("value").as_string();
             veh->properties.insert(
-                std::pair<std::string, std::string>(name_, vlaue_));
+                std::pair<std::string, std::string>(name_, value_));
             property = property.next_sibling();
           }
           ///////////////////////////
 
           if (park_pos.type() != pugi::node_null) {
             auto park_pos_ = park_pos.attribute("value").as_string();
-            auto p = resource->find(park_pos_);
-            if (p.first == kernel::allocate::ResourceManager::ResType::Point) {
+            if (auto [type, res_] = resource->find(park_pos_);
+                type == kernel::allocate::ResourceManager::ResType::Point) {
               veh->park_point =
-                  std::dynamic_pointer_cast<data::model::Point>(p.second);
+                  std::dynamic_pointer_cast<data::model::Point>(res_);
             }
           }
           dispatcher->vehicles.push_back(veh);
-
         } else if (adapter_class.find("vda") != std::string::npos) {
           //
-          auto interfaceName = vehicle.find_child([](pugi::xml_node node) {
+          pugi::xml_node interfaceName;
+          interfaceName = vehicle.find_child([](const pugi::xml_node node) {
             return (std::string(node.name()) == "property" &&
                     node.attribute("name").as_string() ==
                         std::string("vda5050:interfaceName"));
           });
-          auto manufacturer = vehicle.find_child([](pugi::xml_node node) {
+          auto manufacturer = vehicle.find_child([](const pugi::xml_node node) {
             return (std::string(node.name()) == "property" &&
                     node.attribute("name").as_string() ==
                         std::string("vda5050:manufacturer"));
           });
 
-          auto serialNumber = vehicle.find_child([](pugi::xml_node node) {
+          auto serialNumber = vehicle.find_child([](const pugi::xml_node node) {
             return (std::string(node.name()) == "property" &&
                     node.attribute("name").as_string() ==
                         std::string("vda5050:serialNumber"));
           });
-          auto version = vehicle.find_child([](pugi::xml_node node) {
+          auto version = vehicle.find_child([](const pugi::xml_node node) {
             return (std::string(node.name()) == "property" &&
                     node.attribute("name").as_string() ==
                         std::string("vda5050:version"));
           });
 
-          auto orderquence = vehicle.find_child([](pugi::xml_node node) {
+          auto orderquence = vehicle.find_child([](const pugi::xml_node node) {
             return (std::string(node.name()) == "property" &&
                     node.attribute("name").as_string() ==
                         std::string("vda5050:orderQueueSize"));
           });
-          auto deviation_xy = vehicle.find_child([](pugi::xml_node node) {
+          auto deviation_xy = vehicle.find_child([](const pugi::xml_node node) {
             return (std::string(node.name()) == "property" &&
                     node.attribute("name").as_string() ==
                         std::string("vda5050:deviationXY"));
           });
-          auto deviation_theta = vehicle.find_child([](pugi::xml_node node) {
-            return (std::string(node.name()) == "property" &&
-                    node.attribute("name").as_string() ==
-                        std::string("vda5050:deviationTheta"));
-          });
+          auto deviation_theta =
+              vehicle.find_child([](const pugi::xml_node node) {
+                return (std::string(node.name()) == "property" &&
+                        node.attribute("name").as_string() ==
+                            std::string("vda5050:deviationTheta"));
+              });
 
           ///////////////////
           /// // 使用mqtt车辆
@@ -727,30 +735,30 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
               vda_manufacturer);
           if (init_pos.type() != pugi::node_null) {
             auto init_pos_ = init_pos.attribute("value").as_string();
-            auto p = resource->find(init_pos_);
-            if (p.first == kernel::allocate::ResourceManager::ResType::Point) {
+            if (auto [type, res_] = resource->find(init_pos_);
+                type == kernel::allocate::ResourceManager::ResType::Point) {
               veh->init_pos = true;
               veh->last_point =
-                  std::dynamic_pointer_cast<data::model::Point>(p.second);
+                  std::dynamic_pointer_cast<data::model::Point>(res_);
             }
           }
           if (park_pos.type() != pugi::node_null) {
             auto park_pos_ = park_pos.attribute("value").as_string();
-            auto p = resource->find(park_pos_);
-            if (p.first == kernel::allocate::ResourceManager::ResType::Point) {
+            if (auto [type, res_] = resource->find(park_pos_);
+                type == kernel::allocate::ResourceManager::ResType::Point) {
               veh->park_point =
-                  std::dynamic_pointer_cast<data::model::Point>(p.second);
+                  std::dynamic_pointer_cast<data::model::Point>(res_);
             }
           }
           veh->length = length;
-          veh->width = 2.0 * length / 4;
+          veh->width = static_cast<int>(2.0 * length / 4);
           veh->max_reverse_vel = maxReverseVelocity;
           veh->max_vel = maxVelocity;
           veh->color = color;
           veh->energy_level_critical = energyLevelCritical;
           veh->energy_level_good = energyLevelGood;
-          veh->engrgy_level_full = energyLevelFullyRecharged;
-          veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
+          veh->energy_level_full = energyLevelFullyRecharged;
+          veh->energy_level_recharge = energyLevelSufficientlyRecharged;
           veh->map_id = root.attribute("name").as_string();
           veh->broker_ip = MQTT_IP;
           veh->broker_port = MQTT_PORT;
@@ -762,7 +770,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           veh->envelope_key = envelope;
 
           // pro
-          auto property = vehicle.find_child([](pugi::xml_node node) {
+          auto property = vehicle.find_child([](const pugi::xml_node node) {
             return std::string(node.name()) == "property";
           });
           while (property.type() != pugi::node_null) {
@@ -770,9 +778,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
               break;
             }
             auto name_ = property.attribute("name").as_string();
-            auto vlaue_ = property.attribute("value").as_string();
+            auto value_ = property.attribute("value").as_string();
             veh->properties.insert(
-                std::pair<std::string, std::string>(name_, vlaue_));
+                std::pair<std::string, std::string>(name_, value_));
             property = property.next_sibling();
           }
           ///////////////////////////
@@ -780,18 +788,18 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         } else {
           auto veh = std::make_shared<kernel::driver::InvalidVehicle>(name);
           veh->length = length;
-          veh->width = 2.0 * length / 4;
+          veh->width = static_cast<int>(2.0 * length / 4);
           veh->max_reverse_vel = maxReverseVelocity;
           veh->max_vel = maxVelocity;
           veh->color = color;
           veh->energy_level_critical = energyLevelCritical;
           veh->energy_level_good = energyLevelGood;
-          veh->engrgy_level_full = energyLevelFullyRecharged;
-          veh->engrgy_level_recharge = energyLevelSufficientlyRecharged;
+          veh->energy_level_full = energyLevelFullyRecharged;
+          veh->energy_level_recharge = energyLevelSufficientlyRecharged;
           veh->send_queue_size = 2;
           veh->envelope_key = envelope;
           // pro
-          auto property = vehicle.find_child([](pugi::xml_node node) {
+          auto property = vehicle.find_child([](const pugi::xml_node node) {
             return std::string(node.name()) == "property";
           });
           while (property.type() != pugi::node_null) {
@@ -799,9 +807,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
               break;
             }
             auto name_ = property.attribute("name").as_string();
-            auto vlaue_ = property.attribute("value").as_string();
+            auto value_ = property.attribute("value").as_string();
             veh->properties.insert(
-                std::pair<std::string, std::string>(name_, vlaue_));
+                std::pair<std::string, std::string>(name_, value_));
             property = property.next_sibling();
           }
           dispatcher->vehicles.push_back(veh);
@@ -818,21 +826,17 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     init_planner();
     scheduler->resource = resource;
     // connect signals
-    dispatcher->find_res = std::bind(&kernel::allocate::ResourceManager::find,
-                                     resource, std::placeholders::_1);
-    dispatcher->go_home = std::bind(
-        &RSS::home_order, this, std::placeholders::_1, std::placeholders::_2);
-    dispatcher->order_empty =
-        std::bind(&kernel::allocate::OrderPool::is_empty, orderpool);
-    dispatcher->go_charge = std::bind(
-        &RSS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
-    dispatcher->get_next_ord =
-        std::bind(&kernel::allocate::OrderPool::get_one_order, orderpool);
-    dispatcher->pop_order = std::bind(&kernel::allocate::OrderPool::pop,
-                                      orderpool, std::placeholders::_1);
-    dispatcher->get_park_point =
-        std::bind(&kernel::allocate::ResourceManager::get_recent_park_point,
-                  resource, std::placeholders::_1);
+    dispatcher->find_res = [&](auto &r) { return resource->find(r); };
+    dispatcher->go_home = [&](auto name, auto veh) { home_order(name, veh); };
+    dispatcher->order_empty = [&]() { return orderpool->is_empty(); };
+    dispatcher->pop_order = [&](auto ord) { orderpool->pop(ord); };
+    dispatcher->get_next_vec = [&]() { return orderpool->get_next_vec(); };
+    dispatcher->go_charge = [&](auto name, auto veh) {
+      charge_order(name, veh);
+    };
+    dispatcher->get_park_point = [&](auto veh) {
+      return resource->get_recent_park_point(veh);
+    };
     for (auto &v : dispatcher->vehicles) {
       v->planner = planner;
       v->scheduler = scheduler;
@@ -843,37 +847,41 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     CLOG(INFO, rss_log) << "run all ...\n";
     run();
     CLOG(INFO, rss_log) << "run all ok\n";
-    return std::pair<int, std::string>(static_cast<int>(OK_200), "");
-  } catch (pugi::xpath_exception ec) {
+    return {static_cast<int>(OK_200), ""};
+  } catch (pugi::xpath_exception &ec) {
     CLOG(ERROR, rss_log) << "parse error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse XML input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
   }
 }
 
-void RSS::paused_vehicle(const std::string &name) {
-  std::hash<std::string> hash_fn;
-  for (auto &v : dispatcher->vehicles) {
-    if (v->name_hash == hash_fn(name)) {
+void RSS::paused_vehicle(const std::string &name) const {
+  for (const auto &v : dispatcher->vehicles) {
+    if (std::hash<std::string> hash_fn; v->name_hash == hash_fn(name)) {
       v->paused = true;
     }
   }
 }
-void RSS::recovery_vehicle(const std::string &name) {
-  std::hash<std::string> hash_fn;
-  for (auto &v : dispatcher->vehicles) {
-    if (v->name_hash == hash_fn(name)) {
+
+void RSS::recovery_vehicle(const std::string &name) const {
+  for (const auto &v : dispatcher->vehicles) {
+    if (std::hash<std::string> hash_fn; v->name_hash == hash_fn(name)) {
       v->paused = false;
     }
   }
 }
 
+void RSS::init() {
+  init_resource();
+  init_planner();
+  init_orderpool();
+  init_dispatcher();
+  init_scheduler();
+}
+
 void RSS::stop() {
-  if (orderpool) {
-    orderpool.reset();
-  }
   if (scheduler) {
     scheduler.reset();
   }
@@ -881,17 +889,20 @@ void RSS::stop() {
     dispatcher->stop();
     dispatcher.reset();
   }
+  if (orderpool) {
+    orderpool.reset();
+  }
   if (resource) {
     resource.reset();
   }
   is_run = false;
 }
+
 void RSS::home_order(const std::string &name,
-                     std::shared_ptr<kernel::driver::Vehicle> v) {
-  auto time = get_now_utc_time();
-  std::shared_ptr<data::order::TransportOrder> ord =
-      std::make_shared<data::order::TransportOrder>(name);
-  std::hash<std::string> hash_fn;
+                     const std::shared_ptr<kernel::driver::Vehicle> &v) const {
+  const auto time = get_now_utc_time();
+  const auto ord = std::make_shared<data::order::TransportOrder>(name);
+  // std::hash<std::string> hash_fn;
   ord->create_time = time;
   ord->dead_time = time + std::chrono::minutes(60);
   ord->state = data::order::TransportOrder::State::RAW;
@@ -901,54 +912,56 @@ void RSS::home_order(const std::string &name,
                       << ord->name_hash << "\n";
   //  检查是否通路
 
-  auto home_point = v->park_point
-                        ? v->park_point
-                        : resource->get_recent_park_point(v->last_point);
+  const auto home_point = v->park_point
+                              ? v->park_point
+                              : resource->get_recent_park_point(v->last_point);
   if (!home_point) {
     CLOG(ERROR, rss_log) << "home point not found";
     return;
   }
-  auto destination = orderpool->res_to_destination(
+  const auto destination = orderpool->res_to_destination(
       home_point, data::order::DriverOrder::Destination::OpType::MOVE);
-  auto dr =
+  const auto dr =
       std::make_shared<data::order::DriverOrder>("driverorder_home_" + v->name);
   dr->destination = destination;
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
   ord->intended_vehicle = v;
   ord->anytime_drop = true;
-  orderpool->orderpool.push_back(ord);
+  orderpool->push(ord);
 }
-void RSS::charge_order(const std::string &name,
-                       std::shared_ptr<kernel::driver::Vehicle> v) {
-  v->process_chargeing = true;
-  auto time = get_now_utc_time();
-  std::shared_ptr<data::order::TransportOrder> ord =
-      std::make_shared<data::order::TransportOrder>(name);
-  std::hash<std::string> hash_fn;
+
+void RSS::charge_order(
+    const std::string &name,
+    const std::shared_ptr<kernel::driver::Vehicle> &v) const {
+  v->process_charging = true;
+  const auto time = get_now_utc_time();
+  const auto ord = std::make_shared<data::order::TransportOrder>(name);
+  // std::hash<std::string> hash_fn;
   ord->create_time = time;
   ord->dead_time = time + std::chrono::minutes(60);
   ord->state = data::order::TransportOrder::State::RAW;
-  // TODO type ?
-  ord->type = "MOVE";
+  //  type ?
+  ord->type = "Charge";
   CLOG(INFO, rss_log) << "new ord " << ord->name << " name_hash "
                       << ord->name_hash << "\n";
   //  检查是否通路
-  auto charge_point = resource->get_recent_charge_loc(v->last_point);
+  const auto charge_point = resource->get_recent_charge_loc(v->last_point);
   if (!charge_point) {
     CLOG(ERROR, rss_log) << "charge point not found";
     return;
   }
-  auto destination = orderpool->res_to_destination(
+  const auto destination = orderpool->res_to_destination(
       charge_point, data::order::DriverOrder::Destination::OpType::CHARGE);
-  auto dr = std::make_shared<data::order::DriverOrder>("driverorder_charge_" +
-                                                       v->name);
+  const auto dr = std::make_shared<data::order::DriverOrder>(
+      "driverorder_charge_" + v->name);
   dr->destination = destination;
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
   ord->intended_vehicle = v;
-  orderpool->orderpool.push_back(ord);
+  orderpool->push(ord);
 }
+
 RSS::~RSS() {
   CLOG(INFO, rss_log) << "TCS  stop\n";
   stop();
@@ -959,16 +972,19 @@ bool RSS::init_dispatcher() {
   CLOG(INFO, rss_log) << "init dispatcher ok\n";
   return true;
 }
+
 bool RSS::init_orderpool() {
   orderpool = std::make_shared<kernel::allocate::OrderPool>("OrderPool");
   CLOG(INFO, rss_log) << "init orderpool ok\n";
   return true;
 }
+
 bool RSS::init_scheduler() {
   this->scheduler = std::make_shared<kernel::schedule::Scheduler>("Scheduler");
   CLOG(INFO, rss_log) << "init scheduler ok\n";
   return true;
 }
+
 bool RSS::init_planner() {
   if (!resource) {
     return false;
@@ -977,24 +993,26 @@ bool RSS::init_planner() {
   CLOG(INFO, rss_log) << "init planner ok\n";
   return true;
 }
-void RSS::cancel_all_order() { orderpool->cancel_all_order(); }
 
-void RSS::cancel_order(const std::string &order_name) {
-  std::hash<std::string> hash_fn;
+void RSS::cancel_all_order() const { orderpool->cancel_all_order(); }
+
+void RSS::cancel_order(const std::string &order_name) const {
+  constexpr std::hash<std::string> hash_fn;
   orderpool->cancel_order(hash_fn(order_name));
 }
-void RSS::cancel_vehicle_all_order(const std::string &vehicle_name) {
-  std::hash<std::string> hash_fn;
-  for (auto &v : dispatcher->vehicles) {
-    if (v->name_hash == hash_fn(vehicle_name)) {
+
+void RSS::cancel_vehicle_all_order(const std::string &vehicle_name) const {
+  for (const auto &v : dispatcher->vehicles) {
+    if (std::hash<std::string> hash_fn; v->name_hash == hash_fn(vehicle_name)) {
       v->cancel_all_order();
     }
   }
 }
+
 void RSS::run() {
   assert(dispatcher != nullptr);
   if (dispatcher) {
-    for (auto &v : dispatcher->vehicles) {
+    for (const auto &v : dispatcher->vehicles) {
       v->run();
     }
     dispatcher->run();
@@ -1006,7 +1024,7 @@ void RSS::run() {
   is_run = true;
 }
 
-json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
+json order_to_json(const std::shared_ptr<data::order::TransportOrder> &v) {
   json value;
   if (v) {
     value["dispensable"] = v->dispensable;
@@ -1029,10 +1047,10 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
       dest_v["operation"] = dest->destination->get_type();
       dest_v["state"] = dest->get_state();
       dest_v["properties"] = json::array();
-      for (auto &property : dest->properties) {
+      for (auto &[key, value_] : dest->properties) {
         json pro;
-        pro["name"] = property.first;
-        pro["value"] = property.second;
+        pro["name"] = key;
+        pro["value"] = value_;
         dest_v["properties"].push_back(pro);
       }
       value["destinations"].push_back(dest_v);
@@ -1041,86 +1059,94 @@ json order_to_json(std::shared_ptr<data::order::TransportOrder> v) {
   return value;
 }
 
-std::pair<int, std::string> RSS::get_transport_orders(
-    const std::string &vehicle) {
+std::pair<int, std::string>
+RSS::get_transport_orders(const std::string &vehicle) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   if (vehicle.empty()) {
     json res = json::array();
-    for (auto &v : orderpool->orderpool) {
-      json value = order_to_json(v);
-      res.push_back(value);
+    for (auto &[name, ords] : orderpool->orderpool) {
+      for (auto &o : ords) {
+        json value = order_to_json(o);
+        res.push_back(value);
+      }
     }
     for (auto &v : orderpool->ended_orderpool) {
       json value = order_to_json(v);
       res.push_back(value);
     }
-    return std::pair<int, std::string>(OK_200, res.to_string());
+    return std::pair<int, std::string>({OK_200, res.to_string()});
   } else {
     for (auto &v : dispatcher->vehicles) {
       if (v->name == vehicle) {
         json res = json::array();
-        for (auto &v : v->orders) {
-          json value = order_to_json(v);
+        for (auto &v_ : v->orders) {
+          json value = order_to_json(v_);
           res.push_back(value);
         }
-        return std::pair<int, std::string>(OK_200, res.to_string());
+        return std::pair<int, std::string>({OK_200, res.to_string()});
       }
     }
     json res = json::array();
     auto msg = "Could not find the intended vehicle '" + vehicle + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
 }
 
-std::pair<int, std::string> RSS::get_transport_order(
-    const std::string &ord_name) {
+std::pair<int, std::string>
+RSS::get_transport_order(const std::string &ord_name) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   json res = json::array();
-  for (auto &ord : orderpool->orderpool) {
-    if (ord->name == ord_name) {
-      res.push_back(order_to_json(ord));
-      return std::pair<int, std::string>(OK_200, res.to_string());
+  for (auto &[name, orders] : orderpool->orderpool) {
+    for (auto &o : orders) {
+      if (o->name == ord_name) {
+        res.push_back(order_to_json(o));
+        return std::pair<int, std::string>({OK_200, res.to_string()});
+      }
     }
   }
   for (auto &ord : orderpool->ended_orderpool) {
     if (ord->name == ord_name) {
       res.push_back(order_to_json(ord));
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     }
   }
   auto msg = "Could not find transport order '" + ord_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
-std::pair<int, std::string> RSS::post_transport_order(
-    const std::string &ord_name, const std::string &body) {
+
+std::pair<int, std::string>
+RSS::post_transport_order(const std::string &ord_name,
+                          const std::string &body) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
-  for (auto &o : orderpool->orderpool) {
-    if (o->name == ord_name) {
-      json res = json::array();
-      auto msg = "Transport order '" + ord_name + "' already exists.";
-      res.push_back(msg);
-      CLOG(ERROR, rss_log) << msg;
-      return std::pair<int, std::string>(Conflict_409, res.to_string());
+  for (auto &[name, ords] : orderpool->orderpool) {
+    for (auto &ord : ords) {
+      if (ord->name == ord_name) {
+        json res = json::array();
+        auto msg = "Transport order '" + ord_name + "' already exists.";
+        res.push_back(msg);
+        CLOG(ERROR, rss_log) << msg;
+        return std::pair<int, std::string>({Conflict_409, res.to_string()});
+      }
     }
   }
   for (auto &o : orderpool->ended_orderpool) {
@@ -1129,12 +1155,12 @@ std::pair<int, std::string> RSS::post_transport_order(
       auto msg = "Transport order '" + ord_name + "' already exists.";
       res.push_back(msg);
       CLOG(ERROR, rss_log) << msg;
-      return std::pair<int, std::string>(Conflict_409, res.to_string());
+      return std::pair<int, std::string>({Conflict_409, res.to_string()});
     }
   }
   try {
     auto req = json::parse(body);
-    LOG(WARNING) << "\n" << pretty_print(req) << "\n";
+    LOG(WARNING) << "receive order:\n" << pretty_print(req) << "\n";
     // 字段检查
     auto ord = std::make_shared<data::order::TransportOrder>(ord_name);
     ord->create_time = get_now_utc_time();
@@ -1168,9 +1194,9 @@ std::pair<int, std::string> RSS::post_transport_order(
         orderpool->orderquence.push_back(new_orderquence);
       }
     }
-    if (req.contains("type")) ord->type = req["type"].as_string();
-    auto destinations = req["destinations"];
-    if (destinations.empty()) {
+    if (req.contains("type"))
+      ord->type = req["type"].as_string();
+    if (auto destinations = req["destinations"]; destinations.empty()) {
       LOG(WARNING) << ord->name << " op is null";
       ord->state = data::order::TransportOrder::State::FAILED;
       orderpool->ended_orderpool.push_back(ord);
@@ -1178,42 +1204,39 @@ std::pair<int, std::string> RSS::post_transport_order(
       for (auto &d : destinations.array_range()) {
         //  操作类型判断
         auto loc = d["locationName"].as_string();
-        auto check = resource->find(loc);
-        if (check.first == kernel::allocate::ResourceManager::ResType::Err) {
-          json res = json::array();
+        if (auto [ret, res] = resource->find(loc);
+            ret == kernel::allocate::ResourceManager::ResType::Err) {
+          json res_ = json::array();
           auto msg = "Could not find location '" + loc + "'.";
-          res.push_back(msg);
+          res_.push_back(msg);
           CLOG(ERROR, rss_log) << msg;
           ord->state = data::order::TransportOrder::State::UNROUTABLE;
           orderpool->ended_orderpool.push_back(ord);
-          return std::pair<int, std::string>(NotFound_404, res.to_string());
+          return std::pair<int, std::string>({NotFound_404, res_.to_string()});
         } else {
           auto op = d["operation"].as_string();
-          auto op_ = data::model::Actions::get_optype(op);
-          if (op_.has_value()) {
-            if (check.first ==
-                kernel::allocate::ResourceManager::ResType::Location) {
-              auto t1 = std::dynamic_pointer_cast<data::model::Location>(
-                  check.second);
+          if (auto op_ = data::model::Actions::get_optype(op);
+              op_.has_value()) {
+            if (ret == kernel::allocate::ResourceManager::ResType::Location) {
+              auto t1 = std::dynamic_pointer_cast<data::model::Location>(res);
               std::string op_lower = op;
               std::transform(op_lower.begin(), op_lower.end(), op_lower.begin(),
                              ::tolower);
-              auto it = t1->type.lock()->allowed_ops.find(op_lower);
-              if (it == t1->type.lock()->allowed_ops.end()) {
+              if (auto it = t1->type.lock()->allowed_ops.find(op_lower);
+                  it == t1->type.lock()->allowed_ops.end()) {
                 CLOG(ERROR, driver_log)
                     << t1->name << " not support <" << op << "> type\n";
                 ord->state = data::order::TransportOrder::State::FAILED;
                 orderpool->ended_orderpool.push_back(ord);
-                json res = json::array();
+                json res_ = json::array();
                 auto msg = "not support type '" + op + "'.";
-                res.push_back(msg);
-                return std::pair<int, std::string>(NotFound_404,
-                                                   res.to_string());
+                res_.push_back(msg);
+                return std::pair<int, std::string>(
+                    {NotFound_404, res_.to_string()});
               }
             }
 
-            auto destination =
-                orderpool->res_to_destination(check.second, op_.value());
+            auto destination = orderpool->res_to_destination(res, op_.value());
             if (d.contains("properties")) {
               for (auto &pro : d["properties"].array_range()) {
                 destination->properties.insert(
@@ -1231,10 +1254,11 @@ std::pair<int, std::string> RSS::post_transport_order(
                 << "op type <" + std::string(op) + "> is not support\n";
             ord->state = data::order::TransportOrder::State::FAILED;
             orderpool->ended_orderpool.push_back(ord);
-            json res = json::array();
+            json res_ = json::array();
             auto msg = "Could not support type '" + op + "'.";
-            res.push_back(msg);
-            return std::pair<int, std::string>(NotFound_404, res.to_string());
+            res_.push_back(msg);
+            return std::pair<int, std::string>(
+                {NotFound_404, res_.to_string()});
           }
         }
       }
@@ -1247,9 +1271,11 @@ std::pair<int, std::string> RSS::post_transport_order(
     }
     if (req.contains("dependencies")) {
       for (auto &dep : req["dependencies"].array_range()) {
-        for (auto &o : orderpool->orderpool) {
-          if (o->name == dep.as_string()) {
-            ord->dependencies.push_back(o);
+        for (auto &[name, ords] : orderpool->orderpool) {
+          for (auto &o_ : ords) {
+            if (o_->name == dep.as_string()) {
+              ord->dependencies.push_back(o_);
+            }
           }
         }
         for (auto &o : orderpool->ended_orderpool) {
@@ -1265,7 +1291,7 @@ std::pair<int, std::string> RSS::post_transport_order(
             : "";
     ord->state = data::order::TransportOrder::State::RAW;
     CLOG(INFO, dispatch_log) << ord->name << " status: [raw]\n";
-    orderpool->orderpool.push_back(ord);
+    orderpool->push(ord);
     dispatcher->notify();
     // return
     json res;
@@ -1288,35 +1314,36 @@ std::pair<int, std::string> RSS::post_transport_order(
       value["operation"] = dest->destination->get_type();
       value["state"] = dest->get_state();
       value["properties"] = json::array();
-      for (auto &pro : dest->properties) {
+      for (auto &[key, v_] : dest->properties) {
         json p;
-        p["name"] = pro.first;
-        p["value"] = pro.second;
+        p["name"] = key;
+        p["value"] = v_;
         value["properties"].push_back(p);
       }
       res["destinations"].push_back(value);
     }
-    return std::pair<int, std::string>(OK_200, res.to_string());
-  } catch (jsoncons::ser_error ec) {
+    return std::pair<int, std::string>({OK_200, res.to_string()});
+  } catch (jsoncons::ser_error &ec) {
     CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
-  } catch (jsoncons::key_not_found ec) {
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
+  } catch (jsoncons::key_not_found &ec) {
     CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
-  } catch (jsoncons::not_an_object ec) {
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
+  } catch (jsoncons::not_an_object &ec) {
     CLOG(ERROR, rss_log) << "not_an_object error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
   }
 }
+
 std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
                                                  const std::string &point) {
   std::shared_lock<std::shared_mutex> lk(mutex);
@@ -1324,7 +1351,7 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   auto veh =
       std::find_if(dispatcher->vehicles.begin(), dispatcher->vehicles.end(),
@@ -1333,15 +1360,15 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
     json res = json::array();
     auto msg = "Could not find vehicle '" + vehicle + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
   }
   auto p = std::find_if(resource->points.begin(), resource->points.end(),
-                        [&](auto &p) { return p->name == point; });
+                        [&](auto &p_) { return p_->name == point; });
   if (p == resource->points.end()) {
     json res = json::array();
     auto msg = "Could not find point '" + point + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
   }
   //
   auto ord = std::make_shared<data::order::TransportOrder>(
@@ -1358,7 +1385,7 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
   ord->peripheral_reservation_token = "null";
-  orderpool->orderpool.push_back(ord);
+  orderpool->push(ord);
   dispatcher->notify();
   // return
   json res;
@@ -1382,44 +1409,51 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
     value["operation"] = dest->destination->get_type();
     value["state"] = dest->get_state();
     value["properties"] = json::array();
-    for (auto &pro : dest->properties) {
-      json p;
-      p["name"] = pro.first;
-      p["value"] = pro.second;
-      value["properties"].push_back(p);
+    for (auto &[key, value_] : dest->properties) {
+      json val;
+      val["name"] = key;
+      val["value"] = value_;
+      value["properties"].push_back(val);
     }
     res["destinations"].push_back(value);
   }
-  return std::pair<int, std::string>(OK_200, res.to_string());
+  return std::pair<int, std::string>({OK_200, res.to_string()});
 }
-std::pair<int, std::string> RSS::post_transport_order_withdrawl(
-    const std::string &ord_name, bool immediate, bool) {
+
+std::pair<int, std::string>
+RSS::post_transport_order_withdrawl(const std::string &ord_name, bool immediate,
+                                    bool) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
-  for (auto &o : orderpool->orderpool) {
-    if (o->name == ord_name) {
-      o->state = data::order::TransportOrder::State::WITHDRAWL;
-      return std::pair<int, std::string>(OK_200, "");
+  for (auto &[name, ords] : orderpool->orderpool) {
+    for (auto &ord : ords) {
+      if (ord->name == ord_name) {
+        CLOG(INFO, rss_log) << ord_name << " withdrawl\n";
+        ord->state = data::order::TransportOrder::State::WITHDRAWL;
+        return std::pair<int, std::string>({OK_200, ""});
+      }
     }
   }
   for (auto &o : orderpool->ended_orderpool) {
     if (o->name == ord_name) {
+      CLOG(INFO, rss_log) << ord_name << " withdrawl\n";
       o->state = data::order::TransportOrder::State::WITHDRAWL;
-      return std::pair<int, std::string>(OK_200, "");
+      return std::pair<int, std::string>({OK_200, ""});
     }
   }
   json res = json::array();
   auto msg = "Could not find transport order '" + ord_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
+json orderquence_to_json(
+    const std::shared_ptr<data::order::OrderSequence> &quence) {
   json res;
   res["name"] = quence->name;
   res["type"] = quence->get_type();
@@ -1438,22 +1472,23 @@ json orderquence_to_json(std::shared_ptr<data::order::OrderSequence> quence) {
                                  ? quence->processing_vehicle.lock()->name
                                  : "";
   res["properties"] = json::array();
-  for (auto &pro : quence->properties) {
+  for (auto &[key, value] : quence->properties) {
     json p;
-    p["name"] = pro.first;
-    p["value"] = pro.second;
+    p["name"] = key;
+    p["value"] = value;
     res["properties"].push_back(p);
   }
   return res;
 }
-std::pair<int, std::string> RSS::get_ordersequences(
-    const std::string &vehicle) {
+
+std::pair<int, std::string>
+RSS::get_ordersequences(const std::string &vehicle) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   if (!vehicle.empty()) {
     json res = json::array();
@@ -1467,55 +1502,56 @@ std::pair<int, std::string> RSS::get_ordersequences(
     if (res.empty()) {
       auto msg = "Could not find the intended vehicle '" + vehicle + "'.";
       res.push_back(msg);
-      return std::pair<int, std::string>(NotFound_404, res.to_string());
+      return std::pair<int, std::string>({NotFound_404, res.to_string()});
     } else {
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     }
   } else {
     json res = json::array();
     for (auto &q : orderpool->orderquence) {
       res.push_back(orderquence_to_json(q));
     }
-    return std::pair<int, std::string>(OK_200, res.to_string());
+    return std::pair<int, std::string>({OK_200, res.to_string()});
   }
 }
 
-std::pair<int, std::string> RSS::get_ordersequence(
-    const std::string &sequence_name) {
+std::pair<int, std::string>
+RSS::get_ordersequence(const std::string &sequence_name) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &q : orderpool->orderquence) {
     if (q->name == sequence_name) {
       auto res = orderquence_to_json(q);
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     }
   }
   json res = json::array();
   auto msg = "Could not find order sequence '" + sequence_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string> RSS::post_ordersequence(
-    const std::string &sequence_name, const std::string &body) {
+std::pair<int, std::string>
+RSS::post_ordersequence(const std::string &sequence_name,
+                        const std::string &body) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &s : orderpool->orderquence) {
     if (s->name == sequence_name) {
       json res = json::array();
       auto msg = "Order sequence '" + sequence_name + "' already exists.";
       res.push_back(msg);
-      return std::pair<int, std::string>(Conflict_409, res.to_string());
+      return std::pair<int, std::string>({Conflict_409, res.to_string()});
     }
   }
   try {
@@ -1543,43 +1579,43 @@ std::pair<int, std::string> RSS::post_ordersequence(
           // return
           auto res = orderquence_to_json(new_orderquence);
           orderpool->orderquence.push_back(new_orderquence);
-          return std::pair<int, std::string>(OK_200, res.to_string());
+          return std::pair<int, std::string>({OK_200, res.to_string()});
         }
       }
     }
     json res = json::array();
     auto msg = "Could not find Vehicle " + veh + ".";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
-  } catch (jsoncons::not_an_object ec) {
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
+  } catch (jsoncons::not_an_object &ec) {
     CLOG(ERROR, rss_log) << "not_an_object error:" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
-  } catch (jsoncons::ser_error ec) {
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
+  } catch (jsoncons::ser_error &ec) {
     CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
-  } catch (jsoncons::key_not_found ec) {
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
+  } catch (jsoncons::key_not_found &ec) {
     CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
   }
 }
 
-json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
+json vehicle_to_json(const std::shared_ptr<kernel::driver::Vehicle> &v) {
   json res;
   res["name"] = v->name;
   res["length"] = v->length;
-  for (auto &pro : v->properties) {
-    res["properties"][pro.first] = pro.second;
+  for (auto &[key, value] : v->properties) {
+    res["properties"][key] = value;
   }
-  res["energyLevel"] = v->engerg_level;
+  res["energyLevel"] = v->energy_level;
   res["energyLevelGood"] = v->energy_level_good;
   std::string integrationlevel;
   if (v->integration_level ==
@@ -1634,20 +1670,20 @@ json vehicle_to_json(std::shared_ptr<kernel::driver::Vehicle> v) {
   return res;
 }
 
-std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
+std::pair<int, std::string> RSS::get_vehicles(const std::string &state) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   if (state.empty()) {
     json res = json::array();
     for (auto &v : dispatcher->vehicles) {
       res.push_back(vehicle_to_json(v));
     }
-    return std::pair<int, std::string>(OK_200, res.to_string());
+    return std::pair<int, std::string>({OK_200, res.to_string()});
   } else {
     if (state == "IDLE") {
       json res = json::array();
@@ -1656,7 +1692,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     } else if (state == "ERROR") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1664,7 +1700,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     } else if (state == "EXECUTING") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1672,7 +1708,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     } else if (state == "UNKNOWN") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1680,7 +1716,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     } else if (state == "UNAVAILABLE") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1688,7 +1724,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     } else if (state == "CHARGING") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
@@ -1696,44 +1732,44 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) {
           res.push_back(vehicle_to_json(v));
         }
       }
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     } else {
       json res = json::array();
       auto msg = "Could not parse input.";
       res.push_back(msg);
-      return std::pair<int, std::string>(BadRequest_400, res.to_string());
+      return std::pair<int, std::string>({BadRequest_400, res.to_string()});
     }
   }
 }
 
-std::pair<int, std::string> RSS::get_vehicle(const std::string &vehicle) {
+std::pair<int, std::string> RSS::get_vehicle(const std::string &vehicle) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
       auto res = vehicle_to_json(v);
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     }
   }
   json res = json::array();
   auto msg = "Could not find vehicle '" + vehicle + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string> RSS::post_vehicle_withdrawl(
-    const std::string &vehicle, bool, bool) {
+std::pair<int, std::string>
+RSS::post_vehicle_withdrawl(const std::string &vehicle, bool, bool) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == vehicle) {
@@ -1743,24 +1779,24 @@ std::pair<int, std::string> RSS::post_vehicle_withdrawl(
       for (auto &o : v->orders) {
         o->state = data::order::TransportOrder::State::WITHDRAWL;
       }
-      return std::pair<int, std::string>(OK_200, "");
+      return std::pair<int, std::string>({OK_200, ""});
     }
   }
   json res = json::array();
   auto msg = "Could not find vehicle '" + vehicle + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
 std::pair<int, std::string> RSS::put_vehicle_paused(const std::string &name,
-                                                    bool p) {
+                                                    bool p) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
 
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &x : dispatcher->vehicles) {
     if (x->name == name) {
@@ -1779,24 +1815,24 @@ std::pair<int, std::string> RSS::put_vehicle_paused(const std::string &name,
       }
       paused_task->blocking_type =
           vda5050::instantaction::ActionBlockingType::HARD;
-      paused_task->action_id = name + "_set_pasued_<" + std::to_string(p) + ">";
+      paused_task->action_id = name + "_set_paused_<" + std::to_string(p) + ">";
       x->execute_instatn_action(paused_task);
-      return std::pair<int, std::string>(OK_200, "");
+      return std::pair<int, std::string>({OK_200, ""});
     }
   }
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string> RSS::get_model() {
+std::pair<int, std::string> RSS::get_model() const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   json res;
   res["name"] = resource->model_name;
@@ -1806,21 +1842,22 @@ std::pair<int, std::string> RSS::get_model() {
   res["visualLayout"]["scaleX"] = resource->visual_layout->scale_x;
   res["visualLayout"]["scaleY"] = resource->visual_layout->scale_y;
   res["visualLayout"]["layers"] = json::array();
-  for (auto &x : resource->visual_layout->layers) {
+  for (auto &[id, ordinal, visible, name, group_id] :
+       resource->visual_layout->layers) {
     json layer;
-    layer["id"] = x.id;
-    layer["ordinal"] = x.ordinal;
-    layer["visible"] = x.visible;
-    layer["name"] = x.name;
-    layer["groupId"] = x.group_id;
+    layer["id"] = id;
+    layer["ordinal"] = ordinal;
+    layer["visible"] = visible;
+    layer["name"] = name;
+    layer["groupId"] = group_id;
     res["visualLayout"]["layers"].push_back(layer);
   }
   res["visualLayout"]["layerGroups"] = json::array();
-  for (auto &x : resource->visual_layout->layer_groups) {
+  for (auto &[id, name, visible] : resource->visual_layout->layer_groups) {
     json layer_group;
-    layer_group["id"] = x.id;
-    layer_group["name"] = x.name;
-    layer_group["visible"] = x.visible;
+    layer_group["id"] = id;
+    layer_group["name"] = name;
+    layer_group["visible"] = visible;
     res["visualLayout"]["layerGroups"].push_back(layer_group);
   }
   res["visualLayout"]["properties"] = json::array();
@@ -1842,18 +1879,18 @@ std::pair<int, std::string> RSS::get_model() {
     layout["layerId"] = p->layout.layer_id;
     point["layout"] = layout;
     point["properties"] = json::array();
-    for (auto &pro : p->properties) {
+    for (auto &[key, value] : p->properties) {
       json t;
-      t["name"] = pro.first;
-      t["value"] = pro.second;
+      t["name"] = key;
+      t["value"] = value;
       point["properties"].push_back(t);
     }
     point["vehicleEnvelopes"] = json::array();
-    for (auto &x : p->envelopes) {
+    for (auto &[name, res] : p->envelopes) {
       json t;
-      t["envelopeKey"] = x.first;
+      t["envelopeKey"] = name;
       t["vertices"] = json::array();
-      auto v = std::dynamic_pointer_cast<data::model::Envelope>(x.second);
+      auto v = std::dynamic_pointer_cast<data::model::Envelope>(res);
       for (auto &v_ : v->vertexs) {
         json ver;
         ver["x"] = v_.x();
@@ -1887,18 +1924,18 @@ std::pair<int, std::string> RSS::get_model() {
       path["layout"]["controlPoints"].push_back(ctrl_p_);
     }
     path["properties"] = json::array();
-    for (auto &pro : p->properties) {
+    for (auto &[key, value] : p->properties) {
       json t;
-      t["name"] = pro.first;
-      t["value"] = pro.second;
+      t["name"] = key;
+      t["value"] = value;
       path["properties"].push_back(t);
     }
     path["vehicleEnvelope"] = json::array();
-    for (auto &x : p->envelopes) {
+    for (auto &[key, value] : p->envelopes) {
       json t;
-      t["envelopeKey"] = x.first;
+      t["envelopeKey"] = key;
       t["vertices"] = json::array();
-      auto v = std::dynamic_pointer_cast<data::model::Envelope>(x.second);
+      auto v = std::dynamic_pointer_cast<data::model::Envelope>(value);
       for (auto &v_ : v->vertexs) {
         json ver;
         ver["x"] = v_.x();
@@ -1908,12 +1945,13 @@ std::pair<int, std::string> RSS::get_model() {
       path["vehicleEnvelope"].push_back(t);
     }
     path["peripheralOperations"] = json::array();
-    for (auto &x : p->per_acts.acts) {
+    for (auto &[op_name, location_name, completion_required,
+                execution_trigger] : p->per_acts.acts) {
       json t;
-      t["operation"] = x.op_name;
-      t["locationName"] = x.op_name;
-      t["completionRequired"] = x.completion_required;
-      t["executionTrigger"] = x.execution_trigger;
+      t["operation"] = op_name;
+      t["locationName"] = op_name;
+      t["completionRequired"] = completion_required;
+      t["executionTrigger"] = execution_trigger;
       path["peripheralOperations"].push_back(t);
     }
     res["paths"].push_back(path);
@@ -1926,20 +1964,20 @@ std::pair<int, std::string> RSS::get_model() {
     loc_type["allowedOperations"] = json::array();
     loc_type["allowedPeripheralOperations"] = json::array();
     loc_type["properties"] = json::array();
-    for (auto &x : type->allowed_ops) {
-      std::string x_type = x.first;
-      x_type[0] = ::toupper(x_type[0]);
+    for (auto &[name, param] : type->allowed_ops) {
+      std::string x_type = name;
+      x_type[0] = std::toupper(x_type[0]); // NOLINT(*-narrowing-conversions)
       loc_type["allowedOperations"].push_back(x_type);
     }
-    for (auto &x : type->allowrd_per_ops) {
-      std::string x_type = x.first;
-      x_type[0] = ::toupper(x_type[0]);
+    for (auto &[name, param] : type->allowrd_per_ops) {
+      std::string x_type = name;
+      x_type[0] = std::toupper(x_type[0]); // NOLINT(*-narrowing-conversions)
       loc_type["allowedPeripheralOperations"].push_back(x_type);
     }
-    for (auto &pro : type->properties) {
+    for (auto &[key, value] : type->properties) {
       json t;
-      t["name"] = pro.first;
-      t["value"] = pro.second;
+      t["name"] = key;
+      t["value"] = value;
       loc_type["properties"].push_back(t);
     }
     loc_type["layout"]["locationRepresentation"] =
@@ -1960,9 +1998,9 @@ std::pair<int, std::string> RSS::get_model() {
       json link;
       link["pointName"] = loc->link.lock()->name;
       link["allowedOperations"] = json::array();
-      for (auto &op : loc->type.lock()->allowed_ops) {
-        std::string x_type = op.first;
-        x_type[0] = ::toupper(x_type[0]);
+      for (auto &[type, param] : loc->type.lock()->allowed_ops) {
+        std::string x_type = type;
+        x_type[0] = std::toupper(x_type[0]); // NOLINT(*-narrowing-conversions)
         link["allowedOperations"].push_back(x_type);
       }
       location["links"].push_back(link);
@@ -1977,10 +2015,10 @@ std::pair<int, std::string> RSS::get_model() {
             loc->type.lock()->layout.location_representation);
     location["layout"]["layerId"] = loc->layout.layer_id;
     location["properties"] = json::array();
-    for (auto &pro : loc->properties) {
+    for (auto &[key, value_] : loc->properties) {
       json t;
-      t["name"] = pro.first;
-      t["value"] = pro.second;
+      t["name"] = key;
+      t["value"] = value_;
       location["properties"].push_back(t);
     }
     res["locations"].push_back(location);
@@ -2016,43 +2054,33 @@ std::pair<int, std::string> RSS::get_model() {
     vehicle["length"] = v->length;
     vehicle["energyLevelCritical"] = v->energy_level_critical;
     vehicle["energyLevelGood"] = v->energy_level_good;
-    vehicle["energyLevelFullyRecharged"] = v->engrgy_level_full;
-    vehicle["energyLevelSufficientlyRecharged"] = v->engrgy_level_recharge;
+    vehicle["energyLevelFullyRecharged"] = v->energy_level_full;
+    vehicle["energyLevelSufficientlyRecharged"] = v->energy_level_recharge;
     vehicle["maxVelocity"] = v->max_vel;
     vehicle["maxReverseVelocity"] = v->max_reverse_vel;
     vehicle["layout"]["routeColor"] = v->color;
     vehicle["paused"] = v->paused;
     vehicle["properties"] = json::array();
-    for (auto &pro : v->properties) {
+    for (auto &[key, value_] : v->properties) {
       json t;
-      t["name"] = pro.first;
-      t["value"] = pro.second;
+      t["name"] = key;
+      t["value"] = value_;
       vehicle["properties"].push_back(t);
     }
     res["vehicles"].push_back(vehicle);
   }
-  return std::pair<int, std::string>(OK_200, res.to_string());
+  return std::pair<int, std::string>({OK_200, res.to_string()});
 }
+
 std::pair<int, std::string> RSS::put_model(const std::string &body) {
   std::unique_lock<std::shared_mutex> lk(mutex);
   stop();
-  init_orderpool();
-  init_scheduler();
-  init_dispatcher();
+  init();
   try {
     auto opt = jsoncons::json_options{}.precision(5).float_format(
         jsoncons::float_chars_format::fixed);
     json model = json::parse(body, opt);
-    resource =
-        std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
-    this->resource->is_connected = std::bind(
-        &RSS::is_connect, this, std::placeholders::_1, std::placeholders::_2);
-    auto control_rule =
-        std::make_shared<kernel::allocate::OwnerRule>("control_rule", resource);
-    resource->rules.push_back(control_rule);
-    auto envelope_rule = std::make_shared<kernel::allocate::CollisionRule>(
-        "collision_rule", resource);
-    resource->rules.push_back(envelope_rule);
+    CLOG(INFO, rss_log) << jsoncons::pretty_print(model) << std::endl;
     if (model.contains("name")) {
       resource->model_name = model["name"].as_string();
     }
@@ -2158,7 +2186,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
       }
       CLOG(INFO, rss_log) << "init point size " << resource->points.size();
     }
-    // locationtype
+    // location type
     {
       for (auto &x : model["locationTypes"].array_range()) {
         auto type =
@@ -2223,14 +2251,14 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         for (auto &x : resource->location_types) {
           if (x->name == l["typeName"].as_string()) {
             loc->type = x;
-            for (auto &a_op : x->allowed_ops) {
+            for (auto &[op, param] : x->allowed_ops) {
               for (auto &per : loc->properties) {
-                a_op.second.insert(per);
+                param.insert(per);
               }
             }
-            for (auto &a_op : x->allowrd_per_ops) {
+            for (auto &[op, param] : x->allowrd_per_ops) {
               for (auto &per : loc->properties) {
-                a_op.second.insert(per);
+                param.insert(per);
               }
             }
           }
@@ -2291,7 +2319,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             for (auto &ctrl_p : p["layout"]["controlPoints"].array_range()) {
               int x = ctrl_p["x"].as_integer<int>();
               int y = ctrl_p["y"].as_integer<int>();
-              path->layout.control_points.push_back(Eigen::Vector2i(x, y));
+              path->layout.control_points.emplace_back(x, y);
             }
           }
         }
@@ -2324,7 +2352,8 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
               auto per_op_name = op["name"].as_string();
               std::transform(per_op_name.begin(), per_op_name.end(),
                              per_op_name.begin(), ::tolower);
-              auto wait = op["completionRequired"].as_bool() ? "SOFT" : "NONE";
+              // auto wait = op["completionRequired"].as_bool() ? "SOFT" :
+              // "NONE";
               auto when = op["executionTrigger"].as_string();
               auto link_loc_name = op["locationName"].as_string();
               for (auto &loc : resource->locations) {
@@ -2357,11 +2386,11 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           }
         }
         {
-          for (auto &_p : path->properties) {
-            if (_p.first == "vda5050:orientation.reverse") {
-              path->orientation_reverse = std::stof(_p.second) * M_PI / 180;
-            } else if (_p.first == "vda5050:orientation.forward") {
-              path->orientation_forward = std::stof(_p.second) * M_PI / 180;
+          for (auto &[key, value] : path->properties) {
+            if (key == "vda5050:orientation.reverse") {
+              path->orientation_reverse = std::stof(value) * M_PI / 180;
+            } else if (key == "vda5050:orientation.forward") {
+              path->orientation_forward = std::stof(value) * M_PI / 180;
             }
           }
         }
@@ -2402,8 +2431,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           } else if (block["type"] == "SAME_DIRECTION_ONLY") {
             std::string direction = block["direct"].as_string();
             for (auto &x : resource->paths) {
-              auto p = rs.find(x);
-              if (p != rs.end()) {
+              if (auto p = rs.find(x); p != rs.end()) {
                 auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
                 if (direction == "FRONT") {
                   path->max_reverse_vel = 0;
@@ -2454,11 +2482,11 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             veh->energy_level_good = v["energyLevelGood"].as_integer<int>();
           }
           if (v.contains("energyLevelFullyRecharged")) {
-            veh->engrgy_level_full =
+            veh->energy_level_full =
                 v["energyLevelFullyRecharged"].as_integer<int>();
           }
           if (v.contains("energyLevelSufficientlyRecharged")) {
-            veh->engrgy_level_recharge =
+            veh->energy_level_recharge =
                 v["energyLevelSufficientlyRecharged"].as_integer<int>();
           }
           veh->send_queue_size = orderquence;
@@ -2485,7 +2513,6 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             }
           }
           dispatcher->vehicles.push_back(veh);
-
         } else if (adapter.find("vda") != std::string::npos) {
           std::string vda_interfaceName{"rw"};
           std::string vda_serialNumber{"rw"};
@@ -2493,8 +2520,8 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           std::string vda_manufacturer{"rw"};
           double deviationXY{1.0};
           double deviationTheta{0.17};
-          double orientation_reverse{3.14159};
-          double orientation_forward{0.0};
+          // double orientation_reverse{3.14159};
+          // double orientation_forward{0.0};
           if (v.contains("properties")) {
             for (auto &pro : v["properties"].array_range()) {
               if (pro["name"] == "vda5050:interfaceName") {
@@ -2503,21 +2530,20 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
                 vda_manufacturer = pro["value"].as_string();
               } else if (pro["name"] == "vda5050:serialNumber") {
                 vda_serialNumber = pro["value"].as_string();
-
               } else if (pro["name"] == "vda5050:version") {
                 vda_version = pro["value"].as_string();
-
               } else if (pro["name"] == "vda5050:orderQueueSize") {
                 orderquence = pro["value"].as_integer<int>();
               } else if (pro["name"] == "vda5050:deviationXY") {
                 deviationXY = pro["value"].as_double();
               } else if (pro["name"] == "vda5050:deviationTheta") {
                 deviationTheta = pro["value"].as_double();
-              } else if (pro["name"] == "vda5050:orientation.reverse") {
-                orientation_reverse = pro["value"].as_double();
-              } else if (pro["name"] == "vda5050:orientation.forward") {
-                orientation_forward = pro["value"].as_double();
               }
+              // else if (pro["name"] == "vda5050:orientation.reverse") {
+              //   orientation_reverse = pro["value"].as_double();
+              // } else if (pro["name"] == "vda5050:orientation.forward") {
+              //   orientation_forward = pro["value"].as_double();
+              // }
             }
           }
           auto veh = std::make_shared<kernel::driver::Rabbit3>(
@@ -2544,11 +2570,11 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             veh->energy_level_good = v["energyLevelGood"].as_integer<int>();
           }
           if (v.contains("energyLevelFullyRecharged")) {
-            veh->engrgy_level_full =
+            veh->energy_level_full =
                 v["energyLevelFullyRecharged"].as_integer<int>();
           }
           if (v.contains("energyLevelSufficientlyRecharged")) {
-            veh->engrgy_level_recharge =
+            veh->energy_level_recharge =
                 v["energyLevelSufficientlyRecharged"].as_integer<int>();
           }
           veh->broker_ip = MQTT_IP;
@@ -2569,7 +2595,8 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         } else {
           auto veh = std::make_shared<kernel::driver::InvalidVehicle>(
               v["name"].as_string());
-          if (v.contains("length")) veh->length = v["length"].as_integer<int>();
+          if (v.contains("length"))
+            veh->length = v["length"].as_integer<int>();
           if (v.contains("maxReverseVelocity")) {
             veh->max_reverse_vel = v["maxReverseVelocity"].as_integer<int>();
           }
@@ -2587,11 +2614,11 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             veh->energy_level_good = v["energyLevelGood"].as_integer<int>();
           }
           if (v.contains("energyLevelFullyRecharged")) {
-            veh->engrgy_level_full =
+            veh->energy_level_full =
                 v["energyLevelFullyRecharged"].as_integer<int>();
           }
           if (v.contains("energyLevelSufficientlyRecharged")) {
-            veh->engrgy_level_recharge =
+            veh->energy_level_recharge =
                 v["energyLevelSufficientlyRecharged"].as_integer<int>();
           }
           veh->send_queue_size = orderquence;
@@ -2607,21 +2634,17 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     init_planner();
     scheduler->resource = resource;
     // connect signals
-    dispatcher->find_res = std::bind(&kernel::allocate::ResourceManager::find,
-                                     resource, std::placeholders::_1);
-    dispatcher->go_home = std::bind(
-        &RSS::home_order, this, std::placeholders::_1, std::placeholders::_2);
-    dispatcher->order_empty =
-        std::bind(&kernel::allocate::OrderPool::is_empty, orderpool);
-    dispatcher->get_next_ord =
-        std::bind(&kernel::allocate::OrderPool::get_one_order, orderpool);
-    dispatcher->pop_order = std::bind(&kernel::allocate::OrderPool::pop,
-                                      orderpool, std::placeholders::_1);
-    dispatcher->go_charge = std::bind(
-        &RSS::charge_order, this, std::placeholders::_1, std::placeholders::_2);
-    dispatcher->get_park_point =
-        std::bind(&kernel::allocate::ResourceManager::get_recent_park_point,
-                  resource, std::placeholders::_1);
+    dispatcher->find_res = [&](auto &r) { return resource->find(r); };
+    dispatcher->go_home = [&](auto name, auto veh) { home_order(name, veh); };
+    dispatcher->order_empty = [&]() { return orderpool->is_empty(); };
+    dispatcher->pop_order = [&](auto ord) { orderpool->pop(ord); };
+    dispatcher->get_next_vec = [&]() { return orderpool->get_next_vec(); };
+    dispatcher->go_charge = [&](auto name, auto veh) {
+      charge_order(name, veh);
+    };
+    dispatcher->get_park_point = [&](auto veh) {
+      return resource->get_recent_park_point(veh);
+    };
     for (auto &v : dispatcher->vehicles) {
       v->planner = planner;
       v->scheduler = scheduler;
@@ -2632,42 +2655,41 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     CLOG(INFO, rss_log) << "run all ...\n";
     run();
     CLOG(INFO, rss_log) << "run all ok\n";
-    return std::pair<int, std::string>(OK_200, "");
-  } catch (jsoncons::not_an_object ec) {
+    return std::pair<int, std::string>({OK_200, ""});
+  } catch (jsoncons::not_an_object &ec) {
     CLOG(ERROR, rss_log) << "not_an_object error: " << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
-  } catch (jsoncons::ser_error ec) {
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
+  } catch (jsoncons::ser_error &ec) {
     CLOG(ERROR, rss_log) << "ser_error error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
-  } catch (jsoncons::key_not_found ec) {
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
+  } catch (jsoncons::key_not_found &ec) {
     CLOG(ERROR, rss_log) << "key_not_found error :" << ec.what();
     json res = json::array();
     auto msg = "Could not parse JSON input '" + std::string(ec.what()) + "'.";
     res.push_back(msg);
-    return std::pair<int, std::string>(BadRequest_400, res.to_string());
+    return std::pair<int, std::string>({BadRequest_400, res.to_string()});
   }
 }
 
-std::pair<int, std::string> RSS::get_view() {
+std::pair<int, std::string> RSS::get_view() const {
   std::shared_lock<std::shared_mutex> lk(mutex);
-
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   auto r = get_vehicles_step();
-  return std::pair<int, std::string>(OK_200, r);
+  return std::pair<int, std::string>({OK_200, r});
 }
 
-std::string RSS::get_vehicles_step() {
+std::string RSS::get_vehicles_step() const {
   json value = json::array();
   for (auto &v : dispatcher->vehicles) {
     json veh;
@@ -2690,8 +2712,9 @@ std::string RSS::get_vehicles_step() {
         for (auto &dr : v->current_order->driverorders) {
           if (dr->state == data::order::DriverOrder::State::TRAVELLING) {
             // current first
-            auto step_ = dr->route->current_step;
-            if (step_) {  // LOG(INFO) << "++++++++++++++++++" << step_->name;
+            if (dr->route->current_step) {
+              auto step_ = dr->route->current_step;
+              // LOG(INFO) << "++++++++++++++++++" << step_->name;
               auto beg = step_->path->source_point.lock();
               auto end = step_->path->destination_point.lock();
               json step;
@@ -2746,32 +2769,32 @@ std::string RSS::get_vehicles_step() {
               veh["step"].push_back(step);
             }
             // location
-            auto t = resource->find(dr->destination->destination.lock()->name);
-            if (t.first ==
-                kernel::allocate::ResourceManager::ResType::Location) {
+            if (auto [type, res_] =
+                    resource->find(dr->destination->destination.lock()->name);
+                type == kernel::allocate::ResourceManager::ResType::Location) {
               veh["destination"]["op"] = dr->destination->get_type();
-              auto loction = std::dynamic_pointer_cast<data::model::Location>(
+              auto location = std::dynamic_pointer_cast<data::model::Location>(
                   dr->destination->destination.lock());
-              veh["destination"]["dest"] = loction->name;
+              veh["destination"]["dest"] = location->name;
             }
           }
         }
       }
     }
-    veh["battery_level"] = v->engerg_level;
+    veh["battery_level"] = v->energy_level;
     value.push_back(veh);
   }
   return value.to_string();
 }
 
 std::pair<int, std::string> RSS::put_path_locked(const std::string &path_name,
-                                                 bool new_value) {
+                                                 bool new_value) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &x : resource->paths) {
     if (x->name == path_name) {
@@ -2782,89 +2805,90 @@ std::pair<int, std::string> RSS::put_path_locked(const std::string &path_name,
         planner->reset_edge(x->name);
       }
       reroute();
-      return std::pair<int, std::string>(OK_200, "");
+      return std::pair<int, std::string>({OK_200, ""});
     }
   }
   json res = json::array();
   auto msg = "Could not find path '" + path_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string> RSS::put_location_locked(
-    const std::string &loc_name, bool new_value) {
+std::pair<int, std::string>
+RSS::put_location_locked(const std::string &loc_name, bool new_value) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &x : resource->locations) {
     if (x->name == loc_name) {
       x->locked = new_value;
-      return std::pair<int, std::string>(OK_200, "");
+      return std::pair<int, std::string>({OK_200, ""});
     }
   }
   json res = json::array();
   auto msg = "Could not find location  '" + loc_name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-void RSS::reroute() {
-  for (auto &v : dispatcher->vehicles) {
+void RSS::reroute() const {
+  for (const auto &v : dispatcher->vehicles) {
     if (v->current_order) {
       v->reroute();
     }
   }
 }
 
-std::pair<int, std::string> RSS::post_reroute() {
+std::pair<int, std::string> RSS::post_reroute() const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   reroute();
-  return std::pair<int, std::string>(OK_200, "");
+  return std::pair<int, std::string>({OK_200, ""});
 }
-bool RSS::is_connect(std::shared_ptr<data::model::Point> a,
-                     std::shared_ptr<data::model::Point> b) {
-  return planner->find_paths(a, b).size() > 0;
+
+bool RSS::is_connect(const std::shared_ptr<data::model::Point> &a,
+                     const std::shared_ptr<data::model::Point> &b) const {
+  return !planner->find_paths(a, b).empty();
 }
 
 std::pair<int, std::string> RSS::post_vehicle_reroute(const std::string &name,
-                                                      bool f) {
+                                                      bool f) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
       v->reroute();
-      return std::pair<int, std::string>(OK_200, "");
+      return std::pair<int, std::string>({OK_200, ""});
     }
   }
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
 std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
-                                                    bool p) {
+                                                    bool p) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   for (auto &v : dispatcher->vehicles) {
     if (v->name == name) {
@@ -2873,25 +2897,26 @@ std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
       } else {
         v->state = kernel::driver::Vehicle::State::UNKNOWN;
       }
-      return std::pair<int, std::string>(OK_200, "");
+      return std::pair<int, std::string>({OK_200, ""});
     }
   }
   json res = json::array();
   auto msg = "no vehicle named '" + name + "'.";
   res.push_back(msg);
-  return std::pair<int, std::string>(NotFound_404, res.to_string());
+  return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string> RSS::put_vehicle_integration_level(
-    const std::string &name, const std::string &p) {
+std::pair<int, std::string>
+RSS::put_vehicle_integration_level(const std::string &name,
+                                   const std::string &p) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
-  for (auto &v : dispatcher->vehicles) {
+  for (const auto &v : dispatcher->vehicles) {
     if (v->name == name) {
       if (p == "TO_BE_UTILIZED") {
         v->integration_level =
@@ -2899,28 +2924,27 @@ std::pair<int, std::string> RSS::put_vehicle_integration_level(
       } else if (p == "TO_BE_RESPECTED") {
         v->integration_level =
             kernel::driver::Vehicle::integrationLevel::TO_BE_RESPECTED;
-
       } else if (p == "TO_BE_NOTICED") {
         v->integration_level =
             kernel::driver::Vehicle::integrationLevel::TO_BE_NOTICED;
-
       } else {
         v->integration_level =
             kernel::driver::Vehicle::integrationLevel::TO_BE_IGNORED;
       }
     }
   }
-  return std::pair<int, std::string>(OK_200, "");
+  return std::pair<int, std::string>({OK_200, ""});
 }
 
-std::pair<int, std::string> RSS::post_vehicle_path_to_point(
-    const std::string &name, const std::string &p_) {
+std::pair<int, std::string>
+RSS::post_vehicle_path_to_point(const std::string &name,
+                                const std::string &p_) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
     res.push_back(msg);
-    return std::pair<int, std::string>(NotFound_404, res.to_string());
+    return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   json body = json::parse(p_);
   for (auto &v : dispatcher->vehicles) {
@@ -2946,8 +2970,8 @@ std::pair<int, std::string> RSS::post_vehicle_path_to_point(
         }
         // path
         if (d_p) {
-          auto path = planner->find_paths_with_vertex(s_p, d_p);
-          if (path.empty()) {
+          if (auto path = planner->find_paths_with_vertex(s_p, d_p);
+              path.empty()) {
             res["routes"].push_back("");
           } else {
             auto min_path = path.front().first;
@@ -2974,7 +2998,7 @@ std::pair<int, std::string> RSS::post_vehicle_path_to_point(
               } else {
                 ori = "UNDEFINED";
               }
-              step["vehliceOrientation"] = ori;
+              step["vehicleOrientation"] = ori;
             }
             res["routes"].push_back(route);
           }
@@ -2982,16 +3006,21 @@ std::pair<int, std::string> RSS::post_vehicle_path_to_point(
           res["routes"].push_back("");
         }
       }
-      return std::pair<int, std::string>(OK_200, res.to_string());
+      return std::pair<int, std::string>({OK_200, res.to_string()});
     }
   }
-  return std::pair<int, std::string>(BadRequest_400,
-                                     "the vehicle does not exist");
+  return std::pair<int, std::string>(
+      {BadRequest_400, "the vehicle does not exist"});
 }
-bool RSS::is_exist_active_order() {
-  for (auto &x : orderpool->ended_orderpool) {
-    if (x->state == data::order::TransportOrder::State::BEING_PROCESSED)
+
+bool RSS::is_exist_active_order() const {
+  for (const auto &[name, ords] : orderpool->orderpool) {
+    const auto it = std::any_of(ords.begin(), ords.end(), [](auto a) {
+      return a->state == data::order::TransportOrder::State::BEING_PROCESSED;
+    });
+    if (it) {
       return true;
+    }
   }
   return false;
 }

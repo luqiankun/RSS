@@ -10,26 +10,28 @@ using OpType = data::order::DriverOrder::Destination::OpType;
 using TransOrderPtr = std::shared_ptr<data::order::TransportOrder>;
 using OrderSeqPtr = std::shared_ptr<data::order::OrderSequence>;
 class OrderPool : public RSSObject {
- public:
-  DriverOrderPtr route_to_driverorder(RoutePtr route, DestPtr dest);
-  DestPtr res_to_destination(const std::shared_ptr<RSSResource>& res,
+public:
+  DriverOrderPtr route_to_driverorder(const RoutePtr &route,
+                                      const DestPtr &dest);
+  DestPtr res_to_destination(const std::shared_ptr<RSSResource> &res,
                              OpType op);
   void cancel_all_order();
   void cancel_order(size_t order_uuid);
-  void pop(TransOrderPtr order);
-  TransOrderPtr get_one_order();
+  void pop(const TransOrderPtr &order);
+  void push(const TransOrderPtr &order);
+  std::pair<std::string, std::vector<TransOrderPtr>> get_next_vec();
   ~OrderPool() { CLOG(INFO, allocate_log) << name << " close\n"; }
-  void update_quence();
+  void update_quence() const;
   bool is_empty() { return orderpool.empty(); }
 
- public:
+public:
   using RSSObject::RSSObject;
-  std::deque<TransOrderPtr> orderpool;
+  std::vector<std::pair<std::string, std::vector<TransOrderPtr>>> orderpool;
   std::deque<TransOrderPtr> ended_orderpool;
   std::deque<OrderSeqPtr> orderquence;
   int cur_index{0};
 };
-}  // namespace allocate
-}  // namespace kernel
+} // namespace allocate
+} // namespace kernel
 
 #endif

@@ -1,13 +1,12 @@
 #ifndef VISUALLAYOUT_HPP
 #define VISUALLAYOUT_HPP
 #include "../../rssresource.hpp"
-namespace data {
-namespace model {
+namespace data::model {
 class VisualLayout : public RSSObject {
- public:
+public:
   using RSSObject::RSSObject;
   class Layer {
-   public:
+  public:
     int id;
     int ordinal;
     bool visible;
@@ -15,7 +14,7 @@ class VisualLayout : public RSSObject {
     int group_id;
   };
   class LayerGroup {
-   public:
+  public:
     int id;
     std::string name;
     bool visible;
@@ -25,6 +24,5 @@ class VisualLayout : public RSSObject {
   std::vector<Layer> layers;
   std::vector<LayerGroup> layer_groups;
 };
-}  // namespace model
-}  // namespace data
+} // namespace data::model
 #endif

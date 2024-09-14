@@ -6,8 +6,7 @@
 #include "../../3rdparty/jsoncons/basic_json.hpp"
 #include "../data/order/driverorder.hpp"
 
-namespace vda5050 {
-namespace instantaction {
+namespace vda5050::instantaction {
 using ActionType = data::order::DriverOrder::Destination::OpType;
 
 using ActionBlockingType = data::model::Actions::ActionBlockingType;
@@ -17,9 +16,9 @@ using ActionBlockingType = data::model::Actions::ActionBlockingType;
 using ActionParam = data::model::Actions::ActionParam;
 
 class Action : public data::model::Actions::Action {
- public:
+public:
   using data::model::Actions::Action ::Action;
-  void init(jsoncons::json& obj) override {
+  void init(jsoncons::json &obj) override {
     if (obj["actionType"].as_string() == "startPause") {
       action_type = ActionType::STARTPAUSE;
     } else if (obj["actionType"].as_string() == "stopPause") {
@@ -40,7 +39,7 @@ class Action : public data::model::Actions::Action {
     }
     if (obj.contains("actionParameters")) {
       action_parameters = std::vector<ActionParam>();
-      for (auto& x : obj["actionParameters"].array_range()) {
+      for (auto &x : obj["actionParameters"].array_range()) {
         ActionParam param;
         param.key = x["key"].as_string();
         if (x["value"].is_bool()) {
@@ -51,7 +50,7 @@ class Action : public data::model::Actions::Action {
           param.value = x["value"].as_double();
         } else if (x["value"].is_array()) {
           param.value = std::vector<std::string>();
-          for (auto& str : x["value"].array_range()) {
+          for (auto &str : x["value"].array_range()) {
             std::get<std::vector<std::string>>(param.value)
                 .push_back(str.as_string());
           }
@@ -82,7 +81,7 @@ class Action : public data::model::Actions::Action {
     }
     if (action_parameters.has_value()) {
       res["actionParameters"] = jsoncons::json::array();
-      for (auto& x : action_parameters.value()) {
+      for (auto &x : action_parameters.value()) {
         jsoncons::json p;
         p["key"] = x.key;
         if (x.value.index() == 0) {
@@ -93,7 +92,7 @@ class Action : public data::model::Actions::Action {
           p["value"] = std::get<2>(x.value);
         } else {
           p["value"] = jsoncons::json::array();
-          for (auto& str : std::get<3>(x.value)) {
+          for (auto &str : std::get<3>(x.value)) {
             p["value"].push_back(str);
           }
         }
@@ -105,21 +104,21 @@ class Action : public data::model::Actions::Action {
 };
 
 class InstantAction {
- public:
+public:
   int header_id;
   std::string timestamp{};
   std::string version{};
   std::string manufacturer{};
   std::string serial_number{};
   std::vector<Action> actions;
-  InstantAction() {}
-  explicit InstantAction(jsoncons::json& obj)
+  InstantAction() : header_id(0) {}
+  explicit InstantAction(jsoncons::json &obj)
       : header_id(obj["headerId"].as_integer<int>()),
         timestamp(obj["timestamp"].as_string()),
+        version(obj["version"].as_string()),
         manufacturer(obj["manufacturer"].as_string()),
-        serial_number(obj["serialNumber"].as_string()),
-        version(obj["version"].as_string()) {
-    for (auto& x : obj["actions"].array_range()) {
+        serial_number(obj["serialNumber"].as_string()) {
+    for (auto &x : obj["actions"].array_range()) {
       auto a = Action();
       a.init(x);
       actions.push_back(a);
@@ -133,13 +132,12 @@ class InstantAction {
     res["serialNumber"] = serial_number;
     res["manufacturer"] = manufacturer;
     res["actions"] = jsoncons::json::array();
-    for (auto& x : actions) {
+    for (auto &x : actions) {
       res["actions"].push_back(x.to_json());
     }
     return res;
   }
 };
 
-}  // namespace instantaction
-}  // namespace vda5050
+} // namespace vda5050::instantaction
 #endif

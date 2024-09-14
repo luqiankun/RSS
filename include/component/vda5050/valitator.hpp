@@ -5,15 +5,15 @@
 
 namespace vda5050 {
 class SchemaValidator {
- public:
+public:
   static std::vector<std::string> validate(
-      jsoncons::json& obj,
-      std::shared_ptr<jsoncons::jsonschema::json_schema<jsoncons::json>>
-          schema) {
+      const jsoncons::json &obj,
+      const std::shared_ptr<jsoncons::jsonschema::json_schema<jsoncons::json>>
+          &schema) {
     std::vector<std::string> errors;
     try {
       auto reporter =
-          [&errors](const jsoncons::jsonschema::validation_output& o) {
+          [&errors](const jsoncons::jsonschema::validation_output &o) {
             auto t = o.instance_location() + ": " + o.message();
             errors.push_back(t);
             return jsoncons::jsonschema::walk_result::advance;
@@ -21,7 +21,7 @@ class SchemaValidator {
       jsoncons::jsonschema::json_validator<jsoncons::json> vad(schema);
       vad.validate(obj, reporter);
       return errors;
-    } catch (std::exception& ec) {
+    } catch (std::exception &ec) {
       errors.push_back(std::string{"std::exception: "} + ec.what());
       return errors;
     }
@@ -1167,21 +1167,22 @@ static auto con_schema_ptr = jsoncons::jsonschema::make_schema(con_schema);
 static auto ord_schema_ptr = jsoncons::jsonschema::make_schema(ord_schema);
 static auto ins_schema_ptr = jsoncons::jsonschema::make_schema(ins_schema);
 
-static std::vector<std::string> state_validate(jsoncons::json src) {
+static std::vector<std::string> state_validate(const jsoncons::json &src) {
   return SchemaValidator::validate(src, state_schema_ptr);
 }
 
-static std::vector<std::string> connection_validate(jsoncons::json src) {
+static std::vector<std::string> connection_validate(const jsoncons::json &src) {
   return SchemaValidator::validate(src, con_schema_ptr);
 }
 
-static std::vector<std::string> order_validate(jsoncons::json src) {
+static std::vector<std::string> order_validate(const jsoncons::json &src) {
   return SchemaValidator::validate(src, ord_schema_ptr);
 }
 
-static std::vector<std::string> instantaction_validate(jsoncons::json src) {
+static std::vector<std::string>
+instantaction_validate(const jsoncons::json &src) {
   return SchemaValidator::validate(src, ins_schema_ptr);
 }
 
-}  // namespace vda5050
+} // namespace vda5050
 #endif

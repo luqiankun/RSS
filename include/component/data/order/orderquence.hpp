@@ -1,10 +1,9 @@
 #ifndef ORDERQUENCE_HPP
 #define ORDERQUENCE_HPP
 #include "transportorder.hpp"
-namespace data {
-namespace order {
+namespace data::order {
 class OrderSequence : public RSSObject {
- public:
+public:
   using RSSObject::RSSObject;
   enum class Type {
     TYPE_ANY,
@@ -14,7 +13,7 @@ class OrderSequence : public RSSObject {
     TYPE_TRANSPORT
   };
 
-  std::string get_type() {
+  [[nodiscard]] std::string get_type() const {
     if (type == Type::TYPE_ANY) {
       return "ANY";
     } else if (type == Type::TYPE_NONE) {
@@ -27,7 +26,7 @@ class OrderSequence : public RSSObject {
       return "PARK";
     }
   }
-  bool add_transport_ord(std::shared_ptr<TransportOrder> ord) {
+  bool add_transport_ord(const std::shared_ptr<TransportOrder> &ord) {
     if (complete) {
       return false;
     } else {
@@ -36,7 +35,7 @@ class OrderSequence : public RSSObject {
     }
   }
 
- public:
+public:
   std::deque<std::shared_ptr<TransportOrder>> orders;
   Type type{Type::TYPE_NONE};
   int finished_index{-1};
@@ -46,6 +45,5 @@ class OrderSequence : public RSSObject {
   std::weak_ptr<kernel::driver::Vehicle> intended_vehicle;
   std::weak_ptr<kernel::driver::Vehicle> processing_vehicle;
 };
-}  // namespace order
-}  // namespace data
+} // namespace data::order
 #endif

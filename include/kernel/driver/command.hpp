@@ -13,9 +13,9 @@ using StepPtr = std::shared_ptr<data::order::Step>;
 using TransOrderPtr = std::shared_ptr<data::order::TransportOrder>;
 class Vehicle;
 class Command : public RSSObject {
- public:
+public:
   using RSSObject::RSSObject;
-  Command(const std::string&);
+  explicit Command(const std::string &);
   enum class State {
     INIT,
     ALLOCATING,
@@ -25,17 +25,18 @@ class Command : public RSSObject {
     END,
     DISPOSABLE
   };
-  DestPtr get_dest(DriverOrderPtr);
-  std::vector<StepPtr> get_step(DriverOrderPtr, uint32_t);
-  std::vector<StepPtr> get_step_nopop(DriverOrderPtr, uint32_t);
-  std::vector<std::shared_ptr<RSSResource>> get_future(DriverOrderPtr);
-  std::vector<std::shared_ptr<RSSResource>> get_next_allocate_res(
-      DriverOrderPtr, std::shared_ptr<Vehicle>);
-  void vehicle_execute_cb(bool);  // 车辆通知动作结果
+  DestPtr get_dest(const DriverOrderPtr &);
+  std::vector<StepPtr> get_step(const DriverOrderPtr &, uint32_t);
+  std::vector<StepPtr> get_step_nopop(const DriverOrderPtr &, uint32_t);
+  std::vector<std::shared_ptr<RSSResource>> get_future(const DriverOrderPtr &) const;
+  std::vector<std::shared_ptr<RSSResource>>
+  get_next_allocate_res(const DriverOrderPtr &,
+                        const std::shared_ptr<Vehicle> &);
+  void vehicle_execute_cb(bool); // 车辆通知动作结果
   void run_once();
-  ~Command() { CLOG(DEBUG, driver_log) << name << " drop\n"; }
+  ~Command() override ;
 
- public:
+public:
   State state{State::INIT};
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<driver::Vehicle> vehicle;
@@ -45,7 +46,7 @@ class Command : public RSSObject {
   std::unordered_map<State, std::function<void()>> cbs;
 };
 
-}  // namespace driver
-}  // namespace kernel
+} // namespace driver
+} // namespace kernel
 
 #endif

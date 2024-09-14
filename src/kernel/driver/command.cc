@@ -1,38 +1,38 @@
 #include "../../../include/kernel/driver/command.hpp"
 
 #include "../../../include/kernel/driver/vehicle.hpp"
-#define assert_valid                                                   \
-  auto veh = vehicle.lock();                                           \
-  auto scheduler = veh->scheduler.lock();                              \
-  if (!veh || !scheduler) {                                            \
-    state = State::DISPOSABLE;                                         \
-    return;                                                            \
-  }                                                                    \
-  auto res = scheduler->resource.lock();                               \
-  if (!res) {                                                          \
-    state = State::DISPOSABLE;                                         \
-    return;                                                            \
-  }                                                                    \
-  if (veh->paused) {                                                   \
-    return;                                                            \
-  }                                                                    \
-  if (order->state == data::order::TransportOrder::State::WITHDRAWL) { \
-    state = State::EXECUTED;                                           \
-    return;                                                            \
+#define assert_valid                                                           \
+  auto veh = vehicle.lock();                                                   \
+  auto scheduler = veh->scheduler.lock();                                      \
+  if (!veh || !scheduler) {                                                    \
+    state = State::DISPOSABLE;                                                 \
+    return;                                                                    \
+  }                                                                            \
+  auto res = scheduler->resource.lock();                                       \
+  if (!res) {                                                                  \
+    state = State::DISPOSABLE;                                                 \
+    return;                                                                    \
+  }                                                                            \
+  if (veh->paused) {                                                           \
+    return;                                                                    \
+  }                                                                            \
+  if (order->state == data::order::TransportOrder::State::WITHDRAWL) {         \
+    state = State::EXECUTED;                                                   \
+    return;                                                                    \
   }
-namespace kernel {
-namespace driver {
+namespace kernel::driver {
 // namespace driver
-std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
-    allocate::DriverOrderPtr driver_order, std::shared_ptr<Vehicle> veh) {
-  auto steps = get_step_nopop(driver_order, veh->send_queue_size);
+std::vector<allocate::TCSResourcePtr>
+Command::get_next_allocate_res(const allocate::DriverOrderPtr &driver_order,
+                               const std::shared_ptr<Vehicle> &veh) {
+  const auto steps = get_step_nopop(driver_order, veh->send_queue_size);
   std::vector<std::shared_ptr<RSSResource>> temp;
-  for (auto& x : steps) {
+  for (auto &x : steps) {
     std::vector<std::shared_ptr<RSSResource>> step_res;
     bool has_1{false}, has_2{false};
-    auto s_p = x->path->source_point.lock();
-    auto e_p = x->path->destination_point.lock();
-    for (auto& exist : temp) {
+    const auto s_p = x->path->source_point.lock();
+    const auto e_p = x->path->destination_point.lock();
+    for (const auto &exist : temp) {
       if (exist->name == s_p->name) {
         has_1 = true;
       }
@@ -52,22 +52,22 @@ std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
     step_res.push_back(x->path);
     for (auto x_res = step_res.begin(); x_res != step_res.end();) {
       bool has{false};
-      for (auto& allocate_list : veh->allocated_resources) {
+      for (auto &allocate_list : veh->allocated_resources) {
         if (std::any_of(allocate_list.begin(), allocate_list.end(),
-                        [&](auto& x) { return x == *x_res; })) {
+                        [&](auto &x_) { return x_ == *x_res; })) {
           has = true;
         }
       }
       if (has) {
         x_res = step_res.erase(x_res);
       } else {
-        x_res++;
+        ++x_res;
       }
     }
   }
   return temp;
 }
-Command::Command(const std::string& n) : RSSObject(n) {
+Command::Command(const std::string &n) : RSSObject(n) {
   cbs[State::INIT] = [&] {
     assert_valid;
     state = State::ALLOCATING;
@@ -87,12 +87,12 @@ Command::Command(const std::string& n) : RSSObject(n) {
       } else {
         std::vector<std::shared_ptr<RSSResource>> temp;
         veh->claim_resources.clear();
-        for (auto& x : steps) {
+        for (auto &x : steps) {
           std::vector<std::shared_ptr<RSSResource>> step_res;
           bool has_1{false}, has_2{false};
           auto s_p = x->path->source_point.lock();
           auto e_p = x->path->destination_point.lock();
-          for (auto& exist : temp) {
+          for (auto &exist : temp) {
             if (exist->name == s_p->name) {
               has_1 = true;
             }
@@ -112,29 +112,27 @@ Command::Command(const std::string& n) : RSSObject(n) {
           step_res.push_back(x->path);
           for (auto x_res = step_res.begin(); x_res != step_res.end();) {
             bool has{false};
-            for (auto& allocate_list : veh->allocated_resources) {
+            for (auto &allocate_list : veh->allocated_resources) {
               if (std::any_of(allocate_list.begin(), allocate_list.end(),
-                              [&](auto& v) { return v == *x_res; })) {
+                              [&](auto &v) { return v == *x_res; })) {
                 has = true;
               }
             }
             if (has) {
               x_res = step_res.erase(x_res);
             } else {
-              x_res++;
+              ++x_res;
             }
           }
           // allocate
-          veh->claim_resources.push_back(
-              std::unordered_set<std::shared_ptr<RSSResource>>{step_res.begin(),
-                                                               step_res.end()});
+          veh->claim_resources.emplace_back(step_res.begin(), step_res.end());
           if (!res->allocate(step_res, veh)) {
             // future_claim
-            for (auto& x_res : step_res) {
+            for (auto &x_res : step_res) {
               bool has{false};
-              for (auto& t : veh->allocated_resources) {
+              for (auto &t : veh->allocated_resources) {
                 if (std::any_of(t.begin(), t.end(),
-                                [&](auto& v) { return v == x_res; })) {
+                                [&](auto &v) { return v == x_res; })) {
                   has = true;
                   break;
                 }
@@ -148,11 +146,11 @@ Command::Command(const std::string& n) : RSSObject(n) {
           }
         }
         // future_claim
-        for (auto& x : get_future(driver_order)) {
+        for (auto &x : get_future(driver_order)) {
           bool has{false};
-          for (auto& t : veh->allocated_resources) {
+          for (auto &t : veh->allocated_resources) {
             if (std::any_of(t.begin(), t.end(),
-                            [&](auto& v) { return v == x; })) {
+                            [&](auto &v) { return v == x; })) {
               has = true;
               break;
             }
@@ -169,11 +167,9 @@ Command::Command(const std::string& n) : RSSObject(n) {
       std::vector<std::shared_ptr<RSSResource>> temp;
       temp.push_back(dest->destination.lock());
       veh->claim_resources.clear();
-      veh->claim_resources.push_back(
-          std::unordered_set<std::shared_ptr<RSSResource>>{temp.begin(),
-                                                           temp.end()});
-      for (auto& r : veh->allocated_resources) {
-        if (std::any_of(r.begin(), r.end(), [&](auto& v) {
+      veh->claim_resources.emplace_back(temp.begin(), temp.end());
+      for (auto &r : veh->allocated_resources) {
+        if (std::any_of(r.begin(), r.end(), [&](auto &v) {
               return v == dest->destination.lock();
             })) {
           state = State::ALLOCATED;
@@ -188,7 +184,7 @@ Command::Command(const std::string& n) : RSSObject(n) {
   cbs[State::ALLOCATED] = [&] {
     assert_valid;
     // execute
-    auto& driver_order = order->driverorders[order->current_driver_index];
+    auto &driver_order = order->driverorders[order->current_driver_index];
     if (driver_order->state == data::order::DriverOrder::State::TRAVELLING) {
       auto steps = get_step(driver_order, veh->send_queue_size);
       if (steps.empty()) {
@@ -222,7 +218,7 @@ Command::Command(const std::string& n) : RSSObject(n) {
     if (veh->paused) {
       return;
     }
-    auto& driver_order = order->driverorders[order->current_driver_index];
+    auto &driver_order = order->driverorders[order->current_driver_index];
     // free
     // 获取下次要分配的资源
     std::stringstream ss;
@@ -233,8 +229,8 @@ Command::Command(const std::string& n) : RSSObject(n) {
       next_res.clear();
     }
     std::vector<std::shared_ptr<RSSResource>> temp;
-    for (auto& a : veh->allocated_resources) {
-      for (auto& x : a) {
+    for (auto &a : veh->allocated_resources) {
+      for (auto &x : a) {
         if (order->state != data::order::TransportOrder::State::WITHDRAWL ||
             order->state != data::order::TransportOrder::State::FAILED) {
           if (x == veh->current_point) {
@@ -276,10 +272,11 @@ Command::Command(const std::string& n) : RSSObject(n) {
   };
 }
 void Command::run_once() { cbs[state](); }
+Command::~Command() { CLOG(DEBUG, driver_log) << name << " drop\n"; }
 void Command::vehicle_execute_cb(bool ret) {
   assert_valid;
   if (state == State::EXECUTING) {
-    auto& driver_order = order->driverorders[order->current_driver_index];
+    auto &driver_order = order->driverorders[order->current_driver_index];
     if (driver_order->state == data::order::DriverOrder::State::OPERATING) {
       if (ret) {
         driver_order->state = data::order::DriverOrder::State::FINISHED;
@@ -291,15 +288,15 @@ void Command::vehicle_execute_cb(bool ret) {
     state = State::EXECUTED;
   }
 }
-DestPtr Command::get_dest(DriverOrderPtr order) { return order->destination; }
-std::vector<StepPtr> Command::get_step(DriverOrderPtr order, uint32_t size) {
+DestPtr Command::get_dest(const DriverOrderPtr &order) { return order->destination; }
+std::vector<StepPtr> Command::get_step(const DriverOrderPtr &order, uint32_t size) {
   if (order->route->steps.empty()) {
     order->route->current_step.reset();
-    return std::vector<StepPtr>();
+    return {};
   }
   order->route->current_step = order->route->steps.front();
   auto res = std::vector<StepPtr>();
-  auto len =
+  const auto len =
       size >= order->route->steps.size() ? order->route->steps.size() : size;
   for (auto i = 0; i < len; i++) {
     res.push_back(order->route->steps.at(i));
@@ -307,16 +304,16 @@ std::vector<StepPtr> Command::get_step(DriverOrderPtr order, uint32_t size) {
   order->route->steps.pop_front();
   return res;
 }
-std::vector<StepPtr> Command::get_step_nopop(DriverOrderPtr order,
+std::vector<StepPtr> Command::get_step_nopop(const DriverOrderPtr &order,
                                              uint32_t size) {
   if (order->route->steps.empty() || !order) {
     order->route->current_step.reset();
-    return std::vector<StepPtr>();
+    return {};
   }
   // auto step = order->route->steps.front();
   // order->route->current_steps.push_back(step);
   auto res = std::vector<StepPtr>();
-  auto len =
+  const auto len =
       size >= order->route->steps.size() ? order->route->steps.size() : size;
   for (auto i = 0; i < len; i++) {
     res.push_back(order->route->steps.at(i));
@@ -324,17 +321,17 @@ std::vector<StepPtr> Command::get_step_nopop(DriverOrderPtr order,
   }
   return res;
 }
-std::vector<std::shared_ptr<RSSResource>> Command::get_future(
-    DriverOrderPtr order) {
-  auto veh = vehicle.lock();
+std::vector<std::shared_ptr<RSSResource>>
+Command::get_future(const DriverOrderPtr &order)const {
+  const auto veh = vehicle.lock();
   std::vector<std::shared_ptr<RSSResource>> res;
   if (order->route->steps.size() > veh->send_queue_size) {
-    auto next = *(order->route->steps.begin() + veh->send_queue_size);
+    const auto next = *(order->route->steps.begin() + veh->send_queue_size);
     auto path = next->path;
     auto beg = next->path->destination_point.lock();
     auto end = next->path->source_point.lock();
-    for (auto& r : veh->allocated_resources) {
-      for (auto& x : r) {
+    for (auto &r : veh->allocated_resources) {
+      for (auto &x : r) {
         if (x == beg) {
           beg = nullptr;
         }
@@ -359,5 +356,4 @@ std::vector<std::shared_ptr<RSSResource>> Command::get_future(
   return res;
 }
 
-}  // namespace driver
-}  // namespace kernel
+}

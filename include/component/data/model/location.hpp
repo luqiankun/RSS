@@ -3,11 +3,10 @@
 #include "../../rssresource.hpp"
 #include "./locationtype.hpp"
 #include "point.hpp"
-namespace data {
-namespace model {
+namespace data::model {
 
 class Location : public RSSResource {
- public:
+public:
   struct Layout {
     Vector2i position{0, 0};
     Vector2i label_offset{0, 0};
@@ -21,6 +20,5 @@ class Location : public RSSResource {
   std::weak_ptr<Point> link;
   std::weak_ptr<LocationType> type;
 };
-}  // namespace model
-}  // namespace data
+} // namespace data::model
 #endif

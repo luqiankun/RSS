@@ -3,8 +3,7 @@
 #include <regex>
 
 #include "../../rssobject.hpp"
-namespace data {
-namespace model {
+namespace data::model {
 struct LocationTypeLayout {
   enum class LocationRepresentation {
 
@@ -68,28 +67,28 @@ struct LocationTypeLayout {
   LocationRepresentation location_representation{LocationRepresentation::NONE};
 };
 class LocationType : public RSSObject {
- public:
+public:
   using RSSObject::RSSObject;
   void get_param() {
     std::regex P{R"(^vda5050:destinationAction.([^.]+).parameter.([^.]+)$)"};
-    for (auto& x : properties) {
+    for (auto &x : properties) {
       if (std::regex_match(x.first, P)) {
         std::smatch sm;
         std::regex_search(x.first, sm, P);
-        auto name = (*(sm.end() - 2)).str();
+        auto name = ((sm.end() - 2))->str();
         std::transform(name.begin(), name.end(), name.begin(), ::tolower);
-        auto key = (*(sm.end() - 1)).str();
+        auto key = ((sm.end() - 1))->str();
         auto value = x.second;
         auto it_ops =
             std::find_if(allowed_ops.begin(), allowed_ops.end(),
-                         [&name](const auto& x) { return x.first == name; });
+                         [&name](const auto &x) { return x.first == name; });
         if (it_ops != allowed_ops.end()) {
           it_ops->second.insert(
               std::pair<std::string, std::string>(key, value));
         }
         auto it_ops_per =
             std::find_if(allowrd_per_ops.begin(), allowrd_per_ops.end(),
-                         [&name](const auto& x) { return name == x.first; });
+                         [&name](const auto &x) { return name == x.first; });
         if (it_ops_per != allowrd_per_ops.end()) {
           it_ops_per->second.insert(
               std::pair<std::string, std::string>(key, value));
@@ -98,16 +97,16 @@ class LocationType : public RSSObject {
     }
   }
 
- public:
+public:
   std::map<std::string, std::map<std::string, std::string>>
-      allowed_ops;  // 本地操作，优先通过vdaaction启动，类型hard
+      allowed_ops; // 本地操作，优先通过vdaaction启动，类型hard
   std::map<std::string, std::map<std::string, std::string>>
-      allowrd_per_ops;  // 外围操作，在其他点触发，服务器来启动
+      allowrd_per_ops; // 外围操作，在其他点触发，服务器来启动
   LocationTypeLayout layout;
 };
 
-static std::string get_Representation(
-    LocationTypeLayout::LocationRepresentation l) {
+static std::string
+get_Representation(LocationTypeLayout::LocationRepresentation l) {
   if (l == LocationTypeLayout::LocationRepresentation::LOAD_TRANSFER_ALT_1) {
     return "LOAD_TRANSFER_ALT_1";
   } else if (l ==
@@ -144,8 +143,8 @@ static std::string get_Representation(
     return "NONE";
   }
 }
-static LocationTypeLayout::LocationRepresentation new_location_type(
-    const std::string& name) {
+static LocationTypeLayout::LocationRepresentation
+new_location_type(const std::string &name) {
   if (name == "DEFAULT") {
     return LocationTypeLayout::LocationRepresentation::DEFAULT;
   } else if (name == "WORKING_GENERIC") {
@@ -176,7 +175,6 @@ static LocationTypeLayout::LocationRepresentation new_location_type(
     return LocationTypeLayout::LocationRepresentation::NONE;
   }
 }
-}  // namespace model
-}  // namespace data
+}
 
 #endif

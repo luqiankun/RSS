@@ -4,16 +4,13 @@
 #include "../../../3rdparty/log/easylogging++.h"
 #include "./driverorder.hpp"
 
-namespace kernel {
-namespace driver {
+namespace kernel::driver {
 class Vehicle;
 }
-}  // namespace kernel
-namespace data {
-namespace order {
+namespace data::order {
 class OrderSequence;
 class TransportOrder : public RSSObject {
- public:
+public:
   using RSSObject::RSSObject;
   enum class State {
     RAW,
@@ -25,7 +22,7 @@ class TransportOrder : public RSSObject {
     FAILED,
     UNROUTABLE
   };
-  std::string get_state() {
+  [[nodiscard]] std::string get_state() const {
     if (state == State::RAW) {
       return "RAW";
     } else if (state == State::ACTIVE) {
@@ -50,7 +47,7 @@ class TransportOrder : public RSSObject {
       return "UNROUTABLE";
     }
   }
-  ~TransportOrder() {
+  ~TransportOrder() override {
     if (state == State::BEING_PROCESSED) {
       CLOG(WARNING, order_log)
           << "order: " << name << " not finished, now will be drop";
@@ -59,7 +56,7 @@ class TransportOrder : public RSSObject {
     }
   }
 
- public:
+public:
   std::chrono::system_clock::time_point create_time;
   std::chrono::system_clock::time_point end_time;
   std::chrono::system_clock::time_point dead_time;
@@ -73,8 +70,7 @@ class TransportOrder : public RSSObject {
   bool dispensable{false};
   std::weak_ptr<kernel::driver::Vehicle> intended_vehicle;
   std::weak_ptr<kernel::driver::Vehicle> processing_vehicle;
-  bool anytime_drop{false};  // 不影响车辆状态，可随时丢弃的
+  bool anytime_drop{false}; // 不影响车辆状态，可随时丢弃的
 };
-}  // namespace order
-}  // namespace data
+}
 #endif

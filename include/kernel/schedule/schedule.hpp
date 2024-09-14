@@ -5,11 +5,10 @@
 #include "../../component/rssresource.hpp"
 #include "../allocate/resource.hpp"
 #include "../driver/command.hpp"
-namespace kernel {
-namespace schedule {
+namespace kernel::schedule {
 class Client : public RSSObject {
- public:
-  virtual ~Client() = default;
+public:
+  ~Client() override = default;
   using RSSObject::RSSObject;
   std::list<std::unordered_set<std::shared_ptr<RSSResource>>> claim_resources;
   std::list<std::unordered_set<std::shared_ptr<RSSResource>>>
@@ -19,13 +18,13 @@ class Client : public RSSObject {
 };
 class Scheduler : public RSSObject,
                   public std::enable_shared_from_this<Scheduler> {
- public:
+public:
   using RSSObject::RSSObject;
-  std::shared_ptr<driver::Command> new_command(
-      std::shared_ptr<driver::Vehicle>);
-  void add_command(std::shared_ptr<driver::Command>);
+  std::shared_ptr<driver::Command>
+  new_command(const std::shared_ptr<driver::Vehicle> &);
+  void add_command(const std::shared_ptr<driver::Command> &);
   void run();
-  ~Scheduler() {
+  ~Scheduler() override {
     commands.clear();
     dispose = true;
     con_var.notify_all();
@@ -35,7 +34,7 @@ class Scheduler : public RSSObject,
     CLOG(INFO, "schedule") << name << " close\n";
   }
 
- public:
+public:
   std::list<std::shared_ptr<driver::Command>> commands;
   std::weak_ptr<allocate::ResourceManager> resource;
   std::thread schedule_th;
@@ -43,6 +42,5 @@ class Scheduler : public RSSObject,
   std::mutex mut;
   bool dispose{false};
 };
-}  // namespace schedule
-}  // namespace kernel
+} // namespace kernel::schedule
 #endif

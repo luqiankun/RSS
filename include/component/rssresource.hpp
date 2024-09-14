@@ -5,8 +5,8 @@
 
 #include "rssobject.hpp"
 class RSSResource : public RSSObject {
- public:
-  virtual ~RSSResource() = default;
+public:
+  ~RSSResource() override = default;
   using RSSObject::RSSObject;
   std::weak_ptr<RSSObject> owner;
   std::vector<std::weak_ptr<RSSObject>> future_owner;

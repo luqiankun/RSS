@@ -2,11 +2,10 @@
 #define DRIVERORDER_HPP
 
 #include "route.hpp"
-namespace data {
-namespace order {
+namespace data::order {
 class TransportOrder;
 class DriverOrder : public RSSObject {
- public:
+public:
   using RSSObject::RSSObject;
   enum class State { PRISTINE, TRAVELLING, OPERATING, FINISHED, FAILED };
 
@@ -16,11 +15,11 @@ class DriverOrder : public RSSObject {
     std::weak_ptr<RSSResource> destination;
     OpType operation{OpType::NOP};
 
-    std::string get_type() {
+    [[nodiscard]] std::string get_type() const {
       return data::model::Actions::get_type(operation);
     };
   };
-  std::string get_cmd_name() {
+  [[nodiscard]] std::string get_cmd_name() const {
     if (route->steps.empty()) {
       return "->operation]";
     } else {
@@ -41,7 +40,7 @@ class DriverOrder : public RSSObject {
       return msg;
     }
   }
-  std::string get_state() {
+  [[nodiscard]] std::string get_state() const {
     if (state == State::PRISTINE) {
       return "PRISTINE";
     } else if (state == State::TRAVELLING) {
@@ -58,12 +57,11 @@ class DriverOrder : public RSSObject {
     }
   };
 
- public:
+public:
   std::shared_ptr<Destination> destination;
   std::shared_ptr<Route> route;
   State state{State::PRISTINE};
   std::weak_ptr<TransportOrder> transport_order;
 };
-}  // namespace order
-}  // namespace data
+} // namespace data::order
 #endif

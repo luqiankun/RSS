@@ -144,7 +144,7 @@ class SimRabbit3 {
                           .retained(t->is_retained())
                           .payload(t->get_payload())
                           .finalize();
-        move_task.async_run([&] {
+        move_task.commit([&] {
           try {
             LOG(INFO) << current_msg->get_payload();
             auto src = jsoncons::json::parse(current_msg->get_payload());
@@ -435,7 +435,7 @@ class SimRabbit3 {
                       vda_state = *state;
                       con.notify_one();
                       lock.unlock();
-                      util_task.async_run([&]() mutable {
+                      util_task.commit([&]() mutable {
                         while (vda_state.battery_state.battery_charge < 100) {
                           std::unique_lock<std::mutex> lock(mut);
                           if (vda_state.driving) {
@@ -757,7 +757,7 @@ class SimRabbit3 {
                       vda_state = *state;
                       con.notify_one();
                       lock.unlock();
-                      util_task.async_run([&]() mutable {
+                      util_task.commit([&]() mutable {
                         while (vda_state.battery_state.battery_charge < 100) {
                           std::unique_lock<std::mutex> lock(mut);
                           if (vda_state.driving) {
@@ -836,7 +836,7 @@ class SimRabbit3 {
                                   .retained(t->is_retained())
                                   .payload(t->get_payload())
                                   .finalize();
-            action_task.async_run([&] {
+            action_task.commit([&] {
               // LOG(INFO) << current_act_msg->get_payload();
               try {
                 auto src =
@@ -888,9 +888,9 @@ class SimRabbit3 {
     }
   }
   ~SimRabbit3() {
-    action_task.stop();
-    move_task.stop();
-    util_task.stop();
+    // action_task.stop();
+    // move_task.stop();
+    // util_task.stop();
   }
 
  public:
@@ -901,9 +901,9 @@ class SimRabbit3 {
   vda5050::state::VDA5050State vda_state;
   std::thread th_state;
   std::thread th_pro;
-  fa::taskpool_t move_task{1};
-  fa::taskpool_t action_task{1};
-  fa::taskpool_t util_task{4};
+  tools::threadpool move_task{1};
+  tools::threadpool action_task{1};
+  tools::threadpool util_task{4};
   std::mutex mut;
   std::mutex pro_mut;
   std::condition_variable con;

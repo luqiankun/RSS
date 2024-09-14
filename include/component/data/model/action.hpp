@@ -5,35 +5,36 @@
 #include <variant>
 
 #include "../../../3rdparty/jsoncons/basic_json.hpp"
+#include "../../util/tools.hpp"
+
 // #include "../order/driverorder.hpp"
-namespace data {
-namespace model {
+namespace data::model {
 class Actions {
- public:
+public:
   enum class OpType {
-    NOP,     // 啥也不干
-    LOAD,    // 去某location load
-    UNLOAD,  // 去某location unload
-    MOVE,    // 去某point
-    CHARGE,  // 充电
+    NOP,    // 啥也不干
+    LOAD,   // 去某location load
+    UNLOAD, // 去某location unload
+    MOVE,   // 去某point
+    CHARGE, // 充电
     CLOSE,
     OPEN,
     LIFT,
     DROP,
     PICK,
-    PARK,  // 停靠在某个location
+    PARK, // 停靠在某个location
     STARTPAUSE,
     STOPPAUSE
   };
   enum class ActionBlockingType { NONE = 1, SOFT = 2, HARD = 3 };
   class ActionParam {
-   public:
+  public:
     std::string key;
     std::variant<std::string, bool, double, std::vector<std::string>> value;
   };
   // 自定义
   enum class ActionWhen { ORDER_START = 1, ORDER_END = 2 };
-  static std::optional<OpType> get_optype(const std::string& op) {
+  static std::optional<OpType> get_optype(const std::string &op) {
     auto str1 = op;
     std::transform(str1.begin(), str1.end(), str1.begin(), ::tolower);
     if (str1 == "nop") {
@@ -97,33 +98,34 @@ class Actions {
   }
   // vda操作
   class Action {
-   public:
-    Action() = default;
+  public:
+    virtual ~Action() = default;
+    Action();
     OpType action_type{OpType::NOP};
     std::string action_id;
     std::optional<std::string> action_description;
     ActionBlockingType blocking_type{ActionBlockingType::HARD};
     std::optional<std::vector<ActionParam>> action_parameters;
     ActionWhen when;
-    bool vaild{false};
+    bool valid{false};
     std::string name;
-    virtual void init(jsoncons::json&) {};
+    virtual void init(jsoncons::json &){};
     virtual jsoncons::json to_json() { return jsoncons::json::object(); };
   };
-  explicit Actions(std::map<std::string, std::string> pro) {
+  explicit Actions(const std::map<std::string, std::string> &pro) {
     std::regex N{R"(^vda5050:action.([^.]+)$)"};
     std::regex T{R"(^vda5050:action.([^.]+).blockingType$)"};
     std::regex P{R"(^vda5050:action.([^.]+).parameter.([^.]+)$)"};
     std::regex W{R"(^vda5050:action.([^.]+).when$)"};
 
-    for (auto& x : pro) {
+    for (auto &x : pro) {
       std::smatch mt;
       if (std::regex_match(x.first, N)) {
         std::regex_search(x.first, mt, N);
         auto id = (mt.end() - 1)->str();
         auto name = x.second;
         bool has{false};
-        for (auto& a : actions) {
+        for (auto &a : actions) {
           if (a.action_id == id) {
             a.name = name;
             has = true;
@@ -139,7 +141,7 @@ class Actions {
         std::regex_search(x.first, mt, T);
         auto id = (mt.end() - 1)->str();
         bool has{false};
-        for (auto& a : actions) {
+        for (auto &a : actions) {
           if (a.action_id == id) {
             if (x.second == "NONE") {
               a.blocking_type = ActionBlockingType::NONE;
@@ -167,7 +169,7 @@ class Actions {
         std::regex_search(x.first, mt, W);
         auto id = (mt.end() - 1)->str();
         bool has{false};
-        for (auto& a : actions) {
+        for (auto &a : actions) {
           if (a.action_id == id) {
             if (x.second == "ORDER_START") {
               a.when = ActionWhen::ORDER_START;
@@ -196,7 +198,7 @@ class Actions {
         p.value = x.second;
         auto id = (mt.end() - 2)->str();
         bool has{false};
-        for (auto& a : actions) {
+        for (auto &a : actions) {
           if (a.action_id == id) {
             if (!a.action_parameters.has_value()) {
               a.action_parameters = std::vector<ActionParam>();
@@ -213,35 +215,37 @@ class Actions {
         }
       }
     }
-    for (auto& x : actions) {
+    for (auto &x : actions) {
       if (x.action_id.empty()) {
-        x.vaild = false;
+        x.valid = false;
         continue;
       }
-      x.vaild = true;
+      x.valid = true;
     }
-    for (auto& x : actions) {
+    for (auto &x : actions) {
       if (!x.action_parameters.has_value()) {
         continue;
       }
-      for (auto& param : x.action_parameters.value()) {
+      for (auto &param : x.action_parameters.value()) {
         if (param.key == "type") {
           x.action_type = get_optype(std::get<std::string>(param.value))
                               .value_or(OpType::NOP);
         }
       }
+      x.action_id = "Action-" + uuids::to_string(get_uuid());
     }
   }
-  Actions() {}
-  void append(Action act) { actions.push_back(act); }
+  Actions() = default;
+  void append(const Action &act) { actions.push_back(act); }
 
- public:
+public:
   std::vector<Action> actions;
 };
+inline Actions::Action::Action() : when(ActionWhen::ORDER_START) {}
 class PeripheralActions {
- public:
+public:
   class PeripheralAction {
-   public:
+  public:
     std::string op_name;
     std::string location_name;
     bool completion_required{false};
@@ -249,7 +253,6 @@ class PeripheralActions {
   };
   std::vector<PeripheralAction> acts;
 };
-}  // namespace model
-}  // namespace data
+}
 
 #endif
