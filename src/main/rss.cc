@@ -35,10 +35,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       return {BadRequest_400, res.to_string()};
     }
     //
-    auto root = doc.first_child(); // <model>
+    auto root = doc.first_child();  // <model>
     if (std::string(root.name()) != "model") {
-      CLOG(ERROR, rss_log) << "parse error: "
-                           << "'don't has model'";
+      CLOG(ERROR, rss_log) << "parse error: " << "'don't has model'";
       json res = json::array();
       auto msg =
           "Could not parse XML input '" + std::string("'don't has model'.");
@@ -1059,8 +1058,8 @@ json order_to_json(const std::shared_ptr<data::order::TransportOrder> &v) {
   return value;
 }
 
-std::pair<int, std::string>
-RSS::get_transport_orders(const std::string &vehicle) const {
+std::pair<int, std::string> RSS::get_transport_orders(
+    const std::string &vehicle) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1069,14 +1068,30 @@ RSS::get_transport_orders(const std::string &vehicle) const {
     return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   if (vehicle.empty()) {
-    json res = json::array();
-    for (auto &[name, ords] : orderpool->orderpool) {
-      for (auto &o : ords) {
-        json value = order_to_json(o);
-        res.push_back(value);
+    std::vector<kernel::allocate::TransOrderPtr> pro_orders = {};
+    auto end_orders = orderpool->ended_orderpool;
+    for (auto &o : orderpool->orderpool) {
+      for (auto &o : o.second) {
+        pro_orders.push_back(o);
       }
     }
-    for (auto &v : orderpool->ended_orderpool) {
+    std::sort(pro_orders.begin(), pro_orders.end(),
+              [](const kernel::allocate::TransOrderPtr &a,
+                 const kernel::allocate::TransOrderPtr &b) {
+                return a->create_time > b->create_time;
+              });
+    std::sort(end_orders.begin(), end_orders.end(),
+              [=](const kernel::allocate::TransOrderPtr &a,
+                  const kernel::allocate::TransOrderPtr &b) {
+                return a->create_time > b->create_time;
+              });
+    json res = json::array();
+    for (auto &o : pro_orders) {
+      json value = order_to_json(o);
+      res.push_back(value);
+    }
+
+    for (auto &v : end_orders) {
       json value = order_to_json(v);
       res.push_back(value);
     }
@@ -1084,11 +1099,18 @@ RSS::get_transport_orders(const std::string &vehicle) const {
   } else {
     for (auto &v : dispatcher->vehicles) {
       if (v->name == vehicle) {
+        auto order_ = v->orders;
+        std::sort(order_.begin(), order_.end(),
+                  [=](const kernel::allocate::TransOrderPtr &a,
+                      const kernel::allocate::TransOrderPtr &b) {
+                    return a->create_time > b->create_time;
+                  });
         json res = json::array();
-        for (auto &v_ : v->orders) {
+        for (auto &v_ : order_) {
           json value = order_to_json(v_);
           res.push_back(value);
         }
+
         return std::pair<int, std::string>({OK_200, res.to_string()});
       }
     }
@@ -1099,8 +1121,8 @@ RSS::get_transport_orders(const std::string &vehicle) const {
   }
 }
 
-std::pair<int, std::string>
-RSS::get_transport_order(const std::string &ord_name) const {
+std::pair<int, std::string> RSS::get_transport_order(
+    const std::string &ord_name) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1128,9 +1150,8 @@ RSS::get_transport_order(const std::string &ord_name) const {
   return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string>
-RSS::post_transport_order(const std::string &ord_name,
-                          const std::string &body) const {
+std::pair<int, std::string> RSS::post_transport_order(
+    const std::string &ord_name, const std::string &body) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1194,8 +1215,7 @@ RSS::post_transport_order(const std::string &ord_name,
         orderpool->orderquence.push_back(new_orderquence);
       }
     }
-    if (req.contains("type"))
-      ord->type = req["type"].as_string();
+    if (req.contains("type")) ord->type = req["type"].as_string();
     if (auto destinations = req["destinations"]; destinations.empty()) {
       LOG(WARNING) << ord->name << " op is null";
       ord->state = data::order::TransportOrder::State::FAILED;
@@ -1420,9 +1440,8 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
   return std::pair<int, std::string>({OK_200, res.to_string()});
 }
 
-std::pair<int, std::string>
-RSS::post_transport_order_withdrawl(const std::string &ord_name, bool immediate,
-                                    bool) const {
+std::pair<int, std::string> RSS::post_transport_order_withdrawl(
+    const std::string &ord_name, bool immediate, bool) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1481,8 +1500,8 @@ json orderquence_to_json(
   return res;
 }
 
-std::pair<int, std::string>
-RSS::get_ordersequences(const std::string &vehicle) const {
+std::pair<int, std::string> RSS::get_ordersequences(
+    const std::string &vehicle) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1515,8 +1534,8 @@ RSS::get_ordersequences(const std::string &vehicle) const {
   }
 }
 
-std::pair<int, std::string>
-RSS::get_ordersequence(const std::string &sequence_name) const {
+std::pair<int, std::string> RSS::get_ordersequence(
+    const std::string &sequence_name) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1536,9 +1555,8 @@ RSS::get_ordersequence(const std::string &sequence_name) const {
   return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string>
-RSS::post_ordersequence(const std::string &sequence_name,
-                        const std::string &body) const {
+std::pair<int, std::string> RSS::post_ordersequence(
+    const std::string &sequence_name, const std::string &body) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1762,8 +1780,8 @@ std::pair<int, std::string> RSS::get_vehicle(const std::string &vehicle) const {
   return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string>
-RSS::post_vehicle_withdrawl(const std::string &vehicle, bool, bool) const {
+std::pair<int, std::string> RSS::post_vehicle_withdrawl(
+    const std::string &vehicle, bool, bool) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -1966,12 +1984,12 @@ std::pair<int, std::string> RSS::get_model() const {
     loc_type["properties"] = json::array();
     for (auto &[name, param] : type->allowed_ops) {
       std::string x_type = name;
-      x_type[0] = std::toupper(x_type[0]); // NOLINT(*-narrowing-conversions)
+      x_type[0] = std::toupper(x_type[0]);  // NOLINT(*-narrowing-conversions)
       loc_type["allowedOperations"].push_back(x_type);
     }
     for (auto &[name, param] : type->allowrd_per_ops) {
       std::string x_type = name;
-      x_type[0] = std::toupper(x_type[0]); // NOLINT(*-narrowing-conversions)
+      x_type[0] = std::toupper(x_type[0]);  // NOLINT(*-narrowing-conversions)
       loc_type["allowedPeripheralOperations"].push_back(x_type);
     }
     for (auto &[key, value] : type->properties) {
@@ -2000,7 +2018,7 @@ std::pair<int, std::string> RSS::get_model() const {
       link["allowedOperations"] = json::array();
       for (auto &[type, param] : loc->type.lock()->allowed_ops) {
         std::string x_type = type;
-        x_type[0] = std::toupper(x_type[0]); // NOLINT(*-narrowing-conversions)
+        x_type[0] = std::toupper(x_type[0]);  // NOLINT(*-narrowing-conversions)
         link["allowedOperations"].push_back(x_type);
       }
       location["links"].push_back(link);
@@ -2339,10 +2357,8 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
                 pro["name"].as_string(), value));
           }
         }
-        if (!p.contains("length")) {
-          path->length = (path->source_point.lock()->position -
-                          path->destination_point.lock()->position)
-                             .norm();
+        if (p.contains("length")) {
+          path->length = p["length"].as_double();
         }
         //
         data::model::Actions acts(path->properties);
@@ -2595,8 +2611,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         } else {
           auto veh = std::make_shared<kernel::driver::InvalidVehicle>(
               v["name"].as_string());
-          if (v.contains("length"))
-            veh->length = v["length"].as_integer<int>();
+          if (v.contains("length")) veh->length = v["length"].as_integer<int>();
           if (v.contains("maxReverseVelocity")) {
             veh->max_reverse_vel = v["maxReverseVelocity"].as_integer<int>();
           }
@@ -2814,8 +2829,8 @@ std::pair<int, std::string> RSS::put_path_locked(const std::string &path_name,
   return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string>
-RSS::put_location_locked(const std::string &loc_name, bool new_value) const {
+std::pair<int, std::string> RSS::put_location_locked(
+    const std::string &loc_name, bool new_value) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -2906,9 +2921,8 @@ std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
   return std::pair<int, std::string>({NotFound_404, res.to_string()});
 }
 
-std::pair<int, std::string>
-RSS::put_vehicle_integration_level(const std::string &name,
-                                   const std::string &p) const {
+std::pair<int, std::string> RSS::put_vehicle_integration_level(
+    const std::string &name, const std::string &p) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
@@ -2936,9 +2950,8 @@ RSS::put_vehicle_integration_level(const std::string &name,
   return std::pair<int, std::string>({OK_200, ""});
 }
 
-std::pair<int, std::string>
-RSS::post_vehicle_path_to_point(const std::string &name,
-                                const std::string &p_) const {
+std::pair<int, std::string> RSS::post_vehicle_path_to_point(
+    const std::string &name, const std::string &p_) const {
   std::shared_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();

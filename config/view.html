@@ -600,10 +600,10 @@
                             }
                         }
                         if (!has) {
-                            order_quence.push([order["name"], order["state"]]);
+                            order_quence.unshift([order["name"], order["state"]]);
                         }
                         while (order_quence.length > 5) {
-                            order_quence.shift();
+                            order_quence.pop();
                         }
                     }
                 }
@@ -1246,30 +1246,30 @@
 
 
 <body onload="start()">
-<div class="main">
-    <div class="ip">
-        <label> <input type="text" id="ip_btn" class="label" value="127.0.0.1:55200"
-                       placeholder="服务器地址：端口号"></label>
-    </div>
-    <div>
-        <button class="button" id="ok_btn" onclick="clicked()">确定</button>
-        <button class="button" id="stop_btn" onclick="stop_()">停止</button>
-        <span class="upload-file">
+    <div class="main">
+        <div class="ip">
+            <label> <input type="text" id="ip_btn" class="label" value="127.0.0.1:55200"
+                    placeholder="服务器地址：端口号"></label>
+        </div>
+        <div>
+            <button class="button" id="ok_btn" onclick="clicked()">确定</button>
+            <button class="button" id="stop_btn" onclick="stop_()">停止</button>
+            <span class="upload-file">
                 <input type="file" class="input-file" accept=".xml" id="model_file" onchange="file_read()">
                 <span class="tip">选择模型文件</span>
             </span>
-    </div>
+        </div>
 
 
-    <div class="view">
-        <canvas id="map" width="400" height="800">
-        </canvas>
-        <canvas id="Order" width="400" height="800">
-        </canvas>
-        <canvas id="Vehicle" width="400" height="800">
-        </canvas>
+        <div class="view">
+            <canvas id="map" width="400" height="800">
+            </canvas>
+            <canvas id="Order" width="400" height="800">
+            </canvas>
+            <canvas id="Vehicle" width="400" height="800">
+            </canvas>
+        </div>
     </div>
-</div>
 </body>
 <style>
     body {

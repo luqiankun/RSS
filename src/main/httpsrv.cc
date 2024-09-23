@@ -53,8 +53,8 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
   this->ip = ip;
   this->port = port;
   const std::string url_prefix = "/v1";
-  int opt = 1;
-  srv.set_socket_options([&](socket_t sock) {
+  srv.set_socket_options([](socket_t sock) {
+    int opt = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt,
                static_cast<socklen_t>(opt));
   });
@@ -390,5 +390,7 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
 
 void HTTPServer::listen() {
   CLOG(INFO, http_log) << "listen " << ip << ":" << port;
-  srv.listen(ip, port);
+  if (!srv.listen(ip, port)) {
+    throw std::runtime_error("listen error");
+  }
 }

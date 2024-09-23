@@ -21,7 +21,7 @@ class SimRabbit3 {
     vda_state.serial_number = serial_number;
     vda_state.order_id = "";
     vda_state.header_id = 0;
-    vda_state.timestamp = get_time_fmt(std::chrono::system_clock::now());
+    vda_state.timestamp = get_time_fmt(get_now_utc_time());
     vda_state.order_update_id = 0;
     vda_state.last_node_id = init_point;
     vda_state.agv_position = vda5050::state::AgvPosition();
@@ -64,7 +64,7 @@ class SimRabbit3 {
     will["manufacturer"] = manufacturer;
     will["serialNumber"] = serial_number;
     will["version"] = version;
-    will["timestamp"] = get_time_fmt(std::chrono::system_clock::now());
+    will["timestamp"] = get_time_fmt(get_now_utc_time());
     will_ops.set_payload(will.as_string());
     con_ops.set_will(will_ops);
   }
@@ -88,8 +88,7 @@ class SimRabbit3 {
               // LOG(WARNING) << serial_number << " " << send_id << " "
               //              << vda_state.header_id;
               send_id += 1;
-              vda_state.timestamp =
-                  get_time_fmt(std::chrono::system_clock::now());
+              vda_state.timestamp = get_time_fmt(get_now_utc_time());
               mqtt_client->publish(msg)->wait();
             } catch (mqtt::exception& ec) {
               LOG(ERROR) << ec.get_error_str();
@@ -111,7 +110,7 @@ class SimRabbit3 {
         ctx["manufacturer"] = manufacturer;
         ctx["serialNumber"] = serial_number;
         ctx["version"] = version;
-        ctx["timestamp"] = get_time_fmt(std::chrono::system_clock::now());
+        ctx["timestamp"] = get_time_fmt(get_now_utc_time());
         mqtt::message_ptr msg = std::make_shared<mqtt::message>();
         msg->set_qos(0);
         msg->set_retained(true);
@@ -860,8 +859,7 @@ class SimRabbit3 {
                         interface_name + "/" + vda_version + "/" +
                             manufacturer + "/" + serial_number + "/" + "state",
                         vda_state.to_json().as_string(), 0, false);
-                    vda_state.timestamp =
-                        get_time_fmt(std::chrono::system_clock::now());
+                    vda_state.timestamp = get_time_fmt(get_now_utc_time());
                     // LOG(WARNING) << msg->get_payload_ref();
                     // mqtt_client->publish(msg)->wait();
                     if (x.action_type ==

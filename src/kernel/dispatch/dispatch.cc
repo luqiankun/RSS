@@ -87,7 +87,8 @@ std::vector<VehPtr> Dispatcher::deadlock_loop() {
     while (!vs.empty()) {
       auto &x = vs.top();
       vs.pop();
-      if (auto it = std::find(exist.begin(), exist.end(), x);it != exist.end()) {
+      if (auto it = std::find(exist.begin(), exist.end(), x);
+          it != exist.end()) {
         return {it, exist.end()};
       }
       exist.push_back(x);
@@ -123,7 +124,8 @@ std::vector<VehPtr> Dispatcher::block_loop() {
     res.push_back(v);
     for (auto &x : v->future_allocate_resources) {
       if (auto f_veh = x->owner.lock()) {
-        if (const auto veh = std::dynamic_pointer_cast<driver::Vehicle>(f_veh);veh->state != driver::Vehicle::State::EXECUTING) {
+        if (const auto veh = std::dynamic_pointer_cast<driver::Vehicle>(f_veh);
+            veh->state != driver::Vehicle::State::EXECUTING) {
           res.push_back(veh);
           return res;
         }
@@ -211,46 +213,50 @@ void Dispatcher::dispatch_once() {
   if (current_vec.second.empty()) {
     return;
   }
-  auto current = current_vec.second.front();
-  if (current->state == data::order::TransportOrder::State::RAW) {
-    // 重写
-    if (current->driverorders.empty()) {
-      return;
-    }
-    auto v = current->intended_vehicle.lock();
-    if (!v) {
-      if (auto_select) {
-        auto dest = current->driverorders[current->current_driver_index]
-                        ->destination->destination.lock();
-        auto dest_check = find_res(dest->name);
-        allocate::PointPtr start;
-        if (dest_check.first == allocate::ResourceManager::ResType::Point) {
-          start =
-              std::dynamic_pointer_cast<data::model::Point>(dest_check.second);
-        } else if (dest_check.first ==
-                   allocate::ResourceManager::ResType::Location) {
-          start = std::dynamic_pointer_cast<data::model::Location>(
-                      dest_check.second)
-                      ->link.lock();
-        }
-        auto v_select = select_vehicle(start);
-        if (!v_select) {
-          CLOG(WARNING, dispatch_log)
-              << current->name << " not exist idle vehicle \n";
-          return;
-        } else {
-          current->intended_vehicle = v_select;
+  for (auto &ord : current_vec.second) {
+    if (ord->state == data::order::TransportOrder::State::RAW) {
+      // 重写
+      if (ord->driverorders.empty()) {
+        // 空的
+        ord->state = data::order::TransportOrder::State::UNROUTABLE;
+        return;
+      }
+      auto v = ord->intended_vehicle.lock();
+      if (!v) {
+        if (auto_select) {
+          auto dest = ord->driverorders[ord->current_driver_index]
+                          ->destination->destination.lock();
+          auto dest_check = find_res(dest->name);
+          allocate::PointPtr start;
+          if (dest_check.first == allocate::ResourceManager::ResType::Point) {
+            start = std::dynamic_pointer_cast<data::model::Point>(
+                dest_check.second);
+          } else if (dest_check.first ==
+                     allocate::ResourceManager::ResType::Location) {
+            start = std::dynamic_pointer_cast<data::model::Location>(
+                        dest_check.second)
+                        ->link.lock();
+          }
+          auto v_select = select_vehicle(start);
+          if (!v_select) {
+            CLOG(WARNING, dispatch_log)
+                << ord->name << " not exist idle vehicle \n";
+            return;
+          } else {
+            ord->intended_vehicle = v_select;
+          }
         }
       }
+      if (!ord->intended_vehicle.lock()) {
+        CLOG(WARNING, dispatch_log)
+            << ord->name << " not exist intended_vehicle \n";
+        return;
+      }
+      ord->state = data::order::TransportOrder::State::ACTIVE;
+      CLOG(INFO, dispatch_log) << ord->name << " status: [active]\n";
     }
-    if (!current->intended_vehicle.lock()) {
-      CLOG(WARNING, dispatch_log)
-          << current->name << " not exist intended_vehicle \n";
-      return;
-    }
-    current->state = data::order::TransportOrder::State::ACTIVE;
-    CLOG(INFO, dispatch_log) << current->name << " status: [active]\n";
   }
+  auto current = current_vec.second.front();
   if (current->state == data::order::TransportOrder::State::ACTIVE) {
     for (auto &x : current->dependencies) {
       if (const auto dep = x.lock()) {
@@ -278,11 +284,20 @@ void Dispatcher::dispatch_once() {
       } else {
       }
     } else if (su == driver::Vehicle::State::UNAVAILABLE) {
-      pop_order(current);
+      current->state = data::order::TransportOrder::State::UNROUTABLE;
+      CLOG(ERROR, driver_log)
+          << current->intended_vehicle.lock()->name << " UNROUTABLE.\n";
+      // pop_order(current);
     } else if (su == driver::Vehicle::State::ERROR) {
-      pop_order(current);
+      CLOG(ERROR, driver_log)
+          << current->intended_vehicle.lock()->name << " ERROR.\n";
+      current->state = data::order::TransportOrder::State::FAILED;
+      // pop_order(current);
     } else {
-      pop_order(current);
+      CLOG(ERROR, driver_log)
+          << current->intended_vehicle.lock()->name << " UNKNOWN.\n";
+      current->state = data::order::TransportOrder::State::FAILED;
+      // pop_order(current);
     }
     // }
   }
@@ -357,4 +372,4 @@ void Dispatcher::run() {
   });
 }
 
-}
+}  // namespace kernel::dispatch

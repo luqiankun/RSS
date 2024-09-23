@@ -84,8 +84,8 @@ void read_params(const std::string &path) {
     }
     CLOG(INFO, rss_log) << "read yaml param success\n";
   } catch (Yaml::Exception &ec) {
-    CLOG(ERROR, rss_log) << "load param from <" << path << "> failed :"
-                         << " " << ec.Message() << ", will use default params.";
+    CLOG(ERROR, rss_log) << "load param from <" << path << "> failed :" << " "
+                         << ec.Message() << ", will use default params.";
   }
 }
 

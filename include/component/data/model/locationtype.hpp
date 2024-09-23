@@ -2,6 +2,7 @@
 #define LOCATIONTYYPE_HPP
 #include <regex>
 
+// #include "../../../3rdparty/log/easylogging++.h"
 #include "../../rssobject.hpp"
 namespace data::model {
 struct LocationTypeLayout {
@@ -67,7 +68,7 @@ struct LocationTypeLayout {
   LocationRepresentation location_representation{LocationRepresentation::NONE};
 };
 class LocationType : public RSSObject {
-public:
+ public:
   using RSSObject::RSSObject;
   void get_param() {
     std::regex P{R"(^vda5050:destinationAction.([^.]+).parameter.([^.]+)$)"};
@@ -83,30 +84,31 @@ public:
             std::find_if(allowed_ops.begin(), allowed_ops.end(),
                          [&name](const auto &x) { return x.first == name; });
         if (it_ops != allowed_ops.end()) {
+          // it_ops->second[key] = value;
           it_ops->second.insert(
               std::pair<std::string, std::string>(key, value));
+          // LOG(INFO) << name << " " << key << " " << value;
         }
         auto it_ops_per =
             std::find_if(allowrd_per_ops.begin(), allowrd_per_ops.end(),
                          [&name](const auto &x) { return name == x.first; });
         if (it_ops_per != allowrd_per_ops.end()) {
-          it_ops_per->second.insert(
-              std::pair<std::string, std::string>(key, value));
+          it_ops_per->second[key] = value;
         }
       }
     }
   }
 
-public:
+ public:
   std::map<std::string, std::map<std::string, std::string>>
-      allowed_ops; // 本地操作，优先通过vdaaction启动，类型hard
+      allowed_ops;  // 本地操作，优先通过vdaaction启动，类型hard
   std::map<std::string, std::map<std::string, std::string>>
-      allowrd_per_ops; // 外围操作，在其他点触发，服务器来启动
+      allowrd_per_ops;  // 外围操作，在其他点触发，服务器来启动
   LocationTypeLayout layout;
 };
 
-static std::string
-get_Representation(LocationTypeLayout::LocationRepresentation l) {
+static std::string get_Representation(
+    LocationTypeLayout::LocationRepresentation l) {
   if (l == LocationTypeLayout::LocationRepresentation::LOAD_TRANSFER_ALT_1) {
     return "LOAD_TRANSFER_ALT_1";
   } else if (l ==
@@ -143,8 +145,8 @@ get_Representation(LocationTypeLayout::LocationRepresentation l) {
     return "NONE";
   }
 }
-static LocationTypeLayout::LocationRepresentation
-new_location_type(const std::string &name) {
+static LocationTypeLayout::LocationRepresentation new_location_type(
+    const std::string &name) {
   if (name == "DEFAULT") {
     return LocationTypeLayout::LocationRepresentation::DEFAULT;
   } else if (name == "WORKING_GENERIC") {
@@ -175,6 +177,6 @@ new_location_type(const std::string &name) {
     return LocationTypeLayout::LocationRepresentation::NONE;
   }
 }
-}
+}  // namespace data::model
 
 #endif
