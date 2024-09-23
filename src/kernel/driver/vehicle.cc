@@ -108,27 +108,27 @@ Vehicle::~Vehicle() {
   CLOG(INFO, driver_log) << name << " close\n";
 }
 void Vehicle::reroute() { reroute_flag = true; }
-void Vehicle::plan_route() const {
+bool Vehicle::plan_route(allocate::TransOrderPtr cur) const {
   auto res = resource.lock();
   auto ordpoll = orderpool.lock();
   auto route_planner = planner.lock();
 
   if (!res) {
     CLOG(ERROR, driver_log) << name << " resource is null\n";
-    return;
+    return false;
   }
   if (!ordpoll) {
     CLOG(ERROR, driver_log) << name << " orderpoll is null\n";
-    return;
+    return false;
   }
   if (!route_planner) {
     CLOG(ERROR, driver_log) << name << " planner is null\n";
-    return;
+    return false;
   }
   bool first_driverorder{true};
   std::shared_ptr<data::model::Point> start_planner;
   std::shared_ptr<data::model::Point> end_planner;
-  for (auto &op : current_order->driverorders) {
+  for (auto &op : cur->driverorders) {
     if (first_driverorder) {
       first_driverorder = false;
       start_planner = last_point;
@@ -152,17 +152,17 @@ void Vehicle::plan_route() const {
       }
     }
     if (!end_planner || !start_planner) {
-      current_order->state = data::order::TransportOrder::State::UNROUTABLE;
       CLOG(WARNING, driver_log)
           << name << " " << current_order->name << " can not find obj "
           << destination->destination.lock()->name
           << " or can not locate current_pos\n";
+      return false;
     } else {
       auto path = route_planner->find_second_paths(start_planner, end_planner);
       if (path.empty()) {
-        current_order->state = data::order::TransportOrder::State::UNROUTABLE;
         CLOG(WARNING, driver_log)
             << name << " " << current_order->name << " can not routable\n";
+        return false;
       } else {
         auto driverorder = ordpoll->route_to_driverorder(
             res->paths_to_route(path.front()), destination);
@@ -172,6 +172,7 @@ void Vehicle::plan_route() const {
       }
     }
   }
+  return true;
 }
 
 void Vehicle::get_next_ord() {
@@ -213,7 +214,7 @@ void Vehicle::command_done() {
     return;
   }
   if (reroute_flag) {
-    plan_route();
+    plan_route(current_order);
     reroute_flag = false;
   }
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
@@ -235,6 +236,7 @@ void Vehicle::command_done() {
       process_charging = false;
     }
     now_order_state = Vehicle::nowOrder::END;
+    current_order->state = data::order::TransportOrder::State::FAILED;
     current_order.reset();
     get_next_ord();
     return;
@@ -257,6 +259,7 @@ void Vehicle::command_done() {
       process_charging = false;
     }
     now_order_state = Vehicle::nowOrder::END;
+    current_order->state = data::order::TransportOrder::State::FAILED;
     // current_order.reset();
     // get_next_ord();
     return;
@@ -265,10 +268,6 @@ void Vehicle::command_done() {
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " timeout.";
     current_order->state = data::order::TransportOrder::State::FAILED;
-    now_order_state = Vehicle::nowOrder::END;
-  }
-  if (current_order->state == data::order::TransportOrder::State::FAILED) {
-    // 订单失败
     future_allocate_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto &a : this->allocated_resources) {
@@ -280,12 +279,27 @@ void Vehicle::command_done() {
     }
     res->free(temp, shared_from_this());
     now_order_state = Vehicle::nowOrder::END;
-    CLOG(ERROR, driver_log)
-        << current_order->name << " failed, requires manual intervention.\n";
-    // current_order.reset();
-    // get_next_ord();
     return;
   }
+  // if (current_order->state == data::order::TransportOrder::State::FAILED) {
+  //   // 订单失败
+  //   future_allocate_resources.clear();
+  //   std::vector<std::shared_ptr<RSSResource>> temp;
+  //   for (auto &a : this->allocated_resources) {
+  //     for (auto &x : a) {
+  //       if (x != this->current_point) {
+  //         temp.push_back(x);
+  //       }
+  //     }
+  //   }
+  //   res->free(temp, shared_from_this());
+  //   now_order_state = Vehicle::nowOrder::END;
+  //   CLOG(ERROR, driver_log)
+  //       << current_order->name << " failed, requires manual intervention.\n";
+  //   // current_order.reset();
+  //   // get_next_ord();
+  //   return;
+  // }
   // 完成step or action
   auto dr = (current_order->driverorders[current_order->current_driver_index]);
   if (dr->state == data::order::DriverOrder::State::FINISHED) {
@@ -370,6 +384,7 @@ std::string Vehicle::get_process_state() const {
 void Vehicle::next_command() {
   auto scheduler_ = scheduler.lock();
   if (!scheduler_) {
+    current_order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " scheduler is null\n";
     return;
   }
@@ -382,17 +397,15 @@ void Vehicle::next_command() {
     current_order->state = data::order::TransportOrder::State::BEING_PROCESSED;
     CLOG(INFO, order_log) << current_order->name
                           << " status: {begin_processed}\n";
-    plan_route();  // 首次执行，规划路径
+    plan_route(current_order);  // 首次执行，规划路径
   }
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
+    current_order->state = data::order::TransportOrder::State::FAILED;
     current_order.reset();
     if (process_charging) {
       process_charging = false;
     }
     get_next_ord();
-    return;
-  }
-  if (current_order->state == data::order::TransportOrder::State::UNROUTABLE) {
     return;
   }
   if (current_order->state == data::order::TransportOrder::State::FAILED) {
@@ -412,11 +425,11 @@ void Vehicle::receive_task(
   CLOG(INFO, driver_log) << name << " receive new order " << order->name
                          << "\n";
   if (state == State::ERROR) {
-    order->state = data::order::TransportOrder::State::FAILED;
+    // order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " " << order->name
                             << " failed : " << name << " state is ERROR";
   } else if (state == State::UNAVAILABLE) {
-    order->state = data::order::TransportOrder::State::FAILED;
+    // order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " " << order->name
                             << " failed : " << name << " state is UNAVAILABLE";
   } else if (state == State::IDEL) {
@@ -431,6 +444,7 @@ void Vehicle::receive_task(
   } else if (state == State::EXECUTING) {
     if (current_order && current_order->anytime_drop) {
       current_order->state = data::order::TransportOrder::State::WITHDRAWL;
+      LOG(INFO) << "__________________|||||||||||||||||||||||||";
     }
     if (process_charging) {
       process_charging = false;
@@ -438,6 +452,7 @@ void Vehicle::receive_task(
     orders.push_back(order);
     if (current_order &&
         current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
+      current_order->state = data::order::TransportOrder::State::FAILED;
       current_order.reset();
       next_command();
     }
@@ -453,7 +468,7 @@ void Vehicle::receive_task(
       next_command();
     }
   } else {
-    order->state = data::order::TransportOrder::State::FAILED;
+    // order->state = data::order::TransportOrder::State::FAILED;
     CLOG(WARNING, dispatch_log) << order->name << " status: [failed]\n";
     CLOG(ERROR, driver_log) << name << " " << order->name
                             << " failed : " << name << " state is UNKNOWN\n";

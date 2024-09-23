@@ -1452,16 +1452,34 @@ std::pair<int, std::string> RSS::post_transport_order_withdrawl(
   for (auto &[name, ords] : orderpool->orderpool) {
     for (auto &ord : ords) {
       if (ord->name == ord_name) {
+        if (ord->state != data::order::TransportOrder::State::DISPATCHABLE) {
+          return std::pair<int, std::string>(
+              {NotFound_404, "[" + ord_name + " is not support withdrawl.]"});
+        }
         CLOG(INFO, rss_log) << ord_name << " withdrawl\n";
         ord->state = data::order::TransportOrder::State::WITHDRAWL;
+        orderpool->pop(ord);
         return std::pair<int, std::string>({OK_200, ""});
       }
     }
   }
   for (auto &o : orderpool->ended_orderpool) {
     if (o->name == ord_name) {
+      if (o->state != data::order::TransportOrder::State::BEING_PROCESSED &&
+          o->state != data::order::TransportOrder::State::FAILED) {
+        return std::pair<int, std::string>(
+            {NotFound_404, "[" + ord_name + "'" + o->get_state() +
+                               "' is not support withdrawl.]"});
+      }
       CLOG(INFO, rss_log) << ord_name << " withdrawl\n";
-      o->state = data::order::TransportOrder::State::WITHDRAWL;
+      if (o->state == data::order::TransportOrder::State::FAILED &&
+          o->intended_vehicle.lock()->current_order == o) {
+        o->state = data::order::TransportOrder::State::WITHDRAWL;
+        o->intended_vehicle.lock()->command_done();
+      } else if (o->state ==
+                 data::order::TransportOrder::State::BEING_PROCESSED) {
+        o->state = data::order::TransportOrder::State::WITHDRAWL;
+      }
       return std::pair<int, std::string>({OK_200, ""});
     }
   }

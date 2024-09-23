@@ -55,8 +55,9 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
   const std::string url_prefix = "/v1";
   srv.set_socket_options([](socket_t sock) {
     int opt = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt,
-               static_cast<socklen_t>(opt));
+    int ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt,
+                         sizeof(opt));
+    CLOG(INFO, http_log) << "setsockopt ret: %d" << ret;
   });
   srv.set_default_headers({{"Access-Control-Allow-Origin", "*"},
                            {"Access-Control-Allow-Credentials", "false"},
@@ -389,8 +390,8 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
 }
 
 void HTTPServer::listen() {
-  CLOG(INFO, http_log) << "listen " << ip << ":" << port;
   if (!srv.listen(ip, port)) {
     throw std::runtime_error("listen error");
   }
+  CLOG(INFO, http_log) << "listen " << ip << ":" << port;
 }

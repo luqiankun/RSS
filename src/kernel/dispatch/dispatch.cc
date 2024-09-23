@@ -201,14 +201,14 @@ void Dispatcher::idle_detect() {
 }
 
 void Dispatcher::dispatch_once() {
-  for (auto &v : vehicles) {
-    if (v && v->current_order) {
-      if (v->current_order->state ==
-          data::order::TransportOrder::State::WITHDRAWL) {
-        v->command_done();
-      }
-    }
-  }
+  // for (auto &v : vehicles) {
+  //   if (v && v->current_order) {
+  //     if (v->current_order->state ==
+  //         data::order::TransportOrder::State::WITHDRAWL) {
+  //       v->command_done();
+  //     }
+  //   }
+  // }
   auto current_vec = get_next_vec();
   if (current_vec.second.empty()) {
     return;
@@ -219,7 +219,7 @@ void Dispatcher::dispatch_once() {
       if (ord->driverorders.empty()) {
         // 空的
         ord->state = data::order::TransportOrder::State::UNROUTABLE;
-        return;
+        continue;
       }
       auto v = ord->intended_vehicle.lock();
       if (!v) {
@@ -254,19 +254,28 @@ void Dispatcher::dispatch_once() {
       }
       ord->state = data::order::TransportOrder::State::ACTIVE;
       CLOG(INFO, dispatch_log) << ord->name << " status: [active]\n";
+    } else if (ord->state == data::order::TransportOrder::State::ACTIVE) {
+      for (auto &x : ord->dependencies) {
+        if (const auto dep = x.lock()) {
+          if (dep->state != data::order::TransportOrder::State::FINISHED) {
+            continue;
+          }
+        }
+      }
+      // 规划路径
+      if (ord->intended_vehicle.lock()->plan_route(ord)) {
+        ord->state = data::order::TransportOrder::State::DISPATCHABLE;
+        CLOG(INFO, dispatch_log) << ord->name << " status: [dispatchable]\n";
+      } else {
+        ord->state = data::order::TransportOrder::State::UNROUTABLE;
+        CLOG(INFO, dispatch_log) << ord->name << " status: [unroutable]\n";
+      }
     }
   }
   auto current = current_vec.second.front();
-  if (current->state == data::order::TransportOrder::State::ACTIVE) {
-    for (auto &x : current->dependencies) {
-      if (const auto dep = x.lock()) {
-        if (dep->state != data::order::TransportOrder::State::FINISHED) {
-          return;
-        }
-      }
-    }
-    current->state = data::order::TransportOrder::State::DISPATCHABLE;
-    CLOG(INFO, dispatch_log) << current->name << " status: [dispatchable]\n";
+  if (current->state == data::order::TransportOrder::State::WITHDRAWL) {
+    current->state = data::order::TransportOrder::State::FAILED;
+    CLOG(WARNING, dispatch_log) << current->name << " status: [withdrawl]\n";
   }
   if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
     auto su = current->intended_vehicle.lock()->state;
@@ -307,10 +316,6 @@ void Dispatcher::dispatch_once() {
         << current->name << " status: [beging_processed]\n";
 
     // wait  do nothing
-  }
-  if (current->state == data::order::TransportOrder::State::WITHDRAWL) {
-    pop_order(current);
-    CLOG(WARNING, dispatch_log) << current->name << " status: [withdrawl]\n";
   }
   if (current->state == data::order::TransportOrder::State::FINISHED) {
     pop_order(current);
