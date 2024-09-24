@@ -3,8 +3,8 @@
 #include "../../../include/kernel/schedule/schedule.hpp"
 
 namespace kernel::allocate {
-std::shared_ptr<data::order::Route>
-ResourceManager::paths_to_route(std::vector<PointPtr> ps) {
+std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
+    std::vector<PointPtr> ps) {
   std::string route_name = ps.front()->name + "_" + ps.back()->name;
   auto res = std::make_shared<data::order::Route>(route_name);
   int index{0};
@@ -34,12 +34,13 @@ ResourceManager::paths_to_route(std::vector<PointPtr> ps) {
   if (!res->steps.empty()) {
     res->current_step = res->steps.front();
   }
-  res->step_number = static_cast<int>(res->steps.size());
+  res->steps.front()->type = data::order::Step::Type::FRONT;
+  res->steps.back()->type = data::order::Step::Type::BACK;
   return res;
 }
 
-std::pair<ResourceManager::ResType, TCSResourcePtr>
-ResourceManager::find(const std::string &name) {
+std::pair<ResourceManager::ResType, TCSResourcePtr> ResourceManager::find(
+    const std::string &name) {
   TCSResourcePtr res;
   const auto it =
       std::find_if(points.begin(), points.end(),
@@ -211,14 +212,13 @@ PointPtr ResourceManager::get_recent_park_point(const PointPtr &cur) const {
   // CLOG(INFO, "allocate") << "now" << cur->name << " " << cur->position;
   std::vector<double> dis;
   auto temp_ps = points;
-  std::sort(temp_ps.begin(), temp_ps.end(),
-            [&](const PointPtr &a, const PointPtr &b) {
-              const double d1 =
-                  (cur->position - a->position).cast<double>().norm();
-              const double d2 =
-                  (cur->position - b->position).cast<double>().norm();
-              return d1 < d2;
-            });
+  std::sort(
+      temp_ps.begin(), temp_ps.end(),
+      [&](const PointPtr &a, const PointPtr &b) {
+        const double d1 = (cur->position - a->position).cast<double>().norm();
+        const double d2 = (cur->position - b->position).cast<double>().norm();
+        return d1 < d2;
+      });
   for (auto &x : temp_ps) {
     if (x->type != data::model::Point::Type::PARK_POSITION) {
       continue;
@@ -236,14 +236,13 @@ PointPtr ResourceManager::get_recent_park_point(const PointPtr &cur) const {
 LocationPtr ResourceManager::get_recent_charge_loc(const PointPtr &cur) const {
   std::vector<double> dis;
   auto temp_loc = locations;
-  std::sort(temp_loc.begin(), temp_loc.end(),
-            [&](const LocationPtr &a, const LocationPtr &b) {
-              const double d1 =
-                  (cur->position - a->position).cast<double>().norm();
-              const double d2 =
-                  ((cur->position - b->position).cast<double>()).norm();
-              return d1 < d2;
-            });
+  std::sort(
+      temp_loc.begin(), temp_loc.end(),
+      [&](const LocationPtr &a, const LocationPtr &b) {
+        const double d1 = (cur->position - a->position).cast<double>().norm();
+        const double d2 = ((cur->position - b->position).cast<double>()).norm();
+        return d1 < d2;
+      });
   for (auto &x : temp_loc) {
     if (x->type.lock()->allowed_ops.find("charge") ==
         x->type.lock()->allowed_ops.end()) {
@@ -263,4 +262,4 @@ LocationPtr ResourceManager::get_recent_charge_loc(const PointPtr &cur) const {
   return nullptr;
 }
 
-} // namespace kernel::allocate
+}  // namespace kernel::allocate

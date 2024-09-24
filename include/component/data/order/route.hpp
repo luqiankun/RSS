@@ -6,12 +6,14 @@ namespace order {
 class Step : public RSSObject {
  public:
   enum class Orientation { FORWARD, BACKWARD, UNDEFINED };
+  enum class Type { FRONT, BACK, MID };
   using RSSObject::RSSObject;
   int wait_time{0};
   std::shared_ptr<model::Path> path;
   int route_index{0};
   bool execution_allowed{false};
   Orientation vehicle_orientation{Orientation::UNDEFINED};
+  Type type{Type::MID};
 };
 class Route : public RSSObject {
  public:
@@ -19,7 +21,6 @@ class Route : public RSSObject {
   std::deque<std::shared_ptr<Step>> steps;
   std::shared_ptr<Step> current_step;
   int64_t costs{0};
-  int step_number{0};
 };
 }  // namespace order
 }  // namespace data

@@ -852,13 +852,9 @@ bool Rabbit3::move(
     CLOG(ERROR, driver_log) << name << " resource is not exist\n";
     return false;
   }
-  bool last_steps{false};
   auto &driver_order =
       current_order->driverorders[current_order->current_driver_index];
 
-  if (driver_order->route->steps.empty()) {
-    last_steps = true;
-  }
   // 发送多步，走完一步返回
   std::string name_;
   {
@@ -933,40 +929,36 @@ bool Rabbit3::move(
   pos.allowed_deviation_xy = deviation_xy;
   pos.allowed_deviation_theta = deviation_theta;
   start.node_position = pos;
-  {
-    if (steps.front()->route_index == 0) {
-      // 起点
-      // vda 遍历当前动作
-      for (auto &x : steps.front()->path->acts.actions) {
-        auto action = static_cast<vda5050::order::Action *>(&x);
+  ord.nodes.push_back(start);
+  std::stringstream ss;
+  ss << "begin move along [" << start_point->name << " --> ";
+  std::string last_id = start_point->name;
+  int forward_two{0};  // 只有前两步是Base,后面都是Horizon
+  if (steps.front()->type == data::order::Step::Type::FRONT) {
+    // 起点
+    // vda 遍历当前动作
+    for (auto &x : steps.front()->path->acts.actions) {
+      auto action = static_cast<vda5050::order::Action *>(&x);
+      if (action->when == vda5050::order::ActionWhen::ORDER_START) {
+        if (action->blocking_type != vda5050::order::ActionBlockingType::NONE) {
+          wait_act_ord_start.insert(action->action_id);
+        }
+        ord.nodes.front().actions.push_back(*action);
+      }
+    }
+    for (auto &x : driver_order->route->steps) {
+      for (auto &act : x->path->acts.actions) {
+        auto action = static_cast<vda5050::order::Action *>(&act);
         if (action->when == vda5050::order::ActionWhen::ORDER_START) {
           if (action->blocking_type !=
               vda5050::order::ActionBlockingType::NONE) {
             wait_act_ord_start.insert(action->action_id);
           }
-          start.actions.push_back(*action);
-        }
-      }
-      for (auto &x : driver_order->route->steps) {
-        for (auto &act : x->path->acts.actions) {
-          auto action = static_cast<vda5050::order::Action *>(&act);
-          if (action->when == vda5050::order::ActionWhen::ORDER_START) {
-            if (action->blocking_type !=
-                vda5050::order::ActionBlockingType::NONE) {
-              wait_act_ord_start.insert(action->action_id);
-            }
-            start.actions.push_back(*action);
-          }
+          ord.nodes.front().actions.push_back(*action);
         }
       }
     }
   }
-  ord.nodes.push_back(start);
-
-  std::stringstream ss;
-  ss << "begin move along [" << start_point->name << " --> ";
-  std::string last_id = start_point->name;
-  int forward_two{0};  // 只有前两步是Base,后面都是Horizon
   for (auto &x : steps) {
     last_step_count++;
     std::shared_ptr<data::model::Point> end_point;
@@ -991,7 +983,7 @@ bool Rabbit3::move(
     auto pos2 = vda5050::order::NodePosition();
     pos2.x = end_point->position.x() / 1000.0;
     pos2.y = end_point->position.y() / 1000.0;
-    if (last_steps && x == steps.back()) {
+    if (x->type == data::order::Step::Type::BACK) {
       // 订单的动作，不是路径的动作
       pos2.allowed_deviation_xy = (dest_deviation_xy);
       pos2.allowed_deviation_theta = (dest_deviation_theta);
@@ -1033,7 +1025,10 @@ bool Rabbit3::move(
         param_sy.value = std::to_string(t1->link.lock()->position.y() / 1000.0);
         act.action_parameters->push_back(param_sy);
         end.actions.push_back(act);
-        wait_act_ord_end.insert(act.action_id);
+        if (x == steps.front()) {
+          // 只等待第一步的
+          wait_act_ord_end.insert(act.action_id);
+        }
       } else if (t.first == allocate::ResourceManager::ResType::Point) {
         // TODO
         //  auto t1 = std::dynamic_pointer_cast<data::model::Point>(
@@ -1163,56 +1158,52 @@ bool Rabbit3::move(
     last_id = end_point->name;
     e.sequence_id = seq_id++;
     end.sequence_id = seq_id++;
-    {
-      // peraction  服务器本地调用
+    // peraction  服务器本地调用
 
-      if (!x->path->per_acts.acts.empty()) {
-        for (auto &op : x->path->per_acts.acts) {
-          if (op.execution_trigger == "AFTER_ALLOCATION") {
-            // TODO
-            CLOG(INFO, driver_log)
-                << "do " << op.location_name << "[" << op.op_name << "]";
-            if (op.completion_required) {
-              // wait_act_ord_start.insert(op.op_name);
-            }
-          } else {
-            CLOG(INFO, driver_log)
-                << "do " << op.location_name << "[" << op.op_name << "]";
-            if (op.completion_required) {
-              // wait_act_ord_end.insert(op.op_name);
-            }
+    if (!x->path->per_acts.acts.empty()) {
+      for (auto &op : x->path->per_acts.acts) {
+        if (op.execution_trigger == "AFTER_ALLOCATION") {
+          // TODO
+          CLOG(INFO, driver_log)
+              << "do " << op.location_name << "[" << op.op_name << "]";
+          if (op.completion_required) {
+            // wait_act_ord_start.insert(op.op_name);
+          }
+        } else {
+          CLOG(INFO, driver_log)
+              << "do " << op.location_name << "[" << op.op_name << "]";
+          if (op.completion_required) {
+            // wait_act_ord_end.insert(op.op_name);
           }
         }
       }
     }
+
     ord.nodes.push_back(end);
     ord.edges.push_back(e);
     forward_two++;
   }
-  {
-    if (steps.front()->route_index == driver_order->route->step_number - 1) {
-      // 终点
-      // 遍历当前动作
-      for (auto &x : steps.front()->path->acts.actions) {
-        auto action = static_cast<vda5050::order::Action *>(&x);
+  if (steps.front()->type == data::order::Step::Type::BACK) {
+    // 终点vda动作
+    // 遍历当前动作
+    for (auto &x : steps.front()->path->acts.actions) {
+      auto action = static_cast<vda5050::order::Action *>(&x);
+      if (action->when == vda5050::order::ActionWhen::ORDER_END) {
+        if (action->blocking_type != vda5050::order::ActionBlockingType::NONE) {
+          wait_act_ord_end.insert(action->action_id);
+        }
+        ord.nodes.back().actions.push_back(*action);
+      }
+    }
+    for (auto &x : driver_order->route->steps) {
+      for (auto &act : x->path->acts.actions) {
+        auto action = static_cast<vda5050::order::Action *>(&act);
         if (action->when == vda5050::order::ActionWhen::ORDER_END) {
           if (action->blocking_type !=
               vda5050::order::ActionBlockingType::NONE) {
             wait_act_ord_end.insert(action->action_id);
           }
           ord.nodes.back().actions.push_back(*action);
-        }
-      }
-      for (auto &x : driver_order->route->steps) {
-        for (auto &act : x->path->acts.actions) {
-          auto action = static_cast<vda5050::order::Action *>(&act);
-          if (action->when == vda5050::order::ActionWhen::ORDER_END) {
-            if (action->blocking_type !=
-                vda5050::order::ActionBlockingType::NONE) {
-              wait_act_ord_end.insert(action->action_id);
-            }
-            ord.nodes.back().actions.push_back(*action);
-          }
         }
       }
     }
