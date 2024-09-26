@@ -241,7 +241,7 @@ void Dispatcher::dispatch_once() {
           if (!v_select) {
             CLOG(WARNING, dispatch_log)
                 << ord->name << " not exist idle vehicle \n";
-            return;
+            continue;
           } else {
             ord->intended_vehicle = v_select;
           }
@@ -250,7 +250,7 @@ void Dispatcher::dispatch_once() {
       if (!ord->intended_vehicle.lock()) {
         CLOG(WARNING, dispatch_log)
             << ord->name << " not exist intended_vehicle \n";
-        return;
+        continue;
       }
       ord->state = data::order::TransportOrder::State::ACTIVE;
       CLOG(INFO, dispatch_log) << ord->name << " status: [active]\n";

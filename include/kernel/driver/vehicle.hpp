@@ -152,6 +152,7 @@ class Rabbit3 : public Vehicle {
   double deviation_theta;
   double dest_deviation_xy;
   double dest_deviation_theta;
+  uuids::uuid order_action_uuid;
 };
 class InvalidVehicle : public Vehicle {
  public:

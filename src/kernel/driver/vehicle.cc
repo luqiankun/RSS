@@ -990,7 +990,10 @@ bool Rabbit3::move(
       auto act = vda5050::order::Action();
       auto dest = driver_order->destination;
       auto t = res->find(dest->destination.lock()->name);
-      act.action_id = "Action-" + uuids::to_string(get_uuid());
+      if (order_action_uuid.is_nil()) {
+        order_action_uuid = get_uuid();
+      }
+      act.action_id = "Action-" + uuids::to_string(order_action_uuid);
       act.action_type = dest->operation;
       act.blocking_type = vda5050::order::ActionBlockingType::HARD;
       act.action_parameters = std::vector<vda5050::order::ActionParam>();
@@ -1220,8 +1223,8 @@ bool Rabbit3::move(
   assert(vda5050::order_validate(vaild).empty());
   auto msg = mqtt::make_message(prefix + "order", msg_str, 0, false);
   mqtt_cli->mqtt_client->publish(msg)->wait();
-  CLOG(INFO, driver_log) << "send order mqtt msg: \n"
-                         << jsoncons::pretty_print(vaild) << "\n";
+  // CLOG(INFO, driver_log) << "send order mqtt msg: \n"
+  //                        << jsoncons::pretty_print(vaild) << "\n";
 
   // wait move and actions
   int n{0};
@@ -1410,6 +1413,7 @@ bool Rabbit3::action(
   CLOG(INFO, driver_log) << name << " " << "action execute ["
                          << dest->get_type() << "] at "
                          << dest->destination.lock()->name << "\n";
+  order_action_uuid = uuids::uuid();
   return true;
   // task_run = true;
   // if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
