@@ -92,8 +92,8 @@ bool OwnerRule::pass(std::vector<std::shared_ptr<RSSResource>> resource,
   return true;
 }
 
-std::shared_ptr<data::model::Envelope>
-get_envelope(const std::shared_ptr<RSSResource> &res, const std::string &key) {
+std::shared_ptr<data::model::Envelope> get_envelope(
+    const std::shared_ptr<RSSResource> &res, const std::string &key) {
   if (const auto it = res->envelopes.find(key); it != res->envelopes.end()) {
     return std::dynamic_pointer_cast<data::model::Envelope>(it->second);
   }
@@ -106,6 +106,7 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<RSSResource>> resource,
     auto client_envelope = get_envelope(r, client->envelope_key);
     // LOG(INFO) << client_envelope;
     if (!client_envelope) {
+      // TODO 是否需要返回失败？
       continue;
     }
     for (auto &key : r->envelope_keys) {
@@ -122,4 +123,4 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<RSSResource>> resource,
   return true;
 }
 
-} // namespace kernel::allocate
+}  // namespace kernel::allocate

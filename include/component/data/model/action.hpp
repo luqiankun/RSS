@@ -10,25 +10,25 @@
 // #include "../order/driverorder.hpp"
 namespace data::model {
 class Actions {
-public:
+ public:
   enum class OpType {
-    NOP,    // 啥也不干
-    LOAD,   // 去某location load
-    UNLOAD, // 去某location unload
-    MOVE,   // 去某point
-    CHARGE, // 充电
+    NOP,     // 啥也不干
+    LOAD,    // 去某location load
+    UNLOAD,  // 去某location unload
+    MOVE,    // 去某point
+    CHARGE,  // 充电
     CLOSE,
     OPEN,
     LIFT,
     DROP,
     PICK,
-    PARK, // 停靠在某个location
+    PARK,  // 停靠在某个location
     STARTPAUSE,
     STOPPAUSE
   };
   enum class ActionBlockingType { NONE = 1, SOFT = 2, HARD = 3 };
   class ActionParam {
-  public:
+   public:
     std::string key;
     std::variant<std::string, bool, double, std::vector<std::string>> value;
   };
@@ -98,7 +98,7 @@ public:
   }
   // vda操作
   class Action {
-  public:
+   public:
     virtual ~Action() = default;
     Action();
     OpType action_type{OpType::NOP};
@@ -109,7 +109,7 @@ public:
     ActionWhen when;
     bool valid{false};
     std::string name;
-    virtual void init(jsoncons::json &){};
+    virtual void init(jsoncons::json &) {};
     virtual jsoncons::json to_json() { return jsoncons::json::object(); };
   };
   explicit Actions(const std::map<std::string, std::string> &pro) {
@@ -238,21 +238,22 @@ public:
   Actions() = default;
   void append(const Action &act) { actions.push_back(act); }
 
-public:
+ public:
   std::vector<Action> actions;
 };
 inline Actions::Action::Action() : when(ActionWhen::ORDER_START) {}
 class PeripheralActions {
-public:
+ public:
   class PeripheralAction {
-  public:
+   public:
     std::string op_name;
     std::string location_name;
     bool completion_required{false};
     std::string execution_trigger;
+    std::vector<Actions::ActionParam> action_parameters;
   };
   std::vector<PeripheralAction> acts;
 };
-}
+}  // namespace data::model
 
 #endif

@@ -478,14 +478,20 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
                 peripher_op.attribute("locationName").as_string();
             for (auto &loc : resource->locations) {
               if (loc->name == link_loc_name) {
-                if (loc->type.lock()->allowrd_per_ops.find(per_op_name) !=
-                    loc->type.lock()->allowrd_per_ops.end()) {
+                auto it = loc->type.lock()->allowrd_per_ops.find(per_op_name);
+                if (it != loc->type.lock()->allowrd_per_ops.end()) {
                   // exist
                   data::model::PeripheralActions::PeripheralAction per_act;
                   per_act.completion_required = wait;
                   per_act.execution_trigger = when;
                   per_act.location_name = link_loc_name;
                   per_act.op_name = per_op_name;
+                  for (auto &p_ : it->second) {
+                    data::model::Actions::ActionParam param;
+                    param.key = p_.first;
+                    param.value = p_.second;
+                    per_act.action_parameters.push_back(param);
+                  }
                   p->per_acts.acts.push_back(per_act);
                   break;
                 }
@@ -1981,8 +1987,8 @@ std::pair<int, std::string> RSS::get_model() const {
       path["vehicleEnvelope"].push_back(t);
     }
     path["peripheralOperations"] = json::array();
-    for (auto &[op_name, location_name, completion_required,
-                execution_trigger] : p->per_acts.acts) {
+    for (auto &[op_name, location_name, completion_required, execution_trigger,
+                prams] : p->per_acts.acts) {
       json t;
       t["operation"] = op_name;
       t["locationName"] = op_name;
@@ -2392,12 +2398,18 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
               auto link_loc_name = op["locationName"].as_string();
               for (auto &loc : resource->locations) {
                 if (loc->name == link_loc_name) {
-                  if (loc->type.lock()->allowrd_per_ops.find(per_op_name) !=
-                      loc->type.lock()->allowrd_per_ops.end()) {
+                  auto it = loc->type.lock()->allowrd_per_ops.find(per_op_name);
+                  if (it != loc->type.lock()->allowrd_per_ops.end()) {
                     // exist
                     data::model::Actions::Action act;
                     act.action_id = path->name + "_action_" + per_op_name;
                     act.name = loc->type.lock()->name;
+                    for (auto &p_ : it->second) {
+                      data::model::Actions::ActionParam param;
+                      param.key = p_.first;
+                      param.value = p_.second;
+                      act.action_parameters->push_back(param);
+                    }
                     acts.append(act);
                     break;
                   }

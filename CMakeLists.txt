@@ -74,11 +74,12 @@ if (TEST)
     add_executable(schema_test test/3rdparty/json/schema_test.cc
             src/3rdparty/log/easylogging++.cc
     )
+    add_executable(nurbe_test test/kernel/nurbs_test.cc)
     add_executable(mqtt_test test/3rdparty/mqtt/mqtt_test.cc)
     target_link_libraries(mqtt_test PahoMqttCpp::paho-mqttpp3)
     add_executable(sim_agv_test test/kernel/driver/rabbit3_test.cc ${3rd_SRC})
     target_link_libraries(sim_agv_test PahoMqttCpp::paho-mqttpp3 Threads::Threads)
-    install(TARGETS log_event xml_test http_test json_test sim_agv_test mqtt_test
+    install(TARGETS nurbe_test log_event xml_test http_test json_test sim_agv_test mqtt_test
             RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/${PROJECT_NAME}
     )
 

@@ -3,16 +3,17 @@
 #include "./vertex.hpp"
 namespace kernel::planner {
 class Edge : public std::enable_shared_from_this<Edge> {
-public:
+ public:
   enum class Access { Front = 0, Back = 1, Both = 2 };
-  int weight; // 权重
+  int weight;  // 权重
   VertexWeakPtr head{};
   VertexWeakPtr tail{};
   std::string name{};
-  bool open{true}; // 是否可通行
+  bool open{true};  // 是否可通行
   Access access{Access::Front};
+  std::shared_ptr<data::model::Path> equal_path{nullptr};
 
-public:
+ public:
   Edge(const VertexPtr &h, const VertexPtr &t, std::string n, int w, Access);
   Edge() = delete;
   bool operator==(const EdgePtr &edge) const;
@@ -31,7 +32,7 @@ public:
   }
 };
 class Console {
-public:
+ public:
   Console() = delete;
   Console(const Eigen::Vector2i &pos, std::string n);
   Console(Eigen::Vector2i pos, Eigen::Vector2i layout, std::string n);
@@ -44,7 +45,7 @@ public:
     return os.str();
   }
 
-public:
+ public:
   std::string name{};
   Eigen::Vector2i location{};
   Eigen::Vector2i layout{};
@@ -52,5 +53,5 @@ public:
   bool locked{false};
 };
 using ConsolePtr = std::shared_ptr<Console>;
-}
+}  // namespace kernel::planner
 #endif

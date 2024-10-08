@@ -1171,12 +1171,9 @@ bool Rabbit3::move(
               << "do " << op.location_name << "[" << op.op_name << "]";
           if (op.completion_required) {
             // wait_act_ord_start.insert(op.op_name);
-          }
-        } else {
-          CLOG(INFO, driver_log)
-              << "do " << op.location_name << "[" << op.op_name << "]";
-          if (op.completion_required) {
-            // wait_act_ord_end.insert(op.op_name);
+            std::this_thread::sleep_for(std::chrono::seconds(1));  // 测试用
+            CLOG(INFO, driver_log)
+                << "do " << op.location_name << "[" << op.op_name << "] ok";
           }
         }
       }
@@ -1327,15 +1324,17 @@ bool Rabbit3::move(
           CLOG(INFO, driver_log)
               << name << " " << "move along " << name_ << " ok\n";
           run_ok = true;
-          // per act 服务器本地调用 只等待第一步的
-          // TODO
+          // per act 服务器本地调用
           for (auto &x : steps) {
             for (auto &op : x->path->per_acts.acts) {
               if (op.execution_trigger == "AFTER_MOVEMENT") {
                 CLOG(INFO, driver_log)
                     << "do " << op.location_name << "[" << op.op_name << "]";
-                if (op.completion_required && x == steps.front()) {
-                  wait_act_ord_end.insert(op.op_name);
+                if (op.completion_required) {
+                  std::this_thread::sleep_for(
+                      std::chrono::seconds(1));  // 测试用
+                  CLOG(INFO, driver_log) << "do " << op.location_name << "["
+                                         << op.op_name << "] ok";
                 }
               }
             }

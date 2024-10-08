@@ -26,7 +26,7 @@ void Planner::rebuild() {
   }
   // std::cout << "generate " << vertexs.size() << " vertex\n";
   for (auto &x : res.lock()->paths) {
-    bool ban{false}; // 路段是否禁止
+    bool ban{false};  // 路段是否禁止
     if (x->locked) {
       ban = true;
     }
@@ -48,6 +48,7 @@ void Planner::rebuild() {
         access = Edge::Access::Front;
       }
       auto edge = std::make_shared<Edge>(be, en, x->name, x->length, access);
+      edge->equal_path = x;
       edges.push_back(edge);
       if (ban) {
         edge->open = false;
@@ -63,10 +64,9 @@ void Planner::rebuild() {
         Eigen::Vector2i(x->position.x(), x->position.y()), x->layout.position,
         x->name);
     VertexPtr link;
-    auto it =
-        std::find_if(vertexs.begin(), vertexs.end(), [=](const VertexPtr &a) {
-          return a->equal_point == x->link.lock();
-        });
+    auto it = std::find_if(
+        vertexs.begin(), vertexs.end(),
+        [=](const VertexPtr &a) { return a->equal_point == x->link.lock(); });
     if (it != vertexs.end()) {
       link = *it;
     }
@@ -397,8 +397,7 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
       ss << "| path:[";
       for (auto &p : x.first) {
         if (p == *(x.first.end() - 1)) {
-          ss << p->name << ""
-             << "<" << x.second << ">";
+          ss << p->name << "" << "<" << x.second << ">";
         } else {
           ss << p->name << "<" << p->F << "> -> ";
         }
@@ -415,4 +414,4 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
   }
 }
 
-}
+}  // namespace kernel::planner

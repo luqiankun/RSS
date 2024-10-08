@@ -5,11 +5,13 @@
 #include "../../rssresource.hpp"
 namespace data::model {
 class Envelope : public RSSResource {
-public:
+ public:
   using RSSResource ::RSSResource;
-  using Vertex = Eigen::Vector2f;
+  using Vertex = Eigen::Vector3f;
   explicit Envelope(const std::string &name) : RSSResource(name) {}
-  inline void add_vertex(double x, double y) { vertexs.emplace_back(x, y); }
+  inline void add_vertex(double x, double y, double z = 0) {
+    vertexs.emplace_back(x, y, z);
+  }
   [[nodiscard]] bool collide(const Envelope &other) const {
     auto it = std::any_of(vertexs.begin(), vertexs.end(),
                           [&](const Vertex &v) { return other.inside(v); });
@@ -56,8 +58,8 @@ public:
     return flag;
   }
 
-public:
+ public:
   std::vector<Vertex> vertexs;
 };
-} // namespace data::model
+}  // namespace data::model
 #endif
