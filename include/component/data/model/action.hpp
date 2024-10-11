@@ -252,6 +252,28 @@ class PeripheralActions {
     std::string execution_trigger;
     std::vector<Actions::ActionParam> action_parameters;
   };
+  void get_param(const std::map<std::string, std::string> &pro) {
+    std::regex P{R"(^vda5050:destinationAction.([^.]+).parameter.([^.]+)$)"};
+    for (auto &x : pro) {
+      std::smatch mt;
+      if (std::regex_match(x.first, P)) {
+        std::regex_search(x.first, mt, P);
+        std::string param_name = (mt.end() - 1)->str();
+        std::string param_value = x.second;
+        auto id = (mt.end() - 2)->str();
+        auto it = std::find_if(
+            acts.begin(), acts.end(),
+            [&](const PeripheralAction &a) { return a.op_name == id; });
+        if (it != acts.end()) {
+          it->action_parameters.push_back(Actions::ActionParam());
+          it->action_parameters.back().key = param_name;
+          it->action_parameters.back().value = param_value;
+        }
+      }
+    }
+  }
+
+ public:
   std::vector<PeripheralAction> acts;
 };
 }  // namespace data::model

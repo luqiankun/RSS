@@ -496,6 +496,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
                   break;
                 }
               }
+              p->per_acts.get_param(loc->type.lock()->properties);
             }
             peripher_op = peripher_op.next_sibling();
           }

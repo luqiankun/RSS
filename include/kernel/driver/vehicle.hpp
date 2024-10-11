@@ -133,6 +133,8 @@ class Rabbit3 : public Vehicle {
   void init() override;
   void onstate(const mqtt::const_message_ptr &);
   void onconnect(const mqtt::const_message_ptr &);
+  bool run_script(const std::string &path,
+                  std::map<std::string, std::string> param);
   ~Rabbit3() override;
 
  public:
@@ -153,6 +155,7 @@ class Rabbit3 : public Vehicle {
   double dest_deviation_xy;
   double dest_deviation_theta;
   uuids::uuid order_action_uuid;
+  tools::threadpool python_pool;  // python任务
 };
 class InvalidVehicle : public Vehicle {
  public:

@@ -1024,7 +1024,7 @@
                     ctx.font = font_size.toString() + 'px Arial';
                     ctx.textBaseline = "top";
                     ctx.fillText(v.name + "[" + v.battery + "%]", x, y, v.name.length * font_size);
-                    // console.log(v);
+                    console.log(v, x, y);
 
                     for (let step of v.step) {
                         let start = get_point(step["src"]);

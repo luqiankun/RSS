@@ -1,6 +1,9 @@
 
 #include "../../../include/kernel/driver/vehicle.hpp"
 
+#include <Python.h>
+
+#include "../../../include/3rdparty/fs/filesystem.hpp"
 #include "../../../include/component/util/tools.hpp"
 #include "../../../include/component/vda5050/valitator.hpp"
 #include "../../../include/component/vda5050/vda5050order.hpp"
@@ -1162,18 +1165,55 @@ bool Rabbit3::move(
     e.sequence_id = seq_id++;
     end.sequence_id = seq_id++;
     // peraction  服务器本地调用
-
-    if (!x->path->per_acts.acts.empty()) {
+    // TODO 以下代码仅step_size=2时候才行，其他情况待实现
+    /**---------------------------------------------- */
+    bool peraction{false};
+    if (x->type == data::order::Step::Type::FRONT) {
+      peraction = true;
+    } else {
+      if (x == steps.back()) {
+        peraction = true;
+      }
+    }
+    if (x->type == data::order::Step::Type::BACK && steps.size() == 1) {
+      peraction = false;
+    }
+    /**---------------------------------------------- */
+    // 以上仅step_size=2时候才行，其他情况待实现
+    if (!x->path->per_acts.acts.empty() && peraction) {
       for (auto &op : x->path->per_acts.acts) {
         if (op.execution_trigger == "AFTER_ALLOCATION") {
           // TODO
           CLOG(INFO, driver_log)
-              << "do " << op.location_name << "[" << op.op_name << "]";
+              << "do " << op.location_name << "[" << op.op_name << "]\n";
+          std::map<std::string, std::string> act_param;
+          std::string script;
+          for (auto &x : op.action_parameters) {
+            act_param[x.key] = std::get<std::string>(x.value);
+            if (x.key == "script") {
+              script = std::get<std::string>(x.value);
+            }
+          }
           if (op.completion_required) {
             // wait_act_ord_start.insert(op.op_name);
-            std::this_thread::sleep_for(std::chrono::seconds(1));  // 测试用
-            CLOG(INFO, driver_log)
-                << "do " << op.location_name << "[" << op.op_name << "] ok";
+
+            auto ret = run_script(script, act_param);
+            if (!ret) {
+              CLOG(ERROR, driver_log) << "do " << op.location_name << "["
+                                      << op.op_name << "] failed\n";
+              return false;
+            } else {
+              CLOG(INFO, driver_log)
+                  << "do " << op.location_name << "[" << op.op_name << "] ok\n";
+            }
+          } else {
+            python_pool.commit([=] {
+              auto ret = run_script(script, act_param);
+              CLOG(INFO, driver_log)
+                  << "do " << op.location_name << "[" << op.op_name << "] "
+                  << (ret == true ? "ok" : "failed") << "\n";
+            });
+            // thread1.detach();
           }
         }
       }
@@ -1326,15 +1366,49 @@ bool Rabbit3::move(
           run_ok = true;
           // per act 服务器本地调用
           for (auto &x : steps) {
+            bool peraction{false};
+            if (x->type == data::order::Step::Type::FRONT) {
+              peraction = true;
+            } else {
+              if (x == steps.back()) {
+                peraction = true;
+              }
+            }
+            if (x->type == data::order::Step::Type::BACK && steps.size() == 1) {
+              peraction = false;
+            }
+            if (!peraction) {
+              continue;
+            }
             for (auto &op : x->path->per_acts.acts) {
               if (op.execution_trigger == "AFTER_MOVEMENT") {
                 CLOG(INFO, driver_log)
-                    << "do " << op.location_name << "[" << op.op_name << "]";
+                    << "do " << op.location_name << "[" << op.op_name << "]\n";
+                std::map<std::string, std::string> act_param;
+                std::string script;
+                for (auto &x : op.action_parameters) {
+                  act_param[x.key] = std::get<std::string>(x.value);
+                  if (x.key == "script") {
+                    script = std::get<std::string>(x.value);
+                  }
+                }
                 if (op.completion_required) {
-                  std::this_thread::sleep_for(
-                      std::chrono::seconds(1));  // 测试用
+                  auto ret = run_script(script, act_param);
+                  if (!ret) {
+                    CLOG(ERROR, driver_log) << "do " << op.location_name << "["
+                                            << op.op_name << "] failed";
+                    return false;
+                  }
                   CLOG(INFO, driver_log) << "do " << op.location_name << "["
                                          << op.op_name << "] ok";
+                } else {
+                  python_pool.commit2([=] {
+                    auto ret = run_script(script, act_param);
+                    CLOG(INFO, driver_log)
+                        << "do " << op.location_name << "[" << op.op_name
+                        << "] " << (ret == true ? "ok" : "failed") << "\n";
+                  });
+                  // thread1.detach();
                 }
               }
             }
@@ -1618,6 +1692,86 @@ bool Rabbit3::action(
   // CLOG(WARNING, driver_log) << name << " " << "task cancel";
   // return false;
 }
+
+bool Rabbit3::run_script(const std::string &path,
+                         std::map<std::string, std::string> param) {
+  // std::unique_lock<std::mutex> lock(python_mut);
+  const std::string scirpt_save_path{"/opt/robot/script"};
+  using namespace ghc;
+  filesystem::path p(path);
+  if (p.is_absolute()) {
+    if (!filesystem::exists(p)) {
+      CLOG(ERROR, driver_log) << "file not exist " << path;
+      return false;
+    }
+  }
+  std::string script_name = p.stem();
+  CLOG(INFO, driver_log) << "ready run script " << script_name << ".py at "
+                         << scirpt_save_path << "\n";
+  Py_Initialize();
+  try {
+    PyRun_SimpleString("import sys");
+    std::string env = "sys.path.append('" + scirpt_save_path + "')";
+    PyRun_SimpleString(env.c_str());
+    PyObject *pModule = PyImport_ImportModule(script_name.c_str());
+    if (pModule == NULL) {
+      CLOG(ERROR, driver_log) << "module not found" << std::endl;
+      // Py_DECREF(pModule);
+      Py_Finalize();
+      return false;
+    }
+    pModule = PyImport_ReloadModule(pModule);
+    PyObject *pFunc = PyObject_GetAttrString(pModule, "run");
+    std::string param_msg{'{'};
+    for (auto &item : param) {
+      param_msg += item.first + ":" + item.second + ",";
+    }
+    param_msg.pop_back();
+    param_msg += "}";
+    CLOG(INFO, driver_log) << script_name << " running....\n";
+    PyObject *pReturn = PyObject_CallFunction(pFunc, "s", param_msg.c_str());
+    CLOG(INFO, driver_log) << script_name << " run end\n";
+    PyDictObject *pDict = (PyDictObject *)pReturn;
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+    int ret_code{-10};
+    std::string reason{};
+
+    while (PyDict_Next(pReturn, &pos, &key, &value)) {
+      auto msg = PyUnicode_AsUTF8(key);
+      // std::cout << std::string(msg);
+      if (msg == std::string("ret_code")) {
+        int ret = -10;
+        PyArg_Parse(value, "i", &ret);
+        // std::cout << ":" << ret << std::endl;
+        ret_code = ret;
+      } else if (msg == std::string("reason")) {
+        char *msg_ = NULL;
+        PyArg_Parse(value, "s", &msg_);
+        // std::cout << ":" << msg_ << std::endl;
+        reason = std::string(msg_);
+      }
+    }
+    if (ret_code != 0) {
+      CLOG(ERROR, driver_log)
+          << "run result err,reason: " << reason << std::endl;
+      Py_DECREF(pModule);
+      Py_Finalize();
+      return false;
+    } else {
+      Py_DECREF(pModule);
+      Py_Finalize();
+      CLOG(INFO, driver_log) << "run " << script_name << " ok" << std::endl;
+      return true;
+    }
+  } catch (...) {
+    CLOG(ERROR, driver_log) << "run is  exception" << std::endl;
+    PyErr_PrintEx(1);
+    Py_Finalize();
+    return false;
+  }
+}
+
 bool Rabbit3::instant_action(
     const std::shared_ptr<data::model::Actions::Action> &act) {
   CLOG(INFO, driver_log) << "instantaction " << act->action_id;
@@ -1652,12 +1806,12 @@ bool Rabbit3::instant_action(
   bool ok{false};
   while (instant_task_run) {
     if (mqtt_cli->master_state != vda5050::MasterMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << name << " " << "master not online";
+      CLOG(ERROR, driver_log) << name << " " << "master not online\n";
       instant_task_run = false;
       return false;
     }
     if (veh_state != vda5050::VehicleMqttStatus::ONLINE) {
-      CLOG(ERROR, driver_log) << name << " " << "vehlicle not online";
+      CLOG(ERROR, driver_log) << name << " " << "vehlicle not online\n";
       instant_task_run = false;
       return false;
     }

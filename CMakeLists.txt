@@ -28,10 +28,14 @@ find_package(OpenSSL)
 find_package(eclipse-paho-mqtt-c REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
 find_package(Threads REQUIRED)
+
 ################
 find_package(Eigen3 REQUIRED NO_MODULE)
 include_directories(${EIGEN3_INCLUDE_DIR})
 ################
+find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+include_directories(${Python3_INCLUDE_DIRS})
+
 ##
 file(GLOB_RECURSE 3rd_SRC
         src/3rdparty/*.cc
@@ -48,7 +52,7 @@ add_executable(${EXE_NAME}
         ${3rd_SRC}
         ${MAIN_SRC}
 )
-target_link_libraries(${EXE_NAME} PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen)
+target_link_libraries(${EXE_NAME} PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen ${Python3_LIBRARIES})
 
 
 #########
