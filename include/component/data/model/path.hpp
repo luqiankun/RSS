@@ -2,7 +2,6 @@
 #define PATH_HPP
 #include "../../rssresource.hpp"
 #include "../../util/nurbs.hpp"
-#include "./action.hpp"
 #include "point.hpp"
 namespace data::model {
 class Path : public RSSResource {

@@ -3,12 +3,13 @@
 #include <Eigen/Eigen>
 
 #include "../../rssresource.hpp"
+#include "./action.hpp"
 namespace data::model {
 using namespace Eigen;
 class Path;
 class Location;
 class Point : public RSSResource {
-public:
+ public:
   using RSSResource::RSSResource;
   struct Layout {
     Vector2i position{0, 0};
@@ -54,14 +55,15 @@ public:
     }
   }
 
-public:
-  Vector3i position{0, 0, 0}; // x y
+ public:
+  Vector3i position{0, 0, 0};  // x y
   Layout layout;
   Type type{Type::UNKNOWN};
   double vehicle_orientation{NAN};
   std::vector<std::shared_ptr<Path>> incoming_paths;
   std::vector<std::shared_ptr<Path>> outgoing_paths;
   std::vector<std::shared_ptr<Location>> attached_links;
+  PeripheralActions per_acts;
 };
-} // namespace data::model
+}  // namespace data::model
 #endif

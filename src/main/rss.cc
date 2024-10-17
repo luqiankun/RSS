@@ -104,87 +104,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         visual_layout = visual_layout.next_sibling();
       }
     }
-    {
-      // point
-      auto point = root.find_child([](const pugi::xml_node node) {
-        return std::string(node.name()) == "point";
-      });
-      while (point.type() != pugi::node_null) {
-        if (std::string(point.name()) != "point") {
-          break;
-        }
-        std::string name = point.attribute("name").as_string();
-        std::string type = point.attribute("type").as_string();
-        auto vehicle_orientation =
-            point.attribute("vehicleOrientation").as_double();
-        int xPosition = point.attribute("xPosition").as_int();
-        int yPosition = point.attribute("yPosition").as_int();
-        // int zPosition = point.attribute("zPosition").as_int();
-        int xPosition_layout =
-            point.child("pointLayout").attribute("xPosition").as_int();
-        int yPosition_layout =
-            point.child("pointLayout").attribute("yPosition").as_int();
-        int xLabelOffset =
-            point.child("pointLayout").attribute("xLabelOffset").as_int();
-        int yLabelOffset =
-            point.child("pointLayout").attribute("yLabelOffset").as_int();
-        int layerId = point.child("pointLayout").attribute("layerId").as_int();
-        data::model::Point::Layout layout;
-        layout.layer_id = layerId;
-        layout.label_offset = Eigen::Vector2i(xLabelOffset, yLabelOffset);
-        layout.position = Eigen::Vector2i(xPosition_layout, yPosition_layout);
-        auto p = std::make_shared<data::model::Point>(name);
-        p->position.x() = xPosition;
-        p->position.y() = yPosition;
-        p->layout = layout;
-        p->type = data::model::Point::new_type(type);
-        p->vehicle_orientation = vehicle_orientation;
-        // envelope
-        auto envelope = point.find_child([](const pugi::xml_node node) {
-          return std::string(node.name()) == "vehicleEnvelope";
-        });
-        while (envelope.type() != pugi::node_null) {
-          if (std::string(envelope.name()) != "vehicleEnvelope") {
-            break;
-          }
-          auto name_ = envelope.attribute("name").as_string();
-          auto envelope_ = std::make_shared<data::model::Envelope>(name_);
-          auto vertex = envelope.find_child([](const pugi::xml_node node) {
-            return std::string(node.name()) == "vertex";
-          });
-          while (vertex.type() != pugi::node_null) {
-            if (std::string(vertex.name()) != "vertex") {
-              break;
-            }
-            auto x = vertex.attribute("x").as_double();
-            auto y = vertex.attribute("y").as_double();
-            envelope_->add_vertex(x, y);
-            vertex = vertex.next_sibling();
-          }
-          p->envelopes.insert(
-              std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
-                  name_, envelope_));
-          envelope = envelope.next_sibling();
-        }
-        // pro
-        auto property = point.find_child([](const pugi::xml_node node) {
-          return std::string(node.name()) == "property";
-        });
-        while (property.type() != pugi::node_null) {
-          if (std::string(property.name()) != "property") {
-            break;
-          }
-          auto name_ = property.attribute("name").as_string();
-          auto value_ = property.attribute("value").as_string();
-          p->properties.insert(
-              std::pair<std::string, std::string>(name_, value_));
-          property = property.next_sibling();
-        }
-        resource->points.push_back(p);
-        point = point.next_sibling();
-      }
-      CLOG(INFO, rss_log) << "init point size " << resource->points.size();
-    }
+
     {
       // locationally
       auto loc_type = root.find_child([](const pugi::xml_node node) {
@@ -338,6 +258,129 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       }
       CLOG(INFO, rss_log) << "init location size "
                           << resource->locations.size();
+    }
+    {
+      // point
+      auto point = root.find_child([](const pugi::xml_node node) {
+        return std::string(node.name()) == "point";
+      });
+      while (point.type() != pugi::node_null) {
+        if (std::string(point.name()) != "point") {
+          break;
+        }
+        std::string name = point.attribute("name").as_string();
+        std::string type = point.attribute("type").as_string();
+        auto vehicle_orientation =
+            point.attribute("vehicleOrientation").as_double();
+        int xPosition = point.attribute("xPosition").as_int();
+        int yPosition = point.attribute("yPosition").as_int();
+        // int zPosition = point.attribute("zPosition").as_int();
+        int xPosition_layout =
+            point.child("pointLayout").attribute("xPosition").as_int();
+        int yPosition_layout =
+            point.child("pointLayout").attribute("yPosition").as_int();
+        int xLabelOffset =
+            point.child("pointLayout").attribute("xLabelOffset").as_int();
+        int yLabelOffset =
+            point.child("pointLayout").attribute("yLabelOffset").as_int();
+        int layerId = point.child("pointLayout").attribute("layerId").as_int();
+        data::model::Point::Layout layout;
+        layout.layer_id = layerId;
+        layout.label_offset = Eigen::Vector2i(xLabelOffset, yLabelOffset);
+        layout.position = Eigen::Vector2i(xPosition_layout, yPosition_layout);
+        auto p = std::make_shared<data::model::Point>(name);
+        p->position.x() = xPosition;
+        p->position.y() = yPosition;
+        p->layout = layout;
+        p->type = data::model::Point::new_type(type);
+        p->vehicle_orientation = vehicle_orientation;
+        // envelope
+        auto envelope = point.find_child([](const pugi::xml_node node) {
+          return std::string(node.name()) == "vehicleEnvelope";
+        });
+        while (envelope.type() != pugi::node_null) {
+          if (std::string(envelope.name()) != "vehicleEnvelope") {
+            break;
+          }
+          auto name_ = envelope.attribute("name").as_string();
+          auto envelope_ = std::make_shared<data::model::Envelope>(name_);
+          auto vertex = envelope.find_child([](const pugi::xml_node node) {
+            return std::string(node.name()) == "vertex";
+          });
+          while (vertex.type() != pugi::node_null) {
+            if (std::string(vertex.name()) != "vertex") {
+              break;
+            }
+            auto x = vertex.attribute("x").as_double();
+            auto y = vertex.attribute("y").as_double();
+            envelope_->add_vertex(x, y);
+            vertex = vertex.next_sibling();
+          }
+          p->envelopes.insert(
+              std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
+                  name_, envelope_));
+          envelope = envelope.next_sibling();
+        }
+        // pro
+        auto property = point.find_child([](const pugi::xml_node node) {
+          return std::string(node.name()) == "property";
+        });
+        while (property.type() != pugi::node_null) {
+          if (std::string(property.name()) != "property") {
+            break;
+          }
+          auto name_ = property.attribute("name").as_string();
+          auto value_ = property.attribute("value").as_string();
+          p->properties.insert(
+              std::pair<std::string, std::string>(name_, value_));
+          property = property.next_sibling();
+        }
+        {
+          //  per op
+          auto peripher_op = point.find_child([](const pugi::xml_node node) {
+            return std::string(node.name()) == "peripheralOperation";
+          });
+
+          while (peripher_op.type() != pugi::node_null) {
+            if (std::string(peripher_op.name()) != "peripheralOperation") {
+              break;
+            }
+            std::string per_op_name = peripher_op.attribute("name").as_string();
+            std::transform(per_op_name.begin(), per_op_name.end(),
+                           per_op_name.begin(), ::tolower);
+            auto wait = peripher_op.attribute("completionRequired").as_bool();
+            auto when = peripher_op.attribute("executionTrigger").as_string();
+            auto link_loc_name =
+                peripher_op.attribute("locationName").as_string();
+            for (auto &loc : resource->locations) {
+              if (loc->name == link_loc_name) {
+                auto it = loc->type.lock()->allowrd_per_ops.find(per_op_name);
+                if (it != loc->type.lock()->allowrd_per_ops.end()) {
+                  // exist
+                  data::model::PeripheralActions::PeripheralAction per_act;
+                  per_act.completion_required = wait;
+                  per_act.execution_trigger = when;
+                  per_act.location_name = link_loc_name;
+                  per_act.op_name = per_op_name;
+                  for (auto &p_ : it->second) {
+                    data::model::Actions::ActionParam param;
+                    param.key = p_.first;
+                    param.value = p_.second;
+                    per_act.action_parameters.push_back(param);
+                  }
+                  p->per_acts.acts.push_back(per_act);
+                  break;
+                }
+              }
+              p->per_acts.get_param(loc->type.lock()->properties);
+            }
+            peripher_op = peripher_op.next_sibling();
+          }
+        }
+        resource->points.push_back(p);
+        point = point.next_sibling();
+      }
+      CLOG(INFO, rss_log) << "init point size " << resource->points.size();
     }
     {
       // path
@@ -2116,6 +2159,7 @@ std::pair<int, std::string> RSS::get_model() const {
 }
 
 std::pair<int, std::string> RSS::put_model(const std::string &body) {
+  // TODO per_act 参数获取
   std::unique_lock<std::shared_mutex> lk(mutex);
   stop();
   init();

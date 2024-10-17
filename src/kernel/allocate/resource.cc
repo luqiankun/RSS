@@ -33,9 +33,9 @@ std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
   }
   if (!res->steps.empty()) {
     res->current_step = res->steps.front();
+    res->steps.back()->type = data::order::Step::Type::BACK;
+    res->steps.front()->type = data::order::Step::Type::FRONT;
   }
-  res->steps.back()->type = data::order::Step::Type::BACK;
-  res->steps.front()->type = data::order::Step::Type::FRONT;
   return res;
 }
 

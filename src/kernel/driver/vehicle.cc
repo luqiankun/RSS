@@ -933,6 +933,81 @@ bool Rabbit3::move(
   pos.allowed_deviation_theta = deviation_theta;
   start.node_position = pos;
   ord.nodes.push_back(start);
+  //////////////////////////////////
+  std::vector<data::model::PeripheralActions::PeripheralAction> ready_action;
+  std::vector<data::model::PeripheralActions::PeripheralAction>
+      after_allocated_action;
+  std::vector<data::model::PeripheralActions::PeripheralAction>
+      after_moved_action;
+  if (steps.front()->type == data::order::Step::Type::FRONT) {
+    ready_action.insert(ready_action.end(), start_point->per_acts.acts.begin(),
+                        start_point->per_acts.acts.end());
+    for (int i = 0; i < steps.size(); ++i) {
+      ready_action.insert(ready_action.end(),
+                          steps[i]->path->per_acts.acts.begin(),
+                          steps[i]->path->per_acts.acts.end());
+      if (steps[i]->vehicle_orientation ==
+          data::order::Step::Orientation::FORWARD) {
+        ready_action.insert(
+            ready_action.end(),
+            steps[i]->path->destination_point.lock()->per_acts.acts.begin(),
+            steps[i]->path->destination_point.lock()->per_acts.acts.end());
+      } else {
+        ready_action.insert(
+            ready_action.end(),
+            steps[i]->path->source_point.lock()->per_acts.acts.begin(),
+            steps[i]->path->source_point.lock()->per_acts.acts.end());
+      }
+    }
+  } else {
+    if (steps.size() > 1) {
+      ready_action.insert(ready_action.end(),
+                          steps.back()->path->per_acts.acts.begin(),
+                          steps.back()->path->per_acts.acts.end());
+    }
+  }
+
+  for (auto &op : ready_action) {
+    if (op.execution_trigger == "AFTER_ALLOCATION") {
+      after_allocated_action.push_back(op);
+    } else {
+      after_moved_action.push_back(op);
+    }
+  }
+  // do
+  for (auto &op : after_allocated_action) {
+    CLOG(INFO, driver_log) << "do " << op.location_name << "[" << op.op_name
+                           << "]\n";
+    std::map<std::string, std::string> act_param;
+    std::string script;
+    for (auto &x : op.action_parameters) {
+      act_param[x.key] = std::get<std::string>(x.value);
+      if (x.key == "script") {
+        script = std::get<std::string>(x.value);
+      }
+    }
+    if (op.completion_required) {
+      // wait_act_ord_start.insert(op.op_name);
+
+      auto ret = run_script(script, act_param);
+      if (!ret) {
+        CLOG(ERROR, driver_log)
+            << "do " << op.location_name << "[" << op.op_name << "] failed\n";
+        return false;
+      } else {
+        CLOG(INFO, driver_log)
+            << "do " << op.location_name << "[" << op.op_name << "] ok\n";
+      }
+    } else {
+      python_pool.commit([=] {
+        auto ret = run_script(script, act_param);
+        CLOG(INFO, driver_log)
+            << "do " << op.location_name << "[" << op.op_name << "] "
+            << (ret == true ? "ok" : "failed") << "\n";
+      });
+    }
+  }
+  /////////////////////////////////
   std::stringstream ss;
   ss << "begin move along [" << start_point->name << " --> ";
   std::string last_id = start_point->name;
@@ -1164,60 +1239,6 @@ bool Rabbit3::move(
     last_id = end_point->name;
     e.sequence_id = seq_id++;
     end.sequence_id = seq_id++;
-    // peraction  服务器本地调用
-    // TODO 以下代码仅step_size=2时候才行，其他情况待实现
-    /**---------------------------------------------- */
-    bool peraction{false};
-    if (x->type == data::order::Step::Type::FRONT) {
-      peraction = true;
-    } else {
-      if (x == steps.back()) {
-        peraction = true;
-      }
-    }
-    if (x->type == data::order::Step::Type::BACK && steps.size() == 1) {
-      peraction = false;
-    }
-    /**---------------------------------------------- */
-    // 以上仅step_size=2时候才行，其他情况待实现
-    if (!x->path->per_acts.acts.empty() && peraction) {
-      for (auto &op : x->path->per_acts.acts) {
-        if (op.execution_trigger == "AFTER_ALLOCATION") {
-          // TODO
-          CLOG(INFO, driver_log)
-              << "do " << op.location_name << "[" << op.op_name << "]\n";
-          std::map<std::string, std::string> act_param;
-          std::string script;
-          for (auto &x : op.action_parameters) {
-            act_param[x.key] = std::get<std::string>(x.value);
-            if (x.key == "script") {
-              script = std::get<std::string>(x.value);
-            }
-          }
-          if (op.completion_required) {
-            // wait_act_ord_start.insert(op.op_name);
-
-            auto ret = run_script(script, act_param);
-            if (!ret) {
-              CLOG(ERROR, driver_log) << "do " << op.location_name << "["
-                                      << op.op_name << "] failed\n";
-              return false;
-            } else {
-              CLOG(INFO, driver_log)
-                  << "do " << op.location_name << "[" << op.op_name << "] ok\n";
-            }
-          } else {
-            python_pool.commit([=] {
-              auto ret = run_script(script, act_param);
-              CLOG(INFO, driver_log)
-                  << "do " << op.location_name << "[" << op.op_name << "] "
-                  << (ret == true ? "ok" : "failed") << "\n";
-            });
-            // thread1.detach();
-          }
-        }
-      }
-    }
 
     ord.nodes.push_back(end);
     ord.edges.push_back(e);
@@ -1364,55 +1385,6 @@ bool Rabbit3::move(
           CLOG(INFO, driver_log)
               << name << " " << "move along " << name_ << " ok\n";
           run_ok = true;
-          // per act 服务器本地调用
-          for (auto &x : steps) {
-            bool peraction{false};
-            if (x->type == data::order::Step::Type::FRONT) {
-              peraction = true;
-            } else {
-              if (x == steps.back()) {
-                peraction = true;
-              }
-            }
-            if (x->type == data::order::Step::Type::BACK && steps.size() == 1) {
-              peraction = false;
-            }
-            if (!peraction) {
-              continue;
-            }
-            for (auto &op : x->path->per_acts.acts) {
-              if (op.execution_trigger == "AFTER_MOVEMENT") {
-                CLOG(INFO, driver_log)
-                    << "do " << op.location_name << "[" << op.op_name << "]\n";
-                std::map<std::string, std::string> act_param;
-                std::string script;
-                for (auto &x : op.action_parameters) {
-                  act_param[x.key] = std::get<std::string>(x.value);
-                  if (x.key == "script") {
-                    script = std::get<std::string>(x.value);
-                  }
-                }
-                if (op.completion_required) {
-                  auto ret = run_script(script, act_param);
-                  if (!ret) {
-                    CLOG(ERROR, driver_log) << "do " << op.location_name << "["
-                                            << op.op_name << "] failed";
-                    return false;
-                  }
-                  CLOG(INFO, driver_log) << "do " << op.location_name << "["
-                                         << op.op_name << "] ok";
-                } else {
-                  python_pool.commit2([=] {
-                    auto ret = run_script(script, act_param);
-                    CLOG(INFO, driver_log)
-                        << "do " << op.location_name << "[" << op.op_name
-                        << "] " << (ret == true ? "ok" : "failed") << "\n";
-                  });
-                  // thread1.detach();
-                }
-              }
-            }
-          }
         }
       }
       if (!act_end_ok) {
@@ -1452,7 +1424,40 @@ bool Rabbit3::move(
       //   task_run = false;
       //   return true;
       // }
+
       if (act_start_ok && act_end_ok && run_ok) {
+        for (auto &op : after_moved_action) {
+          CLOG(INFO, driver_log)
+              << "do " << op.location_name << "[" << op.op_name << "]\n";
+          std::map<std::string, std::string> act_param;
+          std::string script;
+          for (auto &x : op.action_parameters) {
+            act_param[x.key] = std::get<std::string>(x.value);
+            if (x.key == "script") {
+              script = std::get<std::string>(x.value);
+            }
+          }
+          if (op.completion_required) {
+            // wait_act_ord_start.insert(op.op_name);
+
+            auto ret = run_script(script, act_param);
+            if (!ret) {
+              CLOG(ERROR, driver_log) << "do " << op.location_name << "["
+                                      << op.op_name << "] failed\n";
+              return false;
+            } else {
+              CLOG(INFO, driver_log)
+                  << "do " << op.location_name << "[" << op.op_name << "] ok\n";
+            }
+          } else {
+            python_pool.commit([=] {
+              auto ret = run_script(script, act_param);
+              CLOG(INFO, driver_log)
+                  << "do " << op.location_name << "[" << op.op_name << "] "
+                  << (ret == true ? "ok" : "failed") << "\n";
+            });
+          }
+        }
         task_run = false;
         return true;
       }
@@ -1503,7 +1508,8 @@ bool Rabbit3::action(
   // int ver = static_cast<int>(std::stod(mqtt_cli->version));
   // auto vda_version = "v" + std::to_string(ver);
   // auto prefix = mqtt_cli->interface_name + "/" + vda_version + "/" +
-  //               mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
+  //               mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number +
+  //               "/";
   // auto ord = vda5050::order::VDA5050Order();
   // ord.header_id = send_header_id++;
   // ord.timestamp = get_time_fmt(get_now_utc_time());
@@ -1560,9 +1566,9 @@ bool Rabbit3::action(
   //         dest->destination.lock());
   //     act.action_parameters = std::vector<vda5050::order::ActionParam>();
   //     node.node_id = t1->link.lock()->name;
-  //     node.node_position.value().x = t1->link.lock()->position.x() / 1000.0;
-  //     node.node_position.value().y = t1->link.lock()->position.y() / 1000.0;
-  //     node.node_position.value().theta =
+  //     node.node_position.value().x = t1->link.lock()->position.x() /
+  //     1000.0; node.node_position.value().y = t1->link.lock()->position.y()
+  //     / 1000.0; node.node_position.value().theta =
   //     t1->link.lock()->vehicle_orientation;
   //     node.node_position->allowed_deviation_xy = dest_deviation_xy;
   //     node.node_position->allowed_deviation_theta = dest_deviation_theta;
@@ -1622,7 +1628,8 @@ bool Rabbit3::action(
   //     task_run = false;
   //     return false;
   //   }
-  //   if (current_order->state == data::order::TransportOrder::State::FAILED) {
+  //   if (current_order->state == data::order::TransportOrder::State::FAILED)
+  //   {
   //     CLOG(ERROR, driver_log) << name << " order failed\n";
   //     task_run = false;
   //     return false;
@@ -1676,7 +1683,8 @@ bool Rabbit3::action(
   //         << name << " " << "order state has not been updated,needed {\'"
   //         << dest->get_type() + "-" << uuids::to_string(order_id)
   //         << " -> update_ord_id_" << update_vda_order_id
-  //         << "\'}, but now is {\'" << vdastate.order_id << " ->update_ord_id_
+  //         << "\'}, but now is {\'" << vdastate.order_id << "
+  //         ->update_ord_id_
   //         "
   //         << vdastate.order_update_id << "}\n";
   //   }
@@ -1724,22 +1732,29 @@ bool Rabbit3::run_script(const std::string &path,
     PyObject *pFunc = PyObject_GetAttrString(pModule, "run");
     std::string param_msg{'{'};
     for (auto &item : param) {
-      param_msg += item.first + ":" + item.second + ",";
+      param_msg += "\"" + item.first + "\":\"" + item.second + "\",";
     }
     param_msg.pop_back();
     param_msg += "}";
-    CLOG(INFO, driver_log) << script_name << " running....\n";
+
+    CLOG(INFO, driver_log) << script_name << "\n running....\n";
     PyObject *pReturn = PyObject_CallFunction(pFunc, "s", param_msg.c_str());
     CLOG(INFO, driver_log) << script_name << " run end\n";
-    PyDictObject *pDict = (PyDictObject *)pReturn;
     PyObject *key, *value;
     Py_ssize_t pos = 0;
     int ret_code{-10};
-    std::string reason{};
-
+    std::string reason{"no return reason"};
+    if (pReturn == nullptr || !PyDict_Check(pReturn)) {
+      CLOG(ERROR, driver_log)
+          << "run result err, return value is null or type is not a dict "
+          << std::endl;
+      Py_DECREF(pModule);
+      Py_Finalize();
+      return false;
+    }
     while (PyDict_Next(pReturn, &pos, &key, &value)) {
       auto msg = PyUnicode_AsUTF8(key);
-      // std::cout << std::string(msg);
+      // LOG(INFO) << std::string(msg);
       if (msg == std::string("ret_code")) {
         int ret = -10;
         PyArg_Parse(value, "i", &ret);
