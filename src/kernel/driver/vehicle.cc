@@ -1730,6 +1730,12 @@ bool Rabbit3::run_script(const std::string &path,
     }
     pModule = PyImport_ReloadModule(pModule);
     PyObject *pFunc = PyObject_GetAttrString(pModule, "run");
+    if (pFunc == nullptr) {
+      CLOG(ERROR, driver_log) << "function <run> not found" << std::endl;
+      Py_DECREF(pModule);
+      Py_Finalize();
+      return false;
+    }
     std::string param_msg{'{'};
     for (auto &item : param) {
       param_msg += "\"" + item.first + "\":\"" + item.second + "\",";
@@ -1738,16 +1744,27 @@ bool Rabbit3::run_script(const std::string &path,
     param_msg += "}";
 
     CLOG(INFO, driver_log) << script_name << "\n running....\n";
+    auto py_state = PyGILState_Ensure();
     PyObject *pReturn = PyObject_CallFunction(pFunc, "s", param_msg.c_str());
+    PyGILState_Release(py_state);
     CLOG(INFO, driver_log) << script_name << " run end\n";
     PyObject *key, *value;
     Py_ssize_t pos = 0;
     int ret_code{-10};
     std::string reason{"no return reason"};
-    if (pReturn == nullptr || !PyDict_Check(pReturn)) {
+    if (pReturn == nullptr) {
       CLOG(ERROR, driver_log)
           << "run result err, return value is null or type is not a dict "
           << std::endl;
+      Py_DECREF(pFunc);
+      Py_DECREF(pModule);
+      Py_Finalize();
+      return false;
+    } else if (!PyDict_Check(pReturn)) {
+      CLOG(ERROR, driver_log)
+          << "run result err: type of  value is not a dict " << std::endl;
+      Py_DECREF(pFunc);
+      Py_DECREF(pReturn);
       Py_DECREF(pModule);
       Py_Finalize();
       return false;
@@ -1774,6 +1791,8 @@ bool Rabbit3::run_script(const std::string &path,
       Py_Finalize();
       return false;
     } else {
+      Py_DECREF(pReturn);
+      Py_DECREF(pFunc);
       Py_DECREF(pModule);
       Py_Finalize();
       CLOG(INFO, driver_log) << "run " << script_name << " ok" << std::endl;

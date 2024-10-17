@@ -362,6 +362,12 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
                   per_act.execution_trigger = when;
                   per_act.location_name = link_loc_name;
                   per_act.op_name = per_op_name;
+                  {
+                    data::model::Actions::ActionParam param;
+                    param.key = "locationName";
+                    param.value = link_loc_name;
+                    per_act.action_parameters.push_back(param);
+                  }
                   for (auto &p_ : it->second) {
                     data::model::Actions::ActionParam param;
                     param.key = p_.first;
@@ -529,6 +535,12 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
                   per_act.execution_trigger = when;
                   per_act.location_name = link_loc_name;
                   per_act.op_name = per_op_name;
+                  {
+                    data::model::Actions::ActionParam param;
+                    param.key = "locationName";
+                    param.value = link_loc_name;
+                    per_act.action_parameters.push_back(param);
+                  }
                   for (auto &p_ : it->second) {
                     data::model::Actions::ActionParam param;
                     param.key = p_.first;
@@ -2209,70 +2221,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         }
       }
     }
-    // point
-    {
-      for (auto &p : model["points"].array_range()) {
-        auto point =
-            std::make_shared<data::model::Point>(p["name"].as_string());
-        if (p.contains("position")) {
-          point->position.x() = p["position"]["x"].as_integer<int>();
-          point->position.y() = p["position"]["y"].as_integer<int>();
-          point->position.z() = p["position"]["z"].as_integer<int>();
-        }
-        if (p.contains("vehicleOrientationAngle")) {
-          if (p["vehicleOrientationAngle"].is_number()) {
-            point->vehicle_orientation =
-                p["vehicleOrientationAngle"].as_double();
-          } else if (p["vehicleOrientationAngle"].is_null()) {
-            point->vehicle_orientation = 0;
-          }
-        }
-        if (p.contains("type")) {
-          point->type = data::model::Point::new_type(p["type"].as_string());
-        }
-        if (p.contains("layout")) {
-          point->layout.position.x() =
-              p["layout"]["position"]["x"].as_integer<int>();
-          point->layout.position.y() =
-              p["layout"]["position"]["y"].as_integer<int>();
-          point->layout.label_offset.x() =
-              p["layout"]["labelOffset"]["x"].as_integer<int>();
-          point->layout.label_offset.y() =
-              p["layout"]["labelOffset"]["y"].as_integer<int>();
-          point->layout.layer_id = p["layout"]["layerId"].as_integer<int>();
-        }
-        if (p.contains("properties")) {
-          for (auto &pro : p["properties"].array_range()) {
-            std::string value;
-            if (pro["value"].is_bool()) {
-              if (pro["value"].as_bool()) {
-                value = "true";
-              } else {
-                value = "false";
-              }
-            } else {
-              value = pro["value"].as_string();
-            }
-            point->properties.insert(std::pair<std::string, std::string>(
-                pro["name"].as_string(), value));
-          }
-        }
-        if (p.contains("vehicleEnvelope")) {
-          for (auto &x : p["vehicleEnvelope"].array_range()) {
-            auto envelope = std::make_shared<data::model::Envelope>(
-                x["envelopeKey"].as_string());
-            for (auto &v : p["vehicleEnvelope"]["vertices"].array_range()) {
-              envelope->add_vertex(v["x"].as_double(), v["y"].as_double());
-            }
-            point->envelopes.insert(
-                std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
-                    x["envelopeKey"].as_string(), envelope));
-          }
-        }
-        resource->points.push_back(point);
-      }
-      CLOG(INFO, rss_log) << "init point size " << resource->points.size();
-    }
+
     // location type
     {
       for (auto &x : model["locationTypes"].array_range()) {
@@ -2379,6 +2328,116 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
       CLOG(INFO, rss_log) << "init location size "
                           << resource->locations.size();
     }
+    // point
+    {
+      for (auto &p : model["points"].array_range()) {
+        auto point =
+            std::make_shared<data::model::Point>(p["name"].as_string());
+        if (p.contains("position")) {
+          point->position.x() = p["position"]["x"].as_integer<int>();
+          point->position.y() = p["position"]["y"].as_integer<int>();
+          point->position.z() = p["position"]["z"].as_integer<int>();
+        }
+        if (p.contains("vehicleOrientationAngle")) {
+          if (p["vehicleOrientationAngle"].is_number()) {
+            point->vehicle_orientation =
+                p["vehicleOrientationAngle"].as_double();
+          } else if (p["vehicleOrientationAngle"].is_null()) {
+            point->vehicle_orientation = 0;
+          }
+        }
+        if (p.contains("type")) {
+          point->type = data::model::Point::new_type(p["type"].as_string());
+        }
+        if (p.contains("layout")) {
+          point->layout.position.x() =
+              p["layout"]["position"]["x"].as_integer<int>();
+          point->layout.position.y() =
+              p["layout"]["position"]["y"].as_integer<int>();
+          point->layout.label_offset.x() =
+              p["layout"]["labelOffset"]["x"].as_integer<int>();
+          point->layout.label_offset.y() =
+              p["layout"]["labelOffset"]["y"].as_integer<int>();
+          point->layout.layer_id = p["layout"]["layerId"].as_integer<int>();
+        }
+        if (p.contains("properties")) {
+          for (auto &pro : p["properties"].array_range()) {
+            std::string value;
+            if (pro["value"].is_bool()) {
+              if (pro["value"].as_bool()) {
+                value = "true";
+              } else {
+                value = "false";
+              }
+            } else {
+              value = pro["value"].as_string();
+            }
+            point->properties.insert(std::pair<std::string, std::string>(
+                pro["name"].as_string(), value));
+          }
+        }
+        //
+        {
+          if (p.contains("peripheralOperation")) {
+            for (auto &op : p["peripheralOperation"].array_range()) {
+              auto per_op_name = op["name"].as_string();
+              std::transform(per_op_name.begin(), per_op_name.end(),
+                             per_op_name.begin(), ::tolower);
+              // auto wait = op["completionRequired"].as_bool() ? "SOFT" :
+              // "NONE";
+              auto when = op["executionTrigger"].as_string();
+              auto link_loc_name = op["locationName"].as_string();
+              auto wait_ = op["completionRequired"].as_bool();
+              for (auto &loc : resource->locations) {
+                if (loc->name == link_loc_name) {
+                  auto it = loc->type.lock()->allowrd_per_ops.find(per_op_name);
+                  if (it != loc->type.lock()->allowrd_per_ops.end()) {
+                    // exist
+                    data::model::PeripheralActions::PeripheralAction per_act;
+                    per_act.completion_required = wait_;
+                    per_act.execution_trigger = when;
+                    per_act.location_name = link_loc_name;
+                    per_act.op_name = per_op_name;
+                    data::model::Actions::Action act;
+                    act.action_id = point->name + "_action_" + per_op_name;
+                    act.name = loc->type.lock()->name;
+                    {
+                      data::model::Actions::ActionParam param;
+                      param.key = "locationName";
+                      param.value = link_loc_name;
+                      per_act.action_parameters.push_back(param);
+                    }
+                    for (auto &p_ : it->second) {
+                      data::model::Actions::ActionParam param;
+                      param.key = p_.first;
+                      param.value = p_.second;
+                      act.action_parameters->push_back(param);
+                    }
+                    point->per_acts.acts.push_back(per_act);
+                    break;
+                  }
+                }
+                point->per_acts.get_param(loc->type.lock()->properties);
+              }
+            }
+          }
+        }
+        if (p.contains("vehicleEnvelope")) {
+          for (auto &x : p["vehicleEnvelope"].array_range()) {
+            auto envelope = std::make_shared<data::model::Envelope>(
+                x["envelopeKey"].as_string());
+            for (auto &v : p["vehicleEnvelope"]["vertices"].array_range()) {
+              envelope->add_vertex(v["x"].as_double(), v["y"].as_double());
+            }
+            point->envelopes.insert(
+                std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
+                    x["envelopeKey"].as_string(), envelope));
+          }
+        }
+        resource->points.push_back(point);
+      }
+      CLOG(INFO, rss_log) << "init point size " << resource->points.size();
+    }
     // path
     {
       for (auto &p : model["paths"].array_range()) {
@@ -2441,24 +2500,37 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
               // "NONE";
               auto when = op["executionTrigger"].as_string();
               auto link_loc_name = op["locationName"].as_string();
+              auto wait_ = op["completionRequired"].as_bool();
               for (auto &loc : resource->locations) {
                 if (loc->name == link_loc_name) {
                   auto it = loc->type.lock()->allowrd_per_ops.find(per_op_name);
                   if (it != loc->type.lock()->allowrd_per_ops.end()) {
                     // exist
+                    data::model::PeripheralActions::PeripheralAction per_act;
+                    per_act.completion_required = wait_;
+                    per_act.execution_trigger = when;
+                    per_act.location_name = link_loc_name;
+                    per_act.op_name = per_op_name;
                     data::model::Actions::Action act;
                     act.action_id = path->name + "_action_" + per_op_name;
                     act.name = loc->type.lock()->name;
+                    {
+                      data::model::Actions::ActionParam param;
+                      param.key = "locationName";
+                      param.value = link_loc_name;
+                      per_act.action_parameters.push_back(param);
+                    }
                     for (auto &p_ : it->second) {
                       data::model::Actions::ActionParam param;
                       param.key = p_.first;
                       param.value = p_.second;
                       act.action_parameters->push_back(param);
                     }
-                    acts.append(act);
+                    path->per_acts.acts.push_back(per_act);
                     break;
                   }
                 }
+                path->per_acts.get_param(loc->type.lock()->properties);
               }
             }
           }
