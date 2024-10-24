@@ -346,7 +346,7 @@ void Dispatcher::run() {
     // int con = 0;
     while (!dispose) {
       std::unique_lock<std::mutex> lock(mut);
-      cv.wait_for(lock, std::chrono::seconds(1),
+      cv.wait_for(lock, std::chrono::milliseconds(100),
                   [&] { return !order_empty || dispose; });
       idle_detect();
       auto deadloop = deadlock_loop();

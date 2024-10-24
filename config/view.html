@@ -931,6 +931,7 @@
                     ctx.lineWidth = (50 / resolution);
                     ctx.strokeRect(start_x - 25 * (50 / resolution), start_y - 15 * (50 / resolution), 50 * (50 / resolution), 30 * (50 / resolution));
                     let link = get_point(loc.link);
+                    // console.log(loc.name, link_x, link_y);
                     if (link == null) {
                         continue
                     }
@@ -1024,7 +1025,7 @@
                     ctx.font = font_size.toString() + 'px Arial';
                     ctx.textBaseline = "top";
                     ctx.fillText(v.name + "[" + v.battery + "%]", x, y, v.name.length * font_size);
-                    console.log(v, x, y);
+                    // console.log(v, x, y);
 
                     for (let step of v.step) {
                         let start = get_point(step["src"]);
@@ -1073,12 +1074,12 @@
                             }
                         }
                     }
-                    // console.log(v.destination);
                     if (v.destination !== undefined) {
                         let loc = get_location(v.destination["dest"]);
                         let start_x = (loc.x - xmin) / resolution;
                         let start_y = canvas.height - (loc.y - ymin) / resolution;
                         let link = get_point(loc.link);
+                        // console.log(loc, link);
                         let link_x = (link.x - xmin) / resolution;
                         let link_y = canvas.height - (link.y - ymin) / resolution;
                         ctx.beginPath()

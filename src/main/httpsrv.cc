@@ -379,12 +379,12 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
            });
   srv.set_logger([](const httplib::Request &req, const httplib::Response &res) {
     // printf("%s", log(req, res).c_str());
-    CLOG_IF(res.status != httplib::OK_200, ERROR, "http")
-        << req.remote_addr << ":" << req.remote_port << "| " << req.method
-        << " " << req.path << " | Res Code: " << res.status << "\n";
-    CLOG_IF(res.status == httplib::OK_200, DEBUG, "http")
-        << req.remote_addr << ":" << req.remote_port << "| " << req.method
-        << " " << req.path << " | Res Code: " << res.status << "\n";
+    // CLOG_IF(res.status != httplib::OK_200, DEBUG, "http")
+    //     << req.remote_addr << ":" << req.remote_port << "| " << req.method
+    //     << " " << req.path << " | Res Code: " << res.status << "\n";
+    // CLOG_IF(res.status == httplib::OK_200, DEBUG, "http")
+    //     << req.remote_addr << ":" << req.remote_port << "| " << req.method
+    //     << " " << req.path << " | Res Code: " << res.status << "\n";
     CLOG(DEBUG, "http") << "http req and rep\n" << log(req, res);
   });
 }
@@ -393,5 +393,5 @@ void HTTPServer::listen() {
   if (!srv.listen(ip, port)) {
     throw std::runtime_error("listen error");
   }
-  CLOG(INFO, http_log) << "listen " << ip << ":" << port;
+  CLOG(INFO, http_log) << "listen " << ip << ":" << port << "\n";
 }

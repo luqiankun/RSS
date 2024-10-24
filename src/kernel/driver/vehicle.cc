@@ -928,7 +928,9 @@ bool Rabbit3::move(
   pos.x = start_point->position.x() / 1000.0;
   pos.y = start_point->position.y() / 1000.0;
   pos.map_id = map_id;
-  pos.theta = start_point->vehicle_orientation;
+  if (!std::isnan(start_point->vehicle_orientation)) {
+    pos.theta = start_point->vehicle_orientation;
+  }
   pos.allowed_deviation_xy = deviation_xy;
   pos.allowed_deviation_theta = deviation_theta;
   start.node_position = pos;
@@ -979,13 +981,17 @@ bool Rabbit3::move(
     CLOG(INFO, driver_log) << "do " << op.location_name << "[" << op.op_name
                            << "]\n";
     std::map<std::string, std::string> act_param;
-    std::string script;
-    for (auto &x : op.action_parameters) {
-      act_param[x.key] = std::get<std::string>(x.value);
-      if (x.key == "script") {
-        script = std::get<std::string>(x.value);
+    for (auto &loc : res->locations) {
+      if (loc->name == op.location_name) {
+        for (auto &x : loc->properties) {
+          act_param[x.first] = x.second;
+        }
       }
     }
+    act_param["op"] = op.op_name;
+    std::string script = op.script;
+    CLOG_IF(script.empty(), WARNING, driver_log)
+        << "the script's name is empty\n";
     if (op.completion_required) {
       // wait_act_ord_start.insert(op.op_name);
 
@@ -1128,7 +1134,9 @@ bool Rabbit3::move(
       pos2.allowed_deviation_theta = (deviation_theta);
     }
     pos2.map_id = map_id;
-    pos2.theta = end_point->vehicle_orientation;
+    if (!std::isnan(end_point->vehicle_orientation)) {
+      pos2.theta = end_point->vehicle_orientation;
+    }
     end.node_position = pos2;
     auto e = vda5050::order::Edge();
     e.edge_id = x->path->name;
@@ -1278,7 +1286,14 @@ bool Rabbit3::move(
   std::string msg_str;
   ord_js.dump(msg_str, opt);
   jsoncons::json vaild = jsoncons::json::parse(msg_str, opt);
-  assert(vda5050::order_validate(vaild).empty());
+  auto err = vda5050::order_validate(vaild);
+  if (!err.empty()) {
+    for (auto &x : err) {
+      CLOG(ERROR, driver_log) << name << "err: " << x << "\n";
+    }
+    return false;
+  }
+  assert(err.empty());
   auto msg = mqtt::make_message(prefix + "order", msg_str, 0, false);
   mqtt_cli->mqtt_client->publish(msg)->wait();
   // CLOG(INFO, driver_log) << "send order mqtt msg: \n"
@@ -1430,13 +1445,15 @@ bool Rabbit3::move(
           CLOG(INFO, driver_log)
               << "do " << op.location_name << "[" << op.op_name << "]\n";
           std::map<std::string, std::string> act_param;
-          std::string script;
-          for (auto &x : op.action_parameters) {
-            act_param[x.key] = std::get<std::string>(x.value);
-            if (x.key == "script") {
-              script = std::get<std::string>(x.value);
+          for (auto &loc : res->locations) {
+            if (loc->name == op.location_name) {
+              for (auto &x : loc->properties) {
+                act_param[x.first] = x.second;
+              }
             }
           }
+          act_param["op"] = op.op_name;
+          std::string script = op.script;
           if (op.completion_required) {
             // wait_act_ord_start.insert(op.op_name);
 
@@ -1700,11 +1717,51 @@ bool Rabbit3::action(
   // CLOG(WARNING, driver_log) << name << " " << "task cancel";
   // return false;
 }
-
+void log_python_err() {
+  if (PyErr_Occurred()) {
+    CLOG(ERROR, driver_log)
+        << "\n-----------------python error-----------------";
+    PyObject *ptype, *pvalue, *ptraceback;
+    PyErr_Fetch(&ptype, &pvalue, &ptraceback);
+    PyErr_NormalizeException(&ptype, &pvalue, &ptraceback);
+    if (ptype != nullptr) {
+      PyObject *str_exc_type = PyObject_Repr(ptype);
+      const char *err_type = PyUnicode_AsUTF8(str_exc_type);
+      std::cerr << err_type << std::endl;
+      Py_XDECREF(str_exc_type);
+    }
+    if (pvalue != nullptr) {
+      PyObject *str_exc_value = PyObject_Repr(pvalue);
+      const char *err_value = PyUnicode_AsUTF8(str_exc_value);
+      std::cerr << err_value << std::endl;
+      Py_XDECREF(str_exc_value);
+    }
+    if (ptraceback != nullptr) {
+      PyObject *traceback_module = PyImport_ImportModule("traceback");
+      PyObject *format_tb_func =
+          PyObject_GetAttrString(traceback_module, "format_exception");
+      PyObject *traceback_list = PyObject_CallFunctionObjArgs(
+          format_tb_func, ptype, pvalue, ptraceback, nullptr);
+      PyObject *traceback_str =
+          PyUnicode_Join(PyUnicode_FromString(""), traceback_list);
+      const char *tb = PyUnicode_AsUTF8(traceback_str);
+      std::cerr << std::endl << tb << std::endl;
+      Py_XDECREF(traceback_module);
+      Py_XDECREF(format_tb_func);
+      Py_XDECREF(traceback_list);
+      Py_XDECREF(traceback_str);
+    }
+    std::cerr << "-------------------------------------------\n";
+  }
+}
 bool Rabbit3::run_script(const std::string &path,
                          std::map<std::string, std::string> param) {
   // std::unique_lock<std::mutex> lock(python_mut);
-  const std::string scirpt_save_path{"/opt/robot/script"};
+#if WIN32
+  const std::string scirpt_save_path{R"(c:\\script)"};
+#else
+  const std::string scirpt_save_path{R"(/opt/robot/script)"};
+#endif
   using namespace ghc;
   filesystem::path p(path);
   if (p.is_absolute()) {
@@ -1723,8 +1780,11 @@ bool Rabbit3::run_script(const std::string &path,
     PyRun_SimpleString(env.c_str());
     PyObject *pModule = PyImport_ImportModule(script_name.c_str());
     if (pModule == NULL) {
-      CLOG(ERROR, driver_log) << "module not found" << std::endl;
-      // Py_DECREF(pModule);
+      CLOG(ERROR, driver_log) << "The import failed, the module was not found "
+                                 "or there was an error inside the module"
+                              << std::endl;
+      log_python_err();
+      //    Py_DECREF(pModule);
       Py_Finalize();
       return false;
     }
@@ -1732,6 +1792,7 @@ bool Rabbit3::run_script(const std::string &path,
     PyObject *pFunc = PyObject_GetAttrString(pModule, "run");
     if (pFunc == nullptr) {
       CLOG(ERROR, driver_log) << "function <run> not found" << std::endl;
+      log_python_err();
       Py_DECREF(pModule);
       Py_Finalize();
       return false;
@@ -1743,9 +1804,12 @@ bool Rabbit3::run_script(const std::string &path,
     param_msg.pop_back();
     param_msg += "}";
 
-    CLOG(INFO, driver_log) << script_name << "\n running....\n";
+    CLOG(INFO, driver_log)
+        << script_name << " running....\n"
+        << "--------------python stdout--------------------\n";
     auto py_state = PyGILState_Ensure();
     PyObject *pReturn = PyObject_CallFunction(pFunc, "s", param_msg.c_str());
+    std::cerr << "-----------------------------------------------\n";
     PyGILState_Release(py_state);
     CLOG(INFO, driver_log) << script_name << " run end\n";
     PyObject *key, *value;
@@ -1754,15 +1818,15 @@ bool Rabbit3::run_script(const std::string &path,
     std::string reason{"no return reason"};
     if (pReturn == nullptr) {
       CLOG(ERROR, driver_log)
-          << "run result err, return value is null or type is not a dict "
-          << std::endl;
+          << "run result err, return value is null" << std::endl;
+      log_python_err();
       Py_DECREF(pFunc);
       Py_DECREF(pModule);
       Py_Finalize();
       return false;
     } else if (!PyDict_Check(pReturn)) {
       CLOG(ERROR, driver_log)
-          << "run result err: type of  value is not a dict " << std::endl;
+          << "result err: type of return value is not a dict " << std::endl;
       Py_DECREF(pFunc);
       Py_DECREF(pReturn);
       Py_DECREF(pModule);
@@ -1800,7 +1864,7 @@ bool Rabbit3::run_script(const std::string &path,
     }
   } catch (...) {
     CLOG(ERROR, driver_log) << "run is  exception" << std::endl;
-    PyErr_PrintEx(1);
+    log_python_err();
     Py_Finalize();
     return false;
   }

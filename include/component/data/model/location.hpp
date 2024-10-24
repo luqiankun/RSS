@@ -6,7 +6,7 @@
 namespace data::model {
 
 class Location : public RSSResource {
-public:
+ public:
   struct Layout {
     Vector2i position{0, 0};
     Vector2i label_offset{0, 0};
@@ -19,6 +19,7 @@ public:
   bool locked{false};
   std::weak_ptr<Point> link;
   std::weak_ptr<LocationType> type;
+  std::string link_point_name;
 };
-} // namespace data::model
+}  // namespace data::model
 #endif

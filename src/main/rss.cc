@@ -225,12 +225,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
               std::pair<std::string, std::string>(name_, value_));
           property = property.next_sibling();
         }
-        for (auto &p : resource->points) {
-          if (p->name == link_point) {
-            link = p;
-            p->attached_links.push_back(loc);
-          }
-        }
+        loc->link_point_name = link_point;
 
         for (auto &t : resource->location_types) {
           if (t->name == type) {
@@ -362,23 +357,11 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
                   per_act.execution_trigger = when;
                   per_act.location_name = link_loc_name;
                   per_act.op_name = per_op_name;
-                  {
-                    data::model::Actions::ActionParam param;
-                    param.key = "locationName";
-                    param.value = link_loc_name;
-                    per_act.action_parameters.push_back(param);
-                  }
-                  for (auto &p_ : it->second) {
-                    data::model::Actions::ActionParam param;
-                    param.key = p_.first;
-                    param.value = p_.second;
-                    per_act.action_parameters.push_back(param);
-                  }
+                  per_act.get_param(loc->type.lock()->properties);
                   p->per_acts.acts.push_back(per_act);
                   break;
                 }
               }
-              p->per_acts.get_param(loc->type.lock()->properties);
             }
             peripher_op = peripher_op.next_sibling();
           }
@@ -387,6 +370,16 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         point = point.next_sibling();
       }
       CLOG(INFO, rss_log) << "init point size " << resource->points.size();
+    }
+    {
+      for (auto &loc : resource->locations) {
+        auto ret = resource->find(loc->link_point_name);
+        if (ret.first == kernel::allocate::ResourceManager::ResType::Point) {
+          auto point = std::static_pointer_cast<data::model::Point>(ret.second);
+          loc->link = point;
+          point->attached_links.push_back(loc);
+        }
+      }
     }
     {
       // path
@@ -535,23 +528,11 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
                   per_act.execution_trigger = when;
                   per_act.location_name = link_loc_name;
                   per_act.op_name = per_op_name;
-                  {
-                    data::model::Actions::ActionParam param;
-                    param.key = "locationName";
-                    param.value = link_loc_name;
-                    per_act.action_parameters.push_back(param);
-                  }
-                  for (auto &p_ : it->second) {
-                    data::model::Actions::ActionParam param;
-                    param.key = p_.first;
-                    param.value = p_.second;
-                    per_act.action_parameters.push_back(param);
-                  }
+                  per_act.get_param(loc->type.lock()->properties);
                   p->per_acts.acts.push_back(per_act);
                   break;
                 }
               }
-              p->per_acts.get_param(loc->type.lock()->properties);
             }
             peripher_op = peripher_op.next_sibling();
           }
@@ -1934,7 +1915,6 @@ std::pair<int, std::string> RSS::get_model() const {
   }
   json res;
   res["name"] = resource->model_name;
-  res["properties"] = json::array();
   // visuallayout
   res["visualLayout"]["name"] = resource->visual_layout->name;
   res["visualLayout"]["scaleX"] = resource->visual_layout->scale_x;
@@ -1958,7 +1938,7 @@ std::pair<int, std::string> RSS::get_model() const {
     layer_group["visible"] = visible;
     res["visualLayout"]["layerGroups"].push_back(layer_group);
   }
-  res["visualLayout"]["properties"] = json::array();
+  // res["visualLayout"]["properties"] = json::array();
   // point
   res["points"] = json::array();
   for (auto &p : resource->points) {
@@ -1967,7 +1947,11 @@ std::pair<int, std::string> RSS::get_model() const {
     point["position"]["x"] = p->position.x();
     point["position"]["y"] = p->position.y();
     point["position"]["z"] = p->position.z();
-    point["vehicleOrientationAngle"] = p->vehicle_orientation;
+    if (std::isnan(p->vehicle_orientation)) {
+      point["vehicleOrientationAngle"] = "NaN";
+    } else {
+      point["vehicleOrientationAngle"] = p->vehicle_orientation;
+    }
     point["type"] = data::model::Point::get_type(p->type);
     json layout;
     layout["position"]["x"] = p->layout.position.x();
@@ -1976,15 +1960,19 @@ std::pair<int, std::string> RSS::get_model() const {
     layout["labelOffset"]["y"] = p->layout.label_offset.y();
     layout["layerId"] = p->layout.layer_id;
     point["layout"] = layout;
-    point["properties"] = json::array();
     for (auto &[key, value] : p->properties) {
+      if (!point.contains("properties")) {
+        point["properties"] = json::array();
+      }
       json t;
       t["name"] = key;
       t["value"] = value;
       point["properties"].push_back(t);
     }
-    point["vehicleEnvelopes"] = json::array();
     for (auto &[name, res] : p->envelopes) {
+      if (!point.contains("vehicleEnvelopes")) {
+        point["vehicleEnvelopes"] = json::array();
+      }
       json t;
       t["envelopeKey"] = name;
       t["vertices"] = json::array();
@@ -2014,22 +2002,29 @@ std::pair<int, std::string> RSS::get_model() const {
     path["layout"]["connectionType"] =
         data::model::Path::get_connect_type(p->layout.connect_type);
     path["layout"]["layerId"] = p->layout.layer_id;
-    path["layout"]["controlPoints"] = json::array();
+    path["length"] = p->length;
     for (auto &ctrl_p : p->layout.control_points) {
+      if (!path["layout"].contains("controlPoints")) {
+        path["layout"]["controlPoints"] = json::array();
+      }
       json ctrl_p_;
       ctrl_p_["x"] = ctrl_p.x();
       ctrl_p_["y"] = ctrl_p.y();
       path["layout"]["controlPoints"].push_back(ctrl_p_);
     }
-    path["properties"] = json::array();
     for (auto &[key, value] : p->properties) {
+      if (!path.contains("properties")) {
+        path["properties"] = json::array();
+      }
       json t;
       t["name"] = key;
       t["value"] = value;
       path["properties"].push_back(t);
     }
-    path["vehicleEnvelope"] = json::array();
     for (auto &[key, value] : p->envelopes) {
+      if (!path.contains("vehicleEnvelopes")) {
+        path["vehicleEnvelopes"] = json::array();
+      }
       json t;
       t["envelopeKey"] = key;
       t["vertices"] = json::array();
@@ -2040,14 +2035,17 @@ std::pair<int, std::string> RSS::get_model() const {
         ver["y"] = v_.y();
         t["vertices"].push_back(ver);
       }
-      path["vehicleEnvelope"].push_back(t);
+      path["vehicleEnvelopes"].push_back(t);
     }
-    path["peripheralOperations"] = json::array();
     for (auto &[op_name, location_name, completion_required, execution_trigger,
                 prams] : p->per_acts.acts) {
+      if (!path.contains("peripheralOperations")) {
+        path["peripheralOperations"] = json::array();
+      }
       json t;
-      t["operation"] = op_name;
-      t["locationName"] = op_name;
+      t["operation"] = data::model::Actions::get_type(
+          data::model::Actions::get_optype(op_name).value());
+      t["locationName"] = location_name;
       t["completionRequired"] = completion_required;
       t["executionTrigger"] = execution_trigger;
       path["peripheralOperations"].push_back(t);
@@ -2112,8 +2110,10 @@ std::pair<int, std::string> RSS::get_model() const {
         data::model::get_Representation(
             loc->type.lock()->layout.location_representation);
     location["layout"]["layerId"] = loc->layout.layer_id;
-    location["properties"] = json::array();
     for (auto &[key, value_] : loc->properties) {
+      if (!location.contains("properties")) {
+        location["properties"] = json::array();
+      }
       json t;
       t["name"] = key;
       t["value"] = value_;
@@ -2274,11 +2274,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         if (l.contains("links")) {
           if (!l["links"].empty()) {
             auto p_name = l["links"][0]["pointName"].as_string();
-            for (auto &x : resource->points) {
-              if (x->name == p_name) {
-                loc->link = x;
-              }
-            }
+            loc->link_point_name = p_name;
           }
         }
         if (l.contains("locked")) {
@@ -2378,9 +2374,9 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         }
         //
         {
-          if (p.contains("peripheralOperation")) {
-            for (auto &op : p["peripheralOperation"].array_range()) {
-              auto per_op_name = op["name"].as_string();
+          if (p.contains("peripheralOperations")) {
+            for (auto &op : p["peripheralOperations"].array_range()) {
+              auto per_op_name = op["operation"].as_string();
               std::transform(per_op_name.begin(), per_op_name.end(),
                              per_op_name.begin(), ::tolower);
               // auto wait = op["completionRequired"].as_bool() ? "SOFT" :
@@ -2401,23 +2397,11 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
                     data::model::Actions::Action act;
                     act.action_id = point->name + "_action_" + per_op_name;
                     act.name = loc->type.lock()->name;
-                    {
-                      data::model::Actions::ActionParam param;
-                      param.key = "locationName";
-                      param.value = link_loc_name;
-                      per_act.action_parameters.push_back(param);
-                    }
-                    for (auto &p_ : it->second) {
-                      data::model::Actions::ActionParam param;
-                      param.key = p_.first;
-                      param.value = p_.second;
-                      act.action_parameters->push_back(param);
-                    }
+                    per_act.get_param(loc->type.lock()->properties);
                     point->per_acts.acts.push_back(per_act);
                     break;
                   }
                 }
-                point->per_acts.get_param(loc->type.lock()->properties);
               }
             }
           }
@@ -2437,6 +2421,16 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         resource->points.push_back(point);
       }
       CLOG(INFO, rss_log) << "init point size " << resource->points.size();
+    }
+    {
+      for (auto &loc : resource->locations) {
+        auto ret = resource->find(loc->link_point_name);
+        if (ret.first == kernel::allocate::ResourceManager::ResType::Point) {
+          auto point = std::static_pointer_cast<data::model::Point>(ret.second);
+          loc->link = point;
+          point->attached_links.push_back(loc);
+        }
+      }
     }
     // path
     {
@@ -2491,9 +2485,9 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         //
         data::model::Actions acts(path->properties);
         {
-          if (p.contains("peripheralOperation")) {
-            for (auto &op : p["peripheralOperation"].array_range()) {
-              auto per_op_name = op["name"].as_string();
+          if (p.contains("peripheralOperations")) {
+            for (auto &op : p["peripheralOperations"].array_range()) {
+              auto per_op_name = op["operation"].as_string();
               std::transform(per_op_name.begin(), per_op_name.end(),
                              per_op_name.begin(), ::tolower);
               // auto wait = op["completionRequired"].as_bool() ? "SOFT" :
@@ -2514,23 +2508,11 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
                     data::model::Actions::Action act;
                     act.action_id = path->name + "_action_" + per_op_name;
                     act.name = loc->type.lock()->name;
-                    {
-                      data::model::Actions::ActionParam param;
-                      param.key = "locationName";
-                      param.value = link_loc_name;
-                      per_act.action_parameters.push_back(param);
-                    }
-                    for (auto &p_ : it->second) {
-                      data::model::Actions::ActionParam param;
-                      param.key = p_.first;
-                      param.value = p_.second;
-                      act.action_parameters->push_back(param);
-                    }
+                    per_act.get_param(loc->type.lock()->properties);
                     path->per_acts.acts.push_back(per_act);
                     break;
                   }
                 }
-                path->per_acts.get_param(loc->type.lock()->properties);
               }
             }
           }
