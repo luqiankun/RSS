@@ -941,7 +941,8 @@ bool Rabbit3::move(
       after_allocated_action;
   std::vector<data::model::PeripheralActions::PeripheralAction>
       after_moved_action;
-  if (steps.front()->type == data::order::Step::Type::FRONT) {
+  if (steps.front()->type == data::order::Step::Type::FRONT ||
+      steps.size() == 1) {
     ready_action.insert(ready_action.end(), start_point->per_acts.acts.begin(),
                         start_point->per_acts.acts.end());
     for (int i = 0; i < steps.size(); ++i) {
@@ -970,6 +971,21 @@ bool Rabbit3::move(
   }
 
   for (auto &op : ready_action) {
+    if (op.completion_required) continue;
+    if (op.execution_trigger == "AFTER_ALLOCATION") {
+      after_allocated_action.push_back(op);
+    } else {
+      after_moved_action.push_back(op);
+    }
+  }
+  ready_action.clear();
+  for (int i = 0; i < steps.size(); ++i) {
+    ready_action.insert(ready_action.end(),
+                        steps[i]->path->per_acts.acts.begin(),
+                        steps[i]->path->per_acts.acts.end());
+  }
+  for (auto &op : ready_action) {
+    if (!op.completion_required) continue;
     if (op.execution_trigger == "AFTER_ALLOCATION") {
       after_allocated_action.push_back(op);
     } else {
@@ -1756,7 +1772,7 @@ void log_python_err() {
 }
 bool Rabbit3::run_script(const std::string &path,
                          std::map<std::string, std::string> param) {
-  // std::unique_lock<std::mutex> lock(python_mut);
+  std::unique_lock<std::mutex> lock(python_mutex);
 #if WIN32
   const std::string scirpt_save_path{R"(c:\\script)"};
 #else

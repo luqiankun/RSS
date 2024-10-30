@@ -156,6 +156,7 @@ class Rabbit3 : public Vehicle {
   double dest_deviation_theta;
   uuids::uuid order_action_uuid;
   tools::threadpool python_pool;  // python任务
+  std::mutex python_mutex;
 };
 class InvalidVehicle : public Vehicle {
  public:

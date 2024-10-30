@@ -1,30 +1,30 @@
 #include "../../../include/kernel/driver/command.hpp"
 
 #include "../../../include/kernel/driver/vehicle.hpp"
-#define assert_valid                                                           \
-  auto veh = vehicle.lock();                                                   \
-  auto scheduler = veh->scheduler.lock();                                      \
-  if (!veh || !scheduler) {                                                    \
-    state = State::DISPOSABLE;                                                 \
-    return;                                                                    \
-  }                                                                            \
-  auto res = scheduler->resource.lock();                                       \
-  if (!res) {                                                                  \
-    state = State::DISPOSABLE;                                                 \
-    return;                                                                    \
-  }                                                                            \
-  if (veh->paused) {                                                           \
-    return;                                                                    \
-  }                                                                            \
-  if (order->state == data::order::TransportOrder::State::WITHDRAWL) {         \
-    state = State::EXECUTED;                                                   \
-    return;                                                                    \
+#define assert_valid                                                   \
+  auto veh = vehicle.lock();                                           \
+  auto scheduler = veh->scheduler.lock();                              \
+  if (!veh || !scheduler) {                                            \
+    state = State::DISPOSABLE;                                         \
+    return;                                                            \
+  }                                                                    \
+  auto res = scheduler->resource.lock();                               \
+  if (!res) {                                                          \
+    state = State::DISPOSABLE;                                         \
+    return;                                                            \
+  }                                                                    \
+  if (veh->paused) {                                                   \
+    return;                                                            \
+  }                                                                    \
+  if (order->state == data::order::TransportOrder::State::WITHDRAWL) { \
+    state = State::EXECUTED;                                           \
+    return;                                                            \
   }
 namespace kernel::driver {
 // namespace driver
-std::vector<allocate::TCSResourcePtr>
-Command::get_next_allocate_res(const allocate::DriverOrderPtr &driver_order,
-                               const std::shared_ptr<Vehicle> &veh) {
+std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
+    const allocate::DriverOrderPtr &driver_order,
+    const std::shared_ptr<Vehicle> &veh) {
   const auto steps = get_step_nopop(driver_order, veh->send_queue_size);
   std::vector<std::shared_ptr<RSSResource>> temp;
   for (auto &x : steps) {
@@ -288,8 +288,11 @@ void Command::vehicle_execute_cb(bool ret) {
     state = State::EXECUTED;
   }
 }
-DestPtr Command::get_dest(const DriverOrderPtr &order) { return order->destination; }
-std::vector<StepPtr> Command::get_step(const DriverOrderPtr &order, uint32_t size) {
+DestPtr Command::get_dest(const DriverOrderPtr &order) {
+  return order->destination;
+}
+std::vector<StepPtr> Command::get_step(const DriverOrderPtr &order,
+                                       uint32_t size) {
   if (order->route->steps.empty()) {
     order->route->current_step.reset();
     return {};
@@ -300,6 +303,16 @@ std::vector<StepPtr> Command::get_step(const DriverOrderPtr &order, uint32_t siz
       size >= order->route->steps.size() ? order->route->steps.size() : size;
   for (auto i = 0; i < len; i++) {
     res.push_back(order->route->steps.at(i));
+    bool single_step = false;
+    if (i + 1 < len) {
+      for (auto act : order->route->steps.at(i + 1)->path->per_acts.acts) {
+        if (act.completion_required) {
+          single_step = true;
+          break;
+        }
+      }
+    }
+    if (single_step) break;
   }
   order->route->steps.pop_front();
   return res;
@@ -318,11 +331,21 @@ std::vector<StepPtr> Command::get_step_nopop(const DriverOrderPtr &order,
   for (auto i = 0; i < len; i++) {
     res.push_back(order->route->steps.at(i));
     // order->route->current_steps.push_back(order->route->steps.at(i));
+    bool single_step = false;
+    if (i + 1 < len) {
+      for (auto act : order->route->steps.at(i + 1)->path->per_acts.acts) {
+        if (act.completion_required) {
+          single_step = true;
+          break;
+        }
+      }
+    }
+    if (single_step) break;
   }
   return res;
 }
-std::vector<std::shared_ptr<RSSResource>>
-Command::get_future(const DriverOrderPtr &order)const {
+std::vector<std::shared_ptr<RSSResource>> Command::get_future(
+    const DriverOrderPtr &order) const {
   const auto veh = vehicle.lock();
   std::vector<std::shared_ptr<RSSResource>> res;
   if (order->route->steps.size() > veh->send_queue_size) {
@@ -356,4 +379,4 @@ Command::get_future(const DriverOrderPtr &order)const {
   return res;
 }
 
-}
+}  // namespace kernel::driver
