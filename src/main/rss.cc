@@ -1,8 +1,9 @@
 #include "../../include/main/rss.hpp"
 
+#include <boost/algorithm/string.hpp>
+
 #include "../../include/component/data/model/envelope.hpp"
 #include "../../include/kernel/driver/vehicle.hpp"
-
 bool RSS::init_resource() {
   this->resource =
       std::make_shared<kernel::allocate::ResourceManager>("ResourceManager");
@@ -299,18 +300,38 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           }
           auto name_ = envelope.attribute("name").as_string();
           auto envelope_ = std::make_shared<data::model::Envelope>(name_);
-          auto vertex = envelope.find_child([](const pugi::xml_node node) {
-            return std::string(node.name()) == "vertex";
-          });
-          while (vertex.type() != pugi::node_null) {
-            if (std::string(vertex.name()) != "vertex") {
-              break;
-            }
-            auto x = vertex.attribute("x").as_double();
-            auto y = vertex.attribute("y").as_double();
-            envelope_->add_vertex(x, y);
-            vertex = vertex.next_sibling();
-          }
+          float width = 0;
+          float head = 0;
+          float tail = 0;
+          std::vector<std::string> out;
+          boost::split(out, name_, boost::is_any_of("-"),
+                       boost::token_compress_on);
+          assert(out.size() >= 3);
+          width = boost::lexical_cast<float>(out[0]);
+          head = boost::lexical_cast<float>(out[1]);
+          tail = boost::lexical_cast<float>(out[2]);
+          // std::vector<data::model::Envelope::Vertex> veh_vertices;
+          // veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+          // veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
+          // veh_vertices.emplace_back(Eigen::Vector3f(head / 2, -width / 2,
+          // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail, -width / 2,
+          // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail / 2, width /
+          // 2, 0));
+          Eigen::Vector3f v1 = Eigen::Vector3f(-tail, width / 2, 0) +
+                               p->position.cast<float>() / 1000;
+          Eigen::Vector3f v2 = Eigen::Vector3f(head, width / 2, 0) +
+                               p->position.cast<float>() / 1000;
+          Eigen::Vector3f v3 = Eigen::Vector3f(head, -width / 2, 0) +
+                               p->position.cast<float>() / 1000;
+          Eigen::Vector3f v4 = Eigen::Vector3f(-tail, -width / 2, 0) +
+                               p->position.cast<float>() / 1000;
+          Eigen::Vector3f v5 = Eigen::Vector3f(-tail, width / 2, 0) +
+                               p->position.cast<float>() / 1000;
+          envelope_->set_points(v1.x(), v1.y());
+          envelope_->set_points(v2.x(), v2.y());
+          envelope_->set_points(v3.x(), v3.y());
+          envelope_->set_points(v4.x(), v4.y());
+          envelope_->set_points(v5.x(), v5.y());
           p->envelopes.insert(
               std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
                   name_, envelope_));
@@ -456,19 +477,185 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           if (std::string(envelope.name()) != "vehicleEnvelope") {
             break;
           }
-          auto name_ = envelope.attribute("name").as_string();
+          std::string name_ = envelope.attribute("name").as_string();
           auto envelope_ = std::make_shared<data::model::Envelope>(name_);
-          auto vertex = envelope.find_child([](const pugi::xml_node node) {
-            return std::string(node.name()) == "vertex";
-          });
-          while (vertex.type() != pugi::node_null) {
-            if (std::string(vertex.name()) != "vertex") {
-              break;
+          // auto vertex = envelope.find_child([](const pugi::xml_node node) {
+          //   return std::string(node.name()) == "vertex";
+          // });
+          // while (vertex.type() != pugi::node_null) {
+          //   if (std::string(vertex.name()) != "vertex") {
+          //     break;
+          //   }
+          //   auto x = vertex.attribute("x").as_double();
+          //   auto y = vertex.attribute("y").as_double();
+          //   envelope_->add_vertex(x, y);
+          //   vertex = vertex.next_sibling();
+          // }
+          // width-head-tail m
+          float width = 0;
+          float head = 0;
+          float tail = 0;
+          std::vector<std::string> out;
+          boost::split(out, name_, boost::is_any_of("-"),
+                       boost::token_compress_on);
+          assert(out.size() >= 3);
+          width = boost::lexical_cast<float>(out[0]);
+          head = boost::lexical_cast<float>(out[1]);
+          tail = boost::lexical_cast<float>(out[2]);
+          // std::vector<data::model::Envelope::Vertex> veh_vertices;
+          // veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+          // veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
+          // veh_vertices.emplace_back(Eigen::Vector3f(head / 2, -width / 2,
+          // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail, -width / 2,
+          // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail / 2, width /
+          // 2, 0));
+          if (p->layout.connect_type ==
+              data::model::Path::ConnectType::DIRECT) {
+            Eigen::Vector3f p_v = (p->destination_point.lock()->position -
+                                   p->source_point.lock()->position)
+                                      .cast<float>()
+                                      .normalized();
+            double angle = atan2(p_v.y(), p_v.x());
+            Eigen::AngleAxisf rotate(angle, Eigen::Vector3f::UnitZ());
+            Eigen::Vector3f v1 =
+                rotate.matrix() * Eigen::Vector3f(-tail, width / 2, 0) +
+                p->source_point.lock()->position.cast<float>() / 1000;
+
+            Eigen::Vector3f v2 =
+                rotate.matrix() * Eigen::Vector3f(head, width / 2, 0) +
+                p->destination_point.lock()->position.cast<float>() / 1000;
+            Eigen::Vector3f v3 =
+                rotate.matrix() * Eigen::Vector3f(head, -width / 2, 0) +
+                p->destination_point.lock()->position.cast<float>() / 1000;
+            Eigen::Vector3f v4 =
+                rotate.matrix() * Eigen::Vector3f(-tail, -width / 2, 0) +
+                p->source_point.lock()->position.cast<float>() / 1000;
+            Eigen::Vector3f v5 =
+                rotate.matrix() * Eigen::Vector3f(-tail, width / 2, 0) +
+                p->source_point.lock()->position.cast<float>() / 1000;
+
+            envelope_->set_points(v1.x(), v1.y());
+            envelope_->set_points(v2.x(), v2.y());
+            envelope_->set_points(v3.x(), v3.y());
+            envelope_->set_points(v4.x(), v4.y());
+            // envelope_->set_points(v5.x(), v5.y());
+            // {
+            //   std::fstream fs;
+            //   fs.open("data1.txt", std::ios::out | std::ios::app);
+            //   assert(fs.is_open());
+            //   for (auto &x : envelope_->poly.outer()) {
+            //     fs << x.get<0>() << "\t" << x.get<1>() << std::endl;
+            //   }
+            //   fs.close();
+            // }
+
+          } else if (p->layout.connect_type ==
+                     data::model::Path::ConnectType::BEZIER) {
+            int degree = 3;
+            std::vector<double> weight{1, 1, 1, 1};
+            std::vector<nurbs::Point> ctrl_ps;
+            ctrl_ps.emplace_back(p->source_point.lock()->position.x() / 1000.0,
+                                 p->source_point.lock()->position.y() / 1000.0,
+                                 0);
+
+            for (auto &cp : p->layout.control_points) {
+              ctrl_ps.emplace_back(cp.x() * 50 / 1000.0, -cp.y() * 50 / 1000.0,
+                                   0);
             }
-            auto x = vertex.attribute("x").as_double();
-            auto y = vertex.attribute("y").as_double();
-            envelope_->add_vertex(x, y);
-            vertex = vertex.next_sibling();
+            ctrl_ps.emplace_back(
+                p->destination_point.lock()->position.x() / 1000.0,
+                p->destination_point.lock()->position.y() / 1000.0, 0);
+            auto nurbs_curve =
+                nurbs::calculate_nurbs(ctrl_ps, weight, degree, ENVELOPE_STEP);
+            auto normal_vec = nurbs::calculate_normal(nurbs_curve);
+            assert(nurbs_curve.size() == normal_vec.size());
+            polygon_t poly_;
+            for (int i = 0; i < nurbs_curve.size(); ++i) {
+              auto ang = atan2(normal_vec[i].y(), normal_vec[i].x());
+              Eigen::AngleAxisf rotate(ang, Eigen::Vector3f::UnitZ());
+              std::vector<Eigen::Vector3f> veh_vertices;
+              veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+              veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
+              veh_vertices.emplace_back(
+                  Eigen::Vector3f(head / 2, -width / 2, 0));
+              veh_vertices.emplace_back(Eigen::Vector3f(-tail, -width / 2, 0));
+              veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+              polygon_t poly_temp;
+
+              for (auto &x : veh_vertices) {
+                x = rotate.matrix() * x;
+                x += nurbs_curve[i];
+                bg::append(poly_temp, point_t(x.x(), x.y()));
+              }
+              std::vector<polygon_t> union_poly;
+              bg::union_(poly_, poly_temp, union_poly);
+              poly_ = union_poly[0];
+            }
+            envelope_->poly = poly_;
+            // {
+            //   std::fstream fs;
+            //   fs.open("data1.txt", std::ios::out | std::ios::app);
+            //   assert(fs.is_open());
+            //   for (auto &x : envelope_->poly.outer()) {
+            //     fs << x.get<0>() << "\t" << x.get<1>() << std::endl;
+            //   }
+            //   fs.close();
+            // }
+          } else if (p->layout.connect_type ==
+                     data::model::Path::ConnectType::BEZIER_3) {
+            int degree = 6;
+            std::vector<double> weight{1, 1, 1, 1, 1, 1, 1};
+            std::vector<nurbs::Point> ctrl_ps;
+            ctrl_ps.emplace_back(p->source_point.lock()->position.x() / 1000.0,
+                                 p->source_point.lock()->position.y() / 1000.0,
+                                 0);
+
+            for (auto &cp : p->layout.control_points) {
+              ctrl_ps.emplace_back(cp.x() * 50 / 1000.0, -cp.y() * 50 / 1000.0,
+                                   0);
+            }
+            ctrl_ps.emplace_back(
+                p->destination_point.lock()->position.x() / 1000.0,
+                p->destination_point.lock()->position.y() / 1000.0, 0);
+            auto nurbs_curve =
+                nurbs::calculate_nurbs(ctrl_ps, weight, degree, ENVELOPE_STEP);
+            auto normal_vec = nurbs::calculate_normal(nurbs_curve);
+            assert(nurbs_curve.size() == normal_vec.size());
+            polygon_t poly_;
+            for (int i = 0; i < nurbs_curve.size(); ++i) {
+              auto ang = atan2(normal_vec[i].y(), normal_vec[i].x());
+              Eigen::AngleAxisf rotate(ang, Eigen::Vector3f::UnitZ());
+              std::vector<Eigen::Vector3f> veh_vertices;
+              veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+              veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
+              veh_vertices.emplace_back(
+                  Eigen::Vector3f(head / 2, -width / 2, 0));
+              veh_vertices.emplace_back(Eigen::Vector3f(-tail, -width / 2, 0));
+              veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+              polygon_t poly_temp;
+
+              for (auto &x : veh_vertices) {
+                x = rotate.matrix() * x;
+                x += nurbs_curve[i];
+                bg::append(poly_temp, point_t(x.x(), x.y()));
+              }
+              std::vector<polygon_t> union_poly;
+              bg::union_(poly_, poly_temp, union_poly);
+              poly_ = union_poly[0];
+            }
+            envelope_->poly = poly_;
+            // TEST OUT
+            // {
+            //   std::fstream fs;
+            //   fs.open("data1.txt", std::ios::out | std::ios::app);
+            //   assert(fs.is_open());
+            //   for (auto &x : envelope_->poly.outer()) {
+            //     fs << x.get<0>() << "\t" << x.get<1>() << std::endl;
+            //   }
+            //   fs.close();
+            // }
+          } else {
+            // TODO
           }
           p->envelopes.insert(
               std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
@@ -543,6 +730,20 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         path = path.next_sibling();
       }
       CLOG(INFO, rss_log) << "init path size " << resource->paths.size();
+      for (auto &point : resource->points) {
+        int num = point->incoming_paths.size() + point->outgoing_paths.size();
+        if (num == 0) {
+          point->traffic_type = data::model::Point::TrafficType::Independent;
+        } else if (num == 1) {
+          point->traffic_type = data::model::Point::TrafficType::Endpoint;
+        } else if (num == 2) {
+          point->traffic_type = data::model::Point::TrafficType::Alleyway;
+        } else if (num >= 3) {
+          point->traffic_type = data::model::Point::TrafficType::Junction;
+        } else {
+          point->traffic_type = data::model::Point::TrafficType::Unknown;
+        }
+      }
     }
     {
       // block
@@ -1977,12 +2178,13 @@ std::pair<int, std::string> RSS::get_model() const {
       t["envelopeKey"] = name;
       t["vertices"] = json::array();
       auto v = std::dynamic_pointer_cast<data::model::Envelope>(res);
-      for (auto &v_ : v->vertexs) {
+      for (auto &v_ : v->poly.outer()) {
         json ver;
-        ver["x"] = v_.x();
-        ver["y"] = v_.y();
+        ver["x"] = v_.get<0>();
+        ver["y"] = v_.get<1>();
         t["vertices"].push_back(ver);
       }
+      t["vertices"].push_back(t["vertices"][0]);
       point["vehicleEnvelopes"].push_back(t);
     }
     res["points"].push_back(point);
@@ -2029,12 +2231,13 @@ std::pair<int, std::string> RSS::get_model() const {
       t["envelopeKey"] = key;
       t["vertices"] = json::array();
       auto v = std::dynamic_pointer_cast<data::model::Envelope>(value);
-      for (auto &v_ : v->vertexs) {
+      for (auto &v_ : v->poly.outer()) {
         json ver;
-        ver["x"] = v_.x();
-        ver["y"] = v_.y();
+        ver["x"] = v_.get<0>();
+        ver["y"] = v_.get<1>();
         t["vertices"].push_back(ver);
       }
+      t["vertices"].push_back(t["vertices"][0]);
       path["vehicleEnvelopes"].push_back(t);
     }
     for (auto &[op_name, location_name, completion_required, execution_trigger,
@@ -2044,7 +2247,8 @@ std::pair<int, std::string> RSS::get_model() const {
       }
       json t;
       t["operation"] = data::model::Actions::get_type(
-          data::model::Actions::get_optype(op_name).value());
+          data::model::Actions::get_optype(op_name).value_or(
+              data::model::Actions::OpType::NOP));
       t["locationName"] = location_name;
       t["completionRequired"] = completion_required;
       t["executionTrigger"] = execution_trigger;
@@ -2408,14 +2612,44 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         }
         if (p.contains("vehicleEnvelope")) {
           for (auto &x : p["vehicleEnvelope"].array_range()) {
-            auto envelope = std::make_shared<data::model::Envelope>(
+            auto envelope_ = std::make_shared<data::model::Envelope>(
                 x["envelopeKey"].as_string());
-            for (auto &v : p["vehicleEnvelope"]["vertices"].array_range()) {
-              envelope->add_vertex(v["x"].as_double(), v["y"].as_double());
-            }
+
+            float width = 0;
+            float head = 0;
+            float tail = 0;
+            std::vector<std::string> out;
+            boost::split(out, x["envelopeKey"].as_string(),
+                         boost::is_any_of("-"), boost::token_compress_on);
+            assert(out.size() >= 3);
+            width = boost::lexical_cast<float>(out[0]);
+            head = boost::lexical_cast<float>(out[1]);
+            tail = boost::lexical_cast<float>(out[2]);
+            // std::vector<data::model::Envelope::Vertex> veh_vertices;
+            // veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+            // veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
+            // veh_vertices.emplace_back(Eigen::Vector3f(head / 2, -width / 2,
+            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail, -width / 2,
+            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail / 2, width /
+            // 2, 0));
+            Eigen::Vector3f v1 = Eigen::Vector3f(-tail, width / 2, 0) +
+                                 point->position.cast<float>() / 1000;
+            Eigen::Vector3f v2 = Eigen::Vector3f(head, width / 2, 0) +
+                                 point->position.cast<float>() / 1000;
+            Eigen::Vector3f v3 = Eigen::Vector3f(head, -width / 2, 0) +
+                                 point->position.cast<float>() / 1000;
+            Eigen::Vector3f v4 = Eigen::Vector3f(-tail, -width / 2, 0) +
+                                 point->position.cast<float>() / 1000;
+            Eigen::Vector3f v5 = Eigen::Vector3f(-tail, width / 2, 0) +
+                                 point->position.cast<float>() / 1000;
+            envelope_->set_points(v1.x(), v1.y());
+            envelope_->set_points(v2.x(), v2.y());
+            envelope_->set_points(v3.x(), v3.y());
+            envelope_->set_points(v4.x(), v4.y());
+            envelope_->set_points(v5.x(), v5.y());
             point->envelopes.insert(
                 std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
-                    x["envelopeKey"].as_string(), envelope));
+                    x["envelopeKey"].as_string(), envelope_));
           }
         }
         resource->points.push_back(point);
@@ -2520,14 +2754,149 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
         path->acts = acts;
         if (p.contains("vehicleEnvelope")) {
           for (auto &x : p["vehicleEnvelope"].array_range()) {
-            auto envelope = std::make_shared<data::model::Envelope>(
+            auto envelope_ = std::make_shared<data::model::Envelope>(
                 x["envelopeKey"].as_string());
-            for (auto &v : p["vehicleEnvelope"]["vertices"].array_range()) {
-              envelope->add_vertex(v["x"].as_double(), v["y"].as_double());
+            float width = 0;
+            float head = 0;
+            float tail = 0;
+            std::vector<std::string> out;
+            boost::split(out, x["envelopeKey"].as_string(),
+                         boost::is_any_of("-"), boost::token_compress_on);
+            assert(out.size() >= 3);
+            width = boost::lexical_cast<float>(out[0]);
+            head = boost::lexical_cast<float>(out[1]);
+            tail = boost::lexical_cast<float>(out[2]);
+            // std::vector<data::model::Envelope::Vertex> veh_vertices;
+            // veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+            // veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
+            // veh_vertices.emplace_back(Eigen::Vector3f(head / 2, -width / 2,
+            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail, -width / 2,
+            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail / 2, width /
+            // 2, 0));
+            if (path->layout.connect_type ==
+                data::model::Path::ConnectType::DIRECT) {
+              Eigen::Vector3f p_v = (path->source_point.lock()->position -
+                                     path->destination_point.lock()->position)
+                                        .cast<float>()
+                                        .normalized();
+              double angle = atan2(p_v.y(), p_v.x());
+              Eigen::AngleAxisf rotate(angle, Eigen::Vector3f::UnitZ());
+              Eigen::Vector3f v1 =
+                  rotate.matrix() * Eigen::Vector3f(-tail, width / 2, 0) +
+                  path->source_point.lock()->position.cast<float>() / 1000;
+              Eigen::Vector3f v2 =
+                  rotate.matrix() * Eigen::Vector3f(head, width / 2, 0) +
+                  path->destination_point.lock()->position.cast<float>() / 1000;
+              Eigen::Vector3f v3 =
+                  rotate.matrix() * Eigen::Vector3f(head, -width / 2, 0) +
+                  path->destination_point.lock()->position.cast<float>() / 1000;
+              Eigen::Vector3f v4 =
+                  rotate.matrix() * Eigen::Vector3f(-tail, -width / 2, 0) +
+                  path->source_point.lock()->position.cast<float>() / 1000;
+              Eigen::Vector3f v5 =
+                  rotate.matrix() * Eigen::Vector3f(-tail, width / 2, 0) +
+                  path->source_point.lock()->position.cast<float>() / 1000;
+
+              envelope_->set_points(v1.x(), v1.y());
+              envelope_->set_points(v2.x(), v2.y());
+              envelope_->set_points(v3.x(), v3.y());
+              envelope_->set_points(v4.x(), v4.y());
+              envelope_->set_points(v5.x(), v5.y());
+
+            } else if (path->layout.connect_type ==
+                       data::model::Path::ConnectType::BEZIER) {
+              int degree = 3;
+              std::vector<double> weight{1, 1, 1, 1};
+              std::vector<nurbs::Point> ctrl_ps;
+              ctrl_ps.emplace_back(
+                  path->source_point.lock()->position.x() / 1000.0,
+                  path->source_point.lock()->position.y() / 1000.0, 0);
+
+              for (auto &cp : path->layout.control_points) {
+                ctrl_ps.emplace_back(cp.x() * 50 / 1000.0,
+                                     -cp.y() * 50 / 1000.0, 0);
+              }
+              ctrl_ps.emplace_back(
+                  path->destination_point.lock()->position.x() / 1000.0,
+                  path->destination_point.lock()->position.y() / 1000.0, 0);
+              auto nurbs_curve = nurbs::calculate_nurbs(ctrl_ps, weight, degree,
+                                                        ENVELOPE_STEP);
+              auto normal_vec = nurbs::calculate_normal(nurbs_curve);
+              assert(nurbs_curve.size() == normal_vec.size());
+              polygon_t poly_;
+              for (int i = 0; i < nurbs_curve.size(); ++i) {
+                auto ang = atan2(normal_vec[i].y(), normal_vec[i].x());
+                Eigen::AngleAxisf rotate(ang, Eigen::Vector3f::UnitZ());
+                std::vector<Eigen::Vector3f> veh_vertices;
+                veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+                veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
+                veh_vertices.emplace_back(
+                    Eigen::Vector3f(head / 2, -width / 2, 0));
+                veh_vertices.emplace_back(
+                    Eigen::Vector3f(-tail, -width / 2, 0));
+                veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+                polygon_t poly_temp;
+
+                for (auto &x : veh_vertices) {
+                  x = rotate.matrix() * x;
+                  x += nurbs_curve[i];
+                  bg::append(poly_temp, point_t(x.x(), x.y()));
+                }
+                std::vector<polygon_t> union_poly;
+                bg::union_(poly_, poly_temp, union_poly);
+                poly_ = union_poly[0];
+              }
+              envelope_->poly = poly_;
+            } else if (path->layout.connect_type ==
+                       data::model::Path::ConnectType::BEZIER_3) {
+              int degree = 6;
+              std::vector<double> weight{1, 1, 1, 1, 1, 1, 1};
+              std::vector<nurbs::Point> ctrl_ps;
+              ctrl_ps.emplace_back(
+                  path->source_point.lock()->position.x() / 1000.0,
+                  path->source_point.lock()->position.y() / 1000.0, 0);
+
+              for (auto &cp : path->layout.control_points) {
+                ctrl_ps.emplace_back(cp.x() * 50 / 1000.0,
+                                     -cp.y() * 50 / 1000.0, 0);
+              }
+              ctrl_ps.emplace_back(
+                  path->destination_point.lock()->position.x() / 1000.0,
+                  path->destination_point.lock()->position.y() / 1000.0, 0);
+              auto nurbs_curve = nurbs::calculate_nurbs(ctrl_ps, weight, degree,
+                                                        ENVELOPE_STEP);
+              auto normal_vec = nurbs::calculate_normal(nurbs_curve);
+              assert(nurbs_curve.size() == normal_vec.size());
+              polygon_t poly_;
+              for (int i = 0; i < nurbs_curve.size(); ++i) {
+                auto ang = atan2(normal_vec[i].y(), normal_vec[i].x());
+                Eigen::AngleAxisf rotate(ang, Eigen::Vector3f::UnitZ());
+                std::vector<Eigen::Vector3f> veh_vertices;
+                veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+                veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
+                veh_vertices.emplace_back(
+                    Eigen::Vector3f(head / 2, -width / 2, 0));
+                veh_vertices.emplace_back(
+                    Eigen::Vector3f(-tail, -width / 2, 0));
+                veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
+                polygon_t poly_temp;
+
+                for (auto &x : veh_vertices) {
+                  x = rotate.matrix() * x;
+                  x += nurbs_curve[i];
+                  bg::append(poly_temp, point_t(x.x(), x.y()));
+                }
+                std::vector<polygon_t> union_poly;
+                bg::union_(poly_, poly_temp, union_poly);
+                poly_ = union_poly[0];
+              }
+              envelope_->poly = poly_;
+            } else {
+              // TODO
             }
             path->envelopes.insert(
                 std::pair<std::string, std::shared_ptr<data::model::Envelope>>(
-                    x["envelopeKey"].as_string(), envelope));
+                    x["envelopeKey"].as_string(), envelope_));
           }
         }
         {

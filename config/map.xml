@@ -59,7 +59,7 @@
         maxReverseVelocity="3000" locked="false">
         <peripheralOperation completionRequired="true" executionTrigger="AFTER_ALLOCATION"
             locationName="door1" name="open"></peripheralOperation>
-        <peripheralOperation completionRequired="false" executionTrigger="AFTER_MOVEMENT"
+        <peripheralOperation completionRequired="true" executionTrigger="AFTER_MOVEMENT"
             locationName="door1" name="close"></peripheralOperation>
         <property name="vda5050:action.01" value="Door"></property>
         <property name="vda5050:action.01.blockingType" value="HARD"></property>
@@ -76,6 +76,8 @@
         <property name="vda5050:action.02.parameter.type" value="close"></property>
         <property name="vda5050:action.02.when" value="ORDER_END"></property>
         <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <path name="P2 --- P3" sourcePoint="P2" destinationPoint="P3" length="1" maxVelocity="400"
         maxReverseVelocity="400" locked="false">
@@ -83,14 +85,20 @@
             <controlPoint x="321" y="-384"></controlPoint>
             <controlPoint x="332" y="-374"></controlPoint>
         </pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <path name="P2 --- Point-0002" sourcePoint="P2" destinationPoint="Point-0002" length="1"
         maxVelocity="3000" maxReverseVelocity="3000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <path name="P3 --- P4" sourcePoint="P3" destinationPoint="P4" length="1" maxVelocity="3000"
         maxReverseVelocity="3000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <path name="P4 --- Point-0005" sourcePoint="P4" destinationPoint="Point-0005" length="1"
         maxVelocity="400" maxReverseVelocity="400" locked="false">
@@ -103,26 +111,37 @@
             <controlPoint x="420" y="-89"></controlPoint>
             <controlPoint x="423" y="-79"></controlPoint>
         </pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
     </path>
     <path name="Point-0002 --- Point-0003" sourcePoint="Point-0002" destinationPoint="Point-0003"
         length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <path name="Point-0003 --- Point-0004" sourcePoint="Point-0003" destinationPoint="Point-0004"
         length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <path name="Point-0005 --- Point-0006" sourcePoint="Point-0005" destinationPoint="Point-0006"
         length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <path name="Point-0007 --- P1" sourcePoint="Point-0007" destinationPoint="P1" length="1"
         maxVelocity="3000" maxReverseVelocity="3000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <path name="Point-0008 --- Point-0007" sourcePoint="Point-0008" destinationPoint="Point-0007"
         length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
         <pathLayout connectionType="DIRECT" layerId="1"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
     </path>
     <vehicle name="3A" length="1000" energyLevelCritical="20" energyLevelGood="90"
         energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"

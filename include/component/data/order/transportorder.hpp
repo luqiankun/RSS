@@ -10,7 +10,7 @@ class Vehicle;
 namespace data::order {
 class OrderSequence;
 class TransportOrder : public RSSObject {
-public:
+ public:
   using RSSObject::RSSObject;
   enum class State {
     RAW,
@@ -22,6 +22,8 @@ public:
     FAILED,
     UNROUTABLE
   };
+  enum class Conflict { NONE, PENDING };
+
   [[nodiscard]] std::string get_state() const {
     if (state == State::RAW) {
       return "RAW";
@@ -56,7 +58,8 @@ public:
     }
   }
 
-public:
+ public:
+  Conflict conflict{Conflict::NONE};
   std::chrono::system_clock::time_point create_time;
   std::chrono::system_clock::time_point end_time;
   std::chrono::system_clock::time_point dead_time;
@@ -70,7 +73,7 @@ public:
   bool dispensable{false};
   std::weak_ptr<kernel::driver::Vehicle> intended_vehicle;
   std::weak_ptr<kernel::driver::Vehicle> processing_vehicle;
-  bool anytime_drop{false}; // 不影响车辆状态，可随时丢弃的
+  bool anytime_drop{false};  // 不影响车辆状态，可随时丢弃的
 };
-}
+}  // namespace data::order
 #endif

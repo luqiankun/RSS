@@ -16,6 +16,7 @@ class Point : public RSSResource {
     Vector2i label_offset{0, 0};
     int layer_id{0};
   };
+  enum class TrafficType { Junction, Alleyway, Unknown, Endpoint, Independent };
   enum class Type {
     REPORT_POSITION,
     HALT_POSITION,
@@ -64,6 +65,7 @@ class Point : public RSSResource {
   std::vector<std::shared_ptr<Path>> outgoing_paths;
   std::vector<std::shared_ptr<Location>> attached_links;
   PeripheralActions per_acts;
+  TrafficType traffic_type{TrafficType::Unknown};
 };
 }  // namespace data::model
 #endif

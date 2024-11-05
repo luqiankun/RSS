@@ -28,7 +28,8 @@ find_package(OpenSSL)
 find_package(eclipse-paho-mqtt-c REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
 find_package(Threads REQUIRED)
-
+################
+find_package(Boost REQUIRED)
 ################
 find_package(Eigen3 REQUIRED NO_MODULE)
 include_directories(${EIGEN3_INCLUDE_DIR})

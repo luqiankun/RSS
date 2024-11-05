@@ -361,13 +361,13 @@ void Dispatcher::run() {
           ss << v->name << " ,";
         }
         ss << "]\n";
-        CLOG_EVERY_N(2, ERROR, dispatch_log) << "deadlock --> " << ss.str();
+        CLOG_EVERY_N(20, ERROR, dispatch_log) << "deadlock --> " << ss.str();
         brake_deadlock(deadloop);
       }
       auto blockloop = block_loop();
       if (!blockloop.empty()) {
         assert(blockloop.size() == 2);
-        CLOG_EVERY_N(2, ERROR, dispatch_log)
+        CLOG_EVERY_N(20, ERROR, dispatch_log)
             << "blocklock --> " << blockloop.front()->name << " blocked by "
             << blockloop.back()->name << "\n";
         brake_blocklock(blockloop);
