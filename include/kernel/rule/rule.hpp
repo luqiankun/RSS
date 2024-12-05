@@ -13,61 +13,69 @@ class Planner;
 namespace allocate {
 class ResourceManager;
 class RuleBase : public RSSObject {
-public:
+ public:
   RuleBase(const std::string &name, const std::shared_ptr<ResourceManager> &r)
       : RSSObject(name), res(r){};
   using RSSObject::RSSObject;
   virtual bool pass(std::vector<std::shared_ptr<RSSResource>> res,
                     std::shared_ptr<schedule::Client>) = 0;
 
-public:
+ public:
   std::weak_ptr<ResourceManager> res;
 };
 
 class OwnerRule : public RuleBase {
-public:
+ public:
   using RuleBase::RuleBase;
   bool pass(std::vector<std::shared_ptr<RSSResource>>,
             std::shared_ptr<schedule::Client>) override;
 };
 
 class CollisionRule : public RuleBase {
-public:
+ public:
   using RuleBase::RuleBase;
   bool pass(std::vector<std::shared_ptr<RSSResource>> res,
             std::shared_ptr<schedule::Client>) override;
 };
 
 class BlockRuleBase : public RuleBase {
-public:
+ public:
   using RuleBase::RuleBase;
 
-public:
+ public:
   std::string color;
   std::unordered_set<std::shared_ptr<RSSObject>> owners;
   std::unordered_set<std::shared_ptr<RSSResource>> occs;
 };
 class OnlyOneGatherRule : public BlockRuleBase {
-public:
+ public:
   using BlockRuleBase::BlockRuleBase;
   bool pass(std::vector<std::shared_ptr<RSSResource>>,
             std::shared_ptr<schedule::Client>) override;
 
-public:
+ public:
   int32_t n{1};
 };
 class OnlyOneRectRule : public OnlyOneGatherRule {
-public:
+ public:
   using OnlyOneGatherRule::OnlyOneGatherRule;
 
   void get_occupys();
 
-public:
+ public:
   float x{0};
   float y{0};
   float height{0};
   float width{0};
 };
-} // namespace allocate
-} // namespace kernel
+class AlleywayRule : public RuleBase {
+ public:
+  using RuleBase::RuleBase;
+  bool pass(std::vector<std::shared_ptr<RSSResource>>,
+            std::shared_ptr<schedule::Client>) override;
+
+ private:
+};
+}  // namespace allocate
+}  // namespace kernel
 #endif

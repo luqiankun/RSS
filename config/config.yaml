@@ -18,5 +18,5 @@ rss:
     enable: true # 启动时是否自动加载一个地图
     xml_path: "config/map.xml" #绝对目录或相对执行文件目录
   mqtt_addr:
-    host: "192.168.0.39" # mqtt服务器地址
+    host: "192.168.0.200" # mqtt服务器地址
     port: 1883 # mqtt服务器端口

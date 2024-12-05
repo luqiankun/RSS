@@ -122,5 +122,10 @@ bool CollisionRule::pass(std::vector<std::shared_ptr<RSSResource>> resource,
   }
   return true;
 }
+bool AlleywayRule::pass(std::vector<std::shared_ptr<RSSResource>> resource,
+                        std::shared_ptr<schedule::Client> client) {
+  // TODO
+  return true;
+}
 
 }  // namespace kernel::allocate

@@ -1,8 +1,8 @@
 #ifndef RESOURCE_HPP
 #define RESOURCE_HPP
 #include "../../../include/3rdparty/log/easylogging++.h"
+#include "../../component/data/model/alleyway.hpp"
 #include "../../component/data/model/location.hpp"
-#include "../../component/data/model/path.hpp"
 #include "../../component/data/model/visuallayout.hpp"
 #include "../../component/data/order/route.hpp"
 #include "../rule/rule.hpp"
@@ -23,7 +23,7 @@ class ResourceManager : public RSSObject {
   enum class ResType { Point = 0, Location = 1, Err = 2, Path = 3 };
   ~ResourceManager() { CLOG(INFO, allocate_log) << name << " close\n"; }
   bool claim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
-  bool allocate(std::vector<TCSResourcePtr>,const ClientPtr&);
+  bool allocate(std::vector<TCSResourcePtr>, const ClientPtr&);
   bool unclaim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
   bool free(const std::vector<TCSResourcePtr>&, const ClientPtr&);
   PointPtr get_recent_park_point(const PointPtr&) const;
@@ -39,6 +39,7 @@ class ResourceManager : public RSSObject {
   std::vector<PointPtr> points;
   std::vector<LocationPtr> locations;
   std::vector<LocationTypePtr> location_types;
+  std::vector<std::shared_ptr<data::model::Alleyway>> alleyways;
   std::shared_ptr<data::model::VisualLayout> visual_layout;
   std::function<bool(PointPtr, PointPtr)> is_connected;
 

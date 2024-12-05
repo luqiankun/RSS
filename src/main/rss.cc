@@ -467,8 +467,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         p->max_vel = maxVelocity;
         p->max_reverse_vel = maxReverseVelocity;
         p->locked = locked;
-        p->source_point.lock()->incoming_paths.push_back(p);
-        p->destination_point.lock()->outgoing_paths.push_back(p);
+        p->source_point.lock()->outgoing_paths.push_back(p);
+        p->destination_point.lock()->incoming_paths.push_back(p);
         // envelope
         auto envelope = path.find_child([](const pugi::xml_node node) {
           return std::string(node.name()) == "vehicleEnvelope";
@@ -742,6 +742,84 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           point->traffic_type = data::model::Point::TrafficType::Junction;
         } else {
           point->traffic_type = data::model::Point::TrafficType::Unknown;
+        }
+      }
+    }
+    // alleyway
+    {
+      for (auto &x : resource->paths) {
+        auto source_type = x->source_point.lock()->traffic_type;
+        auto destination_type = x->destination_point.lock()->traffic_type;
+        if (source_type == data::model::Point::TrafficType::Endpoint ||
+            destination_type == data::model::Point::TrafficType::Endpoint) {
+          // 找到起点
+          LOG(INFO) << "find alleyway endpoint";
+          std::deque<kernel::allocate::PathPtr> paths;
+          std::deque<kernel::allocate::PointPtr> points;
+          kernel::allocate::PointPtr cur_point;
+          kernel::allocate::PointPtr last_point;
+          if (source_type == data::model::Point::TrafficType::Endpoint) {
+            cur_point = x->destination_point.lock();
+            last_point = x->source_point.lock();
+          } else {
+            cur_point = x->source_point.lock();
+            last_point = x->destination_point.lock();
+          }
+          points.push_back(last_point);
+          paths.push_back(x);
+          LOG(INFO) << last_point->name;
+          assert(cur_point != nullptr);
+          while (cur_point->traffic_type ==
+                 data::model::Point::TrafficType::Alleyway) {
+            points.push_back(cur_point);
+            LOG(INFO) << cur_point->name;
+            bool found = false;
+            for (auto &_p : cur_point->outgoing_paths) {
+              if (_p->destination_point.lock() == last_point) {
+                continue;
+              } else {
+                found = true;
+                last_point = cur_point;
+                cur_point = _p->destination_point.lock();
+                paths.push_back(_p);
+                break;
+              }
+            }
+            if (!found) {
+              for (auto _p2 : cur_point->incoming_paths) {
+                if (_p2->source_point.lock() == cur_point) {
+                  continue;
+                } else {
+                  found = true;
+                  last_point = cur_point;
+                  cur_point = _p2->source_point.lock();
+                  paths.push_back(_p2);
+                  break;
+                }
+              }
+            }
+          }
+          if (cur_point->traffic_type ==
+              data::model::Point::TrafficType::Endpoint) {
+            points.push_back(cur_point);
+            LOG(INFO) << cur_point->name;
+            LOG(WARNING) << "a single path";
+          } else if (cur_point->traffic_type ==
+                     data::model::Point::TrafficType::Junction) {
+            points.push_back(cur_point);
+            LOG(INFO) << cur_point->name << "\nalleyway end";
+          } else {
+            LOG(ERROR) << "unknown point type";
+          }
+          //
+          for (auto &path_ : paths) {
+            LOG(INFO) << path_->name;
+          }
+          auto allyway = std::make_shared<data::model::Alleyway>(
+              points.front()->name + "-alleyway");
+          allyway->alley = paths;
+          allyway->vertices = points;
+          resource->alleyways.push_back(allyway);
         }
       }
     }
@@ -2626,12 +2704,13 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             head = boost::lexical_cast<float>(out[1]);
             tail = boost::lexical_cast<float>(out[2]);
             // std::vector<data::model::Envelope::Vertex> veh_vertices;
-            // veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
-            // veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
-            // veh_vertices.emplace_back(Eigen::Vector3f(head / 2, -width / 2,
-            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail, -width / 2,
-            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail / 2, width /
-            // 2, 0));
+            // veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2,
+            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2,
+            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(head / 2, -width
+            // / 2, 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail,
+            // -width / 2, 0));
+            // veh_vertices.emplace_back(Eigen::Vector3f(-tail / 2, width / 2,
+            // 0));
             Eigen::Vector3f v1 = Eigen::Vector3f(-tail, width / 2, 0) +
                                  point->position.cast<float>() / 1000;
             Eigen::Vector3f v2 = Eigen::Vector3f(head, width / 2, 0) +
@@ -2767,12 +2846,13 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             head = boost::lexical_cast<float>(out[1]);
             tail = boost::lexical_cast<float>(out[2]);
             // std::vector<data::model::Envelope::Vertex> veh_vertices;
-            // veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2, 0));
-            // veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2, 0));
-            // veh_vertices.emplace_back(Eigen::Vector3f(head / 2, -width / 2,
-            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail, -width / 2,
-            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail / 2, width /
-            // 2, 0));
+            // veh_vertices.emplace_back(Eigen::Vector3f(-tail, width / 2,
+            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(head, width / 2,
+            // 0)); veh_vertices.emplace_back(Eigen::Vector3f(head / 2, -width
+            // / 2, 0)); veh_vertices.emplace_back(Eigen::Vector3f(-tail,
+            // -width / 2, 0));
+            // veh_vertices.emplace_back(Eigen::Vector3f(-tail / 2, width / 2,
+            // 0));
             if (path->layout.connect_type ==
                 data::model::Path::ConnectType::DIRECT) {
               Eigen::Vector3f p_v = (path->source_point.lock()->position -
