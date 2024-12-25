@@ -7,7 +7,19 @@
 namespace kernel::driver {
 class Vehicle;
 }
+namespace kernel::dispatch {
+class ConflictPool;
+}
 namespace data::order {
+enum class Level {
+  Level_0 = 0,
+  Level_1 = 1,
+  Level_2 = 2,
+  Level_3 = 3,
+  Level_4 = 4,
+  Level_5 = 5,
+  Level_6 = 6,
+};
 class OrderSequence;
 class TransportOrder : public RSSObject {
  public:
@@ -22,8 +34,6 @@ class TransportOrder : public RSSObject {
     FAILED,
     UNROUTABLE
   };
-  enum class Conflict { NONE, PENDING };
-
   [[nodiscard]] std::string get_state() const {
     if (state == State::RAW) {
       return "RAW";
@@ -59,7 +69,6 @@ class TransportOrder : public RSSObject {
   }
 
  public:
-  Conflict conflict{Conflict::NONE};
   std::chrono::system_clock::time_point create_time;
   std::chrono::system_clock::time_point end_time;
   std::chrono::system_clock::time_point dead_time;
@@ -73,7 +82,9 @@ class TransportOrder : public RSSObject {
   bool dispensable{false};
   std::weak_ptr<kernel::driver::Vehicle> intended_vehicle;
   std::weak_ptr<kernel::driver::Vehicle> processing_vehicle;
+  std::weak_ptr<kernel::dispatch::ConflictPool> conflict_pool;
   bool anytime_drop{false};  // 不影响车辆状态，可随时丢弃的
+  int priority{int(Level::Level_0)};  // 优先级
 };
 }  // namespace data::order
 #endif

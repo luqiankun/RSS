@@ -35,26 +35,28 @@ void OnlyOneRectRule::get_occupys() {
   }
 }
 
-bool OnlyOneGatherRule::pass(std::vector<std::shared_ptr<RSSResource>>,
+bool OnlyOneGatherRule::pass(std::vector<std::shared_ptr<RSSResource>> res,
                              std::shared_ptr<schedule::Client> client) {
+  bool flag = false;
+  for (auto &x : res) {
+    if (occs.find(x) != occs.end()) {
+      flag = true;
+      break;
+    }
+  }
+  if (!flag) {
+    return true;
+  }
   owners.clear();
   for (auto &x : occs) {
-    if (x->owner.lock()) {
+    if (x->owner.lock() && x->owner.lock() != client) {
       owners.insert(x->owner.lock());
     }
   }
   if (n < 0) {
     return true;
   } else {
-    auto con{static_cast<int32_t>(owners.size())};
-    if (owners.find(client) != owners.end()) {
-      con = owners.size() - 1;
-    }
-    if (con < n) {
-      return true;
-    } else {
-      return false;
-    }
+    return true;
   }
 }
 

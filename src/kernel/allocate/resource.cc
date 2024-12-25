@@ -1,6 +1,7 @@
 #include "../../../include/kernel/allocate/resource.hpp"
 
-#include "../../../include/kernel/schedule/schedule.hpp"
+#include "../../../include/component/data/model/alleyway.hpp"
+#include "../../../include/kernel/driver/vehicle.hpp"
 
 namespace kernel::allocate {
 std::shared_ptr<data::order::Route> ResourceManager::paths_to_route(
@@ -261,5 +262,48 @@ LocationPtr ResourceManager::get_recent_charge_loc(const PointPtr &cur) const {
   }
   return nullptr;
 }
+std::pair<std::shared_ptr<data::model::Alleyway>, int>
+ResourceManager::get_alleyway(PointPtr p) {
+  for (auto &x : alleyways) {
+    auto [flg, dep] = x->is_in(p);
+    if (flg) {
+      return {x, dep};
+    }
+  }
+  return {nullptr, -1};
+}
+std::vector<std::shared_ptr<data::model::Point>>
+ResourceManager::get_all_idel_points() {
+  std::set<std::shared_ptr<data::model::Point>> res;
+  for (auto &x : points) {
+    auto [flg, dep] = get_alleyway(x);
+    if (flg) {
+      // 巷道点
+      int occupancy = 0;
+      for (auto &x : flg->vertices) {
+        auto owner = x->owner.lock();
+        if (owner) {
+          auto veh = std::dynamic_pointer_cast<driver::Vehicle>(owner);
+          if (veh->state == driver::Vehicle::State::IDLE) {
+            occupancy++;
+          }
+        }
+      }
+      for (int i = 0; i < flg->size() - occupancy; i++)
+        res.insert(flg->vertices[i]);
+    } else {
+      if (x->owner.lock()) {
+        auto veh = std::dynamic_pointer_cast<driver::Vehicle>(x->owner.lock());
+        if (veh->state == driver::Vehicle::State::EXECUTING ||
+            veh->avoid_state == driver::Vehicle::Avoid::Avoiding) {
+          res.insert(x);
+        }
 
+      } else {
+        res.insert(x);
+      }
+    }
+  }
+  return {res.begin(), res.end()};
+}
 }  // namespace kernel::allocate

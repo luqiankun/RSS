@@ -24,7 +24,7 @@ if (DEFINED TEST)
 endif ()
 ################
 #PahoMqttCpp 依赖openssl 和paho-mqtt-c
-find_package(OpenSSL)
+# find_package(OpenSSL)
 find_package(eclipse-paho-mqtt-c REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
 find_package(Threads REQUIRED)
@@ -53,8 +53,7 @@ add_executable(${EXE_NAME}
         ${3rd_SRC}
         ${MAIN_SRC}
 )
-target_link_libraries(${EXE_NAME} PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen ${Python3_LIBRARIES})
-
+target_link_libraries(${EXE_NAME} PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen ${Python3_LIBRARIES}  )
 
 #########
 #install#

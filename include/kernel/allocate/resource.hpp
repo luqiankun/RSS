@@ -1,11 +1,13 @@
 #ifndef RESOURCE_HPP
 #define RESOURCE_HPP
 #include "../../../include/3rdparty/log/easylogging++.h"
-#include "../../component/data/model/alleyway.hpp"
 #include "../../component/data/model/location.hpp"
 #include "../../component/data/model/visuallayout.hpp"
 #include "../../component/data/order/route.hpp"
 #include "../rule/rule.hpp"
+namespace data::model {
+class Alleyway;
+}
 namespace kernel {
 namespace schedule {
 class Client;
@@ -31,6 +33,8 @@ class ResourceManager : public RSSObject {
   std::shared_ptr<data::order::Route> paths_to_route(std::vector<PointPtr> ps);
   std::pair<ResType, std::shared_ptr<RSSResource>> find(
       const std::string& name);
+  std::vector<std::shared_ptr<data::model::Point>> get_all_idel_points();
+  std::pair<std::shared_ptr<data::model::Alleyway>, int> get_alleyway(PointPtr);
 
  public:
   std::mutex mut;

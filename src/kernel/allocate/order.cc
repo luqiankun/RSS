@@ -38,13 +38,10 @@ void OrderPool::cancel_order(size_t order_uuid) {
 
 void OrderPool::pop(const TransOrderPtr &order) {
   for (auto &[name, ords] : orderpool) {
-    for (auto iter = ords.begin(); iter != ords.end();) {
-      if (*iter == order) {
-        iter = ords.erase(iter);
-        ended_orderpool.push_back(order);
-      } else {
-        ++iter;
-      }
+    if (ords.back() == order) {
+      ords.pop_back();
+      ended_orderpool.push_back(order);
+      break;
     }
   }
   for (auto iter = orderpool.begin(); iter != orderpool.end();) {
@@ -56,36 +53,47 @@ void OrderPool::pop(const TransOrderPtr &order) {
   }
 }
 void OrderPool::push(const TransOrderPtr &order) {
+  std::string name{"unspecified"};
   if (order->intended_vehicle.lock()) {
-    bool flag = false;
-    for (auto &o : orderpool) {
-      if (o.first == order->intended_vehicle.lock()->name) {
-        o.second.push_back(order);
-        flag = true;
-        break;
-      }
+    name = order->intended_vehicle.lock()->name;
+  }
+  bool flag = false;
+  for (auto &o : orderpool) {
+    if (o.first == order->intended_vehicle.lock()->name) {
+      o.second.push_back(order);
+      std::sort(o.second.begin(), o.second.end(), OrderCmp());
+      flag = true;
+      break;
     }
-    if (!flag) {
-      orderpool.emplace_back(
-         order->intended_vehicle.lock()->name, std::vector{order});
+  }
+  if (!flag) {
+    std::deque<TransOrderPtr> queue;
+    queue.push_back(order);
+    orderpool.emplace_back(
+        std::pair{order->intended_vehicle.lock()->name, queue});
+  }
+}
+void OrderPool::redistribute(const TransOrderPtr &order) {
+  for (auto &x : ended_orderpool) {
+    if (x == order) {
+      order->state = data::order::TransportOrder::State::RAW;
+      push(order);
+      break;
     }
-  } else {
-    orderpool.emplace_back(std::pair{"", std::vector{order}});
   }
 }
 
-std::pair<std::string, std::vector<TransOrderPtr>> OrderPool::get_next_vec() {
+std::pair<std::string, TransOrderPtr> OrderPool::get_next_ord() {
   update_quence();
   if (orderpool.empty()) {
-    return std::pair{"", std::vector<TransOrderPtr>{}};
+    return std::pair{"", nullptr};
   } else {
     if (cur_index >= orderpool.size()) {
       cur_index = 0;
     }
     auto current = orderpool.at(cur_index);
     cur_index++;
-
-    return current;
+    return {current.first, current.second.back()};
   }
 }
 
@@ -125,4 +133,4 @@ void OrderPool::cancel_all_order() {
     x->state = data::order::TransportOrder::State::WITHDRAWL;
   }
 }
-} // namespace kernel::allocate
+}  // namespace kernel::allocate

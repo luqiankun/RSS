@@ -2,6 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include "../../include/component/data/model/alleyway.hpp"
 #include "../../include/component/data/model/envelope.hpp"
 #include "../../include/kernel/driver/vehicle.hpp"
 bool RSS::init_resource() {
@@ -816,9 +817,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             LOG(INFO) << path_->name;
           }
           auto allyway = std::make_shared<data::model::Alleyway>(
-              points.front()->name + "-alleyway");
-          allyway->alley = paths;
-          allyway->vertices = points;
+              points.front()->name + "-alleyway", paths, points);
           resource->alleyways.push_back(allyway);
         }
       }
@@ -1151,7 +1150,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     dispatcher->go_home = [&](auto name, auto veh) { home_order(name, veh); };
     dispatcher->order_empty = [&]() { return orderpool->is_empty(); };
     dispatcher->pop_order = [&](auto ord) { orderpool->pop(ord); };
-    dispatcher->get_next_vec = [&]() { return orderpool->get_next_vec(); };
+    dispatcher->get_next_ord = [&]() { return orderpool->get_next_ord(); };
     dispatcher->go_charge = [&](auto name, auto veh) {
       charge_order(name, veh);
     };
@@ -1290,6 +1289,8 @@ RSS::~RSS() {
 
 bool RSS::init_dispatcher() {
   dispatcher = std::make_shared<kernel::dispatch::Dispatcher>("Dispatcher");
+  dispatcher->conflict_pool =
+      std::make_shared<kernel::dispatch::ConflictPool>(shared_from_this());
   CLOG(INFO, rss_log) << "init dispatcher ok\n";
   return true;
 }
@@ -2046,7 +2047,7 @@ std::pair<int, std::string> RSS::get_vehicles(const std::string &state) const {
     if (state == "IDLE") {
       json res = json::array();
       for (auto &v : dispatcher->vehicles) {
-        if (v->state == kernel::driver::Vehicle::State::IDEL) {
+        if (v->state == kernel::driver::Vehicle::State::IDLE) {
           res.push_back(vehicle_to_json(v));
         }
       }
@@ -3231,7 +3232,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     dispatcher->go_home = [&](auto name, auto veh) { home_order(name, veh); };
     dispatcher->order_empty = [&]() { return orderpool->is_empty(); };
     dispatcher->pop_order = [&](auto ord) { orderpool->pop(ord); };
-    dispatcher->get_next_vec = [&]() { return orderpool->get_next_vec(); };
+    dispatcher->get_next_ord = [&]() { return orderpool->get_next_ord(); };
     dispatcher->go_charge = [&](auto name, auto veh) {
       charge_order(name, veh);
     };

@@ -162,7 +162,70 @@
         <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
         <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
         <property name="vda5050:version" value="2.0"></property>
-        <vehicleLayout color="#FF0000"></vehicleLayout>
+        <vehicleLayout color="#633974"></vehicleLayout>
+    </vehicle>
+    <vehicle name="3B" length="1000" energyLevelCritical="20" energyLevelGood="90"
+        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
+        maxReverseVelocity="3000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
+        <property name="vda5050:errors.fatal" value="Value unknown"></property>
+        <property name="vda5050:errors.warning" value="Value unknown"></property>
+        <property name="vda5050:information.debug" value="Value unknown"></property>
+        <property name="vda5050:information.info" value="Value unknown"></property>
+        <property name="vda5050:interfaceName" value="uagv"></property>
+        <property name="vda5050:manufacturer" value="tx"></property>
+        <property name="vda5050:minVisualizationInterval" value="1000"></property>
+        <property name="vda5050:orderQueueSize" value="2"></property>
+        <property name="vda5050:paused" value="false"></property>
+        <property name="vda5050:rechargeOperation" value="charge"></property>
+        <property name="vda5050:serialNumber" value="tx4"></property>
+        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
+        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
+        <property name="vda5050:version" value="2.0"></property>
+        <vehicleLayout color="#1d8348"></vehicleLayout>
+    </vehicle>
+    <vehicle name="3C" length="1000" energyLevelCritical="20" energyLevelGood="90"
+        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
+        maxReverseVelocity="3000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
+        <property name="vda5050:errors.fatal" value="Value unknown"></property>
+        <property name="vda5050:errors.warning" value="Value unknown"></property>
+        <property name="vda5050:information.debug" value="Value unknown"></property>
+        <property name="vda5050:information.info" value="Value unknown"></property>
+        <property name="vda5050:interfaceName" value="uagv"></property>
+        <property name="vda5050:manufacturer" value="tx"></property>
+        <property name="vda5050:minVisualizationInterval" value="1000"></property>
+        <property name="vda5050:orderQueueSize" value="2"></property>
+        <property name="vda5050:paused" value="false"></property>
+        <property name="vda5050:rechargeOperation" value="charge"></property>
+        <property name="vda5050:serialNumber" value="tx2"></property>
+        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
+        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
+        <property name="vda5050:version" value="2.0"></property>
+        <vehicleLayout color="#212f3c"></vehicleLayout>
+    </vehicle>
+    <vehicle name="3D" length="1000" energyLevelCritical="20" energyLevelGood="90"
+        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
+        maxReverseVelocity="3000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
+        <property name="vda5050:errors.fatal" value="Value unknown"></property>
+        <property name="vda5050:errors.warning" value="Value unknown"></property>
+        <property name="vda5050:information.debug" value="Value unknown"></property>
+        <property name="vda5050:information.info" value="Value unknown"></property>
+        <property name="vda5050:interfaceName" value="uagv"></property>
+        <property name="vda5050:manufacturer" value="tx"></property>
+        <property name="vda5050:minVisualizationInterval" value="1000"></property>
+        <property name="vda5050:orderQueueSize" value="2"></property>
+        <property name="vda5050:paused" value="false"></property>
+        <property name="vda5050:rechargeOperation" value="charge"></property>
+        <property name="vda5050:serialNumber" value="tx1"></property>
+        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
+        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
+        <property name="vda5050:version" value="2.0"></property>
+        <vehicleLayout color="#641e16"></vehicleLayout>
     </vehicle>
     <locationType name="Transfer">
         <allowedOperation name="Drop"></allowedOperation>

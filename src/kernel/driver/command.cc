@@ -71,11 +71,36 @@ Command::Command(const std::string &n) : RSSObject(n) {
   cbs[State::INIT] = [&] {
     assert_valid;
     state = State::ALLOCATING;
-    auto driver_order = order->driverorders[order->current_driver_index];
+    // auto driver_order = order->driverorders[order->current_driver_index];
   };
   cbs[State::ALLOCATING] = [&] {
     assert_valid;
+    // 冲突判断
     auto driver_order = order->driverorders[order->current_driver_index];
+    std::deque<std::shared_ptr<data::order::Step>> steps =
+        driver_order->route->steps;
+    for (auto &x : steps) {
+      auto st_owner = x->path->source_point.lock()->owner.lock();
+      auto ed_owner = x->path->destination_point.lock()->owner.lock();
+      if (st_owner && st_owner != veh) {
+        auto st_veh = std::dynamic_pointer_cast<Vehicle>(st_owner);
+        if (st_veh->state == Vehicle::State::IDLE &&
+            st_veh->avoid_state == Vehicle::Avoid::Normal) {
+          veh->redistribute_cur_order();
+          state = State::DISPOSABLE;
+          return;
+        }
+      }
+      if (ed_owner && ed_owner != veh) {
+        auto ed_veh = std::dynamic_pointer_cast<Vehicle>(ed_owner);
+        if (ed_veh->state == Vehicle::State::IDLE &&
+            ed_veh->avoid_state == Vehicle::Avoid::Normal) {
+          veh->redistribute_cur_order();
+          state = State::DISPOSABLE;
+          return;
+        }
+      }
+    }
     if (driver_order->state == data::order::DriverOrder::State::PRISTINE) {
       driver_order->state = data::order::DriverOrder::State::TRAVELLING;
     }

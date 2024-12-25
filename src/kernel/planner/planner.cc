@@ -246,12 +246,12 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
     return res;
   }
   {
-    if (st == cur_begin) {
-      CLOG(INFO, planner_log) << "already sovled\n";
-    } else {
-      solver->solver(st);
-      cur_begin = st;
-    }
+    // if (st == cur_begin) {
+    //   CLOG(INFO, planner_log) << "already sovled\n";
+    // } else {
+    solver->solver(st);
+    cur_begin = st;
+    // }
     auto paths = solver->get_paths(ed);
     if (paths.empty()) {
     } else {
@@ -294,7 +294,7 @@ Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
       x->set_type(AType::ATYPE_UNKNOWN);
     }
   }
-  CLOG(INFO, planner_log) << "find " << res.size() << " s paths\n";
+  // CLOG(INFO, planner_log) << "find " << res.size() << " s paths\n";
   return res;
 }
 
@@ -314,7 +314,7 @@ Planner::to_model_path(
 std::vector<std::vector<std::shared_ptr<data::model::Point>>>
 Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
                            const std::shared_ptr<data::model::Point> &end) {
-  cpu_timer t("try to find two paths");
+  // cpu_timer t("try to find two paths");
   auto paths = find_paths_with_vertex(begin, end);
   if (paths.empty() || begin == end) {
     CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
@@ -388,7 +388,7 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
       temp.erase(last, temp.end());
       paths.push_back(temp.front());
     }
-    CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
+    // CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
     for (auto &x : paths) {
       std::stringstream ss;
       ss << "\n.- - - - - - - - - - - - - - - - - - - - - - -.\n"
@@ -408,7 +408,7 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
         ss << "this path is not open";
       }
       ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
-      CLOG(INFO, planner_log) << ss.str();
+      // CLOG(INFO, planner_log) << ss.str();
     }
     return to_model_path(paths);
   }

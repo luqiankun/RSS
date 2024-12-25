@@ -937,17 +937,20 @@ int main(int argc, char** argv) {
   }
   LOG(INFO) << "ip: " << ip << "\t" << "only: " << only << "\n";
 
-  SimRabbit3 agv1("uagv", "tx1", "2.0", "rw", "P1", 45150, -107450);
+  SimRabbit3 agv1("uagv", "tx1", "2.0", "tx", "Point-0003", 25000, 19500);
   agv1.set_mqtt_ops(agv1.serial_number, ip);
-  SimRabbit3 agv2("uagv", "tx2", "2.0", "rw", "P4", 74475, -107450);
+  SimRabbit3 agv2("uagv", "tx2", "2.0", "tx", "P4", 17000, 8500);
   agv2.set_mqtt_ops(agv2.serial_number, ip);
   SimRabbit3 agv3("uagv", "tx3", "2.0", "tx", "P1", 7000, 19500);
   agv3.set_mqtt_ops(agv3.serial_number, ip);
-  SimRabbit3 agv4("uagv", "tx4", "2.0", "tx", "P1", 45150, -107450);
+  SimRabbit3 agv4("uagv", "tx4", "2.0", "tx", "P3", 17000, 15000);
   agv4.set_mqtt_ops(agv4.serial_number, ip);
   if (only) {
     agv3.start();
     agv4.start();
+    agv2.start();
+    agv1.start();
+
   } else {
     agv1.start();
     agv2.start();

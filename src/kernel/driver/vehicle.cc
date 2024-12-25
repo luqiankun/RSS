@@ -9,6 +9,8 @@
 #include "../../../include/component/vda5050/vda5050order.hpp"
 #include "../../../include/kernel/allocate/order.hpp"
 #include "../../../include/kernel/allocate/resource.hpp"
+#include "../../../include/kernel/dispatch/dispatch.hpp"
+
 namespace kernel::driver {
 
 std::string vehicle_state_to_str(Vehicle::State state) {
@@ -18,7 +20,7 @@ std::string vehicle_state_to_str(Vehicle::State state) {
   } else if (state == Vehicle::State::ERROR) {
     res = "ERROR";
 
-  } else if (state == Vehicle::State::IDEL) {
+  } else if (state == Vehicle::State::IDLE) {
     res = "IDLE";
 
   } else if (state == Vehicle::State::EXECUTING) {
@@ -29,7 +31,45 @@ std::string vehicle_state_to_str(Vehicle::State state) {
   }
   return res;
 }
-
+void Vehicle::redistribute_cur_order() {
+  if (current_order) {
+    auto order_pool = orderpool.lock();
+    auto res = resource.lock();
+    if (!res) {
+      CLOG(ERROR, driver_log) << name << " resource is null\n";
+      return;
+    }
+    if (!order_pool) {
+      CLOG(ERROR, driver_log) << name << " order_pool is null\n";
+      return;
+    }
+    process_state = proState::IDEL;
+    future_allocate_resources.clear();
+    std::vector<std::shared_ptr<RSSResource>> temp;
+    for (auto &a : this->allocated_resources) {
+      for (auto &x : a) {
+        if (x != this->current_point) {
+          temp.push_back(x);
+        }
+      }
+    }
+    res->free(temp, shared_from_this());
+    now_order_state = Vehicle::nowOrder::END;
+    process_state = proState::IDEL;
+    avoid_state = Avoid::Normal;
+    CLOG_IF(state != State::IDLE, INFO, driver_log)
+        << name << " " << "state transform to : ["
+        << vehicle_state_to_str(State::IDLE) << "]\n";
+    state = State::IDLE;
+    idle_time = get_now_utc_time();
+    CLOG(INFO, driver_log) << name << " " << "now is idle "
+                           << get_time_fmt(idle_time) << "\n";
+    auto ord = current_order;
+    ord->conflict_pool.lock()->reset_state(ord);
+    current_order.reset();
+    order_pool->redistribute(ord);
+  }
+}
 void Vehicle::execute_action(
     const std::shared_ptr<data::order::DriverOrder::Destination> &dest) {
   pool.commit([=] {
@@ -193,16 +233,18 @@ void Vehicle::get_next_ord() {
     next_command();
   } else {
     process_state = proState::IDEL;
+    avoid_state = Avoid::Normal;
     if (process_charging) {
       CLOG_IF(state != State::CHARGING, INFO, driver_log)
           << name << " " << "state transform to : ["
           << vehicle_state_to_str(State::CHARGING) << "]\n";
       state = State::CHARGING;
     } else {
-      CLOG_IF(state != State::IDEL, INFO, driver_log)
+      CLOG_IF(state != State::IDLE, INFO, driver_log)
           << name << " " << "state transform to : ["
-          << vehicle_state_to_str(State::IDEL) << "]\n";
-      state = State::IDEL;
+          << vehicle_state_to_str(State::IDLE) << "]\n";
+      state = State::IDLE;
+      avoid_state = Avoid::Normal;
       idle_time = get_now_utc_time();
       CLOG(INFO, driver_log)
           << name << " " << "now is idle " << get_time_fmt(idle_time) << "\n";
@@ -355,7 +397,7 @@ void Vehicle::command_done() {
 }
 
 std::string Vehicle::get_state() const {
-  if (state == State::IDEL) {
+  if (state == State::IDLE) {
     return "IDLE";
   } else if (state == State::EXECUTING) {
     return "EXECUTING";
@@ -435,7 +477,7 @@ void Vehicle::receive_task(
     // order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " " << order->name
                             << " failed : " << name << " state is UNAVAILABLE";
-  } else if (state == State::IDEL) {
+  } else if (state == State::IDLE) {
     CLOG_IF(state != State::EXECUTING, INFO, driver_log)
         << name << " state transform to : ["
         << vehicle_state_to_str(State::EXECUTING) << "]\n";
@@ -539,7 +581,8 @@ void SimVehicle::init() {
     CLOG(ERROR, driver_log) << name << " resource is null\n";
     return;
   }
-  state = State::IDEL;
+  state = State::IDLE;
+  avoid_state = Avoid::Normal;
   if (!last_point) {
     state = State::UNKNOWN;
     return;
@@ -715,7 +758,7 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
               if (!vdastate.agv_position.has_value()) {
                 this->position = current_point->position;
               }
-              if (state == State::IDEL &&
+              if (state == State::IDLE &&
                   last_vdastate.last_node_id != vdastate.last_node_id) {
                 LOG(INFO) << last_vdastate.last_node_id << " "
                           << vdastate.last_node_id;
@@ -748,7 +791,8 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
       auto last_state = state;
       if (state == Vehicle::State::UNKNOWN) {
         if (veh_state == vda5050::VehicleMqttStatus::ONLINE) {
-          state = State::IDEL;
+          state = State::IDLE;
+          avoid_state = Avoid::Normal;
           idle_time = get_now_utc_time();
         }
       }
@@ -763,7 +807,8 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
       if (process_charging) {
         if (energy_level > energy_level_good &&
             state == Vehicle::State::CHARGING) {
-          state = Vehicle::State::IDEL;
+          state = Vehicle::State::IDLE;
+          avoid_state = Avoid::Normal;
           idle_time = get_now_utc_time();
           process_charging = false;
         }

@@ -3,8 +3,11 @@
 #include <utility>
 
 #include "../../../include/3rdparty/uuid/uuid.hpp"
+#include "../../../include/component/data/model/alleyway.hpp"
 #include "../../../include/component/util/tools.hpp"
 #include "../../../include/kernel/driver/vehicle.hpp"
+#include "../../../include/kernel/planner/planner.hpp"
+#include "../../../include/main/rss.hpp"
 namespace kernel::dispatch {
 VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
   if (vehicles.empty()) {
@@ -19,7 +22,7 @@ VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
     v_pos = v->position;
     // if (v->state == driver::Vehicle::State::IDLE &&
     //     v->proc_state == driver::Vehicle::ProcState::AWAITING_ORDER) {
-    if (v->state == driver::Vehicle::State::IDEL) {
+    if (v->state == driver::Vehicle::State::IDLE) {
       if (!v->paused) {
         idle_temp.emplace_back(v_pos, v);
       }
@@ -171,14 +174,14 @@ void Dispatcher::idle_detect() {
                     "_goto_charge",
                 v);
     } else if (v->energy_level <= v->energy_level_good) {
-      if (v->state == driver::Vehicle::State::IDEL) {
+      if (v->state == driver::Vehicle::State::IDLE) {
         go_charge("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
                       "_goto_charge",
                   v);
       }
     } else {
       //
-      if (v->state == driver::Vehicle::State::IDEL) {
+      if (v->state == driver::Vehicle::State::IDLE) {
         auto dt = now - v->idle_time;
         auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
         if (dt_s.count() > 15) {
@@ -209,125 +212,148 @@ void Dispatcher::dispatch_once() {
   //     }
   //   }
   // }
-  auto current_vec = get_next_vec();
-  if (current_vec.second.empty()) {
+  auto current_ord = get_next_ord().second;
+  if (!current_ord) {
     return;
   }
-  for (auto &ord : current_vec.second) {
-    if (ord->state == data::order::TransportOrder::State::RAW) {
-      // 重写
-      if (ord->driverorders.empty()) {
-        // 空的
-        ord->state = data::order::TransportOrder::State::UNROUTABLE;
-        continue;
-      }
-      auto v = ord->intended_vehicle.lock();
-      if (!v) {
-        if (auto_select) {
-          auto dest = ord->driverorders[ord->current_driver_index]
-                          ->destination->destination.lock();
-          auto dest_check = find_res(dest->name);
-          allocate::PointPtr start;
-          if (dest_check.first == allocate::ResourceManager::ResType::Point) {
-            start = std::dynamic_pointer_cast<data::model::Point>(
-                dest_check.second);
-          } else if (dest_check.first ==
-                     allocate::ResourceManager::ResType::Location) {
-            start = std::dynamic_pointer_cast<data::model::Location>(
-                        dest_check.second)
-                        ->link.lock();
-          }
-          auto v_select = select_vehicle(start);
-          if (!v_select) {
-            CLOG(WARNING, dispatch_log)
-                << ord->name << " not exist idle vehicle \n";
-            continue;
-          } else {
-            ord->intended_vehicle = v_select;
-          }
+  if (current_ord->state == data::order::TransportOrder::State::RAW) {
+    // 重写
+    if (current_ord->driverorders.empty()) {
+      // 空的
+      current_ord->state = data::order::TransportOrder::State::UNROUTABLE;
+    }
+    auto v = current_ord->intended_vehicle.lock();
+    if (!v) {
+      if (auto_select) {
+        auto dest = current_ord->driverorders[current_ord->current_driver_index]
+                        ->destination->destination.lock();
+        auto dest_check = find_res(dest->name);
+        allocate::PointPtr start;
+        if (dest_check.first == allocate::ResourceManager::ResType::Point) {
+          start =
+              std::dynamic_pointer_cast<data::model::Point>(dest_check.second);
+        } else if (dest_check.first ==
+                   allocate::ResourceManager::ResType::Location) {
+          start = std::dynamic_pointer_cast<data::model::Location>(
+                      dest_check.second)
+                      ->link.lock();
+        }
+        auto v_select = select_vehicle(start);
+        if (!v_select) {
+          CLOG(WARNING, dispatch_log)
+              << current_ord->name << " not exist idle vehicle \n";
+        } else {
+          current_ord->intended_vehicle = v_select;
         }
       }
-      if (!ord->intended_vehicle.lock()) {
-        CLOG(WARNING, dispatch_log)
-            << ord->name << " not exist intended_vehicle \n";
-        continue;
-      }
-      ord->state = data::order::TransportOrder::State::ACTIVE;
-      CLOG(INFO, dispatch_log) << ord->name << " status: [active]\n";
-    } else if (ord->state == data::order::TransportOrder::State::ACTIVE) {
-      for (auto &x : ord->dependencies) {
-        if (const auto dep = x.lock()) {
-          if (dep->state != data::order::TransportOrder::State::FINISHED) {
-            continue;
-          }
+    }
+    if (!current_ord->intended_vehicle.lock()) {
+      CLOG(WARNING, dispatch_log)
+          << current_ord->name << " not exist intended_vehicle \n";
+    }
+    current_ord->state = data::order::TransportOrder::State::ACTIVE;
+    CLOG(INFO, dispatch_log) << current_ord->name << " status: [active]\n";
+  } else if (current_ord->state == data::order::TransportOrder::State::ACTIVE) {
+    for (auto &x : current_ord->dependencies) {
+      if (const auto dep = x.lock()) {
+        if (dep->state != data::order::TransportOrder::State::FINISHED) {
+          return;
         }
       }
+    }
+    auto su = current_ord->intended_vehicle.lock()->state;
+    if (su == driver::Vehicle::State::ERROR) {
+      CLOG(ERROR, driver_log)
+          << current_ord->intended_vehicle.lock()->name << " ERROR.\n";
+      current_ord->state = data::order::TransportOrder::State::FAILED;
+      // pop_order(current_ord);
+    } else if (su != driver::Vehicle::State::IDLE) {
+      return;
+    } else {
       // 规划路径
-      if (ord->intended_vehicle.lock()->plan_route(ord)) {
-        ord->state = data::order::TransportOrder::State::DISPATCHABLE;
-        CLOG(INFO, dispatch_log) << ord->name << " status: [dispatchable]\n";
+      if (current_ord->intended_vehicle.lock()->plan_route(current_ord)) {
+        auto conflict_state = conflict_pool->get_state(current_ord);
+        if (conflict_state == Conflict::State::Err) {
+          // TODO 直接失败还是继续处理？
+          CLOG(ERROR, dispatch_log)
+              << current_ord->name << " status: [conflict]\n";
+          current_ord->state = data::order::TransportOrder::State::FAILED;
+        }
+
+        else if (conflict_state == Conflict::State::END) {
+          current_ord->state = data::order::TransportOrder::State::DISPATCHABLE;
+          CLOG(INFO, dispatch_log)
+              << current_ord->name << " status: [dispatchable]\n";
+        } else {
+          conflict_pool->solve(current_ord);
+        }
+
       } else {
-        ord->state = data::order::TransportOrder::State::UNROUTABLE;
-        CLOG(INFO, dispatch_log) << ord->name << " status: [unroutable]\n";
+        current_ord->state = data::order::TransportOrder::State::UNROUTABLE;
+        CLOG(INFO, dispatch_log)
+            << current_ord->name << " status: [unroutable]\n";
       }
     }
   }
-  auto current = current_vec.second.front();
-  if (current->state == data::order::TransportOrder::State::WITHDRAWL) {
-    current->state = data::order::TransportOrder::State::FAILED;
-    CLOG(WARNING, dispatch_log) << current->name << " status: [withdrawl]\n";
+
+  if (current_ord->state == data::order::TransportOrder::State::WITHDRAWL) {
+    current_ord->state = data::order::TransportOrder::State::FAILED;
+    CLOG(WARNING, dispatch_log)
+        << current_ord->name << " status: [withdrawl]\n";
   }
-  if (current->state == data::order::TransportOrder::State::DISPATCHABLE) {
-    auto su = current->intended_vehicle.lock()->state;
-    if (su == driver::Vehicle::State::IDEL ||
+  if (current_ord->state == data::order::TransportOrder::State::DISPATCHABLE) {
+    auto su = current_ord->intended_vehicle.lock()->state;
+    if (su == driver::Vehicle::State::IDLE ||
         su == driver::Vehicle::State::CHARGING) {
-      current->intended_vehicle.lock()->receive_task(current);
-      current->processing_vehicle = current->intended_vehicle;
-      pop_order(current);
+      current_ord->intended_vehicle.lock()->receive_task(current_ord);
+      current_ord->processing_vehicle = current_ord->intended_vehicle;
+      pop_order(current_ord);
     } else if (su == driver::Vehicle::State::EXECUTING) {
-      if (current->intended_vehicle.lock()->current_order->state ==
-          data::order::TransportOrder::State::WITHDRAWL) {
-        current->intended_vehicle.lock()->receive_task(current);
-        current->processing_vehicle = current->intended_vehicle;
-        pop_order(current);
-      } else {
-      }
+      // if (current_ord->intended_vehicle.lock()->current_order->state ==
+      //     data::order::TransportOrder::State::WITHDRAWL) {
+      //   current_ord->intended_vehicle.lock()->receive_task(current_ord);
+      //   current_ord->processing_vehicle = current_ord->intended_vehicle;
+      //   pop_order(current_ord);
+      // } else {
+      // }
     } else if (su == driver::Vehicle::State::UNAVAILABLE) {
-      current->state = data::order::TransportOrder::State::UNROUTABLE;
+      current_ord->state = data::order::TransportOrder::State::UNROUTABLE;
       CLOG(ERROR, driver_log)
-          << current->intended_vehicle.lock()->name << " UNROUTABLE.\n";
-      // pop_order(current);
+          << current_ord->intended_vehicle.lock()->name << " UNROUTABLE.\n";
+      // pop_order(current_ord);
     } else if (su == driver::Vehicle::State::ERROR) {
       CLOG(ERROR, driver_log)
-          << current->intended_vehicle.lock()->name << " ERROR.\n";
-      current->state = data::order::TransportOrder::State::FAILED;
-      // pop_order(current);
+          << current_ord->intended_vehicle.lock()->name << " ERROR.\n";
+      current_ord->state = data::order::TransportOrder::State::FAILED;
+      // pop_order(current_ord);
     } else {
       CLOG(ERROR, driver_log)
-          << current->intended_vehicle.lock()->name << " UNKNOWN.\n";
-      current->state = data::order::TransportOrder::State::FAILED;
-      // pop_order(current);
+          << current_ord->intended_vehicle.lock()->name << " UNKNOWN.\n";
+      current_ord->state = data::order::TransportOrder::State::FAILED;
+      // pop_order(current_ord);
     }
     // }
   }
-  if (current->state == data::order::TransportOrder::State::BEING_PROCESSED) {
-    pop_order(current);
+  if (current_ord->state ==
+      data::order::TransportOrder::State::BEING_PROCESSED) {
+    pop_order(current_ord);
     CLOG(INFO, dispatch_log)
-        << current->name << " status: [beging_processed]\n";
+        << current_ord->name << " status: [beging_processed]\n";
 
     // wait  do nothing
   }
-  if (current->state == data::order::TransportOrder::State::FINISHED) {
-    pop_order(current);
-    CLOG(WARNING, dispatch_log) << current->name << " status: [finished]\n";
+  if (current_ord->state == data::order::TransportOrder::State::FINISHED) {
+    pop_order(current_ord);
+    CLOG(WARNING, dispatch_log) << current_ord->name << " status: [finished]\n";
   }
-  if (current->state == data::order::TransportOrder::State::FAILED) {
-    pop_order(current);
-    CLOG(WARNING, dispatch_log) << current->name << " status: [failed]\n";
+  if (current_ord->state == data::order::TransportOrder::State::FAILED) {
+    pop_order(current_ord);
+    CLOG(WARNING, dispatch_log) << current_ord->name << " status: [failed]\n";
   }
-  if (current->state == data::order::TransportOrder::State::UNROUTABLE) {
-    pop_order(current);
-    CLOG(WARNING, dispatch_log) << current->name << " status: [unroutable]\n";
+  if (current_ord->state == data::order::TransportOrder::State::UNROUTABLE) {
+    pop_order(current_ord);
+    CLOG(WARNING, dispatch_log)
+        << current_ord->name << " status: [unroutable]\n";
   }
 }
 void Dispatcher::brake_deadlock(const std::vector<VehPtr> &d_loop) {
@@ -346,9 +372,9 @@ void Dispatcher::run() {
     // int con = 0;
     while (!dispose) {
       std::unique_lock<std::mutex> lock(mut);
-      cv.wait_for(lock, std::chrono::milliseconds(100),
+      cv.wait_for(lock, std::chrono::milliseconds(10),
                   [&] { return !order_empty || dispose; });
-      idle_detect();
+      // idle_detect();
       auto deadloop = deadlock_loop();
       if (!deadloop.empty()) {
         std::stringstream ss;
@@ -361,13 +387,13 @@ void Dispatcher::run() {
           ss << v->name << " ,";
         }
         ss << "]\n";
-        CLOG_EVERY_N(20, ERROR, dispatch_log) << "deadlock --> " << ss.str();
+        CLOG_EVERY_N(200, ERROR, dispatch_log) << "deadlock --> " << ss.str();
         brake_deadlock(deadloop);
       }
       auto blockloop = block_loop();
       if (!blockloop.empty()) {
         assert(blockloop.size() == 2);
-        CLOG_EVERY_N(20, ERROR, dispatch_log)
+        CLOG_EVERY_N(200, ERROR, dispatch_log)
             << "blocklock --> " << blockloop.front()->name << " blocked by "
             << blockloop.back()->name << "\n";
         brake_blocklock(blockloop);
@@ -376,5 +402,585 @@ void Dispatcher::run() {
     }
   });
 }
+void Conflict::update() {
+  assert(state == State::Raw);
+  std::stack<VehPtr>().swap(vehicles);
+  graph.clear();
+  auto obj_ = order->driverorders[order->current_driver_index]
+                  ->destination->destination.lock();
+  auto obj_rss = resource_manager.lock()->find(obj_->name);
+  if (obj_rss.first == allocate::ResourceManager::ResType::Point) {
+    this->obj = std::dynamic_pointer_cast<data::model::Point>(obj_rss.second);
+  } else if (obj_rss.first == allocate::ResourceManager::ResType::Location) {
+    this->obj = std::dynamic_pointer_cast<data::model::Location>(obj_rss.second)
+                    ->link.lock();
+  } else {
+    CLOG(ERROR, dispatch_log) << "obj not found\n";
+    state = State::Err;
+  }
+  path = planner.lock()
+             ->find_paths(order->intended_vehicle.lock()->current_point, obj)
+             .front();
+  for (int i = 1; i < path.size(); i++) {
+    auto owner = path[i]->owner.lock();
+    if (owner) {
+      auto veh = std::dynamic_pointer_cast<driver::Vehicle>(owner);
+      if (veh->state == driver::Vehicle::State::IDLE &&
+          veh->avoid_state == driver::Vehicle::Avoid::Normal &&
+          veh != order->intended_vehicle.lock()) {
+        vehicles.push(veh);
+        rm_depends.insert(veh);
+      }
+    }
+  }
+}
+struct Cmp {
+  // 大顶堆
+  bool operator()(std::pair<allocate::PointPtr, float> a,
+                  std::pair<allocate::PointPtr, float> b) {
+    return a.second < b.second;
+  }
+};
+void Conflict::solve_once() {
+  if (state == State::Raw) {
+    update();
+    if (vehicles.empty()) {
+      state = State::Solved;
+    } else {
+      bool main_veh_move{false};
+      while (!vehicles.empty() || main_veh_move) {
+        auto top = vehicles.top();
+        auto allocate_point = select_point(top);
+        if (allocate_point == nullptr) {
+          CLOG(ERROR, dispatch_log) << "no point for " << top->name << "\n";
+          state = State::Err;
+          return;
+        } else {
+          // 有可选分配点
+          graph.push_back(std::make_pair(top, allocate_point));
+          vehicles.pop();
+          // TODO 选中点是否有车辆占用
+          //  检查冲突
+          auto cur_path = planner.lock()
+                              ->find_paths(top->current_point, allocate_point)
+                              .front();
+          for (int i = 1; i < cur_path.size(); i++) {
+            auto owner = cur_path[i]->owner.lock();
+            if (owner) {
+              auto veh = std::dynamic_pointer_cast<driver::Vehicle>(owner);
+              if (veh == order->intended_vehicle.lock()) {
+                // 如果是主车辆
+                main_veh_move = true;
+                break;
+              } else if (veh->state == driver::Vehicle::State::IDLE &&
+                         veh->avoid_state == driver::Vehicle::Avoid::Normal) {
+                if (rm_depends.find(veh) != rm_depends.end()) {
+                  // 如果是队列里的车辆，不管
+                } else {
+                  // 新冲突车辆
+                  vehicles.push(veh);
+                  rm_depends.insert(veh);
+                }
+              }
+            }
+          }
+        }
+      }
+      if (main_veh_move) {
+        state = State::SelfMove;
+      } else {
+        // 分完后判断是否冲突
+        bool conflict = false;
+        int try_count = 0;
+        while (true) {
+          //
+          for (int i = 0; i < graph.size(); i++) {
+            for (int j = i + 1; j < graph.size(); j++) {
+              if (one_of_other(graph[i], graph[j])) {
+                // 有冲突
+                // 交换
+                auto temp = graph[i].second;
+                graph[i].second = graph[j].second;
+                graph[j].second = temp;
+                goto sovle_again;
+              }
+            }
+          }
+          //
+          break;
+        sovle_again:
+          try_count++;
+          if (try_count > 100) {
+            conflict = true;
+            break;
+          }
+        }
+        if (!conflict) {
+          // 无冲突
+          // 推挤
+          // std::set<std::shared_ptr<data::model::Alleyway>> visited;
+          // for (auto &g : graph) {
+          //   auto alley =
+          //   resource_manager.lock()->get_alleyway(g.second).first; if
+          //   (visited.find(alley) == visited.end()) {
+          //     visited.insert(alley);
+          //     int max_index = alley->size();
+          //     int cur_index = max_index - 1;
+          //     int point_index = 0;
+          //     int veh_index = 0;
+          //     for (auto it = alley->vertices.rbegin();
+          //          it != alley->vertices.rend(); it++) {
+          //       auto owner = (*it)->owner.lock();
+          //       if (owner) {
+          //         for (auto &v_ : graph) {
+          //           if (v_.first == owner) {
+          //             continue;
+          //           }
+          //         }
+          //         auto veh =
+          //         std::dynamic_pointer_cast<driver::Vehicle>(owner); if
+          //         (veh->state == driver::Vehicle::State::IDLE &&
+          //             veh->avoid_state == driver::Vehicle::Avoid::Normal) {
+          //           bool flg = false;
+          //           if (veh_index != point_index) {
+          //             int v_index = 0;
+          //             for (auto &exist : graph) {
+          //               if (exist.first == veh) {
+          //                 flg = true;
+          //                 break;
+          //               }
+          //               v_index++;
+          //             }
+          //             if (!flg) {
+          //               graph.push_back(std::make_pair(
+          //                   veh, *(alley->vertices.rbegin() + veh_index)));
+          //             } else {
+          //               graph[v_index].second =
+          //                   *(alley->vertices.rbegin() + veh_index);
+          //             }
+          //           }
+          //           veh_index++;
+          //         }
+          //       }
+          //       point_index++;
+          //     }
+          //   }
+          // }
+          state = State::Solved;
+        } else {
+          CLOG(ERROR, dispatch_log) << "conflict\n";
+          state = State::Err;
+        }
+      }
+    }
+  } else if (state == State::Solved) {
+    // 车辆设置为避让状态
+    for (auto &x : graph) {
+      x.first->avoid_state = driver::Vehicle::Avoid::Avoiding;
+    }
+    state = State::Dispatching;
+  } else if (state == State::Dispatching) {
+    if (graph.empty()) {
+      state = State::Dispatched;
+      return;
+    }
+    auto node = graph.back();
+    auto veh = node.first;
+    auto point = node.second;
+    auto path = planner.lock()->find_paths(veh->current_point, point).front();
+    // 判断是否有交换冲突
+    for (auto &v : dispatcher.lock()->vehicles) {
+      if (v == veh) {
+        continue;
+      }
+      if (v->state == driver::Vehicle::State::EXECUTING) {
+        if (is_swap_conflict(path, v)) {
+          return;
+        }
+      }
+    }
+    // 无冲突
+    auto new_ord = std::make_shared<data::order::TransportOrder>(
+        "TOder_" + uuids::to_string(get_uuid()));
+    new_ord->create_time = get_now_utc_time();
+    new_ord->dead_time = new_ord->create_time + std::chrono::minutes(10);
+    new_ord->priority = int(data::order::Level::Level_3);
+    new_ord->intended_vehicle = veh;
+    new_ord->type = "MOVE";
+    new_ord->state = data::order::TransportOrder::State::RAW;
+    auto driver_order =
+        std::make_shared<data::order::DriverOrder>("DOder_" + point->name);
+    auto dest = orderpool.lock()->res_to_destination(
+        point, data::model::Actions::OpType::MOVE);
+    driver_order->destination = dest;
+    driver_order->transport_order = new_ord;
+    new_ord->driverorders.push_back(driver_order);
+    orderpool.lock()->push(new_ord);
+    dispatcher.lock()->notify();
+    graph.pop_back();
+  } else if (state == State::Dispatched) {
+    auto veh = order->intended_vehicle.lock();
+    auto path = planner.lock()->find_paths(veh->current_point, obj).front();
+    // 判断是否有交换冲突
+    for (auto &v : dispatcher.lock()->vehicles) {
+      if (v == veh) {
+        continue;
+      }
+      if (v->state == driver::Vehicle::State::EXECUTING) {
+        if (is_swap_conflict(path, v)) {
+          return;
+        }
+      }
+    }
+    for (auto &x : path) {
+      auto owner = x->owner.lock();
+      if (owner && owner != veh) {
+        auto cf_veh = std::dynamic_pointer_cast<driver::Vehicle>(owner);
+        if (cf_veh->avoid_state == driver::Vehicle::Avoid::Avoiding &&
+            cf_veh->state != driver::Vehicle::State::EXECUTING) {
+          return;
+        }
+      }
+    }
+    // 无冲突
+    state = State::END;
+  } else if (state == State::SelfMove) {
+    // 主车辆移动
+    graph.clear();
 
+    auto allocate_point = select_point(order->intended_vehicle.lock());
+    if (allocate_point == nullptr) {
+      state = State::Err;
+    } else {
+      // 有可选分配点
+      order->intended_vehicle.lock()->avoid_state =
+          driver::Vehicle::Avoid::Avoiding;
+      auto path =
+          planner.lock()
+              ->find_paths(order->intended_vehicle.lock()->current_point,
+                           allocate_point)
+              .front();
+      // 判断是否有交换冲突
+      for (auto &v : dispatcher.lock()->vehicles) {
+        if (v == order->intended_vehicle.lock()) {
+          continue;
+        }
+        if (v->state == driver::Vehicle::State::EXECUTING) {
+          if (is_swap_conflict(path, v)) {
+            return;
+          }
+        }
+      }
+      for (auto &x : path) {
+        auto owner = x->owner.lock();
+        if (owner && owner != order->intended_vehicle.lock()) {
+          auto cf_veh = std::dynamic_pointer_cast<driver::Vehicle>(owner);
+          if (cf_veh->avoid_state == driver::Vehicle::Avoid::Avoiding &&
+              cf_veh->state != driver::Vehicle::State::EXECUTING) {
+            return;
+          }
+        }
+      }
+      // 无冲突
+      // 推挤
+      // std::set<std::shared_ptr<data::model::Alleyway>> visited;
+      // auto alley =
+      // resource_manager.lock()->get_alleyway(allocate_point).first; if
+      // (visited.find(alley) == visited.end()) {
+      //   visited.insert(alley);
+      //   int max_index = alley->size();
+      //   int cur_index = max_index - 1;
+      //   int point_index = 0;
+      //   int veh_index = 0;
+      //   for (auto it = alley->vertices.rbegin(); it !=
+      //   alley->vertices.rend();
+      //        it++) {
+      //     auto owner = (*it)->owner.lock();
+      //     if (owner) {
+      //       auto veh = std::dynamic_pointer_cast<driver::Vehicle>(owner);
+      //       if (veh->state == driver::Vehicle::State::IDLE &&
+      //           veh->avoid_state == driver::Vehicle::Avoid::Normal) {
+      //         bool flg = false;
+      //         if (veh_index != point_index) {
+      //           for (auto &exist : graph) {
+      //             if (exist.first == veh) {
+      //               flg = true;
+      //               break;
+      //             }
+      //           }
+      //           if (!flg) {
+      //             graph.push_back(std::make_pair(
+      //                 veh, *(alley->vertices.rbegin() + veh_index)));
+      //           }
+      //         }
+      //         veh_index++;
+      //       }
+      //     }
+      //     point_index++;
+      //   }
+      // }
+      // // 推挤发单
+      // while (!graph.empty()) {
+      //   auto node = graph.back();
+      //   auto veh = node.first;
+      //   auto point = node.second;
+      //   auto path =
+      //       planner.lock()->find_paths(veh->current_point, point).front();
+      //   // 判断是否有交换冲突
+      //   for (auto &v : dispatcher.lock()->vehicles) {
+      //     if (v == veh) {
+      //       continue;
+      //     }
+      //     if (v->state == driver::Vehicle::State::EXECUTING) {
+      //       if (is_swap_conflict(path, v)) {
+      //         return;
+      //       }
+      //     }
+      //   }
+      //   // 无冲突
+      //   veh->avoid_state = driver::Vehicle::Avoid::Avoiding;
+      //   auto new_ord = std::make_shared<data::order::TransportOrder>(
+      //       "TOder_" + uuids::to_string(get_uuid()));
+      //   new_ord->create_time = get_now_utc_time();
+      //   new_ord->dead_time = new_ord->create_time + std::chrono::minutes(10);
+      //   new_ord->priority = int(data::order::Level::Level_3);
+      //   new_ord->intended_vehicle = veh;
+      //   new_ord->type = "MOVE";
+      //   new_ord->state = data::order::TransportOrder::State::RAW;
+      //   auto driver_order =
+      //       std::make_shared<data::order::DriverOrder>("DOder_" +
+      //       point->name);
+      //   auto dest = orderpool.lock()->res_to_destination(
+      //       point, data::model::Actions::OpType::MOVE);
+      //   driver_order->destination = dest;
+      //   driver_order->transport_order = new_ord;
+      //   new_ord->driverorders.push_back(driver_order);
+      //   orderpool.lock()->push(new_ord);
+      //   dispatcher.lock()->notify();
+      //   graph.pop_back();
+      // }
+      // 发单
+      auto new_ord = std::make_shared<data::order::TransportOrder>(
+          "TOder_" + uuids::to_string(get_uuid()));
+      new_ord->create_time = get_now_utc_time();
+      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(10);
+      new_ord->priority = int(data::order::Level::Level_3);
+      new_ord->intended_vehicle = order->intended_vehicle.lock();
+      new_ord->type = "MOVE";
+      new_ord->state = data::order::TransportOrder::State::RAW;
+      auto driver_order = std::make_shared<data::order::DriverOrder>(
+          "DOder_" + allocate_point->name);
+      auto dest = orderpool.lock()->res_to_destination(
+          allocate_point, data::model::Actions::OpType::MOVE);
+      driver_order->destination = dest;
+      driver_order->transport_order = new_ord;
+      new_ord->driverorders.push_back(driver_order);
+      orderpool.lock()->push(new_ord);
+      dispatcher.lock()->notify();
+      state = State::Raw;
+    }
+  } else {
+  }
+}
+
+float Conflict::distance(allocate::PointPtr a, allocate::PointPtr b) {
+  auto path = planner.lock()->find_paths_with_vertex(a, b);
+  if (path.empty()) {
+    return std::numeric_limits<float>::max();
+  }
+  return path.front().second / 1e6;
+}
+float Conflict::occupancy(std::shared_ptr<data::model::Alleyway> way) {
+  float occupancy = 0;
+  std::unordered_set<std::shared_ptr<RSSObject>> objs;
+  std::unordered_set<VehPtr> vehs;
+
+  for (auto &x : way->vertices) {
+    auto owner = x->owner.lock();
+    if (owner) {
+      objs.insert(owner);
+      occupancy++;
+    } else {
+      // 检查是否被分配了
+      for (auto &p : graph) {
+        if (p.second == x) {
+          vehs.insert(p.first);
+          occupancy++;
+          break;
+        }
+      }
+    }
+  }
+  for (auto &v : vehs) {
+    if (objs.find(v) != objs.end()) {
+      // 分配到了自己的巷道
+      occupancy--;
+    }
+  }
+  return occupancy / way->size();
+}
+bool Conflict::one_of_other(std::pair<VehPtr, allocate::PointPtr> a,
+                            std::pair<VehPtr, allocate::PointPtr> b) {
+  auto path_a =
+      planner.lock()->find_paths(a.first->current_point, a.second).front();
+  auto path_b =
+      planner.lock()->find_paths(b.first->current_point, b.second).front();
+  std::vector<std::shared_ptr<data::model::Point>> left;
+  std::vector<std::shared_ptr<data::model::Point>> right;
+  if (path_a.size() > path_b.size()) {
+    left = path_a;
+    right = path_b;
+  } else {
+    left = path_b;
+    right = path_a;
+  }
+  int flag = 0;
+  for (auto &x : left) {
+    if (x == right.front()) {
+      flag++;
+    } else if (x == right.back()) {
+      flag++;
+    }
+  }
+  if (flag >= 2) {
+    return true;
+  } else {
+    return false;
+  }
+}
+/**
+ * @brief 路径p和车辆v是否有冲突
+ *
+ * @param p
+ * @param v
+ */
+bool Conflict::is_swap_conflict(std::vector<allocate::PointPtr> p, VehPtr v) {
+  if (v->state == driver::Vehicle::State::IDLE) {
+    return false;
+  }
+  auto cur_step = resource_manager.lock()->paths_to_route(p);
+  auto v_step =
+      v->current_order->driverorders[v->current_order->current_driver_index]
+          ->route->steps;
+  if (v->current_order->driverorders[v->current_order->current_driver_index]
+          ->route->current_step)
+    v_step.push_front(
+        v->current_order->driverorders[v->current_order->current_driver_index]
+            ->route->current_step);
+  if (v_step.empty()) {
+    return false;
+  }
+  float cur_cost = 0;  // mm单位
+  const float kLen = 2;
+  for (auto &cur_s : cur_step->steps) {
+    float v_cost = 0;
+    for (auto &v_s : v_step) {
+      if (cur_s->path == v_s->path &&
+          cur_s->vehicle_orientation != v_s->vehicle_orientation) {
+        // LOG(ERROR) << cur_s->path->length << "->" << cur_cost << " "
+        //            << v_s->path->length << "->" << v_cost << "   "
+        //            << fabs(cur_cost - v_cost) << "  ___   "
+        //            << kLen * (v_s->path->length);
+        if (fabs(cur_cost - v_cost) < kLen * (v_s->path->length)) {
+          return true;
+        }
+      }
+      v_cost += v_s->path->length;
+    }
+    cur_cost += cur_s->path->length;
+  }
+  return false;
+}
+void Conflict::swap_obj(std::pair<VehPtr, allocate::PointPtr> a,
+                        std::pair<VehPtr, allocate::PointPtr> b) {
+  auto a_obj = a.second;
+  auto b_obj = b.second;
+  for (auto &x : graph) {
+    if (x.first == a.first) {
+      x.second = b_obj;
+    } else if (x.first == b.first) {
+      x.second = a_obj;
+    }
+  }
+}
+allocate::PointPtr Conflict::select_point(VehPtr v) {
+  auto all_idel_ps =
+      resource_manager.lock()->get_all_idel_points();  // 所有空闲点
+  // 创建候选队列
+  std::priority_queue<std::pair<allocate::PointPtr, float>,
+                      std::vector<std::pair<allocate::PointPtr, float>>, Cmp>
+      alley_ps;
+  std::priority_queue<std::pair<allocate::PointPtr, float>,
+                      std::vector<std::pair<allocate::PointPtr, float>>, Cmp>
+      normal_ps;
+  for (auto &x : all_idel_ps) {
+    bool flag = false;
+    for (auto &p : path) {
+      if (p == x) {
+        flag = true;
+        break;
+      }
+    }
+    if (flag) {
+      // 在路径上的不能选
+      continue;
+    }
+    flag = false;
+    for (auto &p : graph) {
+      if (p.second == x) {
+        flag = true;
+        break;
+      }
+    }
+    if (flag) {
+      // 已经被选走的不能选
+      continue;
+    }
+    auto [flg, dep] = resource_manager.lock()->get_alleyway(x);
+    if (flg) {
+      // 巷道点
+      auto occupied = Conflict::occupancy(flg);
+      float distance = Conflict::distance(v->current_point, x);
+      float score = 1 / (occupied + 1e-4) + std::exp(-distance) + 1;
+      if (occupied > kMaxOccupancy) {
+        // 车道点占用率过高
+        continue;
+      }
+
+      alley_ps.push(std::make_pair(x, score));
+    } else {
+      // 普通路点
+      float distance = Conflict::distance(v->current_point, x);
+      float score = std::exp(-distance);
+      normal_ps.push(std::make_pair(x, score));
+    }
+  }
+  allocate::PointPtr allocate_point{nullptr};
+  if (!alley_ps.empty()) {
+    allocate_point = alley_ps.top().first;
+  } else if (!normal_ps.empty()) {
+    allocate_point = normal_ps.top().first;
+  }
+  return allocate_point;
+}
+Conflict::State ConflictPool::get_state(allocate::TransOrderPtr order) {
+  if (conflicts.find(order) == conflicts.end()) {
+    //
+    auto conflict = std::make_shared<Conflict>();
+    conflict->order = order;
+    conflict->resource_manager = rss.lock()->resource;
+    conflict->planner = rss.lock()->planner;
+    conflict->dispatcher = rss.lock()->dispatcher;
+    conflict->orderpool = rss.lock()->orderpool;
+    conflicts[order] = conflict;
+    order->conflict_pool = shared_from_this();
+  }
+  return conflicts[order]->state;
+}
+void ConflictPool::solve(allocate::TransOrderPtr order) {
+  conflicts[order]->solve_once();
+}
+void ConflictPool::reset_state(allocate::TransOrderPtr order) {
+  conflicts[order]->state = Conflict::State::Raw;
+}
 }  // namespace kernel::dispatch

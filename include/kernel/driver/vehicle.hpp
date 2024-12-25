@@ -17,9 +17,10 @@ class Vehicle : public schedule::Client,
                 public std::enable_shared_from_this<Vehicle> {
  public:
   explicit Vehicle(const std::string &n) : schedule::Client(n) {}
-  enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDEL, EXECUTING, CHARGING };
+  enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
   enum class proState { AWAITING_ORDER, IDEL, PROCESSING_ORDER };
   enum class nowOrder { BEGIN, END };
+  enum class Avoid { Avoiding, Normal };
   enum integrationLevel {
     TO_BE_IGNORED,
     TO_BE_NOTICED,
@@ -42,6 +43,7 @@ class Vehicle : public schedule::Client,
   bool plan_route(allocate::TransOrderPtr) const;
   void reroute();
   void get_next_ord();
+  void redistribute_cur_order();
   void run();
   void cancel_all_order();
   void close();
@@ -75,6 +77,7 @@ class Vehicle : public schedule::Client,
   proState process_state{proState::IDEL};
   bool paused{false};
   nowOrder now_order_state{nowOrder::END};
+  Avoid avoid_state{Avoid::Normal};
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<allocate::ResourceManager> resource;
