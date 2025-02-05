@@ -11,7 +11,7 @@ using RET = std::pair<int, std::string>;
 inline std::string MQTT_IP{"127.0.0.1"};
 inline int MQTT_PORT{1883};
 class RSS : public std::enable_shared_from_this<RSS> {
-public:
+ public:
   // transport order
   RET get_transport_orders(const std::string &vehicle = "") const;
   RET get_transport_order(const std::string &ord_name) const;
@@ -47,7 +47,7 @@ public:
   RET post_vehicle_path_to_point(const std::string &,
                                  const std::string &) const;
 
-public:
+ public:
   bool init_dispatcher();
   bool init_scheduler();
   bool init_orderpool();
@@ -59,10 +59,10 @@ public:
                   const std::shared_ptr<kernel::driver::Vehicle> &v) const;
   void charge_order(const std::string &name,
                     const std::shared_ptr<kernel::driver::Vehicle> &v) const;
-  void cancel_order(const std::string &order_name) const; // 取消某个订单
-  void cancel_all_order() const;                          // 取消所有订单
+  void cancel_order(const std::string &order_name) const;  // 取消某个订单
+  void cancel_all_order() const;                           // 取消所有订单
   void cancel_vehicle_all_order(
-      const std::string &vehicle_name) const; // 取消某辆车所有订单
+      const std::string &vehicle_name) const;  // 取消某辆车所有订单
   void run();
   void add_vehicle(const std::string &type, const std::string &name);
   void paused_vehicle(const std::string &name) const;
@@ -74,7 +74,7 @@ public:
   bool is_exist_active_order() const;
   ~RSS();
 
-public:
+ public:
   bool is_run{false};
   std::shared_ptr<kernel::allocate::ResourceManager> resource;
   std::shared_ptr<kernel::schedule::Scheduler> scheduler;
@@ -92,11 +92,10 @@ inline std::string get_log_path(const std::string &path) {
 #endif
 }
 inline std::string get_log_name(const std::string &path) {
-  auto data = "main";
 #ifdef _WIN32
-  return (std::string(path) + "\\tcs_" + data + ".log");
+  return (std::string(path) + "\\rss_" + ".log");
 #else
-  return (std::string(path) + "/tcs_" + data + ".log");
+  return (std::string(path) + "/rss_" + ".log");
 #endif
 }
 enum StatusCode {

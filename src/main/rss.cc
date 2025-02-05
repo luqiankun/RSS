@@ -754,7 +754,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
         if (source_type == data::model::Point::TrafficType::Endpoint ||
             destination_type == data::model::Point::TrafficType::Endpoint) {
           // 找到起点
-          LOG(INFO) << "find alleyway endpoint";
+          // LOG(INFO) << "find alleyway endpoint";
           std::deque<kernel::allocate::PathPtr> paths;
           std::deque<kernel::allocate::PointPtr> points;
           kernel::allocate::PointPtr cur_point;
@@ -768,12 +768,12 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           }
           points.push_back(last_point);
           paths.push_back(x);
-          LOG(INFO) << last_point->name;
+          // LOG(INFO) << last_point->name;
           assert(cur_point != nullptr);
           while (cur_point->traffic_type ==
                  data::model::Point::TrafficType::Alleyway) {
             points.push_back(cur_point);
-            LOG(INFO) << cur_point->name;
+            // LOG(INFO) << cur_point->name;
             bool found = false;
             for (auto &_p : cur_point->outgoing_paths) {
               if (_p->destination_point.lock() == last_point) {
@@ -808,14 +808,14 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           } else if (cur_point->traffic_type ==
                      data::model::Point::TrafficType::Junction) {
             points.push_back(cur_point);
-            LOG(INFO) << cur_point->name << "\nalleyway end";
+            // LOG(INFO) << cur_point->name << "\nalleyway end";
           } else {
             LOG(ERROR) << "unknown point type";
           }
           //
-          for (auto &path_ : paths) {
-            LOG(INFO) << path_->name;
-          }
+          // for (auto &path_ : paths) {
+          //   LOG(INFO) << path_->name;
+          // }
           auto allyway = std::make_shared<data::model::Alleyway>(
               points.front()->name + "-alleyway", paths, points);
           resource->alleyways.push_back(allyway);
@@ -981,6 +981,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             }
           }
           dispatcher->vehicles.push_back(veh);
+          veh->dispatcher = dispatcher;
         } else if (adapter_class.find("vda") != std::string::npos) {
           //
           pugi::xml_node interfaceName;
@@ -1105,6 +1106,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           }
           ///////////////////////////
           dispatcher->vehicles.push_back(veh);
+          veh->dispatcher = dispatcher;
         } else {
           auto veh = std::make_shared<kernel::driver::InvalidVehicle>(name);
           veh->length = length;
@@ -1133,6 +1135,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
             property = property.next_sibling();
           }
           dispatcher->vehicles.push_back(veh);
+          veh->dispatcher = dispatcher;
         }
 
         ///////////////////////
@@ -1248,6 +1251,7 @@ void RSS::home_order(const std::string &name,
   ord->driverorders.push_back(dr);
   ord->intended_vehicle = v;
   ord->anytime_drop = true;
+  std::unique_lock<std::mutex> lock(orderpool->mut);
   orderpool->push(ord);
 }
 
@@ -1279,6 +1283,7 @@ void RSS::charge_order(
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
   ord->intended_vehicle = v;
+  std::unique_lock<std::mutex> lock(orderpool->mut);
   orderpool->push(ord);
 }
 
@@ -1391,31 +1396,10 @@ std::pair<int, std::string> RSS::get_transport_orders(
     return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
   if (vehicle.empty()) {
-    std::vector<kernel::allocate::TransOrderPtr> pro_orders = {};
-    auto end_orders = orderpool->ended_orderpool;
-    for (auto &o : orderpool->orderpool) {
-      for (auto &o : o.second) {
-        pro_orders.push_back(o);
-      }
-    }
-    std::sort(pro_orders.begin(), pro_orders.end(),
-              [](const kernel::allocate::TransOrderPtr &a,
-                 const kernel::allocate::TransOrderPtr &b) {
-                return a->create_time > b->create_time;
-              });
-    std::sort(end_orders.begin(), end_orders.end(),
-              [=](const kernel::allocate::TransOrderPtr &a,
-                  const kernel::allocate::TransOrderPtr &b) {
-                return a->create_time > b->create_time;
-              });
+    auto ords = orderpool->get_all_order();
     json res = json::array();
-    for (auto &o : pro_orders) {
+    for (auto &o : ords) {
       json value = order_to_json(o);
-      res.push_back(value);
-    }
-
-    for (auto &v : end_orders) {
-      json value = order_to_json(v);
       res.push_back(value);
     }
     return std::pair<int, std::string>({OK_200, res.to_string()});
@@ -1423,6 +1407,9 @@ std::pair<int, std::string> RSS::get_transport_orders(
     for (auto &v : dispatcher->vehicles) {
       if (v->name == vehicle) {
         auto order_ = v->orders;
+        if (v->current_order) {
+          order_.push_back(v->current_order);
+        }
         std::sort(order_.begin(), order_.end(),
                   [=](const kernel::allocate::TransOrderPtr &a,
                       const kernel::allocate::TransOrderPtr &b) {
@@ -1634,7 +1621,9 @@ std::pair<int, std::string> RSS::post_transport_order(
             : "";
     ord->state = data::order::TransportOrder::State::RAW;
     CLOG(INFO, dispatch_log) << ord->name << " status: [raw]\n";
+    std::unique_lock<std::mutex> lock(orderpool->mut);
     orderpool->push(ord);
+    lock.unlock();
     dispatcher->notify();
     // return
     json res;
@@ -1728,7 +1717,9 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
   ord->peripheral_reservation_token = "null";
+  std::unique_lock<std::mutex> lock(orderpool->mut);
   orderpool->push(ord);
+  lock.unlock();
   dispatcher->notify();
   // return
   json res;
@@ -3108,6 +3099,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             }
           }
           dispatcher->vehicles.push_back(veh);
+          veh->dispatcher = dispatcher;
         } else if (adapter.find("vda") != std::string::npos) {
           std::string vda_interfaceName{"rw"};
           std::string vda_serialNumber{"rw"};
@@ -3187,6 +3179,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           }
           ///////////////////////////
           dispatcher->vehicles.push_back(veh);
+          veh->dispatcher = dispatcher;
         } else {
           auto veh = std::make_shared<kernel::driver::InvalidVehicle>(
               v["name"].as_string());
@@ -3219,6 +3212,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
           veh->envelope_key =
               v.contains("envelopeKey") ? v["envelopeKey"].as_string() : "";
           dispatcher->vehicles.push_back(veh);
+          veh->dispatcher = dispatcher;
         }
       }
       CLOG(INFO, rss_log) << "init vehicle size "

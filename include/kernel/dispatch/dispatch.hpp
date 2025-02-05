@@ -58,13 +58,14 @@ class Conflict {
     SelfMove,     // 主车辆需要移动
     Err,          // 无解
   };
-  float occupancy(std::shared_ptr<data::model::Alleyway>);  // 占用率
-  float distance(allocate::PointPtr, allocate::PointPtr);   // 路径代价
+  float occupancy(std::shared_ptr<data::model::Alleyway>, VehPtr);  // 占用率
+  float distance(allocate::PointPtr, allocate::PointPtr);  // 路径代价
   bool one_of_other(std::pair<VehPtr, allocate::PointPtr>,
                     std::pair<VehPtr, allocate::PointPtr>);
   void swap_obj(std::pair<VehPtr, allocate::PointPtr>,
                 std::pair<VehPtr, allocate::PointPtr>);
-  allocate::PointPtr select_point(VehPtr);
+  allocate::PointPtr select_point(VehPtr, std::vector<allocate::PointPtr>,
+                                  bool = false);
   bool is_swap_conflict(std::vector<allocate::PointPtr> p, VehPtr v);
   void solve_once();
   void update();
@@ -80,6 +81,7 @@ class Conflict {
   allocate::TransOrderPtr order;
   std::stack<VehPtr> vehicles;
   std::set<VehPtr> rm_depends;
+  std::map<VehPtr, allocate::PointPtr> dispthed;
   std::deque<std::pair<VehPtr, allocate::PointPtr>> graph;
 };
 class ConflictPool : public std::enable_shared_from_this<ConflictPool> {
@@ -93,6 +95,7 @@ class ConflictPool : public std::enable_shared_from_this<ConflictPool> {
   std::weak_ptr<RSS> rss;
   std::unordered_map<allocate::TransOrderPtr, std::shared_ptr<Conflict>>
       conflicts;
+  std::mutex mut;
 };
 }  // namespace kernel::dispatch
 #endif

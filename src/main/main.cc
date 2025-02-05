@@ -7,6 +7,7 @@
 #include "../../include/main/httpsrv.hpp"
 #include "../../include/main/rss.hpp"
 INITIALIZE_EASYLOGGINGPP
+#define ELPP_UNICODE
 // signal
 void (*signal(int sig, void (*func)(int)))(int);
 std::condition_variable con;
@@ -147,7 +148,7 @@ int main(int argc, char **argv) {
       auto dir_it = ghc::filesystem::directory_iterator(log_path);
       std::vector<ghc::filesystem::directory_entry> ns;
       for (auto &x : dir_it) {
-        if (!x.is_directory() && x.path().filename() != "tcs_main.log") {
+        if (!x.is_directory() && x.path().filename() != "rss.log") {
           ns.push_back(x);
         }
       }

@@ -273,35 +273,41 @@ ResourceManager::get_alleyway(PointPtr p) {
   return {nullptr, -1};
 }
 std::vector<std::shared_ptr<data::model::Point>>
-ResourceManager::get_all_idel_points() {
+ResourceManager::get_all_idel_points(std::shared_ptr<driver::Vehicle> v,
+                                     bool rm_self_alley) {
   std::set<std::shared_ptr<data::model::Point>> res;
+  auto [self_alley, index] = get_alleyway(v->current_point);
   for (auto &x : points) {
     auto [flg, dep] = get_alleyway(x);
+    if (rm_self_alley && self_alley == flg) continue;
     if (flg) {
       // 巷道点
-      int occupancy = 0;
-      for (auto &x : flg->vertices) {
-        auto owner = x->owner.lock();
-        if (owner) {
-          auto veh = std::dynamic_pointer_cast<driver::Vehicle>(owner);
-          if (veh->state == driver::Vehicle::State::IDLE) {
-            occupancy++;
-          }
-        }
-      }
-      for (int i = 0; i < flg->size() - occupancy; i++)
-        res.insert(flg->vertices[i]);
+      // int occupancy = 0;
+      // for (auto &x : flg->vertices) {
+      //   auto owner = x->owner.lock();
+      //   if (owner) {
+      //     auto veh = std::dynamic_pointer_cast<driver::Vehicle>(owner);
+      //     if (veh->state == driver::Vehicle::State::IDLE && veh != v) {
+      //       occupancy++;
+      //     }
+      //   }
+      // }
+      // for (int i = 0; i < flg->size() - occupancy; i++)
+      //   res.insert(flg->vertices[i]);
+      for (int i = 0; i < flg->size(); i++) res.insert(flg->vertices[i]);
     } else {
-      if (x->owner.lock()) {
-        auto veh = std::dynamic_pointer_cast<driver::Vehicle>(x->owner.lock());
-        if (veh->state == driver::Vehicle::State::EXECUTING ||
-            veh->avoid_state == driver::Vehicle::Avoid::Avoiding) {
-          res.insert(x);
-        }
+      // if (x->owner.lock()) {
+      //   auto veh =
+      //   std::dynamic_pointer_cast<driver::Vehicle>(x->owner.lock()); if
+      //   (veh->state == driver::Vehicle::State::EXECUTING ||
+      //       veh->avoid_state == driver::Vehicle::Avoid::Avoiding) {
+      //     res.insert(x);
+      //   }
 
-      } else {
-        res.insert(x);
-      }
+      // } else {
+      //   res.insert(x);
+      // }
+      res.insert(x);
     }
   }
   return {res.begin(), res.end()};

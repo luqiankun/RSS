@@ -1,5 +1,6 @@
 #ifndef TIMER_HPP
 #define TIMER_HPP
+#include <cassert>
 #include <chrono>
 #include <iomanip>
 #include <iostream>
@@ -13,7 +14,7 @@
 constexpr auto timer_log{"timer"};
 
 class cpu_timer {
-public:
+ public:
   explicit cpu_timer(std::string n = "")
       : name(std::move(n)), start(std::chrono::steady_clock::now()) {}
   ~cpu_timer() {
@@ -27,7 +28,7 @@ public:
                           << "(ms) " << us << "(us)\n";
   }
 
-private:
+ private:
   std::string name;
   std::chrono::time_point<std::chrono::steady_clock> start;
 };
@@ -53,18 +54,19 @@ inline std::string get_date_fmt() {
   return time.str();
 }
 
-inline std::optional<std::chrono::system_clock::time_point>
-get_time_from_str(const std::string &msg) {
-  const std::regex match_reg{
-      R"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{1,10}Z)"};
+inline std::optional<std::chrono::system_clock::time_point> get_time_from_str(
+    const std::string &msg) {
+  // const std::regex match_reg{
+  //     R"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,10}Z)"};
   const std::regex search_reg{
-      R"(((\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}).(\d{1,10})Z))"};
-  if (!std::regex_match(msg, match_reg)) {
-    return std::nullopt;
-  }
+      R"((\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})\.(\d{1,10})Z)"};
   try {
     std::smatch cmatch;
-    std::regex_search(msg, cmatch, search_reg);
+    if (!std::regex_search(msg, cmatch, search_reg)) {
+      return std::nullopt;
+    }
+    // LOG(INFO) << cmatch.size();
+    assert(cmatch.size() == 4);
     std::chrono::milliseconds ms(std::stoi(*(cmatch.end() - 1)));
     std::tm t = {};
     std::istringstream ss{msg};

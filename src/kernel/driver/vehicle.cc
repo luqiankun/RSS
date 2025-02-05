@@ -32,6 +32,7 @@ std::string vehicle_state_to_str(Vehicle::State state) {
   return res;
 }
 void Vehicle::redistribute_cur_order() {
+  std::unique_lock<std::mutex> lock(ord_mutex);
   if (current_order) {
     auto order_pool = orderpool.lock();
     auto res = resource.lock();
@@ -56,7 +57,7 @@ void Vehicle::redistribute_cur_order() {
     res->free(temp, shared_from_this());
     now_order_state = Vehicle::nowOrder::END;
     process_state = proState::IDEL;
-    avoid_state = Avoid::Normal;
+    // avoid_state = Avoid::Normal;
     CLOG_IF(state != State::IDLE, INFO, driver_log)
         << name << " " << "state transform to : ["
         << vehicle_state_to_str(State::IDLE) << "]\n";
@@ -65,14 +66,22 @@ void Vehicle::redistribute_cur_order() {
     CLOG(INFO, driver_log) << name << " " << "now is idle "
                            << get_time_fmt(idle_time) << "\n";
     auto ord = current_order;
-    ord->conflict_pool.lock()->reset_state(ord);
     current_order.reset();
+    ord->conflict_pool.lock()->reset_state(ord);
     order_pool->redistribute(ord);
   }
 }
 void Vehicle::execute_action(
     const std::shared_ptr<data::order::DriverOrder::Destination> &dest) {
   pool.commit([=] {
+    std::unique_lock<std::mutex> lock(ord_mutex);
+    if (!current_order) {
+      CLOG(ERROR, driver_log) << name << " current_order is null\n";
+      state = State::ERROR;
+      CLOG(INFO, driver_log) << name << " " << "state transform to : ["
+                             << vehicle_state_to_str(state) << "]\n";
+      return;
+    }
     auto op_ret = action(dest);
     if (!op_ret) {
       // 订单失败
@@ -82,6 +91,11 @@ void Vehicle::execute_action(
       current_order->end_time = get_now_utc_time();
       CLOG(WARNING, driver_log)
           << name << " " << current_order->name << " action : " << " failed\n";
+      state = State::ERROR;
+      current_order.reset();
+      CLOG(INFO, driver_log) << name << " " << "state transform to : ["
+                             << vehicle_state_to_str(state) << "]\n";
+
     } else {
       CLOG(INFO, driver_log)
           << name << " " << current_order->name << " action : " << " ok\n";
@@ -94,6 +108,13 @@ void Vehicle::execute_action(
 void Vehicle::execute_move(
     const std::vector<std::shared_ptr<data::order::Step>> &steps) {
   pool.commit([=] {
+    std::unique_lock<std::mutex> lock(ord_mutex);
+    if (!current_order) {
+      // state = State::ERROR;
+      CLOG(INFO, driver_log) << name << " " << "state transform to : ["
+                             << vehicle_state_to_str(state) << "]\n";
+      return;
+    }
     auto move_ret = move(steps);
     if (!move_ret) {
       // 订单失败
@@ -104,6 +125,10 @@ void Vehicle::execute_move(
       std::stringstream ss;
       ss << current_order->name << " : move {" << steps.front()->name << "}";
       CLOG(WARNING, driver_log) << name << " " << ss.str() << " failed\n";
+      state = State::ERROR;
+      current_order.reset();
+      CLOG(INFO, driver_log) << name << " " << "state transform to : ["
+                             << vehicle_state_to_str(state) << "]\n";
     } else {
       // std::stringstream ss;
       // ss << current_order->name << " : move {" << steps.front()->name << "}";
@@ -196,20 +221,20 @@ bool Vehicle::plan_route(allocate::TransOrderPtr cur) const {
     }
     if (!end_planner || !start_planner) {
       CLOG(WARNING, driver_log)
-          << name << " " << current_order->name << " can not find obj "
+          << name << " " << cur->name << " can not find obj "
           << destination->destination.lock()->name
           << " or can not locate current_pos\n";
       return false;
     } else {
-      auto path = route_planner->find_second_paths(start_planner, end_planner);
+      auto path = route_planner->find_paths(start_planner, end_planner);
       if (path.empty()) {
         CLOG(WARNING, driver_log)
-            << name << " " << current_order->name << " can not routable\n";
+            << name << " " << cur->name << " can not routable\n";
         return false;
       } else {
         auto driverorder = ordpoll->route_to_driverorder(
             res->paths_to_route(path.front()), destination);
-        driverorder->transport_order = current_order;
+        driverorder->transport_order = cur;
         driverorder->state = data::order::DriverOrder::State::PRISTINE;
         op = driverorder;
       }
@@ -223,6 +248,7 @@ void Vehicle::get_next_ord() {
   if (orders.empty()) {
     // state = State::IDLE;
   } else {
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order = orders.front();
     orders.pop_front();
   }
@@ -258,6 +284,10 @@ void Vehicle::command_done() {
     CLOG(ERROR, driver_log) << name << " resource is null\n";
     return;
   }
+  if (!current_order) {
+    get_next_ord();
+    return;
+  }
   if (reroute_flag) {
     plan_route(current_order);
     reroute_flag = false;
@@ -281,8 +311,10 @@ void Vehicle::command_done() {
       process_charging = false;
     }
     now_order_state = Vehicle::nowOrder::END;
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     current_order.reset();
+    lock.unlock();
     get_next_ord();
     return;
   }
@@ -304,6 +336,7 @@ void Vehicle::command_done() {
       process_charging = false;
     }
     now_order_state = Vehicle::nowOrder::END;
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     // current_order.reset();
     // get_next_ord();
@@ -312,6 +345,7 @@ void Vehicle::command_done() {
   if (current_order->dead_time < get_now_utc_time()) {
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " timeout.";
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     future_allocate_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
@@ -348,10 +382,12 @@ void Vehicle::command_done() {
   // 完成step or action
   auto dr = (current_order->driverorders[current_order->current_driver_index]);
   if (dr->state == data::order::DriverOrder::State::FINISHED) {
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->current_driver_index += 1;
     // LOG(INFO) << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     //           << current_order->current_driver_index;
   } else if (dr->state == data::order::DriverOrder::State::FAILED) {
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     now_order_state = Vehicle::nowOrder::END;
     CLOG(ERROR, driver_log) << name << " " << current_order->name
@@ -373,6 +409,7 @@ void Vehicle::command_done() {
   }
   if (current_order->driverorders.size() <=
       current_order->current_driver_index) {
+    std::unique_lock<std::mutex> lock(ord_mutex);
     process_state = proState::AWAITING_ORDER;
     current_order->state = data::order::TransportOrder::State::FINISHED;
     CLOG(INFO, driver_log) << name << "'order " << current_order->name
@@ -382,6 +419,7 @@ void Vehicle::command_done() {
     current_order.reset();
     current_command.reset();
     future_allocate_resources.clear();
+    lock.unlock();
     get_next_ord();
   } else {
     // 继续执行订单
@@ -429,6 +467,7 @@ std::string Vehicle::get_process_state() const {
 void Vehicle::next_command() {
   auto scheduler_ = scheduler.lock();
   if (!scheduler_) {
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " scheduler is null\n";
     return;
@@ -439,17 +478,20 @@ void Vehicle::next_command() {
   }
   if (current_order->state ==
       data::order::TransportOrder::State::DISPATCHABLE) {
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::BEING_PROCESSED;
     CLOG(INFO, order_log) << current_order->name
                           << " status: {begin_processed}\n";
     plan_route(current_order);  // 首次执行，规划路径
   }
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     current_order.reset();
     if (process_charging) {
       process_charging = false;
     }
+    lock.unlock();
     get_next_ord();
     return;
   }
@@ -483,11 +525,14 @@ void Vehicle::receive_task(
         << vehicle_state_to_str(State::EXECUTING) << "]\n";
     state = State::EXECUTING;
     process_state = proState::AWAITING_ORDER;
+    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order.reset();
+    lock.unlock();
     orders.push_back(order);
     next_command();
   } else if (state == State::EXECUTING) {
     if (current_order && current_order->anytime_drop) {
+      std::unique_lock<std::mutex> lock(ord_mutex);
       current_order->state = data::order::TransportOrder::State::WITHDRAWL;
       LOG(INFO) << "__________________|||||||||||||||||||||||||";
     }
@@ -497,8 +542,10 @@ void Vehicle::receive_task(
     orders.push_back(order);
     if (current_order &&
         current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
+      std::unique_lock<std::mutex> lock(ord_mutex);
       current_order->state = data::order::TransportOrder::State::FAILED;
       current_order.reset();
+      lock.unlock();
       next_command();
     }
   } else if (state == State::CHARGING) {
@@ -531,7 +578,7 @@ bool SimVehicle::action(
                  data::order::DriverOrder::Destination::OpType::LOAD ||
              dest->operation ==
                  data::order::DriverOrder::Destination::OpType::PICK) {
-    return false;
+    // return false;
     std::this_thread::sleep_for(std::chrono::seconds(1));
     auto t = std::dynamic_pointer_cast<data::model::Location>(
         dest->destination.lock());
@@ -697,6 +744,7 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
         // 重启了？
         LOG(WARNING) << h_id << " " << rece_header_id;
         if (current_order) {
+          std::unique_lock<std::mutex> lock(ord_mutex);
           current_order->state = data::order::TransportOrder::State::FAILED;
           CLOG(WARNING, dispatch_log)
               << current_order->name << " status: [failed]\n";
@@ -1388,7 +1436,9 @@ bool Rabbit3::move(
         auto dt = get_now_utc_time() - p.value();
         if (dt > std::chrono::seconds(10)) {
           CLOG(ERROR, driver_log)
-              << name << " The communication interval is too long > 10s";
+              << name << " The communication interval is too long > 10s  "
+              << get_time_fmt(get_now_utc_time()) << " "
+              << get_time_fmt(p.value()) << "\n";
           task_run = false;
           return false;
         }

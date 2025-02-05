@@ -1,10 +1,13 @@
 #include "../../../include/kernel/driver/command.hpp"
 
+#include "../../../include/kernel/dispatch/dispatch.hpp"
 #include "../../../include/kernel/driver/vehicle.hpp"
+
 #define assert_valid                                                   \
   auto veh = vehicle.lock();                                           \
   auto scheduler = veh->scheduler.lock();                              \
-  if (!veh || !scheduler) {                                            \
+  auto cur_ord = veh->current_order;                                   \
+  if (!veh || !scheduler || !cur_ord) {                                \
     state = State::DISPOSABLE;                                         \
     return;                                                            \
   }                                                                    \
@@ -21,6 +24,65 @@
     return;                                                            \
   }
 namespace kernel::driver {
+// bool veh_swap_conflict(std::shared_ptr<Vehicle> v) {
+//   std::unique_lock<std::mutex> lock(v->ord_mutex);
+//   if (!v->current_order) {
+//     return false;
+//   }
+//   auto disptcher = v->dispatcher.lock();
+//   auto vehs = disptcher->vehicles;
+//   for (auto &x : vehs) {
+//     if (x != v && x->state == Vehicle::State::EXECUTING) {
+//       auto left_step =
+//           x->current_order->driverorders[v->current_order->current_driver_index]
+//               ->route->steps;
+//       auto right_step =
+//           v->current_order->driverorders[v->current_order->current_driver_index]
+//               ->route->steps;
+//       float cur_cost = 0;  // mm单位
+//       const float kLen = 1.7;
+//       for (auto &cur_s : left_step) {
+//         float v_cost = 0;
+//         for (auto &v_s : right_step) {
+//           if (cur_s->path == v_s->path &&
+//               cur_s->vehicle_orientation != v_s->vehicle_orientation) {
+//             if (fabs(cur_cost - v_cost) < kLen * (v_s->path->length)) {
+//               return true;
+//             }
+//           }
+//           v_cost += v_s->path->length;
+//         }
+//         cur_cost += cur_s->path->length;
+//       }
+//     }
+//   }
+//   return false;
+// }
+bool veh_conflict(std::shared_ptr<Vehicle> v) {
+  auto driver_order =
+      v->current_order->driverorders[v->current_order->current_driver_index];
+  std::deque<std::shared_ptr<data::order::Step>> steps =
+      driver_order->route->steps;
+  for (auto &x : steps) {
+    auto st_owner = x->path->source_point.lock()->owner.lock();
+    auto ed_owner = x->path->destination_point.lock()->owner.lock();
+    if (st_owner && st_owner != v) {
+      auto st_veh = std::dynamic_pointer_cast<Vehicle>(st_owner);
+      if (st_veh->state == Vehicle::State::IDLE &&
+          st_veh->avoid_state == Vehicle::Avoid::Normal) {
+        return true;
+      }
+    }
+    if (ed_owner && ed_owner != v) {
+      auto ed_veh = std::dynamic_pointer_cast<Vehicle>(ed_owner);
+      if (ed_veh->state == Vehicle::State::IDLE &&
+          ed_veh->avoid_state == Vehicle::Avoid::Normal) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 // namespace driver
 std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
     const allocate::DriverOrderPtr &driver_order,
@@ -76,30 +138,15 @@ Command::Command(const std::string &n) : RSSObject(n) {
   cbs[State::ALLOCATING] = [&] {
     assert_valid;
     // 冲突判断
+    // if (veh_swap_conflict(veh)) {
+    //   CLOG(WARNING, "swap") << "swap conflict";
+    //   return;
+    // }
     auto driver_order = order->driverorders[order->current_driver_index];
-    std::deque<std::shared_ptr<data::order::Step>> steps =
-        driver_order->route->steps;
-    for (auto &x : steps) {
-      auto st_owner = x->path->source_point.lock()->owner.lock();
-      auto ed_owner = x->path->destination_point.lock()->owner.lock();
-      if (st_owner && st_owner != veh) {
-        auto st_veh = std::dynamic_pointer_cast<Vehicle>(st_owner);
-        if (st_veh->state == Vehicle::State::IDLE &&
-            st_veh->avoid_state == Vehicle::Avoid::Normal) {
-          veh->redistribute_cur_order();
-          state = State::DISPOSABLE;
-          return;
-        }
-      }
-      if (ed_owner && ed_owner != veh) {
-        auto ed_veh = std::dynamic_pointer_cast<Vehicle>(ed_owner);
-        if (ed_veh->state == Vehicle::State::IDLE &&
-            ed_veh->avoid_state == Vehicle::Avoid::Normal) {
-          veh->redistribute_cur_order();
-          state = State::DISPOSABLE;
-          return;
-        }
-      }
+    if (veh_conflict(veh)) {
+      veh->redistribute_cur_order();
+      state = State::DISPOSABLE;
+      return;
     }
     if (driver_order->state == data::order::DriverOrder::State::PRISTINE) {
       driver_order->state = data::order::DriverOrder::State::TRAVELLING;

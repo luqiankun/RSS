@@ -78,9 +78,11 @@ class Vehicle : public schedule::Client,
   bool paused{false};
   nowOrder now_order_state{nowOrder::END};
   Avoid avoid_state{Avoid::Normal};
+  std::vector<std::shared_ptr<data::model::Point>> avoid_points;
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<allocate::ResourceManager> resource;
+  std::weak_ptr<dispatch::Dispatcher> dispatcher;
   std::weak_ptr<allocate::OrderPool> orderpool;
   std::weak_ptr<planner::Planner> planner;
   std::shared_ptr<data::order::TransportOrder> current_order;
@@ -100,6 +102,7 @@ class Vehicle : public schedule::Client,
   bool instant_task_run{false};
   std::chrono::system_clock::time_point idle_time;
   std::vector<std::string> allowed_order_type;
+  std::mutex ord_mutex;
 };
 class SimVehicle : public Vehicle {
  public:

@@ -42,12 +42,14 @@ class OrderPool : public RSSObject {
   ~OrderPool() { CLOG(INFO, allocate_log) << name << " close\n"; }
   void update_quence() const;
   bool is_empty() { return orderpool.empty(); }
+  std::vector<TransOrderPtr> get_all_order();
 
  public:
   using RSSObject::RSSObject;
   std::vector<std::pair<std::string, std::deque<TransOrderPtr>>> orderpool;
   std::deque<TransOrderPtr> ended_orderpool;
   std::deque<OrderSeqPtr> orderquence;
+  std::mutex mut;
   int cur_index{0};
 };
 }  // namespace allocate

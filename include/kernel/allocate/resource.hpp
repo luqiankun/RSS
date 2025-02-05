@@ -12,6 +12,9 @@ namespace kernel {
 namespace schedule {
 class Client;
 }
+namespace driver {
+class Vehicle;
+}
 namespace allocate {
 using TCSResourcePtr = std::shared_ptr<RSSResource>;
 using ClientPtr = std::shared_ptr<schedule::Client>;
@@ -33,7 +36,8 @@ class ResourceManager : public RSSObject {
   std::shared_ptr<data::order::Route> paths_to_route(std::vector<PointPtr> ps);
   std::pair<ResType, std::shared_ptr<RSSResource>> find(
       const std::string& name);
-  std::vector<std::shared_ptr<data::model::Point>> get_all_idel_points();
+  std::vector<std::shared_ptr<data::model::Point>> get_all_idel_points(
+      std::shared_ptr<driver::Vehicle>, bool rm_self_alley = false);
   std::pair<std::shared_ptr<data::model::Alleyway>, int> get_alleyway(PointPtr);
 
  public:

@@ -53,8 +53,8 @@ bool OnlyOneGatherRule::pass(std::vector<std::shared_ptr<RSSResource>> res,
       owners.insert(x->owner.lock());
     }
   }
-  if (n < 0) {
-    return true;
+  if (owners.size() > 0) {
+    return false;
   } else {
     return true;
   }

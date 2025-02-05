@@ -57,7 +57,8 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
     int opt = 1;
     int ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt,
                          sizeof(opt));
-    CLOG(INFO, http_log) << "setsockopt SO_REUSEADDR ret: " << ret;
+    CLOG(INFO, http_log) << "setsockopt SO_REUSEADDR ret: "
+                         << (ret == 0 ? "true" : "false");
   });
   srv.set_default_headers({{"Access-Control-Allow-Origin", "*"},
                            {"Access-Control-Allow-Credentials", "false"},

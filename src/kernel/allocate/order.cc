@@ -22,6 +22,7 @@ DestPtr OrderPool::res_to_destination(
   return destination;
 }
 void OrderPool::cancel_order(size_t order_uuid) {
+  std::unique_lock<std::mutex> lock(mut);
   for (auto &[name, ords] : orderpool) {
     for (const auto &o : ords) {
       if (o->name_hash == order_uuid) {
@@ -37,6 +38,7 @@ void OrderPool::cancel_order(size_t order_uuid) {
 }
 
 void OrderPool::pop(const TransOrderPtr &order) {
+  std::unique_lock<std::mutex> lock(mut);
   for (auto &[name, ords] : orderpool) {
     if (ords.back() == order) {
       ords.pop_back();
@@ -74,16 +76,21 @@ void OrderPool::push(const TransOrderPtr &order) {
   }
 }
 void OrderPool::redistribute(const TransOrderPtr &order) {
-  for (auto &x : ended_orderpool) {
-    if (x == order) {
+  std::unique_lock<std::mutex> lock(mut);
+  for (auto it = ended_orderpool.begin(); it != ended_orderpool.end();) {
+    if (*it == order) {
+      ended_orderpool.erase(it);
       order->state = data::order::TransportOrder::State::RAW;
       push(order);
       break;
+    } else {
+      it++;
     }
   }
 }
 
 std::pair<std::string, TransOrderPtr> OrderPool::get_next_ord() {
+  std::unique_lock<std::mutex> lock(mut);
   update_quence();
   if (orderpool.empty()) {
     return std::pair{"", nullptr};
@@ -122,6 +129,7 @@ void OrderPool::update_quence() const {
 }
 
 void OrderPool::cancel_all_order() {
+  std::unique_lock<std::mutex> lock(mut);
   for (auto &x : orderpool) {
     for (auto &o : x.second) {
       o->state = data::order::TransportOrder::State::WITHDRAWL;
@@ -132,5 +140,28 @@ void OrderPool::cancel_all_order() {
   for (auto &x : ended_orderpool) {
     x->state = data::order::TransportOrder::State::WITHDRAWL;
   }
+}
+std::vector<TransOrderPtr> OrderPool::get_all_order() {
+  std::unique_lock<std::mutex> lock(mut);
+  std::vector<kernel::allocate::TransOrderPtr> pro_orders = {};
+  for (auto &o : orderpool) {
+    for (auto &ord : o.second) {
+      pro_orders.push_back(ord);
+    }
+  }
+  std::vector<kernel::allocate::TransOrderPtr> end_orders{
+      ended_orderpool.begin(), ended_orderpool.end()};
+  std::sort(pro_orders.begin(), pro_orders.end(),
+            [](const kernel::allocate::TransOrderPtr &a,
+               const kernel::allocate::TransOrderPtr &b) {
+              return a->create_time > b->create_time;
+            });
+  std::sort(end_orders.begin(), end_orders.end(),
+            [=](const kernel::allocate::TransOrderPtr &a,
+                const kernel::allocate::TransOrderPtr &b) {
+              return a->create_time > b->create_time;
+            });
+  pro_orders.insert(pro_orders.end(), end_orders.begin(), end_orders.end());
+  return pro_orders;
 }
 }  // namespace kernel::allocate
