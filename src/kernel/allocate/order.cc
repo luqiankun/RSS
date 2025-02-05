@@ -71,8 +71,10 @@ void OrderPool::push(const TransOrderPtr &order) {
   if (!flag) {
     std::deque<TransOrderPtr> queue;
     queue.push_back(order);
-    orderpool.emplace_back(
-        std::pair{order->intended_vehicle.lock()->name, queue});
+    orderpool.emplace_back(std::pair{order->intended_vehicle.lock()
+                                         ? order->intended_vehicle.lock()->name
+                                         : "",
+                                     queue});
   }
 }
 void OrderPool::redistribute(const TransOrderPtr &order) {

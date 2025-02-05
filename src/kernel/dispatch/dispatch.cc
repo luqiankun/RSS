@@ -8,41 +8,27 @@
 #include "../../../include/kernel/driver/vehicle.hpp"
 #include "../../../include/kernel/planner/planner.hpp"
 #include "../../../include/main/rss.hpp"
-const float kLen = 10.7;
+const float kLen = 10000.7;
 namespace kernel::dispatch {
 VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
   if (vehicles.empty()) {
     return nullptr;
   }
-  std::vector<std::pair<Eigen::Vector3i, VehPtr>> idle_temp;
-  std::vector<std::pair<Eigen::Vector3i, VehPtr>> busy_temp;
-  std::vector<std::pair<Eigen::Vector3i, VehPtr>> charge_temp;
+  std::vector<VehPtr> idle_temp;
+  std::vector<VehPtr> busy_temp;
+  std::vector<VehPtr> charge_temp;
 
   for (auto &v : vehicles) {
-    Eigen::Vector3i v_pos{0, 0, 0};
-    v_pos = v->position;
     // if (v->state == driver::Vehicle::State::IDLE &&
     //     v->proc_state == driver::Vehicle::ProcState::AWAITING_ORDER) {
     if (v->state == driver::Vehicle::State::IDLE) {
       if (!v->paused) {
-        idle_temp.emplace_back(v_pos, v);
+        idle_temp.emplace_back(v);
       }
     } else if (v->state == driver::Vehicle::State::EXECUTING) {
-      auto dest = v->orders.back()
-                      ->driverorders.back()
-                      ->destination->destination.lock();
-      auto dest_check = find_res(dest->name);
-      if (dest_check.first == allocate::ResourceManager::ResType::Point) {
-        auto p = std::dynamic_pointer_cast<data::model::Point>(dest);
-        v_pos = p->position;
-      } else {
-        auto p =
-            std::dynamic_pointer_cast<data::model::Location>(dest)->link.lock();
-        v_pos = p->position;
-      }
-      busy_temp.emplace_back(v_pos, v);
+      busy_temp.emplace_back(v);
     } else if (v->state == driver::Vehicle::State::CHARGING) {
-      charge_temp.emplace_back(v_pos, v);
+      charge_temp.emplace_back(v);
     }
   }
   if (idle_temp.empty()) {
@@ -50,34 +36,49 @@ VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
       if (charge_temp.empty()) {
         return nullptr;
       } else {
-        std::sort(charge_temp.begin(), charge_temp.end(),
-                  [=](const std::pair<Eigen::Vector3i, VehPtr> &a,
-                      const std::pair<Eigen::Vector3i, VehPtr> &b) {
-                    auto dis_a = start->position - a.first;
-                    auto dis_b = start->position - b.first;
-                    return dis_a.norm() < dis_b.norm();
-                  });
-        return charge_temp.front().second;
+        auto planner = idle_temp.front()->planner.lock();
+        std::sort(
+            charge_temp.begin(), charge_temp.end(),
+            [=](const VehPtr &a, const VehPtr &b) {
+              auto a_len =
+                  planner->find_paths_with_vertex(start, a->current_point)[0]
+                      .second;
+              auto b_len =
+                  planner->find_paths_with_vertex(start, b->current_point)[0]
+                      .second;
+              return a_len <= b_len;
+            });
+        return charge_temp.front();
       }
     } else {
-      std::sort(charge_temp.begin(), charge_temp.end(),
-                [=](const std::pair<Eigen::Vector3i, VehPtr> &a,
-                    const std::pair<Eigen::Vector3i, VehPtr> &b) {
-                  auto dis_a = start->position - a.first;
-                  auto dis_b = start->position - b.first;
-                  return dis_a.norm() < dis_b.norm();
-                });
-      return busy_temp.front().second;
+      auto planner = idle_temp.front()->planner.lock();
+      std::sort(
+          charge_temp.begin(), charge_temp.end(),
+          [=](const VehPtr &a, const VehPtr &b) {
+            auto a_len =
+                planner->find_paths_with_vertex(start, a->current_point)[0]
+                    .second;
+            auto b_len =
+                planner->find_paths_with_vertex(start, b->current_point)[0]
+                    .second;
+            return a_len <= b_len;
+          });
+      return busy_temp.front();
     }
   } else {
+    auto planner = idle_temp.front()->planner.lock();
+
     std::sort(charge_temp.begin(), charge_temp.end(),
-              [=](const std::pair<Eigen::Vector3i, VehPtr> &a,
-                  const std::pair<Eigen::Vector3i, VehPtr> &b) {
-                auto dis_a = start->position - a.first;
-                auto dis_b = start->position - b.first;
-                return dis_a.norm() < dis_b.norm();
+              [=](const VehPtr &a, const VehPtr &b) {
+                auto a_len =
+                    planner->find_paths_with_vertex(start, a->current_point)[0]
+                        .second;
+                auto b_len =
+                    planner->find_paths_with_vertex(start, b->current_point)[0]
+                        .second;
+                return a_len <= b_len;
               });
-    return idle_temp.front().second;
+    return idle_temp.front();
   }
 }
 
