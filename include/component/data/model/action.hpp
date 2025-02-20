@@ -255,8 +255,8 @@ class PeripheralActions {
     void get_param(std::map<std::string, std::string> p) {
       for (auto &[key, value] : p) {
         if (key == "script") {
+          script = value;
         }
-        script = value;
       }
     }
   };

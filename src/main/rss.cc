@@ -46,7 +46,9 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       res.push_back(msg);
       return {BadRequest_400, res.to_string()};
     }
-    { resource->model_name = root.attribute("name").as_string(); }
+    {
+      resource->model_name = root.attribute("name").as_string();
+    }
     {
       // visualize
       auto visual_layout = root.find_child([](const pugi::xml_node node) {
@@ -1153,6 +1155,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     dispatcher->go_home = [&](auto name, auto veh) { home_order(name, veh); };
     dispatcher->order_empty = [&]() { return orderpool->is_empty(); };
     dispatcher->pop_order = [&](auto ord) { orderpool->pop(ord); };
+    dispatcher->pathc_order = [&](auto ord) { orderpool->patch(ord); };
+
     dispatcher->get_next_ord = [&]() { return orderpool->get_next_ord(); };
     dispatcher->go_charge = [&](auto name, auto veh) {
       charge_order(name, veh);
@@ -1455,6 +1459,12 @@ std::pair<int, std::string> RSS::get_transport_order(
       return std::pair<int, std::string>({OK_200, res.to_string()});
     }
   }
+  for (auto &ord : orderpool->temp_orderpool) {
+    if (ord->name == ord_name) {
+      res.push_back(order_to_json(ord));
+      return std::pair<int, std::string>({OK_200, res.to_string()});
+    }
+  }
   auto msg = "Could not find transport order '" + ord_name + "'.";
   res.push_back(msg);
   return std::pair<int, std::string>({NotFound_404, res.to_string()});
@@ -1469,6 +1479,7 @@ std::pair<int, std::string> RSS::post_transport_order(
     res.push_back(msg);
     return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
+  std::unique_lock<std::mutex> lock2(orderpool->mut);
   for (auto &[name, ords] : orderpool->orderpool) {
     for (auto &ord : ords) {
       if (ord->name == ord_name) {
@@ -1489,6 +1500,7 @@ std::pair<int, std::string> RSS::post_transport_order(
       return std::pair<int, std::string>({Conflict_409, res.to_string()});
     }
   }
+  lock2.unlock();
   try {
     auto req = json::parse(body);
     LOG(WARNING) << "receive order:\n" << pretty_print(req) << "\n";
@@ -1959,6 +1971,7 @@ std::pair<int, std::string> RSS::post_ordersequence(
 }
 
 json vehicle_to_json(const std::shared_ptr<kernel::driver::Vehicle> &v) {
+  std::unique_lock<std::mutex> lock(v->resource.lock()->mut);
   json res;
   res["name"] = v->name;
   res["length"] = v->length;
@@ -3226,6 +3239,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     dispatcher->go_home = [&](auto name, auto veh) { home_order(name, veh); };
     dispatcher->order_empty = [&]() { return orderpool->is_empty(); };
     dispatcher->pop_order = [&](auto ord) { orderpool->pop(ord); };
+    dispatcher->pathc_order = [&](auto ord) { orderpool->patch(ord); };
     dispatcher->get_next_ord = [&]() { return orderpool->get_next_ord(); };
     dispatcher->go_charge = [&](auto name, auto veh) {
       charge_order(name, veh);

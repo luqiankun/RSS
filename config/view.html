@@ -472,8 +472,8 @@
                     // console.log(model);
                     visual_scale = model["visualLayout"]["scaleX"]
                     for (let point of model["points"]) {
-                        let x = point["layout"]["position"]["x"];
-                        let y = point["layout"]["position"]["y"];
+                        let x = point["position"]["x"];
+                        let y = point["position"]["y"];
                         let name = point["name"];
                         let t = point["type"]
                         let p = new Point(name, x, y, t);
@@ -1018,7 +1018,7 @@
                     ctx.beginPath()
                     ctx.fillStyle = v.color;
                     ctx.strokeStyle = v.color
-                    let font_size = (20 * (50 / resolution)).toFixed(0);
+                    let font_size = (10 * (50 / resolution)).toFixed(0);
                     if (font_size < 1) {
                         font_size = 1;
                     }

@@ -1,13 +1,13 @@
 #ifndef VEHICLE_HPP
 #define VEHICLE_HPP
+#include <boost/asio.hpp>
+
 #include "../../../include/3rdparty/uuid/uuid.hpp"
-#include "../../../include/component/util/taskpool.hpp"
 #include "../../../include/component/vda5050/master.hpp"
 #include "../../../include/component/vda5050/vda5050insact.hpp"
 #include "../allocate/order.hpp"
 #include "../planner/planner.hpp"
 #include "../schedule/schedule.hpp"
-
 namespace kernel {
 namespace dispatch {
 class Dispatcher;
@@ -16,7 +16,8 @@ namespace driver {
 class Vehicle : public schedule::Client,
                 public std::enable_shared_from_this<Vehicle> {
  public:
-  explicit Vehicle(const std::string &n) : schedule::Client(n) {}
+  explicit Vehicle(const std::string &n)
+      : schedule::Client(n), work(io_context) {}
   enum class State { UNKNOWN, UNAVAILABLE, ERROR, IDLE, EXECUTING, CHARGING };
   enum class proState { AWAITING_ORDER, IDEL, PROCESSING_ORDER };
   enum class nowOrder { BEGIN, END };
@@ -95,8 +96,9 @@ class Vehicle : public schedule::Client,
   Eigen::Vector3i position{0, 0, 0};
   double angle{0};
   Eigen::Vector3i layout{0, 0, 0};
-  tools::threadpool pool{1};       // 普通任务
-  tools::threadpool instant_pool;  // 立即任务
+  boost::asio::io_context io_context;
+  boost::asio::io_context::work work;
+  std::thread *run_th[4];
   bool task_run{false};
   uint32_t send_queue_size{2};
   bool instant_task_run{false};
@@ -161,7 +163,6 @@ class Rabbit3 : public Vehicle {
   double dest_deviation_xy;
   double dest_deviation_theta;
   uuids::uuid order_action_uuid;
-  tools::threadpool python_pool;  // python任务
   std::mutex python_mutex;
 };
 class InvalidVehicle : public Vehicle {

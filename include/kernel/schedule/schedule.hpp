@@ -7,7 +7,7 @@
 #include "../driver/command.hpp"
 namespace kernel::schedule {
 class Client : public RSSObject {
-public:
+ public:
   ~Client() override = default;
   using RSSObject::RSSObject;
   std::list<std::unordered_set<std::shared_ptr<RSSResource>>> claim_resources;
@@ -18,10 +18,10 @@ public:
 };
 class Scheduler : public RSSObject,
                   public std::enable_shared_from_this<Scheduler> {
-public:
+ public:
   using RSSObject::RSSObject;
-  std::shared_ptr<driver::Command>
-  new_command(const std::shared_ptr<driver::Vehicle> &);
+  std::shared_ptr<driver::Command> new_command(
+      const std::shared_ptr<driver::Vehicle> &);
   void add_command(const std::shared_ptr<driver::Command> &);
   void run();
   ~Scheduler() override {
@@ -34,13 +34,16 @@ public:
     CLOG(INFO, "schedule") << name << " close\n";
   }
 
-public:
-  std::list<std::shared_ptr<driver::Command>> commands;
+ public:
+  std::vector<
+      std::pair<std::string, std::list<std::shared_ptr<driver::Command>>>>
+      commands;
   std::weak_ptr<allocate::ResourceManager> resource;
   std::thread schedule_th;
   std::condition_variable con_var;
   std::mutex mut;
   bool dispose{false};
+  int cur_index{0};
 };
-} // namespace kernel::schedule
+}  // namespace kernel::schedule
 #endif

@@ -43,6 +43,7 @@ class Dispatcher : public RSSObject {
   std::function<allocate::PointPtr(allocate::PointPtr)> get_park_point;
   std::function<void(const std::string &, VehPtr)> go_charge;
   std::function<void(allocate::TransOrderPtr)> pop_order;
+  std::function<void(allocate::TransOrderPtr)> pathc_order;
   std::function<std::pair<std::string, allocate::TransOrderPtr>()> get_next_ord;
   std::function<bool()> order_empty;
 };
@@ -59,7 +60,7 @@ class Conflict {
     Err,          // 无解
   };
   float occupancy(std::shared_ptr<data::model::Alleyway>, VehPtr);  // 占用率
-  float distance(allocate::PointPtr, allocate::PointPtr);  // 路径代价
+  float distance(allocate::PointPtr, allocate::PointPtr);           // 路径代价
   bool one_of_other(std::pair<VehPtr, allocate::PointPtr>,
                     std::pair<VehPtr, allocate::PointPtr>);
   void swap_obj(std::pair<VehPtr, allocate::PointPtr>,
@@ -68,7 +69,7 @@ class Conflict {
                                   bool = false);
   bool is_swap_conflict(std::vector<allocate::PointPtr> p, VehPtr v);
   void solve_once();
-  void update();
+  int update();
 
  public:
   State state{Conflict::State::Raw};

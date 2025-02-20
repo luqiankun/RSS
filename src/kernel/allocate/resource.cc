@@ -94,6 +94,22 @@ bool ResourceManager::claim(const std::vector<TCSResourcePtr> &res,
 bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
                                const ClientPtr &client) {
   std::unique_lock<std::mutex> lock(mut);
+  for (auto it = client->allocated_resources.begin();
+       it != client->allocated_resources.end();) {
+    if (it->empty()) {
+      it = client->allocated_resources.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  for (auto it = client->claim_resources.begin();
+       it != client->claim_resources.end();) {
+    if (it->empty()) {
+      it = client->claim_resources.erase(it);
+    } else {
+      ++it;
+    }
+  }
   for (const auto &r : rules) {
     // LOG(INFO) << r->name;
     if (!r->pass(res, client)) {
@@ -142,6 +158,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
       }
     }
   }
+
   CLOG_IF(!ss.str().empty(), INFO, allocate_log)
       << client->name << " allocate { " << ss.str() << "}\n";
   return true;

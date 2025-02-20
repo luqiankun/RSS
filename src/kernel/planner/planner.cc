@@ -139,7 +139,7 @@ uint32_t Planner::calculate_turns(const std::vector<VertexPtr> &path,
   for (auto it = edge_vec.begin(); it != edge_vec.end() - 1; ++it) {
     Eigen::Vector2i v1 = *it;
     Eigen::Vector2i v2 = *(it + 1);
-    if (std::abs(v1.norm()) < 1e-6 && abs(v2.norm()) < 1e-6) {
+    if (std::abs(v1.norm()) < 1e-6 || abs(v2.norm()) < 1e-6) {
       continue;
     }
     const long cos = it->dot(*(it + 1)) / (it->norm() * ((it + 1))->norm());

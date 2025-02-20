@@ -45,6 +45,8 @@ void Vehicle::redistribute_cur_order() {
       return;
     }
     process_state = proState::IDEL;
+    avoid_state = Avoid::Normal;
+    now_order_state = Vehicle::nowOrder::END;
     future_allocate_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto &a : this->allocated_resources) {
@@ -55,8 +57,10 @@ void Vehicle::redistribute_cur_order() {
       }
     }
     res->free(temp, shared_from_this());
-    now_order_state = Vehicle::nowOrder::END;
-    process_state = proState::IDEL;
+    auto ord = current_order;
+    current_order.reset();
+    ord->conflict_pool.lock()->reset_state(ord);
+    order_pool->redistribute(ord);
     // avoid_state = Avoid::Normal;
     CLOG_IF(state != State::IDLE, INFO, driver_log)
         << name << " " << "state transform to : ["
@@ -64,17 +68,19 @@ void Vehicle::redistribute_cur_order() {
     state = State::IDLE;
     idle_time = get_now_utc_time();
     CLOG(INFO, driver_log) << name << " " << "now is idle "
-                           << get_time_fmt(idle_time) << "\n";
-    auto ord = current_order;
-    current_order.reset();
-    ord->conflict_pool.lock()->reset_state(ord);
-    order_pool->redistribute(ord);
+                           << get_time_fmt(idle_time) << " at "
+                           << last_point->name << "\n";
   }
 }
 void Vehicle::execute_action(
     const std::shared_ptr<data::order::DriverOrder::Destination> &dest) {
-  pool.commit([=] {
+  io_context.post([=] {
+    LOG(INFO) << name << " " << "action ---- {"
+              << dest->destination.lock()->name << "}\n";
     std::unique_lock<std::mutex> lock(ord_mutex);
+    LOG(INFO) << name << " " << "action  {" << dest->destination.lock()->name
+              << "}\n";
+
     if (!current_order) {
       CLOG(ERROR, driver_log) << name << " current_order is null\n";
       state = State::ERROR;
@@ -107,8 +113,12 @@ void Vehicle::execute_action(
 }
 void Vehicle::execute_move(
     const std::vector<std::shared_ptr<data::order::Step>> &steps) {
-  pool.commit([=] {
+  io_context.post([=] {
+    CLOG(INFO, driver_log) << name << " " << "move ---- {"
+                           << steps.front()->name << "}\n";
     std::unique_lock<std::mutex> lock(ord_mutex);
+    CLOG(INFO, driver_log) << name << " " << "move {" << steps.front()->name
+                           << "}\n";
     if (!current_order) {
       // state = State::ERROR;
       CLOG(INFO, driver_log) << name << " " << "state transform to : ["
@@ -130,9 +140,9 @@ void Vehicle::execute_move(
       CLOG(INFO, driver_log) << name << " " << "state transform to : ["
                              << vehicle_state_to_str(state) << "]\n";
     } else {
-      // std::stringstream ss;
-      // ss << current_order->name << " : move {" << steps.front()->name << "}";
-      // CLOG(INFO, driver_log) << name << " " << ss.str() << " ok\n";
+      std::stringstream ss;
+      ss << current_order->name << " : move {" << steps.front()->name << "}";
+      CLOG(INFO, driver_log) << name << " " << ss.str() << " ok\n";
     }
 
     if (current_command) {
@@ -143,7 +153,7 @@ void Vehicle::execute_move(
 void Vehicle::execute_instatn_action(
     const std::shared_ptr<vda5050::instantaction::Action> &act) {
   current_action = act;
-  instant_pool.commit([&] {
+  io_context.post([=] {
     auto ret = instant_action(current_action);
     if (!ret) {
       CLOG(ERROR, driver_log)
@@ -161,10 +171,20 @@ void Vehicle::cancel_all_order() {
   orders.clear();
 }
 
-void Vehicle::run() { init(); }
+void Vehicle::run() {
+  init();
+  for (int i = 0; i < 4; i++) {
+    auto th = new std::thread([this] { io_context.run(); });
+    run_th[i] = th;
+  }
+}
 void Vehicle::close() {
   task_run = false;
   instant_task_run = false;
+  io_context.stop();
+  for (int i = 0; i < 4; i++) {
+    run_th[i]->join();
+  }
   // if (run_th.joinable()) {
   //   run_th.join();
   // }
@@ -196,7 +216,8 @@ bool Vehicle::plan_route(allocate::TransOrderPtr cur) const {
   bool first_driverorder{true};
   std::shared_ptr<data::model::Point> start_planner;
   std::shared_ptr<data::model::Point> end_planner;
-  for (auto &op : cur->driverorders) {
+  for (int i = cur->current_driver_index; i < cur->driverorders.size(); i++) {
+    auto op = cur->driverorders[i];
     if (first_driverorder) {
       first_driverorder = false;
       start_planner = last_point;
@@ -226,6 +247,8 @@ bool Vehicle::plan_route(allocate::TransOrderPtr cur) const {
           << " or can not locate current_pos\n";
       return false;
     } else {
+      // LOG(INFO) << "start_planner : " << start_planner->name
+      //           << " end_planner : " << end_planner->name;
       auto path = route_planner->find_paths(start_planner, end_planner);
       if (path.empty()) {
         CLOG(WARNING, driver_log)
@@ -236,7 +259,7 @@ bool Vehicle::plan_route(allocate::TransOrderPtr cur) const {
             res->paths_to_route(path.front()), destination);
         driverorder->transport_order = cur;
         driverorder->state = data::order::DriverOrder::State::PRISTINE;
-        op = driverorder;
+        cur->driverorders[i] = driverorder;
       }
     }
   }
@@ -509,8 +532,8 @@ void Vehicle::next_command() {
 }
 void Vehicle::receive_task(
     const std::shared_ptr<data::order::TransportOrder> &order) {
-  CLOG(INFO, driver_log) << name << " receive new order " << order->name
-                         << "\n";
+  CLOG(INFO, driver_log) << name << " at " << last_point->name
+                         << " receive new order " << order->name << "\n";
   if (state == State::ERROR) {
     // order->state = data::order::TransportOrder::State::FAILED;
     CLOG(ERROR, driver_log) << name << " " << order->name
@@ -524,6 +547,7 @@ void Vehicle::receive_task(
         << name << " state transform to : ["
         << vehicle_state_to_str(State::EXECUTING) << "]\n";
     state = State::EXECUTING;
+    avoid_state = Avoid::Normal;
     process_state = proState::AWAITING_ORDER;
     std::unique_lock<std::mutex> lock(ord_mutex);
     current_order.reset();
@@ -671,6 +695,7 @@ bool SimVehicle::move(
     }
     position.x() = end->position.x();
     position.y() = end->position.y();
+    angle = std::atan2(y_len, x_len);
     last_point = end;
     current_point = last_point;
     CLOG(INFO, driver_log) << name << " now at (" << current_point->name
@@ -692,6 +717,7 @@ bool SimVehicle::move(
     position.x() = end->position.x();
     position.y() = end->position.y();
     last_point = end;
+    angle = std::atan2(y_len, x_len);
     current_point = last_point;
     CLOG(INFO, driver_log) << name << " now at (" << current_point->name
                            << ")\n";
@@ -1114,7 +1140,7 @@ bool Rabbit3::move(
             << "do " << op.location_name << "[" << op.op_name << "] ok\n";
       }
     } else {
-      python_pool.commit([=] {
+      io_context.post([=] {
         auto ret = run_script(script, act_param);
         CLOG(INFO, driver_log)
             << "do " << op.location_name << "[" << op.op_name << "] "
@@ -1578,7 +1604,7 @@ bool Rabbit3::move(
                   << "do " << op.location_name << "[" << op.op_name << "] ok\n";
             }
           } else {
-            python_pool.commit([=] {
+            io_context.post([=] {
               auto ret = run_script(script, act_param);
               CLOG(INFO, driver_log)
                   << "do " << op.location_name << "[" << op.op_name << "] "

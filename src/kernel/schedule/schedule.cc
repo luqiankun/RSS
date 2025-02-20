@@ -15,14 +15,22 @@ void Scheduler::run() {
       if (dispose) {
         break;
       }
-      for (auto it = commands.begin(); it != commands.end();) {
-        if ((*it)->state == driver::Command::State::DISPOSABLE) {
-          it = commands.erase(it);
+      if (commands.empty()) {
+        continue;
+      }
+      if (cur_index >= commands.size()) {
+        cur_index = 0;
+      }
+      if (!commands[cur_index].second.empty()) {
+        auto cmd = commands[cur_index].second.front();
+
+        if (cmd->state == driver::Command::State::DISPOSABLE) {
+          commands[cur_index].second.pop_front();
         } else {
-          (*it)->run_once();
-          ++it;
+          cmd->run_once();
         }
       }
+      cur_index++;
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   });
@@ -31,7 +39,14 @@ void Scheduler::run() {
 void Scheduler::add_command(const std::shared_ptr<driver::Command> &cmd) {
   if (cmd) {
     CLOG(DEBUG, "schedule") << "add new cmd " << cmd->name << "\n";
-    commands.push_back(cmd);
+    for (auto &x : commands) {
+      if (x.first == cmd->vehicle.lock()->name) {
+        x.second.push_back(cmd);
+        con_var.notify_one();
+        return;
+      }
+    }
+    commands.push_back({cmd->vehicle.lock()->name, {cmd}});
     con_var.notify_one();
   }
 }

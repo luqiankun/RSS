@@ -30,6 +30,11 @@ void OrderPool::cancel_order(size_t order_uuid) {
       }
     }
   }
+  for (const auto &x : temp_orderpool) {
+    if (x->name_hash == order_uuid) {
+      x->state = data::order::TransportOrder::State::WITHDRAWL;
+    }
+  }
   for (const auto &x : ended_orderpool) {
     if (x->name_hash == order_uuid) {
       x->state = data::order::TransportOrder::State::WITHDRAWL;
@@ -46,6 +51,15 @@ void OrderPool::pop(const TransOrderPtr &order) {
       break;
     }
   }
+  for (auto it = temp_orderpool.begin(); it != temp_orderpool.end();) {
+    if (*it == order) {
+      it = temp_orderpool.erase(it);
+      ended_orderpool.push_back(order);
+      break;
+    } else {
+      ++it;
+    }
+  }
   for (auto iter = orderpool.begin(); iter != orderpool.end();) {
     if (iter->second.empty()) {
       iter = orderpool.erase(iter);
@@ -54,27 +68,54 @@ void OrderPool::pop(const TransOrderPtr &order) {
     }
   }
 }
+
+void OrderPool::patch(const TransOrderPtr &order) {
+  for (auto it = temp_orderpool.begin(); it != temp_orderpool.end();) {
+    if (*it == order) {
+      it = temp_orderpool.erase(it);
+      push(order);
+      return;
+    } else {
+      ++it;
+    }
+  }
+  push(order);
+}
+
 void OrderPool::push(const TransOrderPtr &order) {
   std::string name{"unspecified"};
   if (order->intended_vehicle.lock()) {
     name = order->intended_vehicle.lock()->name;
   }
-  bool flag = false;
-  for (auto &o : orderpool) {
-    if (o.first == order->intended_vehicle.lock()->name) {
-      o.second.push_back(order);
-      std::sort(o.second.begin(), o.second.end(), OrderCmp());
-      flag = true;
-      break;
+  if (name == "unspecified") {
+    temp_orderpool.push_back(order);
+  } else {
+    for (auto &x : orderpool) {
+      if (x.first == name) {
+        if (order->anytime_drop) {
+          if (x.second.back()->anytime_drop) {
+            x.second.pop_back();
+          }
+          std::stable_sort(x.second.begin(), x.second.end(), OrderCmp());
+          x.second.push_back(order);
+        } else {
+          x.second.push_back(order);
+          std::stable_sort(x.second.begin(), x.second.end(), OrderCmp());
+        }
+
+        // for (auto it = x.second.begin(); it != x.second.end() - 1;) {
+        //   if ((*it)->anytime_drop) {
+        //     it = x.second.erase(it);
+        //   } else {
+        //     ++it;
+        //   }
+        // }
+        return;
+      }
     }
-  }
-  if (!flag) {
     std::deque<TransOrderPtr> queue;
     queue.push_back(order);
-    orderpool.emplace_back(std::pair{order->intended_vehicle.lock()
-                                         ? order->intended_vehicle.lock()->name
-                                         : "",
-                                     queue});
+    orderpool.emplace_back(std::pair{name, queue});
   }
 }
 void OrderPool::redistribute(const TransOrderPtr &order) {
@@ -83,6 +124,12 @@ void OrderPool::redistribute(const TransOrderPtr &order) {
     if (*it == order) {
       ended_orderpool.erase(it);
       order->state = data::order::TransportOrder::State::RAW;
+      order->priority += 1;
+      if (order->current_driver_index == 0) {
+        // 还没执行,可以切换车辆
+        order->intended_vehicle.reset();
+        order->processing_vehicle.reset();
+      }
       push(order);
       break;
     } else {
@@ -94,15 +141,30 @@ void OrderPool::redistribute(const TransOrderPtr &order) {
 std::pair<std::string, TransOrderPtr> OrderPool::get_next_ord() {
   std::unique_lock<std::mutex> lock(mut);
   update_quence();
+
   if (orderpool.empty()) {
-    return std::pair{"", nullptr};
+    if (temp_orderpool.empty()) {
+      return std::pair{"", nullptr};
+    } else {
+      auto x = temp_orderpool.front();
+      return {"", x};
+    }
   } else {
     if (cur_index >= orderpool.size()) {
       cur_index = 0;
     }
     auto current = orderpool.at(cur_index);
     cur_index++;
-    return {current.first, current.second.back()};
+    if (current.second.empty()) {
+      if (temp_orderpool.empty()) {
+        return std::pair{"", nullptr};
+      } else {
+        auto x = temp_orderpool.front();
+        return {"", x};
+      }
+    } else {
+      return {current.first, current.second.back()};
+    }
   }
 }
 
@@ -142,6 +204,10 @@ void OrderPool::cancel_all_order() {
   for (auto &x : ended_orderpool) {
     x->state = data::order::TransportOrder::State::WITHDRAWL;
   }
+  for (auto &x : temp_orderpool) {
+    x->state = data::order::TransportOrder::State::WITHDRAWL;
+    ended_orderpool.push_back(x);
+  }
 }
 std::vector<TransOrderPtr> OrderPool::get_all_order() {
   std::unique_lock<std::mutex> lock(mut);
@@ -164,6 +230,8 @@ std::vector<TransOrderPtr> OrderPool::get_all_order() {
               return a->create_time > b->create_time;
             });
   pro_orders.insert(pro_orders.end(), end_orders.begin(), end_orders.end());
+  pro_orders.insert(pro_orders.end(), temp_orderpool.begin(),
+                    temp_orderpool.end());
   return pro_orders;
 }
 }  // namespace kernel::allocate

@@ -12,18 +12,18 @@ using OrderSeqPtr = std::shared_ptr<data::order::OrderSequence>;
 // 每个机器人的订单派发顺序
 struct OrderCmp {
   bool operator()(const TransOrderPtr &a, const TransOrderPtr &b) const {
-    assert(a->intended_vehicle.lock() == b->intended_vehicle.lock());
+    // assert(a->intended_vehicle.lock() == b->intended_vehicle.lock());
     if (a->priority < b->priority) {
       return true;
     } else if (a->priority > b->priority) {
       return false;
     } else {
       // 优先级相同按创建时间排序
-      if (a->create_time > b->create_time) {
-        return true;
-      } else {
-        return false;
-      }
+      if (a->anytime_drop && b->anytime_drop) {
+        // 都是避让订单
+        return a->create_time < b->create_time;
+      } else
+        return a->create_time > b->create_time;
     }
   }
 };
@@ -37,6 +37,7 @@ class OrderPool : public RSSObject {
   void cancel_order(size_t order_uuid);
   void pop(const TransOrderPtr &order);
   void push(const TransOrderPtr &order);
+  void patch(const TransOrderPtr &order);
   void redistribute(const TransOrderPtr &order);
   std::pair<std::string, TransOrderPtr> get_next_ord();
   ~OrderPool() { CLOG(INFO, allocate_log) << name << " close\n"; }
@@ -47,6 +48,7 @@ class OrderPool : public RSSObject {
  public:
   using RSSObject::RSSObject;
   std::vector<std::pair<std::string, std::deque<TransOrderPtr>>> orderpool;
+  std::deque<TransOrderPtr> temp_orderpool;
   std::deque<TransOrderPtr> ended_orderpool;
   std::deque<OrderSeqPtr> orderquence;
   std::mutex mut;

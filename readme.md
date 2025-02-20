@@ -5,13 +5,13 @@
 [Eigen3](https://eigen.tuxfamily.org/)
 
 ubuntu 安装依赖
+
 > sudo apt install libpaho-mqttpp-dev
 > (ubuntu18.04及以下可能需要源码编译，20.04以上可以apt安装，windows可以源码编译或者用vcpkg)
 
 > sudo apt install libeigen3-dev
 
 > paho-mqttpp依赖eclipse-paho-mqtt-c和openssl,一般会自动安装
-
 
 如果要测试vda,添加test选项编译，编译车辆端模拟的代码和一些测试代码,如果使用虚拟车辆则无须编译test
 
@@ -71,8 +71,8 @@ ls
 
 ##### 如果已经上传模型，或者调度系统启动时配置了自动加载某个文件，可以直接点击确定，此时会显示车辆列表和地图
 
-> <big>**<font color=#b04f61> 在地图上滚轮可以放大缩小地图，右键按住拖动可以地图,鼠标停在Point 或 Location 或
-Vehicle上面可以大字号显示</font>**</big>
+> `<big>`**`<font color=#b04f61>` 在地图上滚轮可以放大缩小地图，右键按住拖动可以地图,鼠标停在Point 或 Location 或
+> Vehicle上面可以大字号显示`</font>`**`</big>`
 
 粗圆环表示停靠点；双线圆环表示充电点；被禁用的道路和操作点会显示灰色
 带颜色的路径和点表示不同的block区域；正方形方框表示周边操作点
@@ -121,6 +121,7 @@ Vehicle上面可以大字号显示</font>**</big>
 #### 也可以使用api工具发送http请求
 
 config中有api接口定义文件
+
 > RSS.openapi.json
 
 发送上传模型请求：
@@ -341,8 +342,8 @@ body config中的map.xml内容
 
 #### 快速下单
 
-> <font color=#b04f61>简单测试可以用鼠标在车辆位置按下左键，然后拖动到Point或Location点口释放可以快捷下单，对应的动作为MOVE或NOP，pick或drop
-> 界面右上角显示最新的几条订单状态</font>
+> `<font color=#b04f61>`简单测试可以用鼠标在车辆位置按下左键，然后拖动到Point或Location点口释放可以快捷下单，对应的动作为MOVE或NOP，pick或drop
+> 界面右上角显示最新的几条订单状态`</font>`
 
 #### 也使用api工具发送请求：
 
@@ -399,7 +400,7 @@ OPEN, //开门
 [I 240430 13:51:55.9563 vehicle.cc:1075] Vehicle-0001 all actions ok
 ```
 
-### 外围关联操作
+### 外设关联操作
 
 电梯等其他外设，由服务器直接执行的动作，具体操作目前留空，用打印来模拟
 如果路径点上定义了相应的动作，根据触发时机会去调用
@@ -424,6 +425,7 @@ OPEN, //开门
 ### 禁用道路或操作点
 
 使用api工具发送请求
+
 > 可以鼠标双击路径或操作点来启用或禁用
 
 例如请求禁用Point-0022 --- Point-0023

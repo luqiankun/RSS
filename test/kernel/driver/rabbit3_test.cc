@@ -1,10 +1,10 @@
-#include "../../../include/component/util/taskpool.hpp"
+#include <boost/asio.hpp>
+
 #include "../../../include/component/util/tools.hpp"
 #include "../../../include/component/vda5050/master.hpp"
 #include "../../../include/component/vda5050/valitator.hpp"
 #include "../../../include/component/vda5050/vda5050insact.hpp"
 #include "../../../include/component/vda5050/vda5050order.hpp"
-
 class SimRabbit3 {
  public:
   enum class Status { RUNNING, PASUED };
@@ -15,7 +15,8 @@ class SimRabbit3 {
       : interface_name(interface_name),
         serial_number(serial_number),
         manufacturer(manufacturer),
-        version(vers) {
+        version(vers),
+        work(io) {
     vda_state.version = this->version;
     vda_state.manufacturer = manufacturer;
     vda_state.serial_number = serial_number;
@@ -69,6 +70,7 @@ class SimRabbit3 {
     con_ops.set_will(will_ops);
   }
   void start() {
+    th = std::thread([&] { io.run(); });
     if (mqtt_client) {
       th_state = std::thread([&] {
         long long send_id{0};
@@ -143,7 +145,7 @@ class SimRabbit3 {
                           .retained(t->is_retained())
                           .payload(t->get_payload())
                           .finalize();
-        move_task.commit([&] {
+        io.post([&] {
           try {
             LOG(INFO) << current_msg->get_payload();
             auto src = jsoncons::json::parse(current_msg->get_payload());
@@ -434,7 +436,7 @@ class SimRabbit3 {
                       vda_state = *state;
                       con.notify_one();
                       lock.unlock();
-                      util_task.commit([&]() mutable {
+                      io.post([&]() mutable {
                         while (vda_state.battery_state.battery_charge < 100) {
                           std::unique_lock<std::mutex> lock(mut);
                           if (vda_state.driving) {
@@ -756,7 +758,7 @@ class SimRabbit3 {
                       vda_state = *state;
                       con.notify_one();
                       lock.unlock();
-                      util_task.commit([&]() mutable {
+                      io.post([&]() mutable {
                         while (vda_state.battery_state.battery_charge < 100) {
                           std::unique_lock<std::mutex> lock(mut);
                           if (vda_state.driving) {
@@ -835,7 +837,7 @@ class SimRabbit3 {
                                   .retained(t->is_retained())
                                   .payload(t->get_payload())
                                   .finalize();
-            action_task.commit([&] {
+            io.post([&] {
               // LOG(INFO) << current_act_msg->get_payload();
               try {
                 auto src =
@@ -899,9 +901,9 @@ class SimRabbit3 {
   vda5050::state::VDA5050State vda_state;
   std::thread th_state;
   std::thread th_pro;
-  tools::threadpool move_task{1};
-  tools::threadpool action_task{1};
-  tools::threadpool util_task{4};
+  boost::asio::io_context io;
+  boost::asio::io_context::work work;
+  std::thread th;
   std::mutex mut;
   std::mutex pro_mut;
   std::condition_variable con;
