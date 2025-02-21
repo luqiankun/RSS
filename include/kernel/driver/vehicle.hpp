@@ -44,7 +44,7 @@ class Vehicle : public schedule::Client,
   bool plan_route(allocate::TransOrderPtr) const;
   void reroute();
   void get_next_ord();
-  void redistribute_cur_order();
+  allocate::TransOrderPtr redistribute_cur_order();
   void run();
   void cancel_all_order();
   void close();

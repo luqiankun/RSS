@@ -45,6 +45,10 @@ class Dispatcher : public RSSObject {
   std::function<void(allocate::TransOrderPtr)> pop_order;
   std::function<void(allocate::TransOrderPtr)> pathc_order;
   std::function<std::pair<std::string, allocate::TransOrderPtr>()> get_next_ord;
+  std::function<std::pair<std::string, allocate::TransOrderPtr>()>
+      get_next_random_ord;
+  std::function<bool()> random_list_empty;
+
   std::function<bool()> order_empty;
 };
 const float kMaxOccupancy = 1;

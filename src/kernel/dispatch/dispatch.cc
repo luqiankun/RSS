@@ -8,7 +8,7 @@
 #include "../../../include/kernel/driver/vehicle.hpp"
 #include "../../../include/kernel/planner/planner.hpp"
 #include "../../../include/main/rss.hpp"
-const float kLen = 3;
+const float kLen = 2;
 namespace kernel::dispatch {
 VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
   if (vehicles.empty()) {
@@ -21,7 +21,8 @@ VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
   for (auto &v : vehicles) {
     // if (v->state == driver::Vehicle::State::IDLE &&
     //     v->proc_state == driver::Vehicle::ProcState::AWAITING_ORDER) {
-    if (v->state == driver::Vehicle::State::IDLE) {
+    if (v->state == driver::Vehicle::State::IDLE &&
+        v->avoid_state == driver::Vehicle::Avoid::Normal) {
       if (!v->paused) {
         idle_temp.emplace_back(v);
       }
@@ -222,7 +223,20 @@ void Dispatcher::dispatch_once() {
   //     }
   //   }
   // }
-  auto current_ord = get_next_ord().second;
+  bool exist = false;
+  for (auto &x : vehicles) {
+    if (x->state == driver::Vehicle::State::IDLE &&
+        x->avoid_state == driver::Vehicle::Avoid::Normal) {
+      exist = true;
+      break;
+    }
+  }
+  std::shared_ptr<data::order::TransportOrder> current_ord;
+  if (exist && !random_list_empty()) {
+    current_ord = get_next_random_ord().second;
+  } else {
+    current_ord = get_next_ord().second;
+  }
   if (!current_ord) {
     return;
   }
@@ -234,6 +248,7 @@ void Dispatcher::dispatch_once() {
     }
     auto v = current_ord->intended_vehicle.lock();
     if (!v) {
+      current_ord->switch_veh = true;
       if (auto_select) {
         int index_driver = current_ord->current_driver_index;
         if (index_driver > current_ord->driverorders.size()) {
@@ -312,17 +327,22 @@ void Dispatcher::dispatch_once() {
             << current_ord->name << " status: [unroutable]\n";
       }
     }
-  }
-
-  if (current_ord->state == data::order::TransportOrder::State::WITHDRAWL) {
+  } else if (current_ord->state ==
+             data::order::TransportOrder::State::WITHDRAWL) {
     current_ord->state = data::order::TransportOrder::State::FAILED;
     CLOG(WARNING, dispatch_log)
         << current_ord->name << " status: [withdrawl]\n";
-  }
-  if (current_ord->state == data::order::TransportOrder::State::DISPATCHABLE) {
+  } else if (current_ord->state ==
+             data::order::TransportOrder::State::DISPATCHABLE) {
     auto su = current_ord->intended_vehicle.lock()->state;
     if (su == driver::Vehicle::State::IDLE ||
         su == driver::Vehicle::State::CHARGING) {
+      if (current_ord->intended_vehicle.lock()->avoid_state ==
+              driver::Vehicle::Avoid::Avoiding &&
+          !current_ord->anytime_drop) {
+        // 不是避让订单
+        return;
+      }
       current_ord->intended_vehicle.lock()->receive_task(current_ord);
       current_ord->processing_vehicle = current_ord->intended_vehicle;
       // pop_order(current_ord);
@@ -351,24 +371,22 @@ void Dispatcher::dispatch_once() {
       // pop_order(current_ord);
     }
     // }
-  }
-  if (current_ord->state ==
-      data::order::TransportOrder::State::BEING_PROCESSED) {
-    pop_order(current_ord);
+  } else if (current_ord->state ==
+             data::order::TransportOrder::State::BEING_PROCESSED) {
+    // pop_order(current_ord);
     CLOG(INFO, dispatch_log)
         << current_ord->name << " status: [beging_processed]\n";
 
     // wait  do nothing
-  }
-  if (current_ord->state == data::order::TransportOrder::State::FINISHED) {
+  } else if (current_ord->state ==
+             data::order::TransportOrder::State::FINISHED) {
     pop_order(current_ord);
     CLOG(WARNING, dispatch_log) << current_ord->name << " status: [finished]\n";
-  }
-  if (current_ord->state == data::order::TransportOrder::State::FAILED) {
+  } else if (current_ord->state == data::order::TransportOrder::State::FAILED) {
     pop_order(current_ord);
     CLOG(WARNING, dispatch_log) << current_ord->name << " status: [failed]\n";
-  }
-  if (current_ord->state == data::order::TransportOrder::State::UNROUTABLE) {
+  } else if (current_ord->state ==
+             data::order::TransportOrder::State::UNROUTABLE) {
     pop_order(current_ord);
     CLOG(WARNING, dispatch_log)
         << current_ord->name << " status: [unroutable]\n";
@@ -377,14 +395,21 @@ void Dispatcher::dispatch_once() {
 void Dispatcher::brake_deadlock(const std::vector<VehPtr> &d_loop) {
   // TODO
   if (!d_loop.empty()) {
-    if (!d_loop.front()->current_order || !d_loop.back()->current_order) return;
-    if (d_loop.front()->current_order->priority >
-        d_loop.back()->current_order->priority) {
-      d_loop.back()->redistribute_cur_order();
+    if (!d_loop.front()->current_order) {
+      if (d_loop.back()->current_order) {
+        auto ord = d_loop.back()->redistribute_cur_order();
+      }
+    } else if (!d_loop.back()->current_order) {
+      if (d_loop.front()->current_order) {
+        auto ord = d_loop.front()->redistribute_cur_order();
+      }
+    } else if (d_loop.front()->current_order->priority >
+               d_loop.back()->current_order->priority) {
+      auto ord = d_loop.back()->redistribute_cur_order();
 
     } else if (d_loop.front()->current_order->create_time >
                d_loop.back()->current_order->create_time) {
-      d_loop.front()->redistribute_cur_order();
+      auto ord = d_loop.front()->redistribute_cur_order();
     }
   }
 }
@@ -398,15 +423,24 @@ void Dispatcher::brake_blocklock(const std::vector<VehPtr> &d_loop) {
     //   // d_loop.back()->redistribute_cur_order();
     //   d_loop.front()->redistribute_cur_order();
     // }
-    if (!d_loop.front()->current_order || !d_loop.back()->current_order) return;
-    if (d_loop.front()->current_order->priority >
-        d_loop.back()->current_order->priority) {
-      d_loop.back()->redistribute_cur_order();
+    // if (!d_loop.front()->current_order) {
+    //   if (d_loop.back()->current_order) {
+    //     d_loop.back()->redistribute_cur_order();
+    //   }
+    // } else if (!d_loop.back()->current_order) {
+    //   if (d_loop.front()->current_order) {
+    //     d_loop.front()->redistribute_cur_order();
+    //   }
+    // } else if (d_loop.front()->current_order->priority >
+    //            d_loop.back()->current_order->priority) {
+    //   d_loop.back()->redistribute_cur_order();
 
-    } else if (d_loop.front()->current_order->create_time >
-               d_loop.back()->current_order->create_time) {
-      d_loop.front()->redistribute_cur_order();
-    }
+    // } else if (d_loop.front()->current_order->create_time >
+    //            d_loop.back()->current_order->create_time) {
+    //   d_loop.front()->redistribute_cur_order();
+    // } else {
+    //   d_loop.back()->redistribute_cur_order();
+    // }
   }
 }
 void Dispatcher::run() {
@@ -701,9 +735,9 @@ void Conflict::solve_once() {
       }
       // 无冲突
       auto new_ord = std::make_shared<data::order::TransportOrder>(
-          "TOder_" + uuids::to_string(get_uuid()));
+          "AOder_" + uuids::to_string(get_uuid()));
       new_ord->create_time = get_now_utc_time();
-      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(10);
+      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(100);
       int pro = 3;
       if (veh->current_order) {
         pro = veh->current_order->priority + 1;
@@ -838,9 +872,9 @@ void Conflict::solve_once() {
       order->intended_vehicle.lock()->avoid_state =
           driver::Vehicle::Avoid::Normal;
       auto new_ord = std::make_shared<data::order::TransportOrder>(
-          "TOder_" + uuids::to_string(get_uuid()));
+          "AOder_" + uuids::to_string(get_uuid()));
       new_ord->create_time = get_now_utc_time();
-      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(10);
+      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(100);
       if (order->intended_vehicle.lock()->current_order) {
         new_ord->priority =
             order->intended_vehicle.lock()->current_order->priority + 1;
@@ -986,6 +1020,13 @@ bool Conflict::is_swap_conflict(std::vector<allocate::PointPtr> p, VehPtr v) {
   if (v_step.empty()) {
     return false;
   }
+  auto last_step = cur_step->steps.back();
+  for (auto &x : v_step) {
+    if (last_step->path == x->path &&
+        last_step->vehicle_orientation == x->vehicle_orientation) {
+      return true;
+    }
+  }
   float cur_cost = 0;  // mm单位
   for (auto &cur_s : cur_step->steps) {
     float v_cost = 0;
@@ -1106,12 +1147,18 @@ Conflict::State ConflictPool::get_state(allocate::TransOrderPtr order) {
     conflicts[order] = conflict;
     order->conflict_pool = shared_from_this();
   }
+  if (conflicts[order]->state == Conflict::State::END) {
+    conflicts.erase(order);
+    return Conflict::State::END;
+  }
   return conflicts[order]->state;
 }
 void ConflictPool::solve(allocate::TransOrderPtr order) {
   conflicts[order]->solve_once();
 }
 void ConflictPool::reset_state(allocate::TransOrderPtr order) {
-  conflicts[order]->state = Conflict::State::Raw;
+  if (conflicts.find(order) != conflicts.end()) {
+    conflicts.erase(order);
+  }
 }
 }  // namespace kernel::dispatch

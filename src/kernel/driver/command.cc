@@ -6,7 +6,7 @@
 #define assert_valid                                                   \
   auto veh = vehicle.lock();                                           \
   auto scheduler = veh->scheduler.lock();                              \
-  auto cur_ord = veh->current_order;                                   \
+  auto cur_ord = order;                                   \
   if (!veh || !scheduler || !cur_ord) {                                \
     state = State::DISPOSABLE;                                         \
     return;                                                            \
@@ -24,10 +24,10 @@
     return;                                                            \
   }
 namespace kernel::driver {
-bool veh_swap_conflict(std::shared_ptr<Vehicle> v) {
+std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
   std::unique_lock<std::mutex> lock(v->ord_mutex);
   if (!v->current_order) {
-    return false;
+    return nullptr;
   }
   auto disptcher = v->dispatcher.lock();
   auto vehs = disptcher->vehicles;
@@ -54,7 +54,7 @@ bool veh_swap_conflict(std::shared_ptr<Vehicle> v) {
                 ->route->current_step);
       }
       float cur_cost = 0;  // mm单位
-      const float kLen = 3;
+      const float kLen = 2;
       for (auto &cur_s : left_step) {
         float v_cost = 0;
         for (auto &v_s : right_step) {
@@ -62,7 +62,7 @@ bool veh_swap_conflict(std::shared_ptr<Vehicle> v) {
               cur_s->vehicle_orientation != v_s->vehicle_orientation) {
             if (fabs(cur_cost - v_cost) < kLen * (v_s->path->length)) {
               LOG(WARNING) << "swap conflict " << v->name << " " << x->name;
-              return true;
+              return x;
             }
           }
           v_cost += v_s->path->length;
@@ -71,11 +71,14 @@ bool veh_swap_conflict(std::shared_ptr<Vehicle> v) {
       }
     }
   }
-  return false;
+  return nullptr;
 }
 bool veh_conflict(std::shared_ptr<Vehicle> v) {
   auto driver_order =
       v->current_order->driverorders[v->current_order->current_driver_index];
+  if (driver_order->route->steps.empty()) {
+    return false;
+  }
   std::deque<std::shared_ptr<data::order::Step>> steps =
       driver_order->route->steps;
   for (auto &x : steps) {
@@ -84,12 +87,14 @@ bool veh_conflict(std::shared_ptr<Vehicle> v) {
     if (st_owner && st_owner != v) {
       auto st_veh = std::dynamic_pointer_cast<Vehicle>(st_owner);
       if (st_veh->state == Vehicle::State::IDLE) {
+        LOG(INFO) << "swap conflict " << v->name << " " << st_veh->name;
         return true;
       }
     }
     if (ed_owner && ed_owner != v) {
       auto ed_veh = std::dynamic_pointer_cast<Vehicle>(ed_owner);
       if (ed_veh->state == Vehicle::State::IDLE) {
+        LOG(INFO) << "swap conflict " << v->name << " " << ed_veh->name;
         return true;
       }
     }
@@ -148,13 +153,27 @@ Command::Command(const std::string &n) : RSSObject(n) {
     state = State::ALLOCATING;
     // auto driver_order = order->driverorders[order->current_driver_index];
   };
+  cbs[State::REDISBUTE] = [&] {
+    assert_valid;
+    veh->orderpool.lock()->redistribute(order);
+    state = Command::State::DISPOSABLE;
+  };
   cbs[State::ALLOCATING] = [&] {
     assert_valid;
     // 冲突判断
-    if (veh_conflict(veh) || veh_swap_conflict(veh)) {
-      LOG(WARNING) << veh->name << "redistribute at " << veh->last_point->name;
+    if (veh_conflict(veh)) {
+      LOG(WARNING) << veh->name << "redistribute at " << veh->last_point->name
+                   << " " << veh->current_point->name;
       veh->redistribute_cur_order();
-      state = State::DISPOSABLE;
+      return;
+    }
+    auto con_veh = veh_swap_conflict(veh);
+    if (con_veh) {
+      // auto ord1 = con_veh->redistribute_cur_order();
+      auto ord2 = veh->redistribute_cur_order();
+      // veh->orderpool.lock()->redistribute(ord1);
+      // veh->orderpool.lock()->redistribute(ord2);
+      LOG(WARNING) << "redistribute " << veh->name << " " << con_veh->name;
       return;
     }
     auto driver_order = order->driverorders[order->current_driver_index];
@@ -274,7 +293,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
         // LOG(WARNING) << "-------------------------";
       } else {
-        LOG(INFO) << veh->name << " move \n";
+        LOG(INFO) << veh->name << "{" << int(state) << "} move \n";
         state = State::EXECUTING;
         move(steps);
       }
@@ -371,6 +390,8 @@ void Command::vehicle_execute_cb(bool ret) {
       veh->claim_resources.clear();
     }
     state = State::EXECUTED;
+  } else {
+    LOG(FATAL) << "test";
   }
   CLOG(INFO, driver_log) << veh->name << "  " << (int)state << " execute cb\n";
 }

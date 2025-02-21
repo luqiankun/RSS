@@ -31,18 +31,21 @@ std::string vehicle_state_to_str(Vehicle::State state) {
   }
   return res;
 }
-void Vehicle::redistribute_cur_order() {
+allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
   std::unique_lock<std::mutex> lock(ord_mutex);
   if (current_order) {
+    LOG(INFO) << name << " " << current_order->name
+              << " redistribute current order\n";
+    auto ord = current_order;
     auto order_pool = orderpool.lock();
     auto res = resource.lock();
     if (!res) {
       CLOG(ERROR, driver_log) << name << " resource is null\n";
-      return;
+      return nullptr;
     }
     if (!order_pool) {
       CLOG(ERROR, driver_log) << name << " order_pool is null\n";
-      return;
+      return nullptr;
     }
     process_state = proState::IDEL;
     avoid_state = Avoid::Normal;
@@ -57,19 +60,26 @@ void Vehicle::redistribute_cur_order() {
       }
     }
     res->free(temp, shared_from_this());
-    auto ord = current_order;
-    current_order.reset();
+
     ord->conflict_pool.lock()->reset_state(ord);
-    order_pool->redistribute(ord);
+    LOG(INFO) << name << " " << ord->name << " redistribute current order\n";
+    // order_pool->redistribute(ord);
     // avoid_state = Avoid::Normal;
     CLOG_IF(state != State::IDLE, INFO, driver_log)
         << name << " " << "state transform to : ["
         << vehicle_state_to_str(State::IDLE) << "]\n";
+    current_order.reset();
     state = State::IDLE;
     idle_time = get_now_utc_time();
     CLOG(INFO, driver_log) << name << " " << "now is idle "
                            << get_time_fmt(idle_time) << " at "
                            << last_point->name << "\n";
+    if (current_command) {
+      current_command->state = Command::State::REDISBUTE;
+    }
+    return ord;
+  } else {
+    return nullptr;
   }
 }
 void Vehicle::execute_action(
@@ -114,8 +124,11 @@ void Vehicle::execute_action(
 void Vehicle::execute_move(
     const std::vector<std::shared_ptr<data::order::Step>> &steps) {
   io_context.post([=] {
-    CLOG(INFO, driver_log) << name << " " << "move ---- {"
-                           << steps.front()->name << "}\n";
+    CLOG(INFO, driver_log) << name << " " << (int)current_command->state
+                           << "}\n";
+    if (current_command->state != Command::State::EXECUTING) {
+      LOG(FATAL) << "ddd";
+    }
     std::unique_lock<std::mutex> lock(ord_mutex);
     CLOG(INFO, driver_log) << name << " " << "move {" << steps.front()->name
                            << "}\n";
@@ -340,8 +353,8 @@ void Vehicle::command_done() {
     lock.unlock();
     get_next_ord();
     return;
-  }
-  if (current_order->state == data::order::TransportOrder::State::UNROUTABLE) {
+  } else if (current_order->state ==
+             data::order::TransportOrder::State::UNROUTABLE) {
     // 订单不可达
     future_allocate_resources.clear();
     CLOG(ERROR, driver_log)
@@ -452,6 +465,12 @@ void Vehicle::command_done() {
       // state = State::EXECUTING;
     } else {
       // 订单取消了或失败了
+      LOG(INFO) << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^ " << (int)current_order->state;
+      if (current_order->state !=
+          data::order::TransportOrder::State::BEING_PROCESSED) {
+        CLOG(FATAL, driver_log)
+            << name << " " << current_order->name << " status: [failed]\n";
+      }
       command_done();
     }
   }
@@ -489,10 +508,11 @@ std::string Vehicle::get_process_state() const {
 }
 void Vehicle::next_command() {
   auto scheduler_ = scheduler.lock();
-  if (!scheduler_) {
+  auto dispatcher_ = dispatcher.lock();
+  if (!scheduler_ || !dispatcher_) {
     std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
-    CLOG(ERROR, driver_log) << name << " scheduler is null\n";
+    CLOG(ERROR, driver_log) << name << " scheduler  or dispatcher is null\n";
     return;
   }
   if (!current_order) {
@@ -503,8 +523,10 @@ void Vehicle::next_command() {
       data::order::TransportOrder::State::DISPATCHABLE) {
     std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::BEING_PROCESSED;
+    dispatcher_->pop_order(current_order);
     CLOG(INFO, order_log) << current_order->name
                           << " status: {begin_processed}\n";
+    lock.unlock();
     plan_route(current_order);  // 首次执行，规划路径
   }
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
@@ -553,6 +575,9 @@ void Vehicle::receive_task(
     current_order.reset();
     lock.unlock();
     orders.push_back(order);
+    if (order->state != data::order::TransportOrder::State::DISPATCHABLE) {
+      LOG(FATAL) << "ssss";
+    }
     next_command();
   } else if (state == State::EXECUTING) {
     if (current_order && current_order->anytime_drop) {

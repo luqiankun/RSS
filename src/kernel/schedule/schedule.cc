@@ -11,12 +11,18 @@ void Scheduler::run() {
   schedule_th = std::thread([&] {
     while (!dispose) {
       std::unique_lock<std::mutex> lock(mut);
-      con_var.wait(lock, [&] { return !commands.empty() || dispose; });
+      con_var.wait(lock, [&] {
+        bool empty = true;
+        for (auto &x : commands) {
+          if (!x.second.empty()) {
+            empty = false;
+            break;
+          }
+        }
+        return !empty || dispose;
+      });
       if (dispose) {
         break;
-      }
-      if (commands.empty()) {
-        continue;
       }
       if (cur_index >= commands.size()) {
         cur_index = 0;

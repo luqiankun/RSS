@@ -40,6 +40,8 @@ class OrderPool : public RSSObject {
   void patch(const TransOrderPtr &order);
   void redistribute(const TransOrderPtr &order);
   std::pair<std::string, TransOrderPtr> get_next_ord();
+  std::pair<std::string, TransOrderPtr> get_next_random_ord();
+  bool random_list_empty() { return random_orderpool.empty(); }
   ~OrderPool() { CLOG(INFO, allocate_log) << name << " close\n"; }
   void update_quence() const;
   bool is_empty() { return orderpool.empty(); }
@@ -48,7 +50,7 @@ class OrderPool : public RSSObject {
  public:
   using RSSObject::RSSObject;
   std::vector<std::pair<std::string, std::deque<TransOrderPtr>>> orderpool;
-  std::deque<TransOrderPtr> temp_orderpool;
+  std::deque<TransOrderPtr> random_orderpool;
   std::deque<TransOrderPtr> ended_orderpool;
   std::deque<OrderSeqPtr> orderquence;
   std::mutex mut;

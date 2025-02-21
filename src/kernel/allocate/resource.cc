@@ -313,18 +313,16 @@ ResourceManager::get_all_idel_points(std::shared_ptr<driver::Vehicle> v,
       //   res.insert(flg->vertices[i]);
       for (int i = 0; i < flg->size(); i++) res.insert(flg->vertices[i]);
     } else {
-      // if (x->owner.lock()) {
-      //   auto veh =
-      //   std::dynamic_pointer_cast<driver::Vehicle>(x->owner.lock()); if
-      //   (veh->state == driver::Vehicle::State::EXECUTING ||
-      //       veh->avoid_state == driver::Vehicle::Avoid::Avoiding) {
-      //     res.insert(x);
-      //   }
+      if (x->owner.lock()) {
+        auto veh = std::dynamic_pointer_cast<driver::Vehicle>(x->owner.lock());
+        if (veh->state == driver::Vehicle::State::IDLE) {
+          res.insert(x);
+        }
 
-      // } else {
-      //   res.insert(x);
-      // }
-      res.insert(x);
+      } else {
+        res.insert(x);
+      }
+      // res.insert(x);
     }
   }
   return {res.begin(), res.end()};

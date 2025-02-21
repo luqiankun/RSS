@@ -1156,7 +1156,12 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     dispatcher->order_empty = [&]() { return orderpool->is_empty(); };
     dispatcher->pop_order = [&](auto ord) { orderpool->pop(ord); };
     dispatcher->pathc_order = [&](auto ord) { orderpool->patch(ord); };
-
+    dispatcher->get_next_random_ord = [&]() {
+      return orderpool->get_next_random_ord();
+    };
+    dispatcher->random_list_empty = [&]() {
+      return orderpool->random_list_empty();
+    };
     dispatcher->get_next_ord = [&]() { return orderpool->get_next_ord(); };
     dispatcher->go_charge = [&](auto name, auto veh) {
       charge_order(name, veh);
@@ -1369,7 +1374,7 @@ json order_to_json(const std::shared_ptr<data::order::TransportOrder> &v) {
     value["peripheralReservationToken"] = v->peripheral_reservation_token;
     value["wrappingSequence"] =
         v->ordersequence.lock() ? v->ordersequence.lock()->name : json::null();
-    value["createTime"] = get_time_fmt(v->create_time);
+    value["creationTime"] = get_time_fmt(v->create_time);
     value["destinations"] = json::array();
     for (auto &dest : v->driverorders) {
       json dest_v;
@@ -1459,7 +1464,7 @@ std::pair<int, std::string> RSS::get_transport_order(
       return std::pair<int, std::string>({OK_200, res.to_string()});
     }
   }
-  for (auto &ord : orderpool->temp_orderpool) {
+  for (auto &ord : orderpool->random_orderpool) {
     if (ord->name == ord_name) {
       res.push_back(order_to_json(ord));
       return std::pair<int, std::string>({OK_200, res.to_string()});
@@ -3240,6 +3245,12 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     dispatcher->order_empty = [&]() { return orderpool->is_empty(); };
     dispatcher->pop_order = [&](auto ord) { orderpool->pop(ord); };
     dispatcher->pathc_order = [&](auto ord) { orderpool->patch(ord); };
+    dispatcher->get_next_random_ord = [&]() {
+      return orderpool->get_next_random_ord();
+    };
+    dispatcher->random_list_empty = [&]() {
+      return orderpool->random_list_empty();
+    };
     dispatcher->get_next_ord = [&]() { return orderpool->get_next_ord(); };
     dispatcher->go_charge = [&](auto name, auto veh) {
       charge_order(name, veh);
