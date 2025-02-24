@@ -21,6 +21,19 @@ DestPtr OrderPool::res_to_destination(
   destination->destination = res;
   return destination;
 }
+bool OrderPool::idel_orderpool(std::string v) {
+  for (auto &x : orderpool) {
+    if (x.first == v) {
+      if (x.second.empty()) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 void OrderPool::cancel_order(size_t order_uuid) {
   std::unique_lock<std::mutex> lock(mut);
   for (auto &[name, ords] : orderpool) {
@@ -128,12 +141,13 @@ void OrderPool::redistribute(const TransOrderPtr &order) {
   for (auto it = ended_orderpool.begin(); it != ended_orderpool.end();) {
     if (*it == order) {
       it = ended_orderpool.erase(it);
-      order->priority += 1;
+
       if (order->anytime_drop) {
         // 避让订单不再重派
         order->state = data::order::TransportOrder::State::WITHDRAWL;
         return;
       }
+      // order->priority = 2;
       if (order->current_driver_index == 0 && order->switch_veh) {
         // 还没执行,可以切换车辆
         order->intended_vehicle.reset();

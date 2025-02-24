@@ -42,9 +42,16 @@ class OrderPool : public RSSObject {
   std::pair<std::string, TransOrderPtr> get_next_ord();
   std::pair<std::string, TransOrderPtr> get_next_random_ord();
   bool random_list_empty() { return random_orderpool.empty(); }
+  bool idel_orderpool(std::string);
   ~OrderPool() { CLOG(INFO, allocate_log) << name << " close\n"; }
   void update_quence() const;
-  bool is_empty() { return orderpool.empty(); }
+  bool is_empty() {
+    if (!random_orderpool.empty()) return false;
+    for (auto &x : orderpool) {
+      if (!x.second.empty()) return false;
+    }
+    return true;
+  }
   std::vector<TransOrderPtr> get_all_order();
 
  public:

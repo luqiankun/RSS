@@ -22,7 +22,8 @@ VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
     // if (v->state == driver::Vehicle::State::IDLE &&
     //     v->proc_state == driver::Vehicle::ProcState::AWAITING_ORDER) {
     if (v->state == driver::Vehicle::State::IDLE &&
-        v->avoid_state == driver::Vehicle::Avoid::Normal) {
+        v->avoid_state == driver::Vehicle::Avoid::Normal &&
+        v->orderpool.lock()->idel_orderpool(v->name)) {
       if (!v->paused) {
         idle_temp.emplace_back(v);
       }
@@ -226,7 +227,8 @@ void Dispatcher::dispatch_once() {
   bool exist = false;
   for (auto &x : vehicles) {
     if (x->state == driver::Vehicle::State::IDLE &&
-        x->avoid_state == driver::Vehicle::Avoid::Normal) {
+        x->avoid_state == driver::Vehicle::Avoid::Normal &&
+        x->orderpool.lock()->idel_orderpool(x->name)) {
       exist = true;
       break;
     }

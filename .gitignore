@@ -3,4 +3,5 @@ build
 tcs_logs
 .cache
 logs
+logs/*
 .idea

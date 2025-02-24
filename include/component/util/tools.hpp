@@ -38,11 +38,11 @@ class cpu_timer {
 inline std::string get_time_fmt(std::chrono::system_clock::time_point t) {
   const auto tm = std::chrono::system_clock::to_time_t(t);
   std::stringstream time;
-  const auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
+  const auto p = std::chrono::duration_cast<std::chrono::microseconds>(
                      t.time_since_epoch())
                      .count();
-  time << std::put_time(std::localtime(&tm), "%Y-%m-%dT%H:%M:%S.") << p % 1000
-       << "Z";
+  time << std::put_time(std::localtime(&tm), "%Y-%m-%dT%H:%M:%S.")
+       << p % 1000000 << "Z";
   return time.str();
 }
 inline std::string get_date_fmt() {
