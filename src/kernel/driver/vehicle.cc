@@ -713,10 +713,10 @@ bool SimVehicle::move(
     size_t t = step->path->length * 1000 / max_vel / rate;  // ms
     int x_len = end->position.x() - position.x();
     int y_len = end->position.y() - position.y();
-    for (int i = 0; i < 10; i++) {
-      position.x() += x_len / 10;
-      position.y() += y_len / 10;
-      std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+    for (int i = 0; i < 100; i++) {
+      position.x() += x_len / 100;
+      position.y() += y_len / 100;
+      std::this_thread::sleep_for(std::chrono::milliseconds(t / 100));
     }
     position.x() = end->position.x();
     position.y() = end->position.y();

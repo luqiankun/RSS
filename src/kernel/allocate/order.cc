@@ -90,12 +90,14 @@ void OrderPool::patch(const TransOrderPtr &order) {
   for (auto it = random_orderpool.begin(); it != random_orderpool.end();) {
     if (*it == order) {
       it = random_orderpool.erase(it);
+      std::unique_lock<std::mutex> lock(mut);
       push(order);
       return;
     } else {
       ++it;
     }
   }
+  std::unique_lock<std::mutex> lock(mut);
   push(order);
 }
 
@@ -106,6 +108,8 @@ void OrderPool::push(const TransOrderPtr &order) {
   }
   if (name == "unspecified") {
     random_orderpool.push_back(order);
+    std::stable_sort(random_orderpool.begin(), random_orderpool.end(),
+                     OrderCmp());
   } else {
     for (auto &x : orderpool) {
       if (x.first == name) {

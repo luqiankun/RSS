@@ -400,10 +400,14 @@ void Dispatcher::brake_deadlock(const std::vector<VehPtr> &d_loop) {
     if (!d_loop.front()->current_order) {
       if (d_loop.back()->current_order) {
         auto ord = d_loop.back()->redistribute_cur_order();
+      } else {
+        auto ord = d_loop.front()->redistribute_cur_order();
       }
     } else if (!d_loop.back()->current_order) {
       if (d_loop.front()->current_order) {
         auto ord = d_loop.front()->redistribute_cur_order();
+      } else {
+        auto ord = d_loop.back()->redistribute_cur_order();
       }
     } else if (d_loop.front()->current_order->priority >
                d_loop.back()->current_order->priority) {
@@ -478,6 +482,7 @@ void Dispatcher::run() {
         brake_blocklock(blockloop);
       }
       dispatch_once();
+      std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
   });
 }
@@ -737,7 +742,7 @@ void Conflict::solve_once() {
       }
       // 无冲突
       auto new_ord = std::make_shared<data::order::TransportOrder>(
-          "AOder_" + uuids::to_string(get_uuid()));
+          "AOrder-" + uuids::to_string(get_uuid()));
       new_ord->create_time = get_now_utc_time();
       new_ord->dead_time = new_ord->create_time + std::chrono::minutes(100);
       int pro = 3;
@@ -874,7 +879,7 @@ void Conflict::solve_once() {
       order->intended_vehicle.lock()->avoid_state =
           driver::Vehicle::Avoid::Normal;
       auto new_ord = std::make_shared<data::order::TransportOrder>(
-          "AOder_" + uuids::to_string(get_uuid()));
+          "AOrder-" + uuids::to_string(get_uuid()));
       new_ord->create_time = get_now_utc_time();
       new_ord->dead_time = new_ord->create_time + std::chrono::minutes(100);
       if (order->intended_vehicle.lock()->current_order) {
@@ -888,7 +893,7 @@ void Conflict::solve_once() {
       new_ord->anytime_drop = true;
       new_ord->state = data::order::TransportOrder::State::RAW;
       auto driver_order = std::make_shared<data::order::DriverOrder>(
-          "DOder_" + allocate_point->name);
+          "DOrder-" + allocate_point->name);
       auto dest = orderpool.lock()->res_to_destination(
           allocate_point, data::model::Actions::OpType::MOVE);
       driver_order->destination = dest;

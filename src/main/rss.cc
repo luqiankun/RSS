@@ -934,7 +934,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           ///////////////////
           /// // 使用虚拟车辆
           //////////////////
-          auto veh = std::make_shared<kernel::driver::SimVehicle>(5, name);
+          auto veh = std::make_shared<kernel::driver::SimVehicle>(10, name);
           if (init_pos.type() != pugi::node_null) {
             auto init_pos_ = init_pos.attribute("value").as_string();
             if (auto [type, res_] = resource->find(init_pos_);
