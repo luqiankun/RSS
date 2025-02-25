@@ -41,7 +41,7 @@ class Vehicle : public schedule::Client,
   void execute_instatn_action(
       const std::shared_ptr<vda5050::instantaction::Action> &);
   void command_done();  // 命令完成回调
-  bool plan_route(allocate::TransOrderPtr) const;
+  bool plan_route(allocate::TransOrderPtr);
   void reroute();
   void get_next_ord();
   allocate::TransOrderPtr redistribute_cur_order();

@@ -6,7 +6,7 @@
 #define assert_valid                                                   \
   auto veh = vehicle.lock();                                           \
   auto scheduler = veh->scheduler.lock();                              \
-  auto cur_ord = order;                                   \
+  auto cur_ord = order;                                                \
   if (!veh || !scheduler || !cur_ord) {                                \
     state = State::DISPOSABLE;                                         \
     return;                                                            \
@@ -188,7 +188,6 @@ Command::Command(const std::string &n) : RSSObject(n) {
         // LOG(WARNING) << "-------------------------";
       } else {
         std::vector<std::shared_ptr<RSSResource>> temp;
-        veh->claim_resources.clear();
         for (auto &x : steps) {
           std::vector<std::shared_ptr<RSSResource>> step_res;
           bool has_1{false}, has_2{false};
@@ -227,7 +226,6 @@ Command::Command(const std::string &n) : RSSObject(n) {
             }
           }
           // allocate
-          veh->claim_resources.emplace_back(step_res.begin(), step_res.end());
           if (!res->allocate(step_res, veh)) {
             // future_claim
             for (auto &x_res : step_res) {
@@ -268,8 +266,6 @@ Command::Command(const std::string &n) : RSSObject(n) {
       auto dest = get_dest(driver_order);
       std::vector<std::shared_ptr<RSSResource>> temp;
       temp.push_back(dest->destination.lock());
-      veh->claim_resources.clear();
-      veh->claim_resources.emplace_back(temp.begin(), temp.end());
       for (auto &r : veh->allocated_resources) {
         if (std::any_of(r.begin(), r.end(), [&](auto &v) {
               return v == dest->destination.lock();
@@ -387,7 +383,6 @@ void Command::vehicle_execute_cb(bool ret) {
       } else {
         driver_order->state = data::order::DriverOrder::State::FAILED;
       }
-      veh->claim_resources.clear();
     }
     state = State::EXECUTED;
   } else {

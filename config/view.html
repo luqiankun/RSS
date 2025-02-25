@@ -167,7 +167,7 @@
                                 // console.log(order(select_vehicle, point.name, "MOVE"))
                                 let Http = new XMLHttpRequest();
                                 let ip = document.getElementById("ip_btn").value;
-                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + crypto.randomUUID(), true);
+                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/TOrder_' + crypto.randomUUID(), true);
                                 Http.onload = function () {
                                     if (Http.readyState === 4 && Http.status === 200) {
                                         console.log("send order ok");

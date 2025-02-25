@@ -102,10 +102,10 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
       ++it;
     }
   }
-  for (auto it = client->claim_resources.begin();
-       it != client->claim_resources.end();) {
+  for (auto it = client->allocated_resources.begin();
+       it != client->allocated_resources.end();) {
     if (it->empty()) {
-      it = client->claim_resources.erase(it);
+      it = client->allocated_resources.erase(it);
     } else {
       ++it;
     }
@@ -159,6 +159,28 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
     }
   }
 
+  {
+    // erase claim
+    for (auto &r : res) {
+      for (auto &x : client->claim_resources) {
+        for (auto it = x.begin(); it != x.end();) {
+          if (*it == r) {
+            it = x.erase(it);
+          } else {
+            ++it;
+          }
+        }
+      }
+    }
+    for (auto it = client->claim_resources.begin();
+         it != client->claim_resources.end();) {
+      if (it->empty()) {
+        it = client->claim_resources.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
   CLOG_IF(!ss.str().empty(), INFO, allocate_log)
       << client->name << " allocate { " << ss.str() << "}\n";
   return true;

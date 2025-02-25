@@ -51,6 +51,7 @@ allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
     avoid_state = Avoid::Normal;
     now_order_state = Vehicle::nowOrder::END;
     future_allocate_resources.clear();
+    claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto &a : this->allocated_resources) {
       for (auto &x : a) {
@@ -209,11 +210,10 @@ Vehicle::~Vehicle() {
   CLOG(INFO, driver_log) << name << " close\n";
 }
 void Vehicle::reroute() { reroute_flag = true; }
-bool Vehicle::plan_route(allocate::TransOrderPtr cur) const {
+bool Vehicle::plan_route(allocate::TransOrderPtr cur) {
   auto res = resource.lock();
   auto ordpoll = orderpool.lock();
   auto route_planner = planner.lock();
-
   if (!res) {
     CLOG(ERROR, driver_log) << name << " resource is null\n";
     return false;
@@ -276,6 +276,20 @@ bool Vehicle::plan_route(allocate::TransOrderPtr cur) const {
       }
     }
   }
+  claim_resources.clear();
+  for (int i = cur->current_driver_index; i < cur->driverorders.size(); i++) {
+    auto x = cur->driverorders[i];
+    for (auto &st : x->route->steps) {
+      std::unordered_set<std::shared_ptr<RSSResource>> set;
+      set.insert(st->path);
+      set.insert(st->path->source_point.lock());
+      set.insert(st->path->destination_point.lock());
+      claim_resources.push_back(set);
+    }
+    std::unordered_set<std::shared_ptr<RSSResource>> set;
+    set.insert(x->destination->destination.lock());
+    claim_resources.push_back(set);
+  }
   return true;
 }
 
@@ -332,6 +346,7 @@ void Vehicle::command_done() {
     process_state = proState::AWAITING_ORDER;
     // 订单取消
     future_allocate_resources.clear();
+    claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto &a : this->allocated_resources) {
       for (auto &x : a) {
@@ -357,6 +372,7 @@ void Vehicle::command_done() {
              data::order::TransportOrder::State::UNROUTABLE) {
     // 订单不可达
     future_allocate_resources.clear();
+    claim_resources.clear();
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " unrouteable.";
     std::vector<std::shared_ptr<RSSResource>> temp;
@@ -384,6 +400,7 @@ void Vehicle::command_done() {
     std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     future_allocate_resources.clear();
+    claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto &a : this->allocated_resources) {
       for (auto &x : a) {
@@ -430,6 +447,7 @@ void Vehicle::command_done() {
                             << " failed, requires manual "
                                "intervention.\n";
     future_allocate_resources.clear();
+    claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
     for (auto &a : this->allocated_resources) {
       for (auto &x : a) {
@@ -455,6 +473,7 @@ void Vehicle::command_done() {
     current_order.reset();
     current_command.reset();
     future_allocate_resources.clear();
+    claim_resources.clear();
     lock.unlock();
     get_next_ord();
   } else {
@@ -691,7 +710,7 @@ void SimVehicle::init() {
     idle_time = get_now_utc_time();
     std::vector<std::shared_ptr<RSSResource>> ress;
     ress.push_back(current_point);
-    res->claim(ress, shared_from_this());
+    // res->claim(ress, shared_from_this());
     res->allocate(ress, shared_from_this());
   }
 }
@@ -845,7 +864,7 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
               res->free(temp, shared_from_this());
               std::vector<std::shared_ptr<RSSResource>> ress;
               ress.push_back(x);
-              res->claim(ress, shared_from_this());
+              // res->claim(ress, shared_from_this());
               if (!res->allocate(ress, shared_from_this())) {
                 CLOG(ERROR, driver_log)
                     << name << " init failed:{ allocate init_point failed }\n";
@@ -870,7 +889,7 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
                 res->free(temp, shared_from_this());
                 std::vector<std::shared_ptr<RSSResource>> ress;
                 ress.push_back(x);
-                res->claim(ress, shared_from_this());
+                // res->claim(ress, shared_from_this());
                 if (!res->allocate(ress, shared_from_this())) {
                   CLOG(ERROR, driver_log)
                       << name
