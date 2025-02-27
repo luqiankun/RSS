@@ -331,7 +331,7 @@ void Dispatcher::dispatch_once() {
     }
   } else if (current_ord->state ==
              data::order::TransportOrder::State::WITHDRAWL) {
-    current_ord->state = data::order::TransportOrder::State::FAILED;
+    // current_ord->state = data::order::TransportOrder::State::FAILED;
     CLOG(WARNING, dispatch_log)
         << current_ord->name << " status: [withdrawl]\n";
   } else if (current_ord->state ==

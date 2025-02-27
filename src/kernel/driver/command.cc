@@ -374,7 +374,22 @@ Command::Command(const std::string &n) : RSSObject(n) {
 void Command::run_once() { cbs[state](); }
 Command::~Command() { CLOG(DEBUG, driver_log) << name << " drop\n"; }
 void Command::vehicle_execute_cb(bool ret) {
-  assert_valid;
+  auto veh = vehicle.lock();
+  auto scheduler = veh->scheduler.lock();
+  auto cur_ord = order;
+  if (!veh || !scheduler || !cur_ord) {
+    state = State ::DISPOSABLE;
+    return;
+  }
+  auto res = scheduler->resource.lock();
+  if (!res) {
+    state = State ::DISPOSABLE;
+    return;
+  }
+  if (order->state == data ::order ::TransportOrder ::State ::WITHDRAWL) {
+    state = State ::EXECUTED;
+    return;
+  };
   if (state == State::EXECUTING) {
     auto &driver_order = order->driverorders[order->current_driver_index];
     if (driver_order->state == data::order::DriverOrder::State::OPERATING) {

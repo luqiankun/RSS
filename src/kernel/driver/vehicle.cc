@@ -363,7 +363,7 @@ void Vehicle::command_done() {
     }
     now_order_state = Vehicle::nowOrder::END;
     std::unique_lock<std::mutex> lock(ord_mutex);
-    current_order->state = data::order::TransportOrder::State::FAILED;
+    // current_order->state = data::order::TransportOrder::State::FAILED;
     current_order.reset();
     lock.unlock();
     get_next_ord();

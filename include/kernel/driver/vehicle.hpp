@@ -23,10 +23,10 @@ class Vehicle : public schedule::Client,
   enum class nowOrder { BEGIN, END };
   enum class Avoid { Avoiding, Normal };
   enum integrationLevel {
-    TO_BE_IGNORED,
-    TO_BE_NOTICED,
-    TO_BE_RESPECTED,
-    TO_BE_UTILIZED
+    TO_BE_IGNORED,    // 忽视,无资源
+    TO_BE_NOTICED,    // 显示但不分配资源
+    TO_BE_RESPECTED,  // 显示但且分配资源，但不可运输
+    TO_BE_UTILIZED    // 可以运输
   };
   std::string get_state() const;
   std::string get_process_state() const;
