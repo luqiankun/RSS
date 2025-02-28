@@ -5,6 +5,11 @@
 #include "../../../include/component/vda5050/valitator.hpp"
 #include "../../../include/component/vda5050/vda5050insact.hpp"
 #include "../../../include/component/vda5050/vda5050order.hpp"
+#if BOOST_VERSION < 106600
+using io_context = boost::asio::io_service;
+#else
+using io_context = boost::asio::io_context;
+#endif
 class SimRabbit3 {
  public:
   enum class Status { RUNNING, PASUED };
@@ -901,8 +906,8 @@ class SimRabbit3 {
   vda5050::state::VDA5050State vda_state;
   std::thread th_state;
   std::thread th_pro;
-  boost::asio::io_context io;
-  boost::asio::io_context::work work;
+  io_context io;
+  io_context::work work;
   std::thread th;
   std::mutex mut;
   std::mutex pro_mut;

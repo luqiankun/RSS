@@ -29,13 +29,28 @@ find_package(eclipse-paho-mqtt-c REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
 find_package(Threads REQUIRED)
 ################
-find_package(Boost REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system )
+include_directories(${Boost_INCLUDE_DIRS})
 ################
 find_package(Eigen3 REQUIRED NO_MODULE)
 include_directories(${EIGEN3_INCLUDE_DIR})
 ################
-find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-include_directories(${Python3_INCLUDE_DIRS})
+set (Python_LIB)
+if(CMAKE_VERSION VERSION_LESS "3.12.0")
+    set(Python_ADDITIONAL_VERSIONS "3")
+    find_package(PythonInterp)
+    find_package(PythonLibs)
+    include_directories(${PYTHON_INCLUDE_DIRS})
+    set (Python_LIB ${PYTHON_LIBRARIES})
+    message(STATUS "Python include dir: " ${PYTHON_INCLUDE_DIRS})
+    message(STATUS "Python lib dir: " ${PYTHON_LIBRARIES})
+else ()
+    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
+    include_directories(${Python3_INCLUDE_DIRS})
+    set (Python_LIB ${Python3_LIBRARIES})
+    message(STATUS "Python3 include dir: " ${Python3_INCLUDE_DIRS})
+    message(STATUS "Python3 lib dir: " ${Python3_LIBRARIES})
+endif()
 
 ##
 file(GLOB_RECURSE 3rd_SRC
@@ -53,7 +68,7 @@ add_executable(${EXE_NAME}
         ${3rd_SRC}
         ${MAIN_SRC}
 )
-target_link_libraries(${EXE_NAME} PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen ${Python3_LIBRARIES}  )
+target_link_libraries(${EXE_NAME} PahoMqttCpp::paho-mqttpp3 Threads::Threads Eigen3::Eigen ${Python_LIB} ${Boost_LIBRARIES})
 
 #########
 #install#
@@ -69,9 +84,10 @@ install(DIRECTORY config DESTINATION ${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME})
 
 if (TEST)
     add_executable(log_event test/3rdparty/log/log_test.cc src/3rdparty/log/easylogging++.cc)
-    target_link_libraries(log_event)
+    target_link_libraries(log_event Threads::Threads)
     add_executable(xml_test test/3rdparty/xml/xml_test.cc src/3rdparty/xml/pugixml.cc)
     add_executable(http_test test/3rdparty/http/http_test.cc)
+    target_link_libraries(http_test Threads::Threads)
     add_executable(json_test test/3rdparty/json/json_test.cc
             src/3rdparty/log/easylogging++.cc
     )
@@ -82,7 +98,7 @@ if (TEST)
     add_executable(mqtt_test test/3rdparty/mqtt/mqtt_test.cc)
     target_link_libraries(mqtt_test PahoMqttCpp::paho-mqttpp3)
     add_executable(sim_agv_test test/kernel/driver/rabbit3_test.cc ${3rd_SRC})
-    target_link_libraries(sim_agv_test PahoMqttCpp::paho-mqttpp3 Threads::Threads)
+    target_link_libraries(sim_agv_test PahoMqttCpp::paho-mqttpp3 Threads::Threads ${Boost_LIBRARIES})
     install(TARGETS nurbe_test log_event xml_test http_test json_test sim_agv_test mqtt_test
             RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin/${PROJECT_NAME}
     )

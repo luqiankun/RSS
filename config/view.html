@@ -167,7 +167,7 @@
                                 // console.log(order(select_vehicle, point.name, "MOVE"))
                                 let Http = new XMLHttpRequest();
                                 let ip = document.getElementById("ip_btn").value;
-                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/TOrder_' + crypto.randomUUID(), true);
+                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/TOrder-' + crypto.randomUUID(), true);
                                 Http.onload = function () {
                                     if (Http.readyState === 4 && Http.status === 200) {
                                         console.log("send order ok");
@@ -185,7 +185,7 @@
                             if (Math.abs(x - event.offsetX) < 20 && Math.abs(y - event.offsetY) < 20) {
                                 let Http = new XMLHttpRequest();
                                 let ip = document.getElementById("ip_btn").value;
-                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/Torder_' + crypto.randomUUID(), true);
+                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/TOrder-' + crypto.randomUUID(), true);
                                 Http.onload = function () {
                                     if (Http.readyState === 4 && Http.status === 200) {
                                         console.log("send order ok");
@@ -593,6 +593,10 @@
                     let model = JSON.parse(Http.responseText);
                     for (let order of model) {
                         let has = false;
+                        // console.log(model.length);
+                        if (order["state"] == "FAILED") {
+                            console.log(order["name"])
+                        }
                         for (let ord of order_quence) {
                             if (ord[0] === order["name"]) {
                                 ord[1] = order["state"];
@@ -1036,7 +1040,7 @@
                         let end_x = (end.x - xmin) / resolution;
                         let end_y = canvas.height - (end.y - ymin) / resolution;
 
-                        console.log(step["type"])
+                        // console.log(step["type"])
                         if (step["type"] === "BEZIER") {
                             if (ori === "FORWARD") {
                                 drawBezierCurveVirtual(ctx, start_x, start_y, end_x, end_y, step["control_point"], 5 * (50 / resolution), v.color, canvas.height);
@@ -1129,7 +1133,7 @@
                             ctx.stroke()
                         } else if (get_block_path(res) != null) {
                             let path = get_block_path(res);
-                            console.log(path)
+                            // console.log(path)
                             let start = get_point(path.start);
                             let end = get_point(path.end);
                             let start_x = (start.x - xmin) / resolution;

@@ -50,7 +50,7 @@ allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
     process_state = proState::IDEL;
     avoid_state = Avoid::Normal;
     now_order_state = Vehicle::nowOrder::END;
-    std::shared_lock<std::shared_mutex> lock(res_mut);
+    std::unique_lock<std::shared_mutex> lock(res_mut);
     future_allocate_resources.clear();
     claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
@@ -349,7 +349,7 @@ void Vehicle::command_done() {
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     process_state = proState::AWAITING_ORDER;
     // 订单取消
-    std::shared_lock<std::shared_mutex> lock(res_mut);
+    std::unique_lock<std::shared_mutex> lock(res_mut);
     future_allocate_resources.clear();
     claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
@@ -376,7 +376,7 @@ void Vehicle::command_done() {
   } else if (current_order->state ==
              data::order::TransportOrder::State::UNROUTABLE) {
     // 订单不可达
-    std::shared_lock<std::shared_mutex> lock(res_mut);
+    std::unique_lock<std::shared_mutex> lock(res_mut);
     future_allocate_resources.clear();
     claim_resources.clear();
     CLOG(ERROR, driver_log)
@@ -403,7 +403,7 @@ void Vehicle::command_done() {
   if (current_order->dead_time < get_now_utc_time()) {
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " timeout.";
-    std::shared_lock<std::shared_mutex> lock(res_mut);
+    std::unique_lock<std::shared_mutex> lock(res_mut);
     current_order->state = data::order::TransportOrder::State::FAILED;
     future_allocate_resources.clear();
     claim_resources.clear();
@@ -451,7 +451,7 @@ void Vehicle::command_done() {
     CLOG(ERROR, driver_log) << name << " " << current_order->name
                             << " failed, requires manual "
                                "intervention.\n";
-    std::shared_lock<std::shared_mutex> lock2(res_mut);
+    std::unique_lock<std::shared_mutex> lock2(res_mut);
 
     future_allocate_resources.clear();
     claim_resources.clear();
@@ -479,7 +479,7 @@ void Vehicle::command_done() {
     now_order_state = Vehicle::nowOrder::END;
     current_order.reset();
     current_command.reset();
-    std::shared_lock<std::shared_mutex> lock2(res_mut);
+    std::unique_lock<std::shared_mutex> lock2(res_mut);
     future_allocate_resources.clear();
     claim_resources.clear();
     lock2.unlock();

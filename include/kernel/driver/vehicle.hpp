@@ -8,6 +8,11 @@
 #include "../allocate/order.hpp"
 #include "../planner/planner.hpp"
 #include "../schedule/schedule.hpp"
+#if BOOST_VERSION < 106600
+using io_context_type = boost::asio::io_service;
+#else
+using io_context_type = boost::asio::io_context;
+#endif
 namespace kernel {
 namespace dispatch {
 class Dispatcher;
@@ -96,8 +101,8 @@ class Vehicle : public schedule::Client,
   Eigen::Vector3i position{0, 0, 0};
   double angle{0};
   Eigen::Vector3i layout{0, 0, 0};
-  boost::asio::io_context io_context;
-  boost::asio::io_context::work work;
+  io_context_type io_context;
+  io_context_type::work work;
   std::thread *run_th[4];
   bool task_run{false};
   uint32_t send_queue_size{2};

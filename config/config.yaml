@@ -8,8 +8,8 @@ log:
   max_num: 5 # 最大文件个数
   enable: true
   to_file: true
-  to_stdout: true
-  level: info # debug >info > warn > error > fatal 其他:关闭log
+  to_stdout: false
+  level: warn # debug >info > warn > error > fatal 其他:关闭log
 httpserver:
   ip: "0.0.0.0" # 默认所有ip都可连接
   port: 55200

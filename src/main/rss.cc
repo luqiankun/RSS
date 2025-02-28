@@ -1477,7 +1477,7 @@ std::pair<int, std::string> RSS::get_transport_order(
 
 std::pair<int, std::string> RSS::post_transport_order(
     const std::string &ord_name, const std::string &body) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1694,7 +1694,7 @@ std::pair<int, std::string> RSS::post_transport_order(
 
 std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
                                                  const std::string &point) {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1772,7 +1772,7 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
 
 std::pair<int, std::string> RSS::post_transport_order_withdrawl(
     const std::string &ord_name, bool immediate, bool) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -1910,7 +1910,7 @@ std::pair<int, std::string> RSS::get_ordersequence(
 
 std::pair<int, std::string> RSS::post_ordersequence(
     const std::string &sequence_name, const std::string &body) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2136,7 +2136,7 @@ std::pair<int, std::string> RSS::get_vehicle(const std::string &vehicle) const {
 
 std::pair<int, std::string> RSS::post_vehicle_withdrawl(
     const std::string &vehicle, bool, bool) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -2711,8 +2711,9 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             float head = 0;
             float tail = 0;
             std::vector<std::string> out;
-            boost::split(out, x["envelopeKey"].as_string(),
-                         boost::is_any_of("-"), boost::token_compress_on);
+            std::string key = x["envelopeKey"].as_string();
+            boost::split(out, key, boost::is_any_of("-"),
+                         boost::token_compress_on);
             assert(out.size() >= 3);
             width = boost::lexical_cast<float>(out[0]);
             head = boost::lexical_cast<float>(out[1]);
@@ -2853,8 +2854,9 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             float head = 0;
             float tail = 0;
             std::vector<std::string> out;
-            boost::split(out, x["envelopeKey"].as_string(),
-                         boost::is_any_of("-"), boost::token_compress_on);
+            std::string key = x["envelopeKey"].as_string();
+            boost::split(out, key, boost::is_any_of("-"),
+                         boost::token_compress_on);
             assert(out.size() >= 3);
             width = boost::lexical_cast<float>(out[0]);
             head = boost::lexical_cast<float>(out[1]);
@@ -3318,15 +3320,18 @@ std::string RSS::get_vehicles_step() const {
     veh["envelope"]["type"] = v->envelope_key;
     veh["envelope"]["vertex"] = json::array();
     veh["allocatedResources"] = json::array();
+    std::shared_lock<std::shared_mutex> lock(v->res_mut);
     for (auto &x : v->allocated_resources) {
       for (auto &x_ : x) {
         veh["allocatedResources"].push_back(x_->name);
       }
     }
-    if (v->current_order) {
-      if (v->current_order->state ==
-          data::order::TransportOrder::State::BEING_PROCESSED) {
-        for (auto &dr : v->current_order->driverorders) {
+    lock.unlock();
+    auto ord = v->current_order;
+    if (ord) {
+      std::shared_lock<std::shared_mutex> lock2(ord->mutex);
+      if (ord->state == data::order::TransportOrder::State::BEING_PROCESSED) {
+        for (auto &dr : ord->driverorders) {
           if (dr->state == data::order::DriverOrder::State::TRAVELLING) {
             // current first
             if (dr->route->current_step) {
@@ -3433,7 +3438,7 @@ std::pair<int, std::string> RSS::put_path_locked(const std::string &path_name,
 
 std::pair<int, std::string> RSS::put_location_locked(
     const std::string &loc_name, bool new_value) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -3461,7 +3466,7 @@ void RSS::reroute() const {
 }
 
 std::pair<int, std::string> RSS::post_reroute() const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -3479,7 +3484,7 @@ bool RSS::is_connect(const std::shared_ptr<data::model::Point> &a,
 
 std::pair<int, std::string> RSS::post_vehicle_reroute(const std::string &name,
                                                       bool f) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -3500,7 +3505,7 @@ std::pair<int, std::string> RSS::post_vehicle_reroute(const std::string &name,
 
 std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
                                                     bool p) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -3525,7 +3530,7 @@ std::pair<int, std::string> RSS::put_vehicle_enable(const std::string &name,
 
 std::pair<int, std::string> RSS::put_vehicle_integration_level(
     const std::string &name, const std::string &p) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
@@ -3554,7 +3559,7 @@ std::pair<int, std::string> RSS::put_vehicle_integration_level(
 
 std::pair<int, std::string> RSS::post_vehicle_path_to_point(
     const std::string &name, const std::string &p_) const {
-  std::shared_lock<std::shared_mutex> lk(mutex);
+  std::unique_lock<std::shared_mutex> lk(mutex);
   if (!is_run) {
     json res = json::array();
     auto msg = "TCS is not running";
