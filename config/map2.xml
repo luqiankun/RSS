@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model version="0.0.4" name="unnamed">
+    <point name="P1" xPosition="7000" yPosition="19500" zPosition="0" vehicleOrientationAngle=""
+        type="HALT_POSITION">
+        <pointLayout xPosition="7000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="P2" xPosition="12000" yPosition="19500" zPosition="0" vehicleOrientationAngle=""
+        type="HALT_POSITION">
+        <pointLayout xPosition="12000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="P3" xPosition="17000" yPosition="15000" zPosition="0" vehicleOrientationAngle=""
+        type="HALT_POSITION">
+        <pointLayout xPosition="17000" yPosition="15000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="P4" xPosition="17000" yPosition="8500" zPosition="0" vehicleOrientationAngle=""
+        type="HALT_POSITION">
+        <pointLayout xPosition="17000" yPosition="8500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="Point-0002" xPosition="17500" yPosition="19500" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="17500" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="Point-0003" xPosition="25000" yPosition="19500" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="25000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="Point-0004" xPosition="32000" yPosition="19500" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="32000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="Point-0005" xPosition="21500" yPosition="2000" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21500" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="Point-0006" xPosition="21500" yPosition="-2000" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21500" yPosition="-2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="Point-0007" xPosition="1000" yPosition="19500" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="1000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <point name="Point-0008" xPosition="-3350" yPosition="19500" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="-3350" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0"></pointLayout>
+    </point>
+    <path name="P1 --- P2" sourcePoint="P1" destinationPoint="P2" length="1" maxVelocity="3000"
+        maxReverseVelocity="3000" locked="false">
+        <peripheralOperation completionRequired="true" executionTrigger="AFTER_ALLOCATION"
+            locationName="door1" name="open"></peripheralOperation>
+        <peripheralOperation completionRequired="true" executionTrigger="AFTER_MOVEMENT"
+            locationName="door1" name="close"></peripheralOperation>
+        <property name="vda5050:action.01" value="Door"></property>
+        <property name="vda5050:action.01.blockingType" value="HARD"></property>
+        <property name="vda5050:action.01.parameter.id" value="1"></property>
+        <property name="vda5050:action.01.parameter.ip" value="192.168.0.1"></property>
+        <property name="vda5050:action.01.parameter.script" value="initialize"></property>
+        <property name="vda5050:action.01.parameter.type" value="open"></property>
+        <property name="vda5050:action.01.when" value="ORDER_START"></property>
+        <property name="vda5050:action.02" value="Door"></property>
+        <property name="vda5050:action.02.blockingType" value="NONE"></property>
+        <property name="vda5050:action.02.parameter.id" value="1"></property>
+        <property name="vda5050:action.02.parameter.ip" value="192.168.0.1"></property>
+        <property name="vda5050:action.02.parameter.script" value="initialize"></property>
+        <property name="vda5050:action.02.parameter.type" value="close"></property>
+        <property name="vda5050:action.02.when" value="ORDER_END"></property>
+        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <path name="P2 --- P3" sourcePoint="P2" destinationPoint="P3" length="1" maxVelocity="400"
+        maxReverseVelocity="400" locked="false">
+        <pathLayout connectionType="BEZIER" layerId="0">
+            <controlPoint x="321" y="-384"></controlPoint>
+            <controlPoint x="332" y="-374"></controlPoint>
+        </pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <path name="P2 --- Point-0002" sourcePoint="P2" destinationPoint="Point-0002" length="1"
+        maxVelocity="3000" maxReverseVelocity="3000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <path name="P3 --- P4" sourcePoint="P3" destinationPoint="P4" length="1" maxVelocity="3000"
+        maxReverseVelocity="3000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <path name="P4 --- Point-0005" sourcePoint="P4" destinationPoint="Point-0005" length="1"
+        maxVelocity="400" maxReverseVelocity="400" locked="false">
+        <property name="vda5050:orientation.forward" value="-90"></property>
+        <property name="vda5050:orientation.reverse" value="-90"></property>
+        <pathLayout connectionType="BEZIER_3" layerId="0">
+            <controlPoint x="348" y="-88"></controlPoint>
+            <controlPoint x="363" y="-113"></controlPoint>
+            <controlPoint x="398" y="-98"></controlPoint>
+            <controlPoint x="420" y="-89"></controlPoint>
+            <controlPoint x="423" y="-79"></controlPoint>
+        </pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+    </path>
+    <path name="Point-0002 --- Point-0003" sourcePoint="Point-0002" destinationPoint="Point-0003"
+        length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <path name="Point-0003 --- Point-0004" sourcePoint="Point-0003" destinationPoint="Point-0004"
+        length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <path name="Point-0005 --- Point-0006" sourcePoint="Point-0005" destinationPoint="Point-0006"
+        length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <path name="Point-0007 --- P1" sourcePoint="Point-0007" destinationPoint="P1" length="1"
+        maxVelocity="3000" maxReverseVelocity="3000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <path name="Point-0008 --- Point-0007" sourcePoint="Point-0008" destinationPoint="Point-0007"
+        length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="1"></pathLayout>
+        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+
+    </path>
+    <vehicle name="3A" length="1000" energyLevelCritical="20" energyLevelGood="90"
+        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
+        maxReverseVelocity="3000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
+        <property name="vda5050:errors.fatal" value="Value unknown"></property>
+        <property name="vda5050:errors.warning" value="Value unknown"></property>
+        <property name="vda5050:information.debug" value="Value unknown"></property>
+        <property name="vda5050:information.info" value="Value unknown"></property>
+        <property name="vda5050:interfaceName" value="uagv"></property>
+        <property name="vda5050:manufacturer" value="tx"></property>
+        <property name="vda5050:minVisualizationInterval" value="1000"></property>
+        <property name="vda5050:orderQueueSize" value="2"></property>
+        <property name="vda5050:paused" value="false"></property>
+        <property name="vda5050:rechargeOperation" value="charge"></property>
+        <property name="vda5050:serialNumber" value="tx3"></property>
+        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
+        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
+        <property name="vda5050:version" value="2.0"></property>
+        <vehicleLayout color="#633974"></vehicleLayout>
+    </vehicle>
+    <vehicle name="3B" length="1000" energyLevelCritical="20" energyLevelGood="90"
+        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
+        maxReverseVelocity="3000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
+        <property name="vda5050:errors.fatal" value="Value unknown"></property>
+        <property name="vda5050:errors.warning" value="Value unknown"></property>
+        <property name="vda5050:information.debug" value="Value unknown"></property>
+        <property name="vda5050:information.info" value="Value unknown"></property>
+        <property name="vda5050:interfaceName" value="uagv"></property>
+        <property name="vda5050:manufacturer" value="tx"></property>
+        <property name="vda5050:minVisualizationInterval" value="1000"></property>
+        <property name="vda5050:orderQueueSize" value="2"></property>
+        <property name="vda5050:paused" value="false"></property>
+        <property name="vda5050:rechargeOperation" value="charge"></property>
+        <property name="vda5050:serialNumber" value="tx4"></property>
+        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
+        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
+        <property name="vda5050:version" value="2.0"></property>
+        <vehicleLayout color="#1d8348"></vehicleLayout>
+    </vehicle>
+    <vehicle name="3C" length="1000" energyLevelCritical="20" energyLevelGood="90"
+        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
+        maxReverseVelocity="3000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
+        <property name="vda5050:errors.fatal" value="Value unknown"></property>
+        <property name="vda5050:errors.warning" value="Value unknown"></property>
+        <property name="vda5050:information.debug" value="Value unknown"></property>
+        <property name="vda5050:information.info" value="Value unknown"></property>
+        <property name="vda5050:interfaceName" value="uagv"></property>
+        <property name="vda5050:manufacturer" value="tx"></property>
+        <property name="vda5050:minVisualizationInterval" value="1000"></property>
+        <property name="vda5050:orderQueueSize" value="2"></property>
+        <property name="vda5050:paused" value="false"></property>
+        <property name="vda5050:rechargeOperation" value="charge"></property>
+        <property name="vda5050:serialNumber" value="tx2"></property>
+        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
+        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
+        <property name="vda5050:version" value="2.0"></property>
+        <vehicleLayout color="#212f3c"></vehicleLayout>
+    </vehicle>
+    <vehicle name="3D" length="1000" energyLevelCritical="20" energyLevelGood="90"
+        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
+        maxReverseVelocity="3000">
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
+        <property name="vda5050:errors.fatal" value="Value unknown"></property>
+        <property name="vda5050:errors.warning" value="Value unknown"></property>
+        <property name="vda5050:information.debug" value="Value unknown"></property>
+        <property name="vda5050:information.info" value="Value unknown"></property>
+        <property name="vda5050:interfaceName" value="uagv"></property>
+        <property name="vda5050:manufacturer" value="tx"></property>
+        <property name="vda5050:minVisualizationInterval" value="1000"></property>
+        <property name="vda5050:orderQueueSize" value="2"></property>
+        <property name="vda5050:paused" value="false"></property>
+        <property name="vda5050:rechargeOperation" value="charge"></property>
+        <property name="vda5050:serialNumber" value="tx1"></property>
+        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
+        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
+        <property name="vda5050:version" value="2.0"></property>
+        <vehicleLayout color="#641e16"></vehicleLayout>
+    </vehicle>
+    <locationType name="Transfer">
+        <allowedOperation name="Drop"></allowedOperation>
+        <allowedOperation name="None"></allowedOperation>
+        <allowedOperation name="Pick"></allowedOperation>
+        <property name="tcs:defaultLocationTypeSymbol" value="LOAD_TRANSFER_ALT_2"></property>
+        <property name="vda5050:destinationAction.Drop.parameter.script" value="drop"></property>
+        <property name="vda5050:destinationAction.Pick.parameter.script" value="pick"></property>
+        <property name="vda5050:destinationAction.Pick.parameter.x" value="100"></property>
+        <locationTypeLayout locationRepresentation="DEFAULT"></locationTypeLayout>
+    </locationType>
+    <locationType name="charge">
+        <allowedOperation name="Charge"></allowedOperation>
+        <property name="tcs:defaultLocationTypeSymbol" value="NONE"></property>
+        <locationTypeLayout locationRepresentation="DEFAULT"></locationTypeLayout>
+    </locationType>
+    <locationType name="Door">
+        <allowedOperation name="close"></allowedOperation>
+        <allowedOperation name="open"></allowedOperation>
+        <allowedPeripheralOperation name="close"></allowedPeripheralOperation>
+        <allowedPeripheralOperation name="open"></allowedPeripheralOperation>
+        <property name="script" value="door.py"></property>
+        <locationTypeLayout locationRepresentation="NONE"></locationTypeLayout>
+    </locationType>
+    <location name="charge1" xPosition="22000" yPosition="8500" zPosition="0" locked="false"
+        type="charge">
+        <link point="P4"></link>
+        <property name="tcs:defaultLocationSymbol" value="DEFAULT"></property>
+        <locationLayout xPosition="22000" yPosition="8500" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+    </location>
+    <location name="trans1" xPosition="25000" yPosition="16000" zPosition="0" locked="false"
+        type="Transfer">
+        <link point="Point-0003"></link>
+        <property name="tcs:defaultLocationSymbol" value="DEFAULT"></property>
+        <locationLayout xPosition="25000" yPosition="16000" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+    </location>
+    <location name="trans2" xPosition="24500" yPosition="-2000" zPosition="0" locked="false"
+        type="Transfer">
+        <link point="Point-0006"></link>
+        <property name="tcs:defaultLocationSymbol" value="DEFAULT"></property>
+        <locationLayout xPosition="24500" yPosition="-2000" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+    </location>
+    <location name="LC1" xPosition="31985" yPosition="16204" zPosition="0" locked="false"
+        type="Transfer">
+        <link point="Point-0004"></link>
+        <locationLayout xPosition="31985" yPosition="16204" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+    </location>
+    <location name="door1" xPosition="9576" yPosition="17912" zPosition="0" locked="false"
+        type="Door">
+        <locationLayout xPosition="9576" yPosition="17912" xLabelOffset="-10" yLabelOffset="-20"
+            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+        <property name="ip" value="127.0.0.1"></property>
+        <property name="time" value="2024-01-01T12:22:33.782Z"></property>
+        <property name="value" value="102"></property>
+
+    </location>
+    <visualLayout name="VLayout" scaleX="50" scaleY="50">
+        <layer id="0" ordinal="" visible="true" name="Layer 0" groupId=""></layer>
+        <layer id="1" ordinal="" visible="true" name="Layer 1" groupId=""></layer>
+        <layerGroup id="0" name="Default layer group" visible="true"></layerGroup>
+    </visualLayout>
+    <property name="tcs:modelFileLastModified" value="2024-10-17 16:24:04.000"></property>
+</model>

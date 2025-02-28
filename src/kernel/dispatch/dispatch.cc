@@ -536,6 +536,7 @@ int Conflict::update() {
         //   rm_depends.insert(veh2);
         // }
       } else if (veh2->state == driver::Vehicle::State::ERROR) {
+        LOG(ERROR) << "path of vehicle error\n";
         state = State::Err;
         return -1;
       }
@@ -553,6 +554,7 @@ struct Cmp {
 void Conflict::solve_once() {
   auto lock = dispatcher.lock();
   if (!lock) {
+    CLOG(ERROR, dispatch_log) << "dispatcher not found\n";
     state = State::Err;
     return;
   }
@@ -589,6 +591,7 @@ void Conflict::solve_once() {
           auto cur_path =
               planner.lock()->find_paths(top->current_point, allocate_point);
           if (cur_path.empty()) {
+            CLOG(ERROR, dispatch_log) << "no path for " << top->name << "\n";
             state = State::Err;
             return;
           }
@@ -821,6 +824,8 @@ void Conflict::solve_once() {
     auto allocate_point =
         select_point(order->intended_vehicle.lock(), rm_ps, true);
     if (allocate_point == nullptr) {
+      CLOG(ERROR, dispatch_log)
+          << "no point for " << order->intended_vehicle.lock()->name << "\n";
       state = State::Err;
     } else {
       // 有可选分配点

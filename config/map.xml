@@ -1,295 +1,725 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<model version="0.0.4" name="unnamed">
-    <point name="P1" xPosition="7000" yPosition="19500" zPosition="0" vehicleOrientationAngle=""
-        type="HALT_POSITION">
-        <pointLayout xPosition="7000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
-    </point>
-    <point name="P2" xPosition="12000" yPosition="19500" zPosition="0" vehicleOrientationAngle=""
-        type="HALT_POSITION">
-        <pointLayout xPosition="12000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
-    </point>
-    <point name="P3" xPosition="17000" yPosition="15000" zPosition="0" vehicleOrientationAngle=""
-        type="HALT_POSITION">
-        <pointLayout xPosition="17000" yPosition="15000" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
-    </point>
-    <point name="P4" xPosition="17000" yPosition="8500" zPosition="0" vehicleOrientationAngle=""
-        type="HALT_POSITION">
-        <pointLayout xPosition="17000" yPosition="8500" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
-    </point>
-    <point name="Point-0002" xPosition="17500" yPosition="19500" zPosition="0"
+<?xml version="1.0"?>
+<model version="0.04" name="unnamed">
+    <point name="Point-0001" xPosition="17280" yPosition="23250" zPosition="0"
         vehicleOrientationAngle="" type="HALT_POSITION">
-        <pointLayout xPosition="17500" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
+        <pointLayout xPosition="17250" yPosition="23250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
     </point>
-    <point name="Point-0003" xPosition="25000" yPosition="19500" zPosition="0"
+    <point name="Point-0002" xPosition="17280" yPosition="19250" zPosition="0"
         vehicleOrientationAngle="" type="HALT_POSITION">
-        <pointLayout xPosition="25000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
+        <pointLayout xPosition="17250" yPosition="19250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
     </point>
-    <point name="Point-0004" xPosition="32000" yPosition="19500" zPosition="0"
+    <point name="Point-0003" xPosition="17280" yPosition="13250" zPosition="0"
         vehicleOrientationAngle="" type="HALT_POSITION">
-        <pointLayout xPosition="32000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
+        <pointLayout xPosition="17250" yPosition="13250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
     </point>
-    <point name="Point-0005" xPosition="21500" yPosition="2000" zPosition="0"
+    <point name="Point-0004" xPosition="17280" yPosition="8750" zPosition="0"
         vehicleOrientationAngle="" type="HALT_POSITION">
-        <pointLayout xPosition="21500" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
+        <pointLayout xPosition="17250" yPosition="8750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
     </point>
-    <point name="Point-0006" xPosition="21500" yPosition="-2000" zPosition="0"
+    <point name="Point-0005" xPosition="17280" yPosition="5750" zPosition="0"
         vehicleOrientationAngle="" type="HALT_POSITION">
-        <pointLayout xPosition="21500" yPosition="-2000" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
+        <pointLayout xPosition="17250" yPosition="5750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
     </point>
-    <point name="Point-0007" xPosition="1000" yPosition="19500" zPosition="0"
+    <point name="Point-0006" xPosition="17280" yPosition="1750" zPosition="0"
         vehicleOrientationAngle="" type="HALT_POSITION">
-        <pointLayout xPosition="1000" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
+        <pointLayout xPosition="17000" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
     </point>
-    <point name="Point-0008" xPosition="-3350" yPosition="19500" zPosition="0"
+    <point name="Point-0007" xPosition="21362" yPosition="1750" zPosition="0"
         vehicleOrientationAngle="" type="HALT_POSITION">
-        <pointLayout xPosition="-3350" yPosition="19500" xLabelOffset="-10" yLabelOffset="-20"
-            layerId="0"></pointLayout>
+        <pointLayout xPosition="21000" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
     </point>
-    <path name="P1 --- P2" sourcePoint="P1" destinationPoint="P2" length="1" maxVelocity="3000"
-        maxReverseVelocity="3000" locked="false">
-        <peripheralOperation completionRequired="true" executionTrigger="AFTER_ALLOCATION"
-            locationName="door1" name="open"></peripheralOperation>
-        <peripheralOperation completionRequired="true" executionTrigger="AFTER_MOVEMENT"
-            locationName="door1" name="close"></peripheralOperation>
-        <property name="vda5050:action.01" value="Door"></property>
-        <property name="vda5050:action.01.blockingType" value="HARD"></property>
-        <property name="vda5050:action.01.parameter.id" value="1"></property>
-        <property name="vda5050:action.01.parameter.ip" value="192.168.0.1"></property>
-        <property name="vda5050:action.01.parameter.script" value="initialize"></property>
-        <property name="vda5050:action.01.parameter.type" value="open"></property>
-        <property name="vda5050:action.01.when" value="ORDER_START"></property>
-        <property name="vda5050:action.02" value="Door"></property>
-        <property name="vda5050:action.02.blockingType" value="NONE"></property>
-        <property name="vda5050:action.02.parameter.id" value="1"></property>
-        <property name="vda5050:action.02.parameter.ip" value="192.168.0.1"></property>
-        <property name="vda5050:action.02.parameter.script" value="initialize"></property>
-        <property name="vda5050:action.02.parameter.type" value="close"></property>
-        <property name="vda5050:action.02.when" value="ORDER_END"></property>
-        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <point name="Point-0008" xPosition="25750" yPosition="1750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="25500" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0009" xPosition="34277" yPosition="1750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="29500" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0010" xPosition="34277" yPosition="1750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="34000" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0011" xPosition="38231" yPosition="1750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="38000" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0012" xPosition="43577" yPosition="1750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="43000" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0013" xPosition="48655" yPosition="1750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="47500" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0014" xPosition="51500" yPosition="1750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="51500" yPosition="2000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0015" xPosition="21362" yPosition="8250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21250" yPosition="8250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0016" xPosition="21362" yPosition="13250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21250" yPosition="13250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0017" xPosition="21362" yPosition="17250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21250" yPosition="17250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0018" xPosition="21362" yPosition="22250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21250" yPosition="22250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0019" xPosition="34277" yPosition="5500" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="29500" yPosition="5500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0020" xPosition="34277" yPosition="10750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="29750" yPosition="10750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0021" xPosition="34277" yPosition="14750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="29750" yPosition="14750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0022" xPosition="34277" yPosition="19250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="30250" yPosition="19250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0023" xPosition="21362" yPosition="-500" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21000" yPosition="-500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0024" xPosition="21362" yPosition="-4250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21250" yPosition="-4250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0025" xPosition="21362" yPosition="-8250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="21250" yPosition="-8250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0026" xPosition="48655" yPosition="-2250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="48250" yPosition="-2250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0027" xPosition="48655" yPosition="-7250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="48250" yPosition="-7250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0028" xPosition="43577" yPosition="0" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="43000" yPosition="0" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0029" xPosition="43577" yPosition="-3750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="43250" yPosition="-3750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0030" xPosition="43577" yPosition="-7250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="43250" yPosition="-7250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0031" xPosition="43577" yPosition="6250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="43250" yPosition="6250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0032" xPosition="43577" yPosition="10250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="43250" yPosition="10250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0033" xPosition="43577" yPosition="14250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="43250" yPosition="14250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0034" xPosition="43577" yPosition="18750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="43250" yPosition="18750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0035" xPosition="48655" yPosition="8250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="47750" yPosition="8250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0036" xPosition="48655" yPosition="13750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="47750" yPosition="13750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0037" xPosition="38231" yPosition="6250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="38250" yPosition="6250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0038" xPosition="38231" yPosition="10750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="38250" yPosition="10750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0039" xPosition="38231" yPosition="-1250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="38250" yPosition="-1250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0040" xPosition="38231" yPosition="-3750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="38250" yPosition="-3750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0041" xPosition="38231" yPosition="-7250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="38250" yPosition="-7250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0042" xPosition="34277" yPosition="-500" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="29500" yPosition="-500" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0043" xPosition="34277" yPosition="-3750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="29750" yPosition="-3750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0044" xPosition="34277" yPosition="-7250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="29750" yPosition="-7250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0045" xPosition="25750" yPosition="6000" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="25500" yPosition="6000" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0046" xPosition="25750" yPosition="11750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="25750" yPosition="11750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0047" xPosition="25750" yPosition="16250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="25750" yPosition="16250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0048" xPosition="25750" yPosition="21250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="25750" yPosition="21250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0049" xPosition="38231" yPosition="16750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="38250" yPosition="16750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0050" xPosition="9750" yPosition="1750" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="9750" yPosition="1750" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <point name="Point-0051" xPosition="17280" yPosition="-4250" zPosition="0"
+        vehicleOrientationAngle="" type="HALT_POSITION">
+        <pointLayout xPosition="17000" yPosition="-4250" xLabelOffset="-10" yLabelOffset="-20"
+            layerId="0" />
+    </point>
+    <path name="Point-0002 --- Point-0001" sourcePoint="Point-0002" destinationPoint="Point-0001"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="P2 --- P3" sourcePoint="P2" destinationPoint="P3" length="1" maxVelocity="400"
-        maxReverseVelocity="400" locked="false">
-        <pathLayout connectionType="BEZIER" layerId="0">
-            <controlPoint x="321" y="-384"></controlPoint>
-            <controlPoint x="332" y="-374"></controlPoint>
-        </pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <path name="Point-0003 --- Point-0002" sourcePoint="Point-0003" destinationPoint="Point-0002"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="P2 --- Point-0002" sourcePoint="P2" destinationPoint="Point-0002" length="1"
-        maxVelocity="3000" maxReverseVelocity="3000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <path name="Point-0004 --- Point-0003" sourcePoint="Point-0004" destinationPoint="Point-0003"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="P3 --- P4" sourcePoint="P3" destinationPoint="P4" length="1" maxVelocity="3000"
-        maxReverseVelocity="3000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <path name="Point-0005 --- Point-0004" sourcePoint="Point-0005" destinationPoint="Point-0004"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="P4 --- Point-0005" sourcePoint="P4" destinationPoint="Point-0005" length="1"
-        maxVelocity="400" maxReverseVelocity="400" locked="false">
-        <property name="vda5050:orientation.forward" value="-90"></property>
-        <property name="vda5050:orientation.reverse" value="-90"></property>
-        <pathLayout connectionType="BEZIER_3" layerId="0">
-            <controlPoint x="348" y="-88"></controlPoint>
-            <controlPoint x="363" y="-113"></controlPoint>
-            <controlPoint x="398" y="-98"></controlPoint>
-            <controlPoint x="420" y="-89"></controlPoint>
-            <controlPoint x="423" y="-79"></controlPoint>
-        </pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
+    <path name="Point-0006 --- Point-0005" sourcePoint="Point-0006" destinationPoint="Point-0005"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="Point-0002 --- Point-0003" sourcePoint="Point-0002" destinationPoint="Point-0003"
-        length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <path name="Point-0006 --- Point-0007" sourcePoint="Point-0006" destinationPoint="Point-0007"
+        length="4000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="Point-0003 --- Point-0004" sourcePoint="Point-0003" destinationPoint="Point-0004"
-        length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <path name="Point-0006 --- Point-0051" sourcePoint="Point-0006" destinationPoint="Point-0051"
+        length="3000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="Point-0005 --- Point-0006" sourcePoint="Point-0005" destinationPoint="Point-0006"
-        length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <path name="Point-0007 --- Point-0008" sourcePoint="Point-0007" destinationPoint="Point-0008"
+        length="4500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="Point-0007 --- P1" sourcePoint="Point-0007" destinationPoint="P1" length="1"
-        maxVelocity="3000" maxReverseVelocity="3000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="0"></pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <path name="Point-0007 --- Point-0023" sourcePoint="Point-0007" destinationPoint="Point-0023"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <path name="Point-0008 --- Point-0007" sourcePoint="Point-0008" destinationPoint="Point-0007"
-        length="1" maxVelocity="3000" maxReverseVelocity="3000" locked="false">
-        <pathLayout connectionType="DIRECT" layerId="1"></pathLayout>
-        <vehicleEnvelope name="4.1-2.5-2"></vehicleEnvelope>
-
+    <path name="Point-0008 --- Point-0009" sourcePoint="Point-0008" destinationPoint="Point-0009"
+        length="4000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
     </path>
-    <vehicle name="3A" length="1000" energyLevelCritical="20" energyLevelGood="90"
-        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
-        maxReverseVelocity="3000">
+    <path name="Point-0009 --- Point-0010" sourcePoint="Point-0009" destinationPoint="Point-0010"
+        length="4500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0009 --- Point-0042" sourcePoint="Point-0009" destinationPoint="Point-0042"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0010 --- Point-0011" sourcePoint="Point-0010" destinationPoint="Point-0011"
+        length="4000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0011 --- Point-0012" sourcePoint="Point-0011" destinationPoint="Point-0012"
+        length="5000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0011 --- Point-0039" sourcePoint="Point-0011" destinationPoint="Point-0039"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0012 --- Point-0013" sourcePoint="Point-0012" destinationPoint="Point-0013"
+        length="4500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0012 --- Point-0028" sourcePoint="Point-0012" destinationPoint="Point-0028"
+        length="2000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0013 --- Point-0014" sourcePoint="Point-0013" destinationPoint="Point-0014"
+        length="4000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0013 --- Point-0026" sourcePoint="Point-0013" destinationPoint="Point-0026"
+        length="2550" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0015 --- Point-0007" sourcePoint="Point-0015" destinationPoint="Point-0007"
+        length="3000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0016 --- Point-0015" sourcePoint="Point-0016" destinationPoint="Point-0015"
+        length="3000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0017 --- Point-0016" sourcePoint="Point-0017" destinationPoint="Point-0016"
+        length="4000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0018 --- Point-0017" sourcePoint="Point-0018" destinationPoint="Point-0017"
+        length="2550" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0019 --- Point-0009" sourcePoint="Point-0019" destinationPoint="Point-0009"
+        length="3500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0020 --- Point-0019" sourcePoint="Point-0020" destinationPoint="Point-0019"
+        length="3000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0021 --- Point-0020" sourcePoint="Point-0021" destinationPoint="Point-0020"
+        length="3041" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0022 --- Point-0021" sourcePoint="Point-0022" destinationPoint="Point-0021"
+        length="3041" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0023 --- Point-0024" sourcePoint="Point-0023" destinationPoint="Point-0024"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0024 --- Point-0025" sourcePoint="Point-0024" destinationPoint="Point-0025"
+        length="3041" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0026 --- Point-0027" sourcePoint="Point-0026" destinationPoint="Point-0027"
+        length="2062" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0028 --- Point-0029" sourcePoint="Point-0028" destinationPoint="Point-0029"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0029 --- Point-0030" sourcePoint="Point-0029" destinationPoint="Point-0030"
+        length="1581" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0031 --- Point-0012" sourcePoint="Point-0031" destinationPoint="Point-0012"
+        length="3000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0032 --- Point-0031" sourcePoint="Point-0032" destinationPoint="Point-0031"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0033 --- Point-0032" sourcePoint="Point-0033" destinationPoint="Point-0032"
+        length="3500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0034 --- Point-0033" sourcePoint="Point-0034" destinationPoint="Point-0033"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0035 --- Point-0013" sourcePoint="Point-0035" destinationPoint="Point-0013"
+        length="3000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0036 --- Point-0035" sourcePoint="Point-0036" destinationPoint="Point-0035"
+        length="3000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0037 --- Point-0011" sourcePoint="Point-0037" destinationPoint="Point-0011"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0038 --- Point-0037" sourcePoint="Point-0038" destinationPoint="Point-0037"
+        length="3000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0039 --- Point-0040" sourcePoint="Point-0039" destinationPoint="Point-0040"
+        length="2000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0040 --- Point-0041" sourcePoint="Point-0040" destinationPoint="Point-0041"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0042 --- Point-0043" sourcePoint="Point-0042" destinationPoint="Point-0043"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0043 --- Point-0044" sourcePoint="Point-0043" destinationPoint="Point-0044"
+        length="2000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0045 --- Point-0008" sourcePoint="Point-0045" destinationPoint="Point-0008"
+        length="4000" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0046 --- Point-0045" sourcePoint="Point-0046" destinationPoint="Point-0045"
+        length="2550" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0047 --- Point-0046" sourcePoint="Point-0047" destinationPoint="Point-0046"
+        length="3536" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0048 --- Point-0047" sourcePoint="Point-0048" destinationPoint="Point-0047"
+        length="2500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0049 --- Point-0038" sourcePoint="Point-0049" destinationPoint="Point-0038"
+        length="3500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <path name="Point-0050 --- Point-0006" sourcePoint="Point-0050" destinationPoint="Point-0006"
+        length="4500" maxVelocity="1000" maxReverseVelocity="1000" locked="false">
+        <pathLayout connectionType="DIRECT" layerId="0" />
+    </path>
+    <vehicle name="Vehicle-0001" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0017" />
         <property name="tcs:preferredAdapterClass"
-            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
-        <property name="vda5050:errors.fatal" value="Value unknown"></property>
-        <property name="vda5050:errors.warning" value="Value unknown"></property>
-        <property name="vda5050:information.debug" value="Value unknown"></property>
-        <property name="vda5050:information.info" value="Value unknown"></property>
-        <property name="vda5050:interfaceName" value="uagv"></property>
-        <property name="vda5050:manufacturer" value="tx"></property>
-        <property name="vda5050:minVisualizationInterval" value="1000"></property>
-        <property name="vda5050:orderQueueSize" value="2"></property>
-        <property name="vda5050:paused" value="false"></property>
-        <property name="vda5050:rechargeOperation" value="charge"></property>
-        <property name="vda5050:serialNumber" value="tx3"></property>
-        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
-        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
-        <property name="vda5050:version" value="2.0"></property>
-        <vehicleLayout color="#633974"></vehicleLayout>
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx1" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#FF0000" />
     </vehicle>
-    <vehicle name="3B" length="1000" energyLevelCritical="20" energyLevelGood="90"
-        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
-        maxReverseVelocity="3000">
+    <vehicle name="Vehicle-0002" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0002" />
         <property name="tcs:preferredAdapterClass"
-            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
-        <property name="vda5050:errors.fatal" value="Value unknown"></property>
-        <property name="vda5050:errors.warning" value="Value unknown"></property>
-        <property name="vda5050:information.debug" value="Value unknown"></property>
-        <property name="vda5050:information.info" value="Value unknown"></property>
-        <property name="vda5050:interfaceName" value="uagv"></property>
-        <property name="vda5050:manufacturer" value="tx"></property>
-        <property name="vda5050:minVisualizationInterval" value="1000"></property>
-        <property name="vda5050:orderQueueSize" value="2"></property>
-        <property name="vda5050:paused" value="false"></property>
-        <property name="vda5050:rechargeOperation" value="charge"></property>
-        <property name="vda5050:serialNumber" value="tx4"></property>
-        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
-        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
-        <property name="vda5050:version" value="2.0"></property>
-        <vehicleLayout color="#1d8348"></vehicleLayout>
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx2" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#0000FF" />
     </vehicle>
-    <vehicle name="3C" length="1000" energyLevelCritical="20" energyLevelGood="90"
-        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
-        maxReverseVelocity="3000">
+    <vehicle name="Vehicle-0003" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0019" />
         <property name="tcs:preferredAdapterClass"
-            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
-        <property name="vda5050:errors.fatal" value="Value unknown"></property>
-        <property name="vda5050:errors.warning" value="Value unknown"></property>
-        <property name="vda5050:information.debug" value="Value unknown"></property>
-        <property name="vda5050:information.info" value="Value unknown"></property>
-        <property name="vda5050:interfaceName" value="uagv"></property>
-        <property name="vda5050:manufacturer" value="tx"></property>
-        <property name="vda5050:minVisualizationInterval" value="1000"></property>
-        <property name="vda5050:orderQueueSize" value="2"></property>
-        <property name="vda5050:paused" value="false"></property>
-        <property name="vda5050:rechargeOperation" value="charge"></property>
-        <property name="vda5050:serialNumber" value="tx2"></property>
-        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
-        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
-        <property name="vda5050:version" value="2.0"></property>
-        <vehicleLayout color="#212f3c"></vehicleLayout>
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#00FFFF" />
     </vehicle>
-    <vehicle name="3D" length="1000" energyLevelCritical="20" energyLevelGood="90"
-        energyLevelFullyRecharged="95" energyLevelSufficientlyRecharged="90" maxVelocity="3000"
-        maxReverseVelocity="3000">
+    <vehicle name="Vehicle-0004" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0018" />
         <property name="tcs:preferredAdapterClass"
-            value="org.opentcs.commadapter.vehicle.vda5050.CommAdapterFactoryImpl"></property>
-        <property name="vda5050:errors.fatal" value="Value unknown"></property>
-        <property name="vda5050:errors.warning" value="Value unknown"></property>
-        <property name="vda5050:information.debug" value="Value unknown"></property>
-        <property name="vda5050:information.info" value="Value unknown"></property>
-        <property name="vda5050:interfaceName" value="uagv"></property>
-        <property name="vda5050:manufacturer" value="tx"></property>
-        <property name="vda5050:minVisualizationInterval" value="1000"></property>
-        <property name="vda5050:orderQueueSize" value="2"></property>
-        <property name="vda5050:paused" value="false"></property>
-        <property name="vda5050:rechargeOperation" value="charge"></property>
-        <property name="vda5050:serialNumber" value="tx1"></property>
-        <property name="vda5050:vehicleLengthLoaded" value="1000"></property>
-        <property name="vda5050:vehicleLengthUnloaded" value="1000"></property>
-        <property name="vda5050:version" value="2.0"></property>
-        <vehicleLayout color="#641e16"></vehicleLayout>
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx4" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#FFFF00" />
     </vehicle>
-    <locationType name="Transfer">
-        <allowedOperation name="Drop"></allowedOperation>
-        <allowedOperation name="None"></allowedOperation>
-        <allowedOperation name="Pick"></allowedOperation>
-        <property name="tcs:defaultLocationTypeSymbol" value="LOAD_TRANSFER_ALT_2"></property>
-        <property name="vda5050:destinationAction.Drop.parameter.script" value="drop"></property>
-        <property name="vda5050:destinationAction.Pick.parameter.script" value="pick"></property>
-        <property name="vda5050:destinationAction.Pick.parameter.x" value="100"></property>
-        <locationTypeLayout locationRepresentation="DEFAULT"></locationTypeLayout>
+    <vehicle name="Vehicle-0005" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0028" />
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx4" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#FF00FF" />
+    </vehicle>
+    <vehicle name="Vehicle-0006" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0021" />
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#9900CC" />
+    </vehicle>
+    <vehicle name="Vehicle-0007" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0023" />
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#FF6600" />
+    </vehicle>
+    <vehicle name="Vehicle-0008" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0022" />
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#CC1DFF" />
+    </vehicle>
+    <vehicle name="Vehicle-0009" length="1000" energyLevelCritical="30" energyLevelGood="90"
+        energyLevelFullyRecharged="30" energyLevelSufficientlyRecharged="90" maxVelocity="1000"
+        maxReverseVelocity="1000">
+        <property name="loopback:initialPosition" value="Point-0003" />
+        <property name="tcs:preferredAdapterClass"
+            value="org.opentcs.virtualvehicle.LoopbackCommunicationAdapterFactory" />
+        <property name="vda5050:interfaceName" value="uagv" />
+        <property name="vda5050:manufacturer" value="rw" />
+        <property name="vda5050:minVisualizationInterval" value="1000" />
+        <property name="vda5050:orderQueueSize" value="2" />
+        <property name="vda5050:serialNumber" value="tx3" />
+        <property name="vda5050:version" value="2.0" />
+        <vehicleLayout color="#327101" />
+    </vehicle>
+    <locationType name=" LType-0001">
+        <allowedOperation name="Load" />
+        <allowedOperation name="Nop" />
+        <allowedOperation name="Unload" />
+        <locationTypeLayout locationRepresentation="DEFAULT" />
     </locationType>
-    <locationType name="charge">
-        <allowedOperation name="Charge"></allowedOperation>
-        <property name="tcs:defaultLocationTypeSymbol" value="NONE"></property>
-        <locationTypeLayout locationRepresentation="DEFAULT"></locationTypeLayout>
-    </locationType>
-    <locationType name="Door">
-        <allowedOperation name="close"></allowedOperation>
-        <allowedOperation name="open"></allowedOperation>
-        <allowedPeripheralOperation name="close"></allowedPeripheralOperation>
-        <allowedPeripheralOperation name="open"></allowedPeripheralOperation>
-        <property name="script" value="door.py"></property>
-        <locationTypeLayout locationRepresentation="NONE"></locationTypeLayout>
-    </locationType>
-    <location name="charge1" xPosition="22000" yPosition="8500" zPosition="0" locked="false"
-        type="charge">
-        <link point="P4"></link>
-        <property name="tcs:defaultLocationSymbol" value="DEFAULT"></property>
-        <locationLayout xPosition="22000" yPosition="8500" xLabelOffset="0" yLabelOffset="0"
-            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+    <location name="Location-0001" xPosition="17280" yPosition="25301" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0001">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="17280" yPosition="25301" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
     </location>
-    <location name="trans1" xPosition="25000" yPosition="16000" zPosition="0" locked="false"
-        type="Transfer">
-        <link point="Point-0003"></link>
-        <property name="tcs:defaultLocationSymbol" value="DEFAULT"></property>
-        <locationLayout xPosition="25000" yPosition="16000" xLabelOffset="0" yLabelOffset="0"
-            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+    <location name="Location-0002" xPosition="21362" yPosition="25301" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0018">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="21362" yPosition="25301" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
     </location>
-    <location name="trans2" xPosition="24500" yPosition="-2000" zPosition="0" locked="false"
-        type="Transfer">
-        <link point="Point-0006"></link>
-        <property name="tcs:defaultLocationSymbol" value="DEFAULT"></property>
-        <locationLayout xPosition="24500" yPosition="-2000" xLabelOffset="0" yLabelOffset="0"
-            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+    <location name="Location-0003" xPosition="25750" yPosition="24773" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0048">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="25750" yPosition="24773" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
     </location>
-    <location name="LC1" xPosition="31985" yPosition="16204" zPosition="0" locked="false"
-        type="Transfer">
-        <link point="Point-0004"></link>
-        <locationLayout xPosition="31985" yPosition="16204" xLabelOffset="0" yLabelOffset="0"
-            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
+    <location name="Location-0004" xPosition="34277" yPosition="22012" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0022">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="34277" yPosition="22012" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
     </location>
-    <location name="door1" xPosition="9576" yPosition="17912" zPosition="0" locked="false"
-        type="Door">
-        <locationLayout xPosition="9576" yPosition="17912" xLabelOffset="-10" yLabelOffset="-20"
-            locationRepresentation="DEFAULT" layerId="0"></locationLayout>
-        <property name="ip" value="127.0.0.1"></property>
-        <property name="time" value="2024-01-01T12:22:33.782Z"></property>
-        <property name="value" value="102"></property>
-
+    <location name="Location-0005" xPosition="38231" yPosition="19412" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0049">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="38231" yPosition="19412" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+    <location name="Location-0006" xPosition="43577" yPosition="21159" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0034">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="43577" yPosition="21159" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+    <location name="Location-0007" xPosition="48655" yPosition="16610" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0036">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="48655" yPosition="16610" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+    <location name="Location-0008" xPosition="17280" yPosition="-8041" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0051">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="17280" yPosition="-8041" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+    <location name="Location-0009" xPosition="21362" yPosition="-10884" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0025">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="21362" yPosition="-10884" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+    <location name="Location-0010" xPosition="34277" yPosition="-11127" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0044">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="34277" yPosition="-11127" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+    <location name="Location-0011" xPosition="38231" yPosition="-10315" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0041">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="38231" yPosition="-10315" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+    <location name="Location-0012" xPosition="43577" yPosition="-10274" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0030">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="43577" yPosition="-10274" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
+    </location>
+    <location name="Location-0013" xPosition="48655" yPosition="-10031" zPosition="0" locked="false"
+        type=" LType-0001">
+        <link point="Point-0027">
+            <allowedOperation name="Load" />
+            <allowedOperation name="Nop" />
+            <allowedOperation name="Unload" />
+        </link>
+        <locationLayout xPosition="48655" yPosition="-10031" xLabelOffset="0" yLabelOffset="0"
+            locationRepresentation="DEFAULT" layerId="0" />
     </location>
     <visualLayout name="VLayout" scaleX="50" scaleY="50">
-        <layer id="0" ordinal="" visible="true" name="Layer 0" groupId=""></layer>
-        <layer id="1" ordinal="" visible="true" name="Layer 1" groupId=""></layer>
-        <layerGroup id="0" name="Default layer group" visible="true"></layerGroup>
+        <layer id="0" ordinal="" visible="true" name="Default layer" groupId="" />
+        <layerGroup id="0" name="Default layer group" visible="true" />
     </visualLayout>
-    <property name="tcs:modelFileLastModified" value="2024-10-17 16:24:04.000"></property>
+    <property name="tcs:modelFileLastModified" value="2025-01-25 11:14:42.000" />
 </model>
