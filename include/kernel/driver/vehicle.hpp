@@ -104,7 +104,6 @@ class Vehicle : public schedule::Client,
   bool instant_task_run{false};
   std::chrono::system_clock::time_point idle_time;
   std::vector<std::string> allowed_order_type;
-  std::mutex ord_mutex;
 };
 class SimVehicle : public Vehicle {
  public:

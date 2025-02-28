@@ -1260,7 +1260,7 @@ void RSS::home_order(const std::string &name,
   ord->driverorders.push_back(dr);
   ord->intended_vehicle = v;
   ord->anytime_drop = true;
-  std::unique_lock<std::mutex> lock(orderpool->mut);
+  std::unique_lock<std::shared_mutex> lock(orderpool->mut);
   orderpool->push(ord);
 }
 
@@ -1292,7 +1292,7 @@ void RSS::charge_order(
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
   ord->intended_vehicle = v;
-  std::unique_lock<std::mutex> lock(orderpool->mut);
+  std::unique_lock<std::shared_mutex> lock(orderpool->mut);
   orderpool->push(ord);
 }
 
@@ -1484,7 +1484,7 @@ std::pair<int, std::string> RSS::post_transport_order(
     res.push_back(msg);
     return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
-  std::unique_lock<std::mutex> lock2(orderpool->mut);
+  std::unique_lock<std::shared_mutex> lock2(orderpool->mut);
   for (auto &[name, ords] : orderpool->orderpool) {
     for (auto &ord : ords) {
       if (ord->name == ord_name) {
@@ -1505,7 +1505,6 @@ std::pair<int, std::string> RSS::post_transport_order(
       return std::pair<int, std::string>({Conflict_409, res.to_string()});
     }
   }
-  lock2.unlock();
   try {
     auto req = json::parse(body);
     LOG(WARNING) << "receive order:\n" << pretty_print(req) << "\n";
@@ -1638,9 +1637,9 @@ std::pair<int, std::string> RSS::post_transport_order(
             : "";
     ord->state = data::order::TransportOrder::State::RAW;
     CLOG(INFO, dispatch_log) << ord->name << " status: [raw]\n";
-    std::unique_lock<std::mutex> lock(orderpool->mut);
+
     orderpool->push(ord);
-    lock.unlock();
+    lock2.unlock();
     dispatcher->notify();
     // return
     json res;
@@ -1734,7 +1733,7 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
   dr->transport_order = ord;
   ord->driverorders.push_back(dr);
   ord->peripheral_reservation_token = "null";
-  std::unique_lock<std::mutex> lock(orderpool->mut);
+  std::unique_lock<std::shared_mutex> lock(orderpool->mut);
   orderpool->push(ord);
   lock.unlock();
   dispatcher->notify();
@@ -1780,15 +1779,19 @@ std::pair<int, std::string> RSS::post_transport_order_withdrawl(
     res.push_back(msg);
     return std::pair<int, std::string>({NotFound_404, res.to_string()});
   }
+  std::unique_lock<std::shared_mutex> lock(orderpool->mut);
   for (auto &[name, ords] : orderpool->orderpool) {
     for (auto &ord : ords) {
       if (ord->name == ord_name) {
+        std::unique_lock<std::shared_mutex> lock2(ord->mutex);
         if (ord->state != data::order::TransportOrder::State::DISPATCHABLE) {
           return std::pair<int, std::string>(
               {NotFound_404, "[" + ord_name + " is not support withdrawl.]"});
         }
         CLOG(INFO, rss_log) << ord_name << " withdrawl\n";
         ord->state = data::order::TransportOrder::State::WITHDRAWL;
+        lock2.unlock();
+        lock.unlock();
         orderpool->pop(ord);
         return std::pair<int, std::string>({OK_200, ""});
       }
@@ -1796,6 +1799,7 @@ std::pair<int, std::string> RSS::post_transport_order_withdrawl(
   }
   for (auto &o : orderpool->ended_orderpool) {
     if (o->name == ord_name) {
+      std::unique_lock<std::shared_mutex> lock2(o->mutex);
       if (o->state != data::order::TransportOrder::State::BEING_PROCESSED &&
           o->state != data::order::TransportOrder::State::FAILED) {
         return std::pair<int, std::string>(
@@ -1976,7 +1980,6 @@ std::pair<int, std::string> RSS::post_ordersequence(
 }
 
 json vehicle_to_json(const std::shared_ptr<kernel::driver::Vehicle> &v) {
-  std::unique_lock<std::mutex> lock(v->resource.lock()->mut);
   json res;
   res["name"] = v->name;
   res["length"] = v->length;
@@ -2011,6 +2014,7 @@ json vehicle_to_json(const std::shared_ptr<kernel::driver::Vehicle> &v) {
   res["state"] = v->get_state();
   res["procState"] = v->get_process_state();
   res["allocatedResources"] = json::array();
+  std::shared_lock<std::shared_mutex> lock(v->res_mut);
   for (auto &r : v->allocated_resources) {
     if (r.empty()) {
       continue;

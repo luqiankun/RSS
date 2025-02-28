@@ -35,28 +35,30 @@ bool OrderPool::idel_orderpool(std::string v) {
 }
 
 void OrderPool::cancel_order(size_t order_uuid) {
-  std::unique_lock<std::mutex> lock(mut);
   for (auto &[name, ords] : orderpool) {
     for (const auto &o : ords) {
       if (o->name_hash == order_uuid) {
+        std::unique_lock<std::shared_mutex> lock(o->mutex);
         o->state = data::order::TransportOrder::State::WITHDRAWL;
       }
     }
   }
   for (const auto &x : random_orderpool) {
     if (x->name_hash == order_uuid) {
+      std::unique_lock<std::shared_mutex> lock(x->mutex);
       x->state = data::order::TransportOrder::State::WITHDRAWL;
     }
   }
   for (const auto &x : ended_orderpool) {
     if (x->name_hash == order_uuid) {
+      std::unique_lock<std::shared_mutex> lock(x->mutex);
       x->state = data::order::TransportOrder::State::WITHDRAWL;
     }
   }
 }
 
 void OrderPool::pop(const TransOrderPtr &order) {
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock(mut);
   for (auto &[name, ords] : orderpool) {
     for (auto it = ords.begin(); it != ords.end();) {
       if (*it == order) {
@@ -90,14 +92,14 @@ void OrderPool::patch(const TransOrderPtr &order) {
   for (auto it = random_orderpool.begin(); it != random_orderpool.end();) {
     if (*it == order) {
       it = random_orderpool.erase(it);
-      std::unique_lock<std::mutex> lock(mut);
+      std::unique_lock<std::shared_mutex> lock(mut);
       push(order);
       return;
     } else {
       ++it;
     }
   }
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock(mut);
   push(order);
 }
 
@@ -141,11 +143,11 @@ void OrderPool::push(const TransOrderPtr &order) {
 }
 void OrderPool::redistribute(const TransOrderPtr &order) {
   LOG(INFO) << "redistribute order " << (order)->name;
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock(mut);
   for (auto it = ended_orderpool.begin(); it != ended_orderpool.end();) {
     if (*it == order) {
       it = ended_orderpool.erase(it);
-
+      std::unique_lock<std::shared_mutex> lock2(order->mutex);
       if (order->anytime_drop) {
         // 避让订单不再重派
         order->state = data::order::TransportOrder::State::WITHDRAWL;
@@ -169,7 +171,7 @@ void OrderPool::redistribute(const TransOrderPtr &order) {
   }
 }
 std::pair<std::string, TransOrderPtr> OrderPool::get_next_random_ord() {
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock(mut);
   if (random_orderpool.empty()) {
     return std::pair{"", nullptr};
   } else {
@@ -180,7 +182,7 @@ std::pair<std::string, TransOrderPtr> OrderPool::get_next_random_ord() {
 }
 
 std::pair<std::string, TransOrderPtr> OrderPool::get_next_ord() {
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock(mut);
   update_quence();
   if (orderpool.empty()) {
     return std::pair{"", nullptr};
@@ -222,24 +224,29 @@ void OrderPool::update_quence() const {
 }
 
 void OrderPool::cancel_all_order() {
-  std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock(mut);
   for (auto &x : orderpool) {
     for (auto &o : x.second) {
+      std::unique_lock<std::shared_mutex> lock2(o->mutex);
       o->state = data::order::TransportOrder::State::WITHDRAWL;
+      lock2.unlock();
       ended_orderpool.push_back(o);
     }
   }
   orderpool.clear();
   for (auto &x : ended_orderpool) {
+    std::unique_lock<std::shared_mutex> lock2(x->mutex);
     x->state = data::order::TransportOrder::State::WITHDRAWL;
   }
   for (auto &x : random_orderpool) {
+    std::unique_lock<std::shared_mutex> lock2(x->mutex);
     x->state = data::order::TransportOrder::State::WITHDRAWL;
+    lock2.unlock();
     ended_orderpool.push_back(x);
   }
 }
 std::vector<TransOrderPtr> OrderPool::get_all_order() {
-  std::unique_lock<std::mutex> lock(mut);
+  std::shared_lock<std::shared_mutex> lock(mut);
   std::vector<kernel::allocate::TransOrderPtr> pro_orders = {};
   for (auto &o : orderpool) {
     for (auto &ord : o.second) {

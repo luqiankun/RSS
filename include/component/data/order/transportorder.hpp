@@ -86,6 +86,7 @@ class TransportOrder : public RSSObject {
   bool anytime_drop{false};           // 不影响车辆状态，可随时丢弃的
   int priority{int(Level::Level_0)};  // 优先级
   int switch_veh{false};
+  mutable std::shared_mutex mutex;
 };
 }  // namespace data::order
 #endif

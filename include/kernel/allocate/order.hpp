@@ -60,7 +60,7 @@ class OrderPool : public RSSObject {
   std::deque<TransOrderPtr> random_orderpool;
   std::deque<TransOrderPtr> ended_orderpool;
   std::deque<OrderSeqPtr> orderquence;
-  std::mutex mut;
+  mutable std::shared_mutex mut;
   int cur_index{0};
 };
 }  // namespace allocate

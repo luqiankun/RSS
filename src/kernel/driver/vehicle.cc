@@ -32,7 +32,7 @@ std::string vehicle_state_to_str(Vehicle::State state) {
   return res;
 }
 allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
-  std::unique_lock<std::mutex> lock(ord_mutex);
+  std::unique_lock<std::shared_mutex> lock(current_order->mutex);
   if (current_order) {
     LOG(INFO) << name << " " << current_order->name
               << " redistribute current order\n";
@@ -50,6 +50,7 @@ allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
     process_state = proState::IDEL;
     avoid_state = Avoid::Normal;
     now_order_state = Vehicle::nowOrder::END;
+    std::shared_lock<std::shared_mutex> lock(res_mut);
     future_allocate_resources.clear();
     claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
@@ -60,6 +61,7 @@ allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
         }
       }
     }
+    lock.unlock();
     res->free(temp, shared_from_this());
 
     ord->conflict_pool.lock()->reset_state(ord);
@@ -88,7 +90,7 @@ void Vehicle::execute_action(
   io_context.post([=] {
     LOG(INFO) << name << " " << "action ---- {"
               << dest->destination.lock()->name << "}\n";
-    std::unique_lock<std::mutex> lock(ord_mutex);
+    std::unique_lock<std::shared_mutex> lock(current_order->mutex);
     LOG(INFO) << name << " " << "action  {" << dest->destination.lock()->name
               << "}\n";
 
@@ -130,7 +132,7 @@ void Vehicle::execute_move(
     if (current_command->state != Command::State::EXECUTING) {
       LOG(FATAL) << "ddd";
     }
-    std::unique_lock<std::mutex> lock(ord_mutex);
+    std::unique_lock<std::shared_mutex> lock(current_order->mutex);
     CLOG(INFO, driver_log) << name << " " << "move {" << steps.front()->name
                            << "}\n";
     if (!current_order) {
@@ -180,6 +182,7 @@ void Vehicle::execute_instatn_action(
 }
 void Vehicle::cancel_all_order() {
   for (auto &ord : orders) {
+    std::unique_lock<std::shared_mutex> lock(ord->mutex);
     ord->state = data::order::TransportOrder::State::WITHDRAWL;
   }
   orders.clear();
@@ -276,6 +279,7 @@ bool Vehicle::plan_route(allocate::TransOrderPtr cur) {
       }
     }
   }
+  std::unique_lock<std::shared_mutex> lock2(res_mut);
   claim_resources.clear();
   for (int i = cur->current_driver_index; i < cur->driverorders.size(); i++) {
     auto x = cur->driverorders[i];
@@ -298,7 +302,6 @@ void Vehicle::get_next_ord() {
   if (orders.empty()) {
     // state = State::IDLE;
   } else {
-    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order = orders.front();
     orders.pop_front();
   }
@@ -338,6 +341,7 @@ void Vehicle::command_done() {
     get_next_ord();
     return;
   }
+  std::unique_lock<std::shared_mutex> lock(current_order->mutex);
   if (reroute_flag) {
     plan_route(current_order);
     reroute_flag = false;
@@ -345,6 +349,7 @@ void Vehicle::command_done() {
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
     process_state = proState::AWAITING_ORDER;
     // 订单取消
+    std::shared_lock<std::shared_mutex> lock(res_mut);
     future_allocate_resources.clear();
     claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
@@ -355,6 +360,7 @@ void Vehicle::command_done() {
         }
       }
     }
+    lock.unlock();
     res->free(temp, shared_from_this());
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " withdrawl.\n";
@@ -362,7 +368,6 @@ void Vehicle::command_done() {
       process_charging = false;
     }
     now_order_state = Vehicle::nowOrder::END;
-    std::unique_lock<std::mutex> lock(ord_mutex);
     // current_order->state = data::order::TransportOrder::State::FAILED;
     current_order.reset();
     lock.unlock();
@@ -371,6 +376,7 @@ void Vehicle::command_done() {
   } else if (current_order->state ==
              data::order::TransportOrder::State::UNROUTABLE) {
     // 订单不可达
+    std::shared_lock<std::shared_mutex> lock(res_mut);
     future_allocate_resources.clear();
     claim_resources.clear();
     CLOG(ERROR, driver_log)
@@ -383,12 +389,12 @@ void Vehicle::command_done() {
         }
       }
     }
+    lock.unlock();
     res->free(temp, shared_from_this());
     if (process_charging) {
       process_charging = false;
     }
     now_order_state = Vehicle::nowOrder::END;
-    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     // current_order.reset();
     // get_next_ord();
@@ -397,7 +403,7 @@ void Vehicle::command_done() {
   if (current_order->dead_time < get_now_utc_time()) {
     CLOG(ERROR, driver_log)
         << name << " " << current_order->name << " timeout.";
-    std::unique_lock<std::mutex> lock(ord_mutex);
+    std::shared_lock<std::shared_mutex> lock(res_mut);
     current_order->state = data::order::TransportOrder::State::FAILED;
     future_allocate_resources.clear();
     claim_resources.clear();
@@ -409,6 +415,7 @@ void Vehicle::command_done() {
         }
       }
     }
+    lock.unlock();
     res->free(temp, shared_from_this());
     now_order_state = Vehicle::nowOrder::END;
     return;
@@ -435,17 +442,17 @@ void Vehicle::command_done() {
   // 完成step or action
   auto dr = (current_order->driverorders[current_order->current_driver_index]);
   if (dr->state == data::order::DriverOrder::State::FINISHED) {
-    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->current_driver_index += 1;
     // LOG(INFO) << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
     //           << current_order->current_driver_index;
   } else if (dr->state == data::order::DriverOrder::State::FAILED) {
-    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     now_order_state = Vehicle::nowOrder::END;
     CLOG(ERROR, driver_log) << name << " " << current_order->name
                             << " failed, requires manual "
                                "intervention.\n";
+    std::shared_lock<std::shared_mutex> lock2(res_mut);
+
     future_allocate_resources.clear();
     claim_resources.clear();
     std::vector<std::shared_ptr<RSSResource>> temp;
@@ -456,6 +463,7 @@ void Vehicle::command_done() {
         }
       }
     }
+    lock2.unlock();
     res->free(temp, shared_from_this());
     // current_order.reset();
     // get_next_ord();
@@ -463,7 +471,6 @@ void Vehicle::command_done() {
   }
   if (current_order->driverorders.size() <=
       current_order->current_driver_index) {
-    std::unique_lock<std::mutex> lock(ord_mutex);
     process_state = proState::AWAITING_ORDER;
     current_order->state = data::order::TransportOrder::State::FINISHED;
     CLOG(INFO, driver_log) << name << "'order " << current_order->name
@@ -472,14 +479,17 @@ void Vehicle::command_done() {
     now_order_state = Vehicle::nowOrder::END;
     current_order.reset();
     current_command.reset();
+    std::shared_lock<std::shared_mutex> lock2(res_mut);
     future_allocate_resources.clear();
     claim_resources.clear();
+    lock2.unlock();
     lock.unlock();
     get_next_ord();
   } else {
     // 继续执行订单
     if (current_order->state ==
         data::order::TransportOrder::State::BEING_PROCESSED) {
+      lock.unlock();
       next_command();
       // state = State::EXECUTING;
     } else {
@@ -528,19 +538,19 @@ std::string Vehicle::get_process_state() const {
 void Vehicle::next_command() {
   auto scheduler_ = scheduler.lock();
   auto dispatcher_ = dispatcher.lock();
-  if (!scheduler_ || !dispatcher_) {
-    std::unique_lock<std::mutex> lock(ord_mutex);
-    current_order->state = data::order::TransportOrder::State::FAILED;
-    CLOG(ERROR, driver_log) << name << " scheduler  or dispatcher is null\n";
-    return;
-  }
   if (!current_order) {
     get_next_ord();
     return;
   }
+  std::unique_lock<std::shared_mutex> lock(current_order->mutex);
+  if (!scheduler_ || !dispatcher_) {
+    current_order->state = data::order::TransportOrder::State::FAILED;
+    CLOG(ERROR, driver_log) << name << " scheduler  or dispatcher is null\n";
+    return;
+  }
+
   if (current_order->state ==
       data::order::TransportOrder::State::DISPATCHABLE) {
-    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::BEING_PROCESSED;
     dispatcher_->pop_order(current_order);
     CLOG(INFO, order_log) << current_order->name
@@ -549,7 +559,6 @@ void Vehicle::next_command() {
     plan_route(current_order);  // 首次执行，规划路径
   }
   if (current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
-    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order->state = data::order::TransportOrder::State::FAILED;
     current_order.reset();
     if (process_charging) {
@@ -563,6 +572,7 @@ void Vehicle::next_command() {
     return;
   }
   if (current_order->state == data::order::TransportOrder::State::FINISHED) {
+    lock.unlock();
     get_next_ord();
     return;
   }
@@ -590,9 +600,7 @@ void Vehicle::receive_task(
     state = State::EXECUTING;
     avoid_state = Avoid::Normal;
     process_state = proState::AWAITING_ORDER;
-    std::unique_lock<std::mutex> lock(ord_mutex);
     current_order.reset();
-    lock.unlock();
     orders.push_back(order);
     if (order->state != data::order::TransportOrder::State::DISPATCHABLE) {
       LOG(FATAL) << "ssss";
@@ -600,7 +608,6 @@ void Vehicle::receive_task(
     next_command();
   } else if (state == State::EXECUTING) {
     if (current_order && current_order->anytime_drop) {
-      std::unique_lock<std::mutex> lock(ord_mutex);
       current_order->state = data::order::TransportOrder::State::WITHDRAWL;
       LOG(INFO) << "__________________|||||||||||||||||||||||||";
     }
@@ -610,10 +617,8 @@ void Vehicle::receive_task(
     orders.push_back(order);
     if (current_order &&
         current_order->state == data::order::TransportOrder::State::WITHDRAWL) {
-      std::unique_lock<std::mutex> lock(ord_mutex);
       current_order->state = data::order::TransportOrder::State::FAILED;
       current_order.reset();
-      lock.unlock();
       next_command();
     }
   } else if (state == State::CHARGING) {
@@ -814,18 +819,20 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
         // 重启了？
         LOG(WARNING) << h_id << " " << rece_header_id;
         if (current_order) {
-          std::unique_lock<std::mutex> lock(ord_mutex);
+          std::unique_lock<std::shared_mutex> lock(current_order->mutex);
           current_order->state = data::order::TransportOrder::State::FAILED;
           CLOG(WARNING, dispatch_log)
               << current_order->name << " status: [failed]\n";
         }
         state = Vehicle::State::UNKNOWN;
         std::vector<std::shared_ptr<RSSResource>> temp;
+        std::shared_lock<std::shared_mutex> lock(res_mut);
         for (auto &a : allocated_resources) {
           for (auto &x : a) {
             temp.push_back(x);
           }
         }
+        lock.unlock();
         res->free(temp, shared_from_this());
         init_pos = false;
         CLOG(WARNING, driver_log) << name << " 重启了???\n";
@@ -856,11 +863,13 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
               this->position = current_point->position;
               idle_time = get_now_utc_time();
               std::vector<std::shared_ptr<RSSResource>> temp;
+              std::shared_lock<std::shared_mutex> lock(res_mut);
               for (auto &a : allocated_resources) {
                 for (auto &x_ : a) {
                   if (x_ != last_point) temp.push_back(x_);
                 }
               }
+              lock.unlock();
               res->free(temp, shared_from_this());
               std::vector<std::shared_ptr<RSSResource>> ress;
               ress.push_back(x);
@@ -881,11 +890,13 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
                 LOG(INFO) << last_vdastate.last_node_id << " "
                           << vdastate.last_node_id;
                 std::vector<std::shared_ptr<RSSResource>> temp;
+                std::shared_lock<std::shared_mutex> lock(res_mut);
                 for (auto &a : allocated_resources) {
                   for (auto &x_ : a) {
                     if (x_ != last_point) temp.push_back(x_);
                   }
                 }
+                lock.unlock();
                 res->free(temp, shared_from_this());
                 std::vector<std::shared_ptr<RSSResource>> ress;
                 ress.push_back(x);
@@ -975,11 +986,13 @@ void Rabbit3::onconnect(const mqtt::const_message_ptr &msg) {
           veh_state = vda5050::VehicleMqttStatus::OFFLINE;
           state = Vehicle::State::UNKNOWN;
           std::vector<std::shared_ptr<RSSResource>> temp;
+          std::shared_lock<std::shared_mutex> lock(res_mut);
           for (auto &a : allocated_resources) {
             for (auto &x : a) {
               temp.push_back(x);
             }
           }
+          lock.unlock();
           res->free(temp, shared_from_this());
         }
         rece_header_id = -1;
@@ -989,11 +1002,13 @@ void Rabbit3::onconnect(const mqtt::const_message_ptr &msg) {
           veh_state = vda5050::VehicleMqttStatus::CONNECTIONBROKEN;
           state = Vehicle::State::UNKNOWN;
           std::vector<std::shared_ptr<RSSResource>> temp;
+          std::shared_lock<std::shared_mutex> lock(res_mut);
           for (auto &a : allocated_resources) {
             for (auto &x : a) {
               temp.push_back(x);
             }
           }
+          lock.unlock();
           res->free(temp, shared_from_this());
         }
         rece_header_id = -1;

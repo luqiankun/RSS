@@ -119,7 +119,7 @@ std::vector<VehPtr> Dispatcher::deadlock_loop() {
 
 std::set<VehPtr> Dispatcher::find_depends(const VehPtr &vs) {
   std::set<VehPtr> res;
-  std::unique_lock<std::mutex> lock(vs->ord_mutex);
+  std::shared_lock<std::shared_mutex> lock(vs->res_mut);
   for (auto &f : vs->future_allocate_resources) {
     if (!f) {
       continue;
@@ -137,6 +137,7 @@ std::vector<VehPtr> Dispatcher::block_loop() {
   // 阻挡检测
   for (auto &v : vehicles) {
     res.push_back(v);
+    std::shared_lock<std::shared_mutex> lock(v->res_mut);
     for (auto &x : v->future_allocate_resources) {
       if (auto f_veh = x->owner.lock()) {
         if (const auto veh = std::dynamic_pointer_cast<driver::Vehicle>(f_veh);
@@ -242,6 +243,7 @@ void Dispatcher::dispatch_once() {
   if (!current_ord) {
     return;
   }
+  std::unique_lock<std::shared_mutex> lock(current_ord->mutex);
   if (current_ord->state == data::order::TransportOrder::State::RAW) {
     // 重写
     if (current_ord->driverorders.empty()) {
@@ -345,8 +347,9 @@ void Dispatcher::dispatch_once() {
         // 不是避让订单
         return;
       }
-      current_ord->intended_vehicle.lock()->receive_task(current_ord);
       current_ord->processing_vehicle = current_ord->intended_vehicle;
+      lock.unlock();
+      current_ord->intended_vehicle.lock()->receive_task(current_ord);
       // pop_order(current_ord);
     } else if (su == driver::Vehicle::State::EXECUTING) {
       // if (current_ord->intended_vehicle.lock()->current_order->state ==
@@ -416,6 +419,8 @@ void Dispatcher::brake_deadlock(const std::vector<VehPtr> &d_loop) {
     } else if (d_loop.front()->current_order->create_time >
                d_loop.back()->current_order->create_time) {
       auto ord = d_loop.front()->redistribute_cur_order();
+    } else {
+      auto ord = d_loop.back()->redistribute_cur_order();
     }
   }
 }
@@ -761,7 +766,7 @@ void Conflict::solve_once() {
       driver_order->destination = dest;
       driver_order->transport_order = new_ord;
       new_ord->driverorders.push_back(driver_order);
-      std::unique_lock<std::mutex> lock(orderpool.lock()->mut);
+      std::unique_lock<std::shared_mutex> lock(orderpool.lock()->mut);
       orderpool.lock()->push(new_ord);
       dispatcher.lock()->notify();
       dispthed.insert({veh, point});
@@ -899,7 +904,7 @@ void Conflict::solve_once() {
       driver_order->destination = dest;
       driver_order->transport_order = new_ord;
       new_ord->driverorders.push_back(driver_order);
-      std::unique_lock<std::mutex> lock(orderpool.lock()->mut);
+      std::unique_lock<std::shared_mutex> lock(orderpool.lock()->mut);
       orderpool.lock()->push(new_ord);
       dispatcher.lock()->notify();
       state = State::Raw;
@@ -1003,7 +1008,7 @@ bool Conflict::one_of_other(std::pair<VehPtr, allocate::PointPtr> a,
  */
 bool Conflict::is_swap_conflict(std::vector<allocate::PointPtr> p, VehPtr v) {
   return false;
-  std::unique_lock<std::mutex> lock(v->ord_mutex);
+  std::shared_lock<std::shared_mutex> lock(v->current_order->mutex);
   if (v->state == driver::Vehicle::State::IDLE) {
     return false;
   }

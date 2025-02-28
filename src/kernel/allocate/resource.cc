@@ -70,6 +70,7 @@ std::pair<ResourceManager::ResType, TCSResourcePtr> ResourceManager::find(
 bool ResourceManager::claim(const std::vector<TCSResourcePtr> &res,
                             const ClientPtr &client) {
   std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock2(client->res_mut);
   for (auto &r : res) {
     for (auto &p : points) {
       if (static_cast<RSSResource *>(r.get()) == p.get()) {
@@ -94,6 +95,7 @@ bool ResourceManager::claim(const std::vector<TCSResourcePtr> &res,
 bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
                                const ClientPtr &client) {
   std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock2(client->res_mut);
   for (auto it = client->allocated_resources.begin();
        it != client->allocated_resources.end();) {
     if (it->empty()) {
@@ -189,6 +191,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
 bool ResourceManager::free(const std::vector<TCSResourcePtr> &res,
                            const ClientPtr &client) {
   std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock2(client->res_mut);
   for (auto &r : res) {
     for (auto &ar : client->allocated_resources) {
       for (auto it = ar.begin(); it != ar.end();) {
@@ -219,6 +222,7 @@ bool ResourceManager::free(const std::vector<TCSResourcePtr> &res,
 bool ResourceManager::unclaim(const std::vector<TCSResourcePtr> &res,
                               const ClientPtr &client) {
   std::unique_lock<std::mutex> lock(mut);
+  std::unique_lock<std::shared_mutex> lock2(client->res_mut);
   for (auto &r : res) {
     for (auto &cr : client->claim_resources) {
       for (auto it = cr.begin(); it != cr.end();) {

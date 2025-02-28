@@ -11,6 +11,7 @@
     state = State::DISPOSABLE;                                         \
     return;                                                            \
   }                                                                    \
+  std::unique_lock<std::shared_mutex> lock(order->mutex);              \
   auto res = scheduler->resource.lock();                               \
   if (!res) {                                                          \
     state = State::DISPOSABLE;                                         \
@@ -25,7 +26,6 @@
   }
 namespace kernel::driver {
 std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
-  std::unique_lock<std::mutex> lock(v->ord_mutex);
   if (!v->current_order) {
     return nullptr;
   }
@@ -155,6 +155,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
   };
   cbs[State::REDISBUTE] = [&] {
     assert_valid;
+    lock.unlock();
     veh->orderpool.lock()->redistribute(order);
     state = Command::State::DISPOSABLE;
   };
@@ -164,12 +165,14 @@ Command::Command(const std::string &n) : RSSObject(n) {
     if (veh_conflict(veh)) {
       LOG(WARNING) << veh->name << "redistribute at " << veh->last_point->name
                    << " " << veh->current_point->name;
+      lock.unlock();
       veh->redistribute_cur_order();
       return;
     }
     auto con_veh = veh_swap_conflict(veh);
     if (con_veh) {
       // auto ord1 = con_veh->redistribute_cur_order();
+      lock.unlock();
       auto ord2 = veh->redistribute_cur_order();
       // veh->orderpool.lock()->redistribute(ord1);
       // veh->orderpool.lock()->redistribute(ord2);
@@ -213,12 +216,14 @@ Command::Command(const std::string &n) : RSSObject(n) {
           step_res.push_back(x->path);
           for (auto x_res = step_res.begin(); x_res != step_res.end();) {
             bool has{false};
+            std::shared_lock<std::shared_mutex> lock(veh->res_mut);
             for (auto &allocate_list : veh->allocated_resources) {
               if (std::any_of(allocate_list.begin(), allocate_list.end(),
                               [&](auto &v) { return v == *x_res; })) {
                 has = true;
               }
             }
+            lock.unlock();
             if (has) {
               x_res = step_res.erase(x_res);
             } else {
@@ -230,6 +235,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
             // future_claim
             for (auto &x_res : step_res) {
               bool has{false};
+              std::shared_lock<std::shared_mutex> lock(veh->res_mut);
               for (auto &t : veh->allocated_resources) {
                 if (std::any_of(t.begin(), t.end(),
                                 [&](auto &v) { return v == x_res; })) {
@@ -240,6 +246,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
               if (!has) {
                 veh->future_allocate_resources.insert(x_res);
               }
+              lock.unlock();
             }
             //
             return;
@@ -248,6 +255,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
         // future_claim
         for (auto &x : get_future(driver_order)) {
           bool has{false};
+          std::shared_lock<std::shared_mutex> lock(veh->res_mut);
           for (auto &t : veh->allocated_resources) {
             if (std::any_of(t.begin(), t.end(),
                             [&](auto &v) { return v == x; })) {
@@ -258,6 +266,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
           if (!has) {
             veh->future_allocate_resources.insert(x);
           }
+          lock.unlock();
         }
         state = State::ALLOCATED;
       }
@@ -266,6 +275,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
       auto dest = get_dest(driver_order);
       std::vector<std::shared_ptr<RSSResource>> temp;
       temp.push_back(dest->destination.lock());
+      std::shared_lock<std::shared_mutex> lock(veh->res_mut);
       for (auto &r : veh->allocated_resources) {
         if (std::any_of(r.begin(), r.end(), [&](auto &v) {
               return v == dest->destination.lock();
@@ -274,6 +284,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
           return;
         }
       }
+      lock.unlock();
       if (res->allocate(temp, veh)) {
         state = State::ALLOCATED;
       }
@@ -329,6 +340,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
       next_res.clear();
     }
     std::vector<std::shared_ptr<RSSResource>> temp;
+    std::shared_lock<std::shared_mutex> lock(veh->res_mut);
     for (auto &a : veh->allocated_resources) {
       for (auto &x : a) {
         if (order->state != data::order::TransportOrder::State::WITHDRAWL ||
@@ -351,6 +363,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
         }
       }
     }
+    lock.unlock();
     if (!res->free(temp, veh)) {
       return;
     }
@@ -470,6 +483,7 @@ std::vector<std::shared_ptr<RSSResource>> Command::get_future(
     auto path = next->path;
     auto beg = next->path->destination_point.lock();
     auto end = next->path->source_point.lock();
+    std::shared_lock<std::shared_mutex> lock(veh->res_mut);
     for (auto &r : veh->allocated_resources) {
       for (auto &x : r) {
         if (x == beg) {
@@ -483,6 +497,7 @@ std::vector<std::shared_ptr<RSSResource>> Command::get_future(
         }
       }
     }
+    lock.unlock();
     if (beg) {
       res.push_back(beg);
     }

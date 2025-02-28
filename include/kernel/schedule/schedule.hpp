@@ -15,6 +15,7 @@ class Client : public RSSObject {
       allocated_resources;
   std::unordered_set<std::shared_ptr<RSSResource>> future_allocate_resources;
   std::string envelope_key;
+  std::shared_mutex res_mut;
 };
 class Scheduler : public RSSObject,
                   public std::enable_shared_from_this<Scheduler> {
