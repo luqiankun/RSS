@@ -53,13 +53,13 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
   this->ip = ip;
   this->port = port;
   const std::string url_prefix = "/v1";
-  srv.set_socket_options([](socket_t sock) {
-    int opt = 1;
-    int ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt,
-                         sizeof(opt));
-    CLOG(INFO, http_log) << "setsockopt SO_REUSEADDR ret: "
-                         << (ret == 0 ? "true" : "false");
-  });
+  // srv.set_socket_options([](socket_t sock) {
+  //   int opt = 1;
+  //   int ret = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt,
+  //                        sizeof(opt));
+  //   CLOG(INFO, http_log) << "setsockopt SO_REUSEADDR ret: "
+  //                        << (ret == 0 ? "true" : "false");
+  // });
   srv.set_default_headers({{"Access-Control-Allow-Origin", "*"},
                            {"Access-Control-Allow-Credentials", "false"},
                            {"Allow", "GET, POST, HEAD, OPTIONS,PUT"}});
