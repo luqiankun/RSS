@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <meta charset=utf-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>rss_view</title>
     <script type="application/javascript">
@@ -516,7 +516,7 @@
                     timer_draw_vehlice = setInterval(() => {
                         get_view();
                         draw_vehicle();
-                        get_order();
+                        // get_order();
                         draw_order();
                     }, 300)
                 } else {
@@ -591,25 +591,26 @@
             Http.onload = function () {
                 if (Http.readyState === 4 && Http.status === 200) {
                     let model = JSON.parse(Http.responseText);
-                    for (let order of model) {
-                        let has = false;
-                        // console.log(model.length);
-                        if (order["state"] == "FAILED") {
-                            // console.log(order["name"])
-                        }
-                        for (let ord of order_quence) {
-                            if (ord[0] === order["name"]) {
-                                ord[1] = order["state"];
-                                has = true;
-                            }
-                        }
-                        if (!has) {
-                            order_quence.unshift([order["name"], order["state"]]);
-                        }
-                        while (order_quence.length > 5) {
-                            order_quence.pop();
-                        }
-                    }
+                    document.getElementById('order_btn').innerHTML = "当前订单数量:{" + model.length + "}";
+                    // for (let order of model) {
+                    //     let has = false;
+                    //     console.log(model.length);
+                    //     if (order["state"] == "FAILED") {
+                    //         // console.log(order["name"])
+                    //     }
+                    //     for (let ord of order_quence) {
+                    //         if (ord[0] === order["name"]) {
+                    //             ord[1] = order["state"];
+                    //             has = true;
+                    //         }
+                    //     }
+                    //     if (!has) {
+                    //         order_quence.unshift([order["name"], order["state"]]);
+                    //     }
+                    //     while (order_quence.length > 5) {
+                    //         order_quence.pop();
+                    //     }
+                    // }
                 }
             }
             Http.onerror = function (e) {
@@ -1219,6 +1220,11 @@
                 document.getElementById('ip_btn').removeAttribute('disabled')
             }
         }
+        function order_() {
+            if (is_running) {
+                get_order();
+            }
+        }
 
         function file_read() {
             const ele = document.getElementById('model_file')
@@ -1263,6 +1269,9 @@
                 <input type="file" class="input-file" accept=".xml" id="model_file" onchange="file_read()">
                 <span class="tip">选择模型文件</span>
             </span>
+        </div>
+        <div>
+            <button class="button" id="order_btn" onclick="order_()">当前订单数量:{0}</button>
         </div>
 
 
