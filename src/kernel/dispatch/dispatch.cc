@@ -9,6 +9,7 @@
 #include "../../../include/kernel/planner/planner.hpp"
 #include "../../../include/main/rss.hpp"
 const float kLen = 2;
+const int search_radius = 20000;  // mm
 namespace kernel::dispatch {
 VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
   if (vehicles.empty()) {
@@ -152,7 +153,10 @@ std::vector<VehPtr> Dispatcher::block_loop() {
   return res;
 }
 
-void Dispatcher::stop() { dispose = true; }
+void Dispatcher::stop() {
+  dispose = true;
+  notify();
+}
 
 Dispatcher::~Dispatcher() {
   stop();
@@ -475,19 +479,19 @@ void Dispatcher::run() {
           ss << v->name << " ,";
         }
         ss << "]\n";
-        CLOG_EVERY_N(200, ERROR, dispatch_log) << "deadlock --> " << ss.str();
+        CLOG_EVERY_N(50, ERROR, dispatch_log) << "deadlock --> " << ss.str();
         brake_deadlock(deadloop);
       }
-      auto blockloop = block_loop();
-      if (!blockloop.empty()) {
-        assert(blockloop.size() == 2);
-        CLOG_EVERY_N(200, ERROR, dispatch_log)
-            << "blocklock --> " << blockloop.front()->name << " blocked by "
-            << blockloop.back()->name << "\n";
-        brake_blocklock(blockloop);
-      }
+      // auto blockloop = block_loop();
+      // if (!blockloop.empty()) {
+      //   assert(blockloop.size() == 2);
+      //   CLOG_EVERY_N(200, ERROR, dispatch_log)
+      //       << "blocklock --> " << blockloop.front()->name << " blocked by "
+      //       << blockloop.back()->name << "\n";
+      //   brake_blocklock(blockloop);
+      // }
       dispatch_once();
-      std::this_thread::sleep_for(std::chrono::milliseconds(5));
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   });
 }
@@ -867,7 +871,7 @@ void Conflict::solve_once() {
               cur_cost += cur_s->path->length;
             }
             if (flg) {
-              state = State::SelfMove;
+              state = State::Raw;
               return;
             }
           }
@@ -880,7 +884,7 @@ void Conflict::solve_once() {
         }
         if (v->state == driver::Vehicle::State::EXECUTING) {
           if (is_swap_conflict(path, v)) {
-            state = State::SelfMove;
+            state = State::Raw;
             return;
           }
         }

@@ -142,7 +142,7 @@ void OrderPool::push(const TransOrderPtr &order) {
   }
 }
 void OrderPool::redistribute(const TransOrderPtr &order) {
-  LOG(INFO) << "redistribute order " << (order)->name;
+  LOG(DEBUG) << "redistribute order " << (order)->name << "\n";
   std::unique_lock<std::shared_mutex> lock(mut);
   for (auto it = ended_orderpool.begin(); it != ended_orderpool.end();) {
     if (*it == order) {
@@ -162,7 +162,7 @@ void OrderPool::redistribute(const TransOrderPtr &order) {
       } else {
         order->state = data::order::TransportOrder::State::ACTIVE;
       }
-      LOG(INFO) << "redistribute order " << order->name;
+      LOG(INFO) << "redistribute order " << order->name << "\n";
       push(order);
       break;
     } else {

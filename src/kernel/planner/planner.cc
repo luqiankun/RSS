@@ -322,7 +322,7 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
   // cpu_timer t("try to find two paths");
   auto paths = find_paths_with_vertex(begin, end);
   if (paths.empty() || begin == end) {
-    CLOG(INFO, planner_log) << "find " << paths.size() << " s paths\n";
+    CLOG(DEBUG, planner_log) << "find " << paths.size() << " s paths\n";
     return to_model_path(paths);
   }
   if (paths.size() > 1) {
@@ -345,7 +345,7 @@ Planner::find_second_paths(const std::shared_ptr<data::model::Point> &begin,
         ss << "this path is not open";
       }
       ss << "·- - - - - - - - - - - - - - - - - - - - - - -.\n";
-      CLOG(INFO, planner_log) << ss.str();
+      CLOG(DEBUG, planner_log) << ss.str();
     }
     return to_model_path({paths.front(), *(paths.begin() + 1)});
   } else {

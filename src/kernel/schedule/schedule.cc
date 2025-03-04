@@ -72,7 +72,7 @@ std::shared_ptr<driver::Command> Scheduler::new_command(
       v->current_order->driverorders[v->current_order->current_driver_index]
           ->get_cmd_name()};
   auto cmd = std::make_shared<driver::Command>(cmd_name);
-  LOG(INFO) << cmd_name << "\n";
+  // LOG(DEBUG) << cmd_name << "\n";
   cmd->vehicle = v;
   cmd->order = v->current_order;
   cmd->scheduler = shared_from_this();

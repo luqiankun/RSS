@@ -34,8 +34,8 @@ std::string vehicle_state_to_str(Vehicle::State state) {
 allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
   std::unique_lock<std::shared_mutex> lock(current_order->mutex);
   if (current_order) {
-    LOG(INFO) << name << " " << current_order->name
-              << " redistribute current order\n";
+    LOG(DEBUG) << name << " " << current_order->name
+               << " redistribute current order\n";
     auto ord = current_order;
     auto order_pool = orderpool.lock();
     auto res = resource.lock();
@@ -65,7 +65,7 @@ allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
     res->free(temp, shared_from_this());
 
     ord->conflict_pool.lock()->reset_state(ord);
-    LOG(INFO) << name << " " << ord->name << " redistribute current order\n";
+    LOG(DEBUG) << name << " " << ord->name << " redistribute current order\n";
     // order_pool->redistribute(ord);
     // avoid_state = Avoid::Normal;
     CLOG_IF(state != State::IDLE, INFO, driver_log)
@@ -88,22 +88,24 @@ allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
 void Vehicle::execute_action(
     const std::shared_ptr<data::order::DriverOrder::Destination> &dest) {
   io_context.post([=] {
-    LOG(INFO) << name << " " << "action ---- {"
-              << dest->destination.lock()->name << "}\n";
+    LOG(DEBUG) << name << " " << "action ---- {"
+               << dest->destination.lock()->name << "}\n";
     std::unique_lock<std::shared_mutex> lock(current_order->mutex);
-    LOG(INFO) << name << " " << "action  {" << dest->destination.lock()->name
-              << "}\n";
+    LOG(DEBUG) << name << " " << "action  {" << dest->destination.lock()->name
+               << "}\n";
 
     if (!current_order) {
       CLOG(ERROR, driver_log) << name << " current_order is null\n";
       state = State::ERROR;
-      CLOG(INFO, driver_log) << name << " " << "state transform to : ["
-                             << vehicle_state_to_str(state) << "]\n";
+      CLOG(DEBUG, driver_log) << name << " " << "state transform to : ["
+                              << vehicle_state_to_str(state) << "]\n";
       return;
     }
+    lock.unlock();
     auto op_ret = action(dest);
     if (!op_ret) {
       // 订单失败
+      lock.lock();
       current_order->driverorders[current_order->current_driver_index]->state =
           data::order::DriverOrder::State::FAILED;
       current_order->state = data::order::TransportOrder::State::FAILED;
@@ -112,11 +114,11 @@ void Vehicle::execute_action(
           << name << " " << current_order->name << " action : " << " failed\n";
       state = State::ERROR;
       current_order.reset();
-      CLOG(INFO, driver_log) << name << " " << "state transform to : ["
-                             << vehicle_state_to_str(state) << "]\n";
+      CLOG(DEBUG, driver_log) << name << " " << "state transform to : ["
+                              << vehicle_state_to_str(state) << "]\n";
 
     } else {
-      CLOG(INFO, driver_log)
+      CLOG(DEBUG, driver_log)
           << name << " " << current_order->name << " action : " << " ok\n";
     }
     if (current_command) {
@@ -127,23 +129,25 @@ void Vehicle::execute_action(
 void Vehicle::execute_move(
     const std::vector<std::shared_ptr<data::order::Step>> &steps) {
   io_context.post([=] {
-    CLOG(INFO, driver_log) << name << " " << (int)current_command->state
-                           << "}\n";
+    CLOG(DEBUG, driver_log)
+        << name << " " << (int)current_command->state << "}\n";
     if (current_command->state != Command::State::EXECUTING) {
       LOG(FATAL) << "ddd";
     }
     std::unique_lock<std::shared_mutex> lock(current_order->mutex);
-    CLOG(INFO, driver_log) << name << " " << "move {" << steps.front()->name
-                           << "}\n";
+    CLOG(DEBUG, driver_log)
+        << name << " " << "move {" << steps.front()->name << "}\n";
     if (!current_order) {
       // state = State::ERROR;
-      CLOG(INFO, driver_log) << name << " " << "state transform to : ["
-                             << vehicle_state_to_str(state) << "]\n";
+      CLOG(DEBUG, driver_log) << name << " " << "state transform to : ["
+                              << vehicle_state_to_str(state) << "]\n";
       return;
     }
+    lock.unlock();
     auto move_ret = move(steps);
     if (!move_ret) {
       // 订单失败
+      lock.lock();
       current_order->driverorders[current_order->current_driver_index]->state =
           data::order::DriverOrder::State::FAILED;
       current_order->state = data::order::TransportOrder::State::FAILED;
@@ -158,7 +162,7 @@ void Vehicle::execute_move(
     } else {
       std::stringstream ss;
       ss << current_order->name << " : move {" << steps.front()->name << "}";
-      CLOG(INFO, driver_log) << name << " " << ss.str() << " ok\n";
+      CLOG(DEBUG, driver_log) << name << " " << ss.str() << " ok\n";
     }
 
     if (current_command) {
@@ -175,7 +179,7 @@ void Vehicle::execute_instatn_action(
       CLOG(ERROR, driver_log)
           << name << " " << current_action->action_id << " failed";
     } else {
-      CLOG(INFO, driver_log)
+      CLOG(DEBUG, driver_log)
           << name << " " << current_action->action_id << " ok";
     }
   });
@@ -473,7 +477,7 @@ void Vehicle::command_done() {
       current_order->current_driver_index) {
     process_state = proState::AWAITING_ORDER;
     current_order->state = data::order::TransportOrder::State::FINISHED;
-    CLOG(INFO, driver_log) << name << "'order " << current_order->name
+    CLOG(INFO, driver_log) << name << " order " << current_order->name
                            << " status: [finished]\n";
     current_order->end_time = get_now_utc_time();
     now_order_state = Vehicle::nowOrder::END;
@@ -494,7 +498,8 @@ void Vehicle::command_done() {
       // state = State::EXECUTING;
     } else {
       // 订单取消了或失败了
-      LOG(INFO) << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^ " << (int)current_order->state;
+      LOG(DEBUG) << "^^^^^^^^^^^^^^^^^^^^^^^^^^^^ "
+                 << (int)current_order->state;
       if (current_order->state !=
           data::order::TransportOrder::State::BEING_PROCESSED) {
         CLOG(FATAL, driver_log)
@@ -609,7 +614,7 @@ void Vehicle::receive_task(
   } else if (state == State::EXECUTING) {
     if (current_order && current_order->anytime_drop) {
       current_order->state = data::order::TransportOrder::State::WITHDRAWL;
-      LOG(INFO) << "__________________|||||||||||||||||||||||||";
+      LOG(DEBUG) << "__________________|||||||||||||||||||||||||";
     }
     if (process_charging) {
       process_charging = false;
@@ -658,11 +663,11 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << t->name << ")\n";
+    CLOG(DEBUG, driver_log) << name << " now at (" << t->name << ")\n";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->link.lock()->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << t->name << ")\n";
+    CLOG(DEBUG, driver_log) << name << " now at (" << t->name << ")\n";
     return true;
   } else if (dest->operation ==
                  data::order::DriverOrder::Destination::OpType::UNLOAD ||
@@ -675,14 +680,14 @@ bool SimVehicle::action(
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->position;
     last_point = t->link.lock();
-    CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
-                           << position.y() << ")";
+    CLOG(DEBUG, driver_log)
+        << name << " now at (" << position.x() << " , " << position.y() << ")";
     std::this_thread::sleep_for(std::chrono::seconds(1));
     position = t->link.lock()->position;
     last_point = t->link.lock();
     current_point = last_point;
-    CLOG(INFO, driver_log) << name << " now at (" << position.x() << " , "
-                           << position.y() << ")";
+    CLOG(DEBUG, driver_log)
+        << name << " now at (" << position.x() << " , " << position.y() << ")";
     return true;
   } else if (dest->operation ==
              data::order::DriverOrder::Destination::OpType::NOP) {
@@ -692,7 +697,7 @@ bool SimVehicle::action(
 }
 bool SimVehicle::instant_action(
     const std::shared_ptr<data::model::Actions::Action> &act) {
-  CLOG(INFO, driver_log) << act->action_id << " ok";
+  CLOG(DEBUG, driver_log) << act->action_id << " ok";
   return true;
 };
 void SimVehicle::init() {
@@ -737,18 +742,19 @@ bool SimVehicle::move(
     size_t t = step->path->length * 1000 / max_vel / rate;  // ms
     int x_len = end->position.x() - position.x();
     int y_len = end->position.y() - position.y();
+    angle = std::atan2(y_len, x_len);
     for (int i = 0; i < 100; i++) {
       position.x() += x_len / 100;
       position.y() += y_len / 100;
+      angle = std::atan2(y_len, x_len);
       std::this_thread::sleep_for(std::chrono::milliseconds(t / 100));
     }
     position.x() = end->position.x();
     position.y() = end->position.y();
-    angle = std::atan2(y_len, x_len);
     last_point = end;
     current_point = last_point;
-    CLOG(INFO, driver_log) << name << " now at (" << current_point->name
-                           << ")\n";
+    CLOG(DEBUG, driver_log)
+        << name << " now at (" << current_point->name << ")\n";
     return true;
   } else if (step->vehicle_orientation ==
              data::order::Step::Orientation::BACKWARD) {
@@ -758,18 +764,19 @@ bool SimVehicle::move(
         std::chrono::milliseconds(step->wait_time / rate));
     int x_len = end->position.x() - position.x();
     int y_len = end->position.y() - position.y();
-    for (int i = 0; i < 10; i++) {
-      position.x() += x_len / 10;
-      position.y() += y_len / 10;
-      std::this_thread::sleep_for(std::chrono::milliseconds(t / 10));
+    angle = std::atan2(y_len, x_len);
+    for (int i = 0; i < 100; i++) {
+      position.x() += x_len / 100;
+      position.y() += y_len / 100;
+      angle = std::atan2(y_len, x_len);
+      std::this_thread::sleep_for(std::chrono::milliseconds(t / 100));
     }
     position.x() = end->position.x();
     position.y() = end->position.y();
     last_point = end;
-    angle = std::atan2(y_len, x_len);
     current_point = last_point;
-    CLOG(INFO, driver_log) << name << " now at (" << current_point->name
-                           << ")\n";
+    CLOG(DEBUG, driver_log)
+        << name << " now at (" << current_point->name << ")\n";
     return true;
   } else {
     return false;
@@ -1471,7 +1478,7 @@ bool Rabbit3::move(
       }
     }
   }
-  CLOG(INFO, driver_log) << name << " " << ss.str() << "\n";
+  CLOG(DEBUG, driver_log) << name << " " << ss.str() << "\n";
   //
   auto ord_js = ord.to_json();
   // LOG(INFO) << ord_js.to_string();
@@ -1593,7 +1600,7 @@ bool Rabbit3::move(
                          });
         if (it == vdastate.edgestates.end() &&
             it_end_point == vdastate.nodestates.end()) {
-          CLOG(INFO, driver_log)
+          CLOG(DEBUG, driver_log)
               << name << " " << "move along " << name_ << " ok\n";
           run_ok = true;
         }

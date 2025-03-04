@@ -115,8 +115,8 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
   for (const auto &r : rules) {
     // LOG(INFO) << r->name;
     if (!r->pass(res, client)) {
-      CLOG_EVERY_N(200, WARNING, allocate_log)
-          << r->name << " not pass of " << client->name << "\n";
+      // CLOG_EVERY_N(200, WARNING, allocate_log)
+      //     << r->name << " not pass of " << client->name << "\n";
       return false;
     }
   }
@@ -152,7 +152,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
          x != client->future_allocate_resources.end();) {
       if (*x == r) {
         x = client->future_allocate_resources.erase(x);
-        CLOG(INFO, allocate_log)
+        CLOG(DEBUG, allocate_log)
             << r->name << " from future_allocate move to allocate of "
             << client->name << "\n";
       } else {
@@ -183,7 +183,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
       }
     }
   }
-  CLOG_IF(!ss.str().empty(), INFO, allocate_log)
+  CLOG_IF(!ss.str().empty(), DEBUG, allocate_log)
       << client->name << " allocate { " << ss.str() << "}\n";
   return true;
 }

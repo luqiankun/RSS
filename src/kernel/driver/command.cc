@@ -61,7 +61,7 @@ std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
           if (cur_s->path == v_s->path &&
               cur_s->vehicle_orientation != v_s->vehicle_orientation) {
             if (fabs(cur_cost - v_cost) < kLen * (v_s->path->length)) {
-              LOG(WARNING) << "swap conflict " << v->name << " " << x->name;
+              LOG(DEBUG) << "swap conflict " << v->name << " " << x->name;
               return x;
             }
           }
@@ -87,14 +87,14 @@ bool veh_conflict(std::shared_ptr<Vehicle> v) {
     if (st_owner && st_owner != v) {
       auto st_veh = std::dynamic_pointer_cast<Vehicle>(st_owner);
       if (st_veh->state == Vehicle::State::IDLE) {
-        LOG(INFO) << "swap conflict " << v->name << " " << st_veh->name;
+        LOG(DEBUG) << "swap conflict " << v->name << " " << st_veh->name;
         return true;
       }
     }
     if (ed_owner && ed_owner != v) {
       auto ed_veh = std::dynamic_pointer_cast<Vehicle>(ed_owner);
       if (ed_veh->state == Vehicle::State::IDLE) {
-        LOG(INFO) << "swap conflict " << v->name << " " << ed_veh->name;
+        LOG(DEBUG) << "swap conflict " << v->name << " " << ed_veh->name;
         return true;
       }
     }
@@ -163,8 +163,8 @@ Command::Command(const std::string &n) : RSSObject(n) {
     assert_valid;
     // 冲突判断
     if (veh_conflict(veh)) {
-      LOG(WARNING) << veh->name << "redistribute at " << veh->last_point->name
-                   << " " << veh->current_point->name;
+      LOG(DEBUG) << veh->name << "redistribute at " << veh->last_point->name
+                 << " " << veh->current_point->name;
       lock.unlock();
       veh->redistribute_cur_order();
       return;
@@ -176,7 +176,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
       auto ord2 = veh->redistribute_cur_order();
       // veh->orderpool.lock()->redistribute(ord1);
       // veh->orderpool.lock()->redistribute(ord2);
-      LOG(WARNING) << "redistribute " << veh->name << " " << con_veh->name;
+      LOG(DEBUG) << "redistribute " << veh->name << " " << con_veh->name;
       return;
     }
     auto driver_order = order->driverorders[order->current_driver_index];
@@ -300,7 +300,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
         // LOG(WARNING) << "-------------------------";
       } else {
-        LOG(INFO) << veh->name << "{" << int(state) << "} move \n";
+        LOG(DEBUG) << veh->name << "{" << int(state) << "} move \n";
         state = State::EXECUTING;
         move(steps);
       }
@@ -308,7 +308,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
     } else if (driver_order->state ==
                data::order::DriverOrder::State::OPERATING) {
       auto dest = get_dest(driver_order);
-      LOG(INFO) << veh->name << " action \n";
+      LOG(DEBUG) << veh->name << " action \n";
       state = State::EXECUTING;
       action(dest);
     } else {
@@ -316,7 +316,15 @@ Command::Command(const std::string &n) : RSSObject(n) {
       return;
     }
   };
-  cbs[State::EXECUTING] = [&] { assert_valid; };
+  cbs[State::EXECUTING] = [&] {
+    auto veh = vehicle.lock();
+    auto scheduler = veh->scheduler.lock();
+    auto cur_ord = order;
+    if (!veh || !scheduler || !cur_ord) {
+      state = State ::DISPOSABLE;
+      return;
+    }
+  };
   cbs[State::EXECUTED] = [&] {
     auto veh = vehicle.lock();
     auto scheduler = veh->scheduler.lock();
@@ -368,7 +376,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
       return;
     }
     state = State::END;
-    CLOG_IF(!ss.str().empty(), INFO, driver_log)
+    CLOG_IF(!ss.str().empty(), DEBUG, driver_log)
         << veh->name << " free { " << ss.str() << "}\n";
   };
   cbs[State::END] = [&] {
@@ -416,7 +424,7 @@ void Command::vehicle_execute_cb(bool ret) {
   } else {
     LOG(FATAL) << "test";
   }
-  CLOG(INFO, driver_log) << veh->name << "  " << (int)state << " execute cb\n";
+  CLOG(DEBUG, driver_log) << veh->name << "  " << (int)state << " execute cb\n";
 }
 DestPtr Command::get_dest(const DriverOrderPtr &order) {
   return order->destination;

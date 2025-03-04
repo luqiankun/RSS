@@ -805,7 +805,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           if (cur_point->traffic_type ==
               data::model::Point::TrafficType::Endpoint) {
             points.push_back(cur_point);
-            LOG(INFO) << cur_point->name;
+            // LOG(INFO) << cur_point->name;
             LOG(WARNING) << "a single path";
           } else if (cur_point->traffic_type ==
                      data::model::Point::TrafficType::Junction) {
@@ -934,7 +934,7 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
           ///////////////////
           /// // 使用虚拟车辆
           //////////////////
-          auto veh = std::make_shared<kernel::driver::SimVehicle>(10, name);
+          auto veh = std::make_shared<kernel::driver::SimVehicle>(1, name);
           if (init_pos.type() != pugi::node_null) {
             auto init_pos_ = init_pos.attribute("value").as_string();
             if (auto [type, res_] = resource->find(init_pos_);
@@ -1507,7 +1507,8 @@ std::pair<int, std::string> RSS::post_transport_order(
   }
   try {
     auto req = json::parse(body);
-    LOG(WARNING) << "receive order:\n" << pretty_print(req) << "\n";
+    LOG(INFO) << "httpserver receive order:\n" << ord_name << "\n";
+    LOG(DEBUG) << "receive order:\n" << pretty_print(req) << "\n";
     // 字段检查
     auto ord = std::make_shared<data::order::TransportOrder>(ord_name);
     ord->create_time = get_now_utc_time();
@@ -2475,7 +2476,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     auto opt = jsoncons::json_options{}.precision(5).float_format(
         jsoncons::float_chars_format::fixed);
     json model = json::parse(body, opt);
-    CLOG(INFO, rss_log) << jsoncons::pretty_print(model) << std::endl;
+    CLOG(DEBUG, rss_log) << jsoncons::pretty_print(model) << std::endl;
     if (model.contains("name")) {
       resource->model_name = model["name"].as_string();
     }

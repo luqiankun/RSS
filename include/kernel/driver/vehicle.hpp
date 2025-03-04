@@ -122,7 +122,7 @@ class SimVehicle : public Vehicle {
   void init() override;
 
  public:
-  int rate{10};  // 时间快进比例
+  int rate{1};  // 时间快进比例
 };
 
 class Rabbit3 : public Vehicle {
