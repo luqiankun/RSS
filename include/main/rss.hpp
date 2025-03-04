@@ -40,6 +40,7 @@ class RSS : public std::enable_shared_from_this<RSS> {
   RET put_model_xml(const std::string &body);
   RET get_view() const;
   RET post_reroute() const;
+  RET put_vehicle_simrate(int) const;
   RET post_vehicle_reroute(const std::string &, bool) const;
   RET put_vehicle_enable(const std::string &, bool) const;
   RET put_vehicle_integration_level(const std::string &,

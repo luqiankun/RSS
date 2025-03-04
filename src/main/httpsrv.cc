@@ -210,6 +210,21 @@ HTTPServer::HTTPServer(const std::string &ip, int port) {
                 res.set_header("Access-Control-Allow-Methods", "PUT");
                 res.status = 200;
               });
+  srv.Put(url_prefix + R"(/vehicles/([1-9]\d*)/simrate)",
+          [=](const httplib::Request &req, httplib::Response &res) {
+            const int rate = std::stoi(*(req.matches.end() - 1));
+            bool state{false};
+            auto [id, msg] = put_vehicel_simrate(rate);
+            res.status = id;
+            if (!msg.empty()) {
+              res.set_content(msg, "application/json");
+            }
+          });
+  srv.Options(url_prefix + R"(/vehicles/([1-9]\d*)/simrate)",
+              [=](const httplib::Request &req, httplib::Response &res) {
+                res.set_header("Access-Control-Allow-Methods", "PUT");
+                res.status = 200;
+              });
   srv.Post(url_prefix + R"(/vehicles/([^/]+)/withdrawal)",
            [=](const httplib::Request &req, httplib::Response &res) {
              const std::string name = *(req.matches.end() - 1);

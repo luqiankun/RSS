@@ -125,7 +125,24 @@
         //     mseconds = mseconds < 10 ? "0" + mseconds : mseconds;
         //     return y + "-" + m + "-" + d + "T" + h + ":" + minute + ":" + sec + "." + mseconds + "Z";
         // }
-
+        function rate_change() {
+            if (!is_running) return
+            const rateBtn = document.getElementById('rate_btn');
+            const rateValue = rateBtn.value;
+            const xhr = new XMLHttpRequest();
+            let ip = document.getElementById("ip_btn").value;
+            const url = `http://${ip}/v1/vehicles/${rateValue}/simrate`; // 替换为实际的服务器地址
+            console.log(url);
+            xhr.open('PUT', url, true);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    console.log('Rate updated successfully:', xhr.responseText);
+                } else if (xhr.readyState === 4) {
+                    console.error('Failed to update rate:', xhr.statusText);
+                }
+            };
+            xhr.send();
+        }
         function order(veh, dest, op) {
             return {
                 "incompleteName": false,
@@ -512,7 +529,7 @@
                     document.getElementById('stop_btn').style.display = '';
                     document.getElementById('ok_btn').style.display = 'none';
                     document.getElementById('ip_btn').setAttribute('disabled', 'disabled')
-
+                    rate_change();
                     timer_draw_vehlice = setInterval(() => {
                         get_view();
                         draw_vehicle();
@@ -1259,8 +1276,10 @@
 <body onload="start()">
     <div class="main">
         <div class="ip">
-            <label> <input type="text" id="ip_btn" class="label" value="192.168.0.161:55200"
+            <label> <input type="text" id="ip_btn" class="label" value="192.168.0.39:55200"
                     placeholder="服务器地址：端口号"></label>
+            <label> <input type="number" min="1" max="20" id="rate_btn" class="label" value="1" oninput="rate_change()"
+                    onclick="rate_change()" placeholder="仿真速度"></label>
         </div>
         <div>
             <button class="button" id="ok_btn" onclick="clicked()">确定</button>
@@ -1273,8 +1292,6 @@
         <div>
             <button class="button" id="order_btn" onclick="order_()">当前订单数量:{0}</button>
         </div>
-
-
         <div class="view">
             <canvas id="map" width="400" height="800">
             </canvas>

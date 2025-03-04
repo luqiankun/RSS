@@ -1770,7 +1770,15 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
   }
   return std::pair<int, std::string>({OK_200, res.to_string()});
 }
-
+std::pair<int, std::string> RSS::put_vehicle_simrate(int rate) const {
+  for (auto &x : dispatcher->vehicles) {
+    auto v = std::dynamic_pointer_cast<kernel::driver::SimVehicle>(x);
+    if (v) {
+      v->rate = rate;
+    }
+  }
+  return std::pair<int, std::string>({OK_200, ""});
+}
 std::pair<int, std::string> RSS::post_transport_order_withdrawl(
     const std::string &ord_name, bool immediate, bool) const {
   std::unique_lock<std::shared_mutex> lk(mutex);

@@ -254,6 +254,8 @@ int main(int argc, char **argv) {
     srv->post_vehicle_path_to_point =
         std::bind(&::RSS::post_vehicle_path_to_point, std::ref(rss),
                   std::placeholders::_1, std::placeholders::_2);
+    srv->put_vehicel_simrate = std::bind(&RSS::put_vehicle_simrate,
+                                         std::ref(rss), std::placeholders::_1);
   }
   std::thread th{[&] { srv->listen(); }};
   signal(SIGINT, signalHandler);
