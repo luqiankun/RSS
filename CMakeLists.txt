@@ -25,7 +25,7 @@ endif ()
 ################
 #PahoMqttCpp 依赖openssl 和paho-mqtt-c
 # find_package(OpenSSL)
-find_package(eclipse-paho-mqtt-c REQUIRED)
+# find_package(eclipse-paho-mqtt-c REQUIRED)
 find_package(PahoMqttCpp REQUIRED)
 find_package(Threads REQUIRED)
 ################

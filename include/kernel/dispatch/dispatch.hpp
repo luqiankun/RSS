@@ -51,7 +51,7 @@ class Dispatcher : public RSSObject {
 
   std::function<bool()> order_empty;
 };
-const float kMaxOccupancy = 1;
+const float kMaxOccupancy = 0.9;
 class Conflict {
  public:
   enum class State {

@@ -267,7 +267,7 @@ PointPtr ResourceManager::get_recent_park_point(const PointPtr &cur) const {
     if (x->type != data::model::Point::Type::PARK_POSITION) {
       continue;
     }
-    if (!is_connected(cur, x)) {
+    if (is_connected && !is_connected(cur, x)) {
       continue;
     }
     if (x->owner.lock()) {
@@ -295,8 +295,10 @@ LocationPtr ResourceManager::get_recent_charge_loc(const PointPtr &cur) const {
     if (!x->link.lock()) {
       continue;
     }
-    if (!is_connected(cur, x->link.lock())) {
-      continue;
+    if (is_connected) {
+      if (!is_connected(cur, x->link.lock())) {
+        continue;
+      }
     }
     if (x->owner.lock()) {
       continue;
@@ -323,7 +325,7 @@ ResourceManager::get_all_idel_points(std::shared_ptr<driver::Vehicle> v,
   for (auto &x : points) {
     auto [flg, dep] = get_alleyway(x);
     if (rm_self_alley && self_alley == flg) continue;
-    if (flg) {
+    if (false) {
       // 巷道点
       // int occupancy = 0;
       // for (auto &x : flg->vertices) {
@@ -342,7 +344,7 @@ ResourceManager::get_all_idel_points(std::shared_ptr<driver::Vehicle> v,
       if (x->owner.lock()) {
         auto veh = std::dynamic_pointer_cast<driver::Vehicle>(x->owner.lock());
         if (veh->state == driver::Vehicle::State::IDLE) {
-          res.insert(x);
+          // res.insert(x);
         }
 
       } else {

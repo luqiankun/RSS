@@ -148,18 +148,18 @@ std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
   return temp;
 }
 Command::Command(const std::string &n) : RSSObject(n) {
-  cbs[State::INIT] = [&] {
+  cbs[(int)State::INIT] = [&] {
     assert_valid;
     state = State::ALLOCATING;
     // auto driver_order = order->driverorders[order->current_driver_index];
   };
-  cbs[State::REDISBUTE] = [&] {
+  cbs[(int)State::REDISBUTE] = [&] {
     assert_valid;
     lock.unlock();
     veh->orderpool.lock()->redistribute(order);
     state = Command::State::DISPOSABLE;
   };
-  cbs[State::ALLOCATING] = [&] {
+  cbs[(int)State::ALLOCATING] = [&] {
     assert_valid;
     // 冲突判断
     if (veh_conflict(veh)) {
@@ -290,7 +290,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
       }
     }
   };
-  cbs[State::ALLOCATED] = [&] {
+  cbs[(int)State::ALLOCATED] = [&] {
     assert_valid;
     // execute
     auto &driver_order = order->driverorders[order->current_driver_index];
@@ -316,7 +316,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
       return;
     }
   };
-  cbs[State::EXECUTING] = [&] {
+  cbs[(int)State::EXECUTING] = [&] {
     auto veh = vehicle.lock();
     auto scheduler = veh->scheduler.lock();
     auto cur_ord = order;
@@ -325,7 +325,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
       return;
     }
   };
-  cbs[State::EXECUTED] = [&] {
+  cbs[(int)State::EXECUTED] = [&] {
     auto veh = vehicle.lock();
     auto scheduler = veh->scheduler.lock();
     auto res = scheduler->resource.lock();
@@ -379,7 +379,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
     CLOG_IF(!ss.str().empty(), DEBUG, driver_log)
         << veh->name << " free { " << ss.str() << "}\n";
   };
-  cbs[State::END] = [&] {
+  cbs[(int)State::END] = [&] {
     auto veh = vehicle.lock();
     if (!veh) {
       state = State::DISPOSABLE;
@@ -392,7 +392,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
     state = State::DISPOSABLE;
   };
 }
-void Command::run_once() { cbs[state](); }
+void Command::run_once() { cbs[(int)state](); }
 Command::~Command() { CLOG(DEBUG, driver_log) << name << " drop\n"; }
 void Command::vehicle_execute_cb(bool ret) {
   auto veh = vehicle.lock();

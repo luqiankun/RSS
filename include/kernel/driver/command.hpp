@@ -44,7 +44,7 @@ class Command : public RSSObject {
   TransOrderPtr order;
   std::function<void(std::vector<StepPtr>)> move;
   std::function<void(const DestPtr)> action;
-  std::unordered_map<State, std::function<void()>> cbs;
+  std::unordered_map<int, std::function<void()>> cbs;
 };
 
 }  // namespace driver

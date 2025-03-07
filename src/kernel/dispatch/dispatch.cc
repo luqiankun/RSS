@@ -265,6 +265,10 @@ void Dispatcher::dispatch_once() {
         }
         auto dest = current_ord->driverorders[current_ord->current_driver_index]
                         ->destination->destination.lock();
+        if (!find_res) {
+          current_ord->state = data::order::TransportOrder::State::UNROUTABLE;
+          return;
+        }
         auto dest_check = find_res(dest->name);
         allocate::PointPtr start;
         if (dest_check.first == allocate::ResourceManager::ResType::Point) {
@@ -463,9 +467,12 @@ void Dispatcher::run() {
     CLOG(INFO, dispatch_log) << this->name << " run....\n";
     // int con = 0;
     while (!dispose) {
-      std::unique_lock<std::mutex> lock(mut);
-      cv.wait_for(lock, std::chrono::milliseconds(10),
-                  [&] { return !order_empty || dispose; });
+      // std::unique_lock<std::mutex> lock(mut);
+      // cv.wait_for(lock, std::chrono::milliseconds(10),
+      //             [&] { return !dispose; });
+      if (dispose) {
+        break;
+      }
       // idle_detect();
       auto deadloop = deadlock_loop();
       if (!deadloop.empty()) {
@@ -920,13 +927,14 @@ void Conflict::solve_once() {
     }
   }
 }
-
 float Conflict::distance(allocate::PointPtr a, allocate::PointPtr b) {
   auto path = planner.lock()->find_paths_with_vertex(a, b);
   if (path.empty()) {
     return std::numeric_limits<float>::max();
   }
-  return path.front().second / 1e6;
+  float len = path.front().second / 1e3;
+  return 2 / (1 + exp(-len * 0.04)) - 1;
+  // return len;
 }
 float Conflict::occupancy(std::shared_ptr<data::model::Alleyway> way,
                           VehPtr vehicle) {
@@ -1092,6 +1100,24 @@ allocate::PointPtr Conflict::select_point(VehPtr v,
   std::priority_queue<std::pair<allocate::PointPtr, float>,
                       std::vector<std::pair<allocate::PointPtr, float>>, Cmp>
       normal_ps;
+  std::vector<allocate::PointPtr> rms;
+  if (path.size() > 1) {
+    auto [a1, d1] = resource_manager.lock()->get_alleyway(path[0]);
+    auto [a2, d2] = resource_manager.lock()->get_alleyway(path[1]);
+    if (a1) {
+      if (a2) {
+        if (a1 == a2 && d1 > d2) {
+          for (int i = d1; i < a1->size(); i++) {
+            rms.push_back(a1->vertices[i]);
+          }
+        }
+      } else if (a1->get_common_point() == path[1]) {
+        for (int i = d1; i < a1->size(); i++) {
+          rms.push_back(a1->vertices[i]);
+        }
+      }
+    }
+  }
   for (auto &x : all_idel_ps) {
     bool flag = false;
     for (auto &p : path) {
@@ -1129,23 +1155,31 @@ allocate::PointPtr Conflict::select_point(VehPtr v,
     if (x == order->intended_vehicle.lock()->current_point) {
       continue;
     }
+    flag = false;
+    for (auto &p : rms) {
+      if (p == x) {
+        flag = true;
+        break;
+      }
+    }
+    if (flag) {
+      // 如果路径是出巷道，里面的不能选
+      continue;
+    }
     auto [flg, dep] = resource_manager.lock()->get_alleyway(x);
+    float distance = Conflict::distance(v->current_point, x);  // 距离
     if (flg) {
-      // 巷道点
-      auto occupied = Conflict::occupancy(flg, v);
-      float distance = Conflict::distance(v->current_point, x);
-      float score = 1 / (occupied + 1e-4) + std::exp(-distance) + 1;
+      float occupied = Conflict::occupancy(flg, v);
       if (occupied > kMaxOccupancy) {
         // 车道点占用率过高
         continue;
       }
-
+      float score = 1 / (occupied + distance + 1e-4);
       alley_ps.push(std::make_pair(x, score));
     } else {
-      // 普通路点
-      float distance = Conflict::distance(v->current_point, x);
-      float score = std::exp(-distance);
-      normal_ps.push(std::make_pair(x, score));
+      float occupied = 1;
+      float score = 1 / (occupied + distance + 1e-4);
+      alley_ps.push(std::make_pair(x, score));
     }
   }
   allocate::PointPtr allocate_point{nullptr};

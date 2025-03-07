@@ -29,6 +29,8 @@ class Alleyway : public RSSResource {
     return {false, i};
   }
 
+  std::shared_ptr<Point> get_common_point() { return common_point; }
+
  public:
   std::shared_ptr<Point> common_point;
   std::deque<std::shared_ptr<Path>> alley;
