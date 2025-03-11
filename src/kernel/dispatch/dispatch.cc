@@ -249,10 +249,13 @@ void Dispatcher::dispatch_once() {
   }
   std::unique_lock<std::shared_mutex> lock(current_ord->mutex);
   if (current_ord->state == data::order::TransportOrder::State::RAW) {
-    // 重写
+    current_ord->state = data::order::TransportOrder::State::ACTIVE;
+    CLOG(INFO, dispatch_log) << current_ord->name << " status: [active]\n";
+  } else if (current_ord->state == data::order::TransportOrder::State::ACTIVE) {
     if (current_ord->driverorders.empty()) {
-      // 空的
+      CLOG(WARNING, dispatch_log) << current_ord->name << " no driver\n";
       current_ord->state = data::order::TransportOrder::State::UNROUTABLE;
+      return;
     }
     auto v = current_ord->intended_vehicle.lock();
     if (!v) {
@@ -288,6 +291,10 @@ void Dispatcher::dispatch_once() {
           current_ord->intended_vehicle = v_select;
           pathc_order(current_ord);
         }
+      } else {
+        CLOG(WARNING, dispatch_log) << current_ord->name << " no vehicle\n";
+        current_ord->state = data::order::TransportOrder::State::FAILED;
+        return;
       }
     }
     if (!current_ord->intended_vehicle.lock()) {
@@ -295,9 +302,6 @@ void Dispatcher::dispatch_once() {
       //     << current_ord->name << " not exist intended_vehicle \n";
       return;
     }
-    current_ord->state = data::order::TransportOrder::State::ACTIVE;
-    CLOG(INFO, dispatch_log) << current_ord->name << " status: [active]\n";
-  } else if (current_ord->state == data::order::TransportOrder::State::ACTIVE) {
     for (auto &x : current_ord->dependencies) {
       if (const auto dep = x.lock()) {
         if (dep->state != data::order::TransportOrder::State::FINISHED) {
@@ -341,7 +345,7 @@ void Dispatcher::dispatch_once() {
     }
   } else if (current_ord->state ==
              data::order::TransportOrder::State::WITHDRAWL) {
-    // current_ord->state = data::order::TransportOrder::State::FAILED;
+    current_ord->state = data::order::TransportOrder::State::FAILED;
     CLOG(WARNING, dispatch_log)
         << current_ord->name << " status: [withdrawl]\n";
   } else if (current_ord->state ==

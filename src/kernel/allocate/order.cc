@@ -158,10 +158,8 @@ void OrderPool::redistribute(const TransOrderPtr &order) {
         // 还没执行,可以切换车辆
         order->intended_vehicle.reset();
         order->processing_vehicle.reset();
-        order->state = data::order::TransportOrder::State::RAW;
-      } else {
-        order->state = data::order::TransportOrder::State::ACTIVE;
       }
+      order->state = data::order::TransportOrder::State::ACTIVE;
       LOG(INFO) << "redistribute order " << order->name << "\n";
       push(order);
       break;
@@ -176,7 +174,7 @@ std::pair<std::string, TransOrderPtr> OrderPool::get_next_random_ord() {
     return std::pair{"", nullptr};
   } else {
     auto order = random_orderpool.back();
-    random_orderpool.pop_back();
+    // random_orderpool.pop_back();
     return {"", order};
   }
 }

@@ -187,7 +187,7 @@ void Vehicle::execute_instatn_action(
 void Vehicle::cancel_all_order() {
   for (auto &ord : orders) {
     std::unique_lock<std::shared_mutex> lock(ord->mutex);
-    ord->state = data::order::TransportOrder::State::WITHDRAWL;
+    ord->state = data::order::TransportOrder::State::FAILED;
   }
   orders.clear();
 }
@@ -372,7 +372,8 @@ void Vehicle::command_done() {
       process_charging = false;
     }
     now_order_state = Vehicle::nowOrder::END;
-    // current_order->state = data::order::TransportOrder::State::FAILED;
+    lock.lock();
+    current_order->state = data::order::TransportOrder::State::FAILED;
     current_order.reset();
     lock.unlock();
     get_next_ord();
