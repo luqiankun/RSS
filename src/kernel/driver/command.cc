@@ -188,8 +188,11 @@ Command::Command(const std::string &n) : RSSObject(n) {
       auto steps = get_step_nopop(driver_order, veh->send_queue_size);
       if (steps.empty()) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
+        veh->last_step.clear();
+        veh->future_step.clear();
         // LOG(WARNING) << "-------------------------";
       } else {
+        veh->future_step = steps;
         std::vector<std::shared_ptr<RSSResource>> temp;
         for (auto &x : steps) {
           std::vector<std::shared_ptr<RSSResource>> step_res;
@@ -268,6 +271,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
           }
           lock.unlock();
         }
+        veh->last_step = steps;
         state = State::ALLOCATED;
       }
     }

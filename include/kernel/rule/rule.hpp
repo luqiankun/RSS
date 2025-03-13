@@ -2,7 +2,8 @@
 #define RULE_HPP
 #include <unordered_set>
 
-#include "../../component/rssresource.hpp"
+#include "../../component/data/order/route.hpp"
+
 namespace kernel {
 namespace schedule {
 class Client;
@@ -15,7 +16,7 @@ class ResourceManager;
 class RuleBase : public RSSObject {
  public:
   RuleBase(const std::string &name, const std::shared_ptr<ResourceManager> &r)
-      : RSSObject(name), res(r){};
+      : RSSObject(name), res(r) {};
   using RSSObject::RSSObject;
   virtual bool pass(std::vector<std::shared_ptr<RSSResource>> res,
                     std::shared_ptr<schedule::Client>) = 0;
@@ -46,6 +47,17 @@ class BlockRuleBase : public RuleBase {
   std::string color;
   std::unordered_set<std::shared_ptr<RSSObject>> owners;
   std::unordered_set<std::shared_ptr<RSSResource>> occs;
+  std::string type;
+};
+class OnlyOneDirectRule : public BlockRuleBase {
+ public:
+  using BlockRuleBase::BlockRuleBase;
+  bool pass(std::vector<std::shared_ptr<RSSResource>>,
+            std::shared_ptr<schedule::Client>) override;
+  void init();
+  int cur_direct{0};  // 0 1 2
+  std::shared_ptr<data::order::Route> route;
+  std::map<std::shared_ptr<data::model::Path>, int> table;
 };
 class OnlyOneGatherRule : public BlockRuleBase {
  public:
@@ -67,14 +79,6 @@ class OnlyOneRectRule : public OnlyOneGatherRule {
   float y{0};
   float height{0};
   float width{0};
-};
-class AlleywayRule : public RuleBase {
- public:
-  using RuleBase::RuleBase;
-  bool pass(std::vector<std::shared_ptr<RSSResource>>,
-            std::shared_ptr<schedule::Client>) override;
-
- private:
 };
 }  // namespace allocate
 }  // namespace kernel

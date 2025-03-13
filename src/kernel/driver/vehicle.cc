@@ -73,6 +73,8 @@ allocate::TransOrderPtr Vehicle::redistribute_cur_order() {
         << vehicle_state_to_str(State::IDLE) << "]\n";
     current_order.reset();
     state = State::IDLE;
+    last_step.clear();
+    future_step.clear();
     idle_time = get_now_utc_time();
     CLOG(INFO, driver_log) << name << " " << "now is idle "
                            << get_time_fmt(idle_time) << " at "
@@ -327,6 +329,9 @@ void Vehicle::get_next_ord() {
           << name << " " << "state transform to : ["
           << vehicle_state_to_str(State::IDLE) << "]\n";
       state = State::IDLE;
+      last_step.clear();
+      future_step.clear();
+
       avoid_state = Avoid::Normal;
       idle_time = get_now_utc_time();
       CLOG(INFO, driver_log)
@@ -707,6 +712,9 @@ void SimVehicle::init() {
     return;
   }
   state = State::IDLE;
+  last_step.clear();
+  future_step.clear();
+
   avoid_state = Avoid::Normal;
   if (!last_point) {
     state = State::UNKNOWN;
@@ -928,6 +936,8 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
       if (state == Vehicle::State::UNKNOWN) {
         if (veh_state == vda5050::VehicleMqttStatus::ONLINE) {
           state = State::IDLE;
+          last_step.clear();
+          future_step.clear();
           avoid_state = Avoid::Normal;
           idle_time = get_now_utc_time();
         }

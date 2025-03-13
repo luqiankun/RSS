@@ -866,21 +866,17 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
               block.attribute("name").as_string(), resource);
           rule->occs = rs;
           rule->color = color;
+          rule->type = "SINGLE_VEHICLE_ONLY";
           resource->rules.push_back(rule);
         } else if (block.attribute("type").as_string() ==
                    std::string("SAME_DIRECTION_ONLY")) {
-          std::string direction =
-              block.child("direct").attribute("value").as_string();
-          for (auto &x : resource->paths) {
-            if (auto p = rs.find(x); p != rs.end()) {
-              auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
-              if (direction == "FRONT") {
-                path->max_reverse_vel = 0;
-              } else if (direction == "BACK") {
-                path->max_vel = 0;
-              }
-            }
-          }
+          auto rule = std::make_shared<kernel::allocate::OnlyOneDirectRule>(
+              block.attribute("name").as_string(), resource);
+          rule->occs = rs;
+          rule->color = color;
+          rule->init();
+          rule->type = "SAME_DIRECTION_ONLY";
+          resource->rules.push_back(rule);
         }
         block = block.next_sibling();
       }
@@ -2444,7 +2440,7 @@ std::pair<int, std::string> RSS::get_model() const {
       block["memberNames"].push_back(p->name);
     }
     block["name"] = x->name;
-    block["type"] = "SINGLE_VEHICLE_ONLY";
+    block["type"] = it->type;
     block["layout"]["color"] = it->color;
     block["properties"] = json::array();
     res["blocks"].push_back(block);
@@ -3048,17 +3044,12 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
             rule->color = block["layout"]["color"].as_string();
             resource->rules.push_back(rule);
           } else if (block["type"] == "SAME_DIRECTION_ONLY") {
-            std::string direction = block["direct"].as_string();
-            for (auto &x : resource->paths) {
-              if (auto p = rs.find(x); p != rs.end()) {
-                auto path = std::dynamic_pointer_cast<data::model::Path>(*p);
-                if (direction == "FRONT") {
-                  path->max_reverse_vel = 0;
-                } else if (direction == "BACK") {
-                  path->max_vel = 0;
-                }
-              }
-            }
+            auto rule = std::make_shared<kernel::allocate::OnlyOneDirectRule>(
+                block["name"].as_string(), resource);
+            rule->occs = rs;
+            rule->color = block["layout"]["color"].as_string();
+            rule->init();
+            resource->rules.push_back(rule);
           }
         }
       }
