@@ -43,6 +43,7 @@ std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
                 ->driverorders[v->current_order->current_driver_index]
                 ->route->current_step);
       }
+      std::unique_lock<std::shared_mutex> lock(x->current_order->mutex);
       std::deque<std::shared_ptr<data::order::Step>> right_step(
           x->current_order->driverorders[x->current_order->current_driver_index]
               ->route->steps);
@@ -53,6 +54,7 @@ std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
                 ->driverorders[x->current_order->current_driver_index]
                 ->route->current_step);
       }
+      lock.unlock();
       float cur_cost = 0;  // mm单位
       const float kLen = 2;
       for (auto &cur_s : left_step) {

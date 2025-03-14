@@ -45,14 +45,14 @@ inline std::string get_time_fmt(std::chrono::system_clock::time_point t) {
        << p % 1000000 << "Z";
   return time.str();
 }
-inline std::string get_date_fmt() {
-  const auto t = std::chrono::system_clock::now();
+inline std::string get_time_fmt_utc(std::chrono::system_clock::time_point t) {
   const auto tm = std::chrono::system_clock::to_time_t(t);
   std::stringstream time;
-  // auto p = std::chrono::duration_cast<std::chrono::milliseconds>(
-  //              t.time_since_epoch())
-  //              .count();
-  time << std::put_time(std::gmtime(&tm), "%Y-%m-%d");
+  const auto p = std::chrono::duration_cast<std::chrono::microseconds>(
+                     t.time_since_epoch())
+                     .count();
+  time << std::put_time(std::gmtime(&tm), "%Y-%m-%dT%H:%M:%S.") << p % 1000000
+       << "Z";
   return time.str();
 }
 
@@ -69,13 +69,20 @@ inline std::optional<std::chrono::system_clock::time_point> get_time_from_str(
     }
     // LOG(INFO) << cmatch.size();
     assert(cmatch.size() == 4);
-    std::chrono::milliseconds ms(std::stoi(*(cmatch.end() - 1)));
-    std::tm t = {};
+    int tail = std::stoi(*(cmatch.end() - 1));
+    std::chrono::microseconds us;
+    if (tail >= 1000) {
+      us = std::chrono::microseconds(tail);
+    } else {
+      us = std::chrono::microseconds(tail * 1000);
+    }
+    std::tm t = {};  // localtime();
     std::istringstream ss{msg};
     ss >> std::get_time(&t, "%Y-%m-%dT%H:%M:%S");
-    long timeSinceEpoch = std::mktime(&t);
-    auto duration = std::chrono::seconds(timeSinceEpoch);
-    auto time_point = std::chrono::system_clock::time_point(duration) + ms;
+    auto t2 = std::mktime(&t);  // utctime
+    int offset = std::localtime(&t2)->tm_hour - std::gmtime(&t2)->tm_hour;
+    auto time_point = std::chrono::system_clock::from_time_t(t2) + us +
+                      std::chrono::hours(offset);
     return time_point;
   } catch (std::exception &ec) {
     CLOG(ERROR, timer_log) << ec.what();

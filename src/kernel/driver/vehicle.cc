@@ -1084,7 +1084,7 @@ bool Rabbit3::move(
                 mqtt_cli->manufacturer + "/" + mqtt_cli->serial_number + "/";
   auto ord = vda5050::order::VDA5050Order();
   ord.header_id = send_header_id++;
-  ord.timestamp = get_time_fmt(get_now_utc_time());
+  ord.timestamp = get_time_fmt_utc(get_now_utc_time());
   ord.version = mqtt_cli->version;
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
@@ -1539,8 +1539,8 @@ bool Rabbit3::move(
         if (dt > std::chrono::seconds(10)) {
           CLOG(ERROR, driver_log)
               << name << " The communication interval is too long > 10s  "
-              << get_time_fmt(get_now_utc_time()) << " "
-              << get_time_fmt(p.value()) << "\n";
+              << get_time_fmt_utc(get_now_utc_time()) << " "
+              << get_time_fmt_utc(p.value()) << "\n";
           task_run = false;
           return false;
         }
@@ -2104,7 +2104,7 @@ bool Rabbit3::instant_action(
   insact->serial_number = mqtt_cli->serial_number;
   insact->header_id = send_header_id++;
   insact->manufacturer = mqtt_cli->manufacturer;
-  insact->timestamp = get_time_fmt(get_now_utc_time());
+  insact->timestamp = get_time_fmt_utc(get_now_utc_time());
   insact->version = mqtt_cli->version;
   auto action = static_cast<vda5050::instantaction::Action *>(act.get());
   insact->actions.push_back(*action);

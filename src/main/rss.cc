@@ -1370,7 +1370,7 @@ json order_to_json(const std::shared_ptr<data::order::TransportOrder> &v) {
     value["peripheralReservationToken"] = v->peripheral_reservation_token;
     value["wrappingSequence"] =
         v->ordersequence.lock() ? v->ordersequence.lock()->name : json::null();
-    value["creationTime"] = get_time_fmt(v->create_time);
+    value["creationTime"] = get_time_fmt_utc(v->create_time);
     value["destinations"] = json::array();
     for (auto &dest : v->driverorders) {
       json dest_v;
@@ -1748,8 +1748,9 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
   res["peripheralReservationToken"] = json::null();
   res["wrappingSequence"] = json::null();
   res["destinations"] = json::array();
-  res["creationTime"] = get_time_fmt(ord->create_time);
-  res["finishTime"] = get_time_fmt(ord->create_time + std::chrono::hours(10));
+  res["creationTime"] = get_time_fmt_utc(ord->create_time);
+  res["finishTime"] =
+      get_time_fmt_utc(ord->create_time + std::chrono::hours(10));
   for (auto &dest : ord->driverorders) {
     json value;
     value["locationName"] = dest->destination->destination.lock()->name;
