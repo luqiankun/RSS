@@ -100,6 +100,8 @@ class Vehicle : public schedule::Client,
   // std::thread run_th;
   Eigen::Vector3i position{0, 0, 0};
   double angle{0};
+  std::vector<StepPtr> last_step;    // 最后一个step
+  std::vector<StepPtr> future_step;  // 要申请的step
   Eigen::Vector3i layout{0, 0, 0};
   io_context_type io_context;
   io_context_type::work work;

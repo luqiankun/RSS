@@ -43,6 +43,7 @@ std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
                 ->driverorders[v->current_order->current_driver_index]
                 ->route->current_step);
       }
+      std::unique_lock<std::shared_mutex> lock(x->current_order->mutex);
       std::deque<std::shared_ptr<data::order::Step>> right_step(
           x->current_order->driverorders[x->current_order->current_driver_index]
               ->route->steps);
@@ -53,6 +54,7 @@ std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
                 ->driverorders[x->current_order->current_driver_index]
                 ->route->current_step);
       }
+      lock.unlock();
       float cur_cost = 0;  // mm单位
       const float kLen = 2;
       for (auto &cur_s : left_step) {
@@ -188,8 +190,11 @@ Command::Command(const std::string &n) : RSSObject(n) {
       auto steps = get_step_nopop(driver_order, veh->send_queue_size);
       if (steps.empty()) {
         driver_order->state = data::order::DriverOrder::State::OPERATING;
+        veh->last_step.clear();
+        veh->future_step.clear();
         // LOG(WARNING) << "-------------------------";
       } else {
+        veh->future_step = steps;
         std::vector<std::shared_ptr<RSSResource>> temp;
         for (auto &x : steps) {
           std::vector<std::shared_ptr<RSSResource>> step_res;
@@ -268,6 +273,7 @@ Command::Command(const std::string &n) : RSSObject(n) {
           }
           lock.unlock();
         }
+        veh->last_step = steps;
         state = State::ALLOCATED;
       }
     }

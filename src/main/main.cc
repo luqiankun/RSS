@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   CLOG(INFO, rss_log) << "service start, press 'Ctrl + C' to exit.\n";
-  assert(srv->srv.is_running());
+  // assert(srv->srv.is_running());
   if (th_wait.joinable()) {
     th_wait.join();
   }

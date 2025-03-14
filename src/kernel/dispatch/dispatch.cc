@@ -1134,7 +1134,21 @@ allocate::PointPtr Conflict::select_point(VehPtr v,
       // 在路径上的不能选
       continue;
     }
-    flag = false;
+    for (auto &p : resource_manager.lock()->rules) {
+      auto block = std::dynamic_pointer_cast<allocate::BlockRuleBase>(p);
+      if (block) {
+        for (auto &p_ : block->occs) {
+          if (x == p_) {
+            flag = true;
+            break;
+          }
+        }
+      }
+    }
+    if (flag) {
+      // block上的不能选
+      continue;
+    }
     for (auto &p : graph) {
       if (p.second == x) {
         flag = true;
@@ -1145,7 +1159,6 @@ allocate::PointPtr Conflict::select_point(VehPtr v,
       // 已经被选走的不能选
       continue;
     }
-    flag = false;
     for (auto &p : rm_ps) {
       if (p == x) {
         flag = true;
@@ -1159,7 +1172,6 @@ allocate::PointPtr Conflict::select_point(VehPtr v,
     if (x == order->intended_vehicle.lock()->current_point) {
       continue;
     }
-    flag = false;
     for (auto &p : rms) {
       if (p == x) {
         flag = true;
