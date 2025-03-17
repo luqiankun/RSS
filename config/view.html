@@ -184,7 +184,10 @@
                                 // console.log(order(select_vehicle, point.name, "MOVE"))
                                 let Http = new XMLHttpRequest();
                                 let ip = document.getElementById("ip_btn").value;
-                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/TOrder-' + crypto.randomUUID(), true);
+                                let uuid = crypto.randomUUID().toString().replaceAll(/-/g, "");
+                                console.log(uuid.length)
+
+                                Http.open('POST', 'http://' + ip + '/v1/transportOrders/TOrder-' + uuid.toUpperCase(), true);
                                 Http.onload = function () {
                                     if (Http.readyState === 4 && Http.status === 200) {
                                         console.log("send order ok");
