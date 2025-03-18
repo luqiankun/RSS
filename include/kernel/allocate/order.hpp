@@ -2,6 +2,9 @@
 #define ORDER_HPP
 #include "../../component/data/order/orderquence.hpp"
 namespace kernel {
+namespace planner {
+class Planner;
+}
 namespace allocate {
 using DriverOrderPtr = std::shared_ptr<data::order::DriverOrder>;
 using DestPtr = std::shared_ptr<data::order::DriverOrder::Destination>;
@@ -37,12 +40,22 @@ class OrderPool : public RSSObject {
   void cancel_order(size_t order_uuid);
   void pop(const TransOrderPtr &order);
   void push(const TransOrderPtr &order);
+  void push_raw(const TransOrderPtr &order);
   void patch(const TransOrderPtr &order);
   void redistribute(const TransOrderPtr &order);
+  void preprocess();
   std::pair<std::string, TransOrderPtr> get_next_ord();
   std::pair<std::string, TransOrderPtr> get_next_random_ord();
-  bool random_list_empty() { return random_orderpool.empty(); }
+  bool random_list_empty() {
+    std::shared_lock<std::shared_mutex> lock(mut);
+    return random_orderpool.empty();
+  }
   bool idel_orderpool(std::string);
+  bool raw_list_empty() {
+    std::shared_lock<std::shared_mutex> lock(mut);
+    return raw_orderpool.empty();
+  }
+
   ~OrderPool() { CLOG(INFO, allocate_log) << name << " close\n"; }
   void update_quence() const;
   bool is_empty() {
@@ -59,7 +72,10 @@ class OrderPool : public RSSObject {
   std::vector<std::pair<std::string, std::deque<TransOrderPtr>>> orderpool;
   std::deque<TransOrderPtr> random_orderpool;
   std::deque<TransOrderPtr> ended_orderpool;
+  std::deque<TransOrderPtr> raw_orderpool;
   std::deque<OrderSeqPtr> orderquence;
+  std::weak_ptr<planner::Planner> planner;
+  std::map<std::string, std::shared_ptr<data::model::Point>> veh_ps;
   mutable std::shared_mutex mut;
   int cur_index{0};
 };

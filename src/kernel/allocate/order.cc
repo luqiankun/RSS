@@ -141,6 +141,68 @@ void OrderPool::push(const TransOrderPtr &order) {
     orderpool.emplace_back(std::pair{name, queue});
   }
 }
+void OrderPool::push_raw(const TransOrderPtr &order) {
+  raw_orderpool.push_back(order);
+}
+
+void OrderPool ::preprocess() {
+  if (raw_orderpool.empty()) {
+    return;
+  } else {
+    std::unique_lock<std::shared_mutex> lock(mut);
+    auto ord = raw_orderpool.front();
+    raw_orderpool.pop_front();
+    lock.unlock();
+    if (ord->state == data::order::TransportOrder::State::RAW) {
+      ord->state = data::order::TransportOrder::State::ACTIVE;
+    }
+    if (ord->state == data::order::TransportOrder::State::ACTIVE) {
+      if (ord->driverorders.empty()) {
+        ord->state = data::order::TransportOrder::State::FAILED;
+        lock.lock();
+        ended_orderpool.push_back(ord);
+      } else {
+        std::vector<PointPtr> ps;
+        for (auto &x : ord->driverorders) {
+          auto p = x->destination->destination.lock();
+          if (std::dynamic_pointer_cast<data::model::Point>(p)) {
+            ps.push_back(std::dynamic_pointer_cast<data::model::Point>(p));
+          } else if (std::dynamic_pointer_cast<data::model::Location>(p)) {
+            ps.push_back(std::dynamic_pointer_cast<data::model::Location>(p)
+                             ->link.lock());
+          } else {
+            ord->state = data::order::TransportOrder::State::UNROUTABLE;
+            lock.lock();
+            ended_orderpool.push_back(ord);
+            return;
+          }
+        }
+        for (auto &x : ps) {
+          bool flg = false;
+          for (auto &v : veh_ps) {
+            if (planner.lock()->find_paths(v.second, x).empty()) {
+              continue;
+            } else {
+              flg = true;
+              break;
+            }
+          }
+          if (!flg) {
+            ord->state = data::order::TransportOrder::State::UNROUTABLE;
+            lock.lock();
+            ended_orderpool.push_back(ord);
+            return;
+          }
+        }
+        ord->state = data::order::TransportOrder::State::MID;
+        lock.lock();
+        push(ord);
+      }
+    } else {
+    }
+  }
+}
+
 void OrderPool::redistribute(const TransOrderPtr &order) {
   LOG(DEBUG) << "redistribute order " << (order)->name << "\n";
   std::unique_lock<std::shared_mutex> lock(mut);
@@ -159,7 +221,7 @@ void OrderPool::redistribute(const TransOrderPtr &order) {
         order->intended_vehicle.reset();
         order->processing_vehicle.reset();
       }
-      order->state = data::order::TransportOrder::State::ACTIVE;
+      order->state = data::order::TransportOrder::State::MID;
       LOG(INFO) << "redistribute order " << order->name << "\n";
       push(order);
       break;

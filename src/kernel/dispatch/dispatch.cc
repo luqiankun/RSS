@@ -163,6 +163,9 @@ Dispatcher::~Dispatcher() {
   if (dispatch_th.joinable()) {
     dispatch_th.join();
   }
+  if (preprocess_th.joinable()) {
+    preprocess_th.join();
+  }
   CLOG(INFO, dispatch_log) << name << " close\n";
 }
 
@@ -187,14 +190,10 @@ void Dispatcher::idle_detect() {
         v->current_order->state = data::order::TransportOrder::State::WITHDRAWL;
       }
       v->cancel_all_order();
-      go_charge("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
-                    "_goto_charge",
-                v);
+      go_charge("TOder_" + uuids::to_string(get_uuid()), v);
     } else if (v->energy_level <= v->energy_level_good) {
       if (v->state == driver::Vehicle::State::IDLE) {
-        go_charge("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
-                      "_goto_charge",
-                  v);
+        go_charge("TOder_" + uuids::to_string(get_uuid()), v);
       }
     } else {
       //
@@ -203,15 +202,11 @@ void Dispatcher::idle_detect() {
         auto dt_s = std::chrono::duration_cast<std::chrono::seconds>(dt);
         if (dt_s.count() > 15) {
           if (v->park_point && v->park_point != v->last_point) {
-            go_home("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
-                        "_goto_park",
-                    v);
+            go_home("TOder_" + uuids::to_string(get_uuid()), v);
           } else if (v->last_point->type !=
                      data::model::Point::Type::PARK_POSITION) {
             if (auto x = get_park_point(v->last_point)) {
-              go_home("TOder_" + uuids::to_string(get_uuid()) + "_" + v->name +
-                          "_goto_park",
-                      v);
+              go_home("TOder_" + uuids::to_string(get_uuid()), v);
             }
           }
         }
@@ -248,10 +243,7 @@ void Dispatcher::dispatch_once() {
     return;
   }
   std::unique_lock<std::shared_mutex> lock(current_ord->mutex);
-  if (current_ord->state == data::order::TransportOrder::State::RAW) {
-    current_ord->state = data::order::TransportOrder::State::ACTIVE;
-    CLOG(INFO, dispatch_log) << current_ord->name << " status: [active]\n";
-  } else if (current_ord->state == data::order::TransportOrder::State::ACTIVE) {
+  if (current_ord->state == data::order::TransportOrder::State::MID) {
     if (current_ord->driverorders.empty()) {
       CLOG(WARNING, dispatch_log) << current_ord->name << " no driver\n";
       current_ord->state = data::order::TransportOrder::State::UNROUTABLE;
@@ -502,6 +494,15 @@ void Dispatcher::run() {
       //   brake_blocklock(blockloop);
       // }
       dispatch_once();
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+  });
+  preprocess_th = std::thread([&] {
+    while (!dispose) {
+      std::unique_lock<std::mutex> lock(mut_preprocess);
+      cv_preprocess.wait(lock,
+                         [&]() { return dispose || (!raw_list_empty()); });
+      preprocess();
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
   });
@@ -767,7 +768,7 @@ void Conflict::solve_once() {
       auto new_ord = std::make_shared<data::order::TransportOrder>(
           "AOrder-" + uuids::to_string(get_uuid()));
       new_ord->create_time = get_now_utc_time();
-      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(100);
+      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(60 * 24);
       int pro = 3;
       if (veh->current_order) {
         pro = veh->current_order->priority + 1;
@@ -776,7 +777,7 @@ void Conflict::solve_once() {
       new_ord->intended_vehicle = veh;
       new_ord->anytime_drop = true;
       new_ord->type = "MOVE";
-      new_ord->state = data::order::TransportOrder::State::RAW;
+      new_ord->state = data::order::TransportOrder::State::MID;
       auto driver_order =
           std::make_shared<data::order::DriverOrder>("DOder_" + point->name);
       auto dest = orderpool.lock()->res_to_destination(
@@ -906,7 +907,7 @@ void Conflict::solve_once() {
       auto new_ord = std::make_shared<data::order::TransportOrder>(
           "AOrder-" + uuids::to_string(get_uuid()));
       new_ord->create_time = get_now_utc_time();
-      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(100);
+      new_ord->dead_time = new_ord->create_time + std::chrono::minutes(60 * 24);
       if (order->intended_vehicle.lock()->current_order) {
         new_ord->priority =
             order->intended_vehicle.lock()->current_order->priority + 1;
@@ -916,7 +917,7 @@ void Conflict::solve_once() {
       new_ord->intended_vehicle = order->intended_vehicle.lock();
       new_ord->type = "MOVE";
       new_ord->anytime_drop = true;
-      new_ord->state = data::order::TransportOrder::State::RAW;
+      new_ord->state = data::order::TransportOrder::State::MID;
       auto driver_order = std::make_shared<data::order::DriverOrder>(
           "DOrder-" + allocate_point->name);
       auto dest = orderpool.lock()->res_to_destination(

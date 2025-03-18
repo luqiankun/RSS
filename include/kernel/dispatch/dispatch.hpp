@@ -24,17 +24,23 @@ class Dispatcher : public RSSObject {
   void idle_detect();
   void run();
   void stop();
-  void notify() { cv.notify_all(); }
+  void notify() {
+    cv.notify_all();
+    cv_preprocess.notify_all();  // 通知预处理线程
+  }
   ~Dispatcher() override;
 
  public:
   std::shared_ptr<ConflictPool> conflict_pool;
   std::thread dispatch_th;
+  std::thread preprocess_th;
   bool dispose{false};
   bool auto_select{true};  // 没有指定车辆时自动选择
   std::vector<VehPtr> vehicles;
   std::mutex mut;
   std::condition_variable cv;
+  std::mutex mut_preprocess;
+  std::condition_variable cv_preprocess;
   /// signals
   std::function<std::pair<allocate::ResourceManager::ResType,
                           allocate::TCSResourcePtr>(const std::string &)>
@@ -45,9 +51,11 @@ class Dispatcher : public RSSObject {
   std::function<void(allocate::TransOrderPtr)> pop_order;
   std::function<void(allocate::TransOrderPtr)> pathc_order;
   std::function<std::pair<std::string, allocate::TransOrderPtr>()> get_next_ord;
+  std::function<void()> preprocess;
   std::function<std::pair<std::string, allocate::TransOrderPtr>()>
       get_next_random_ord;
   std::function<bool()> random_list_empty;
+  std::function<bool()> raw_list_empty;
 
   std::function<bool()> order_empty;
 };

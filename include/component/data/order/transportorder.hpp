@@ -28,6 +28,7 @@ class TransportOrder : public RSSObject {
   enum class State {
     RAW,
     ACTIVE,
+    MID,
     DISPATCHABLE,
     BEING_PROCESSED,
     WITHDRAWL,
@@ -41,7 +42,7 @@ class TransportOrder : public RSSObject {
     } else if (state == State::ACTIVE) {
       return "ACTIVE";
 
-    } else if (state == State::DISPATCHABLE) {
+    } else if (state == State::DISPATCHABLE || state == State::MID) {
       return "DISPATCHABLE";
 
     } else if (state == State::BEING_PROCESSED) {

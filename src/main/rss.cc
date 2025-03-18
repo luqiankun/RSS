@@ -1155,6 +1155,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
     dispatcher->get_next_random_ord = [&]() {
       return orderpool->get_next_random_ord();
     };
+    dispatcher->preprocess = [&]() { return orderpool->preprocess(); };
+    dispatcher->raw_list_empty = [&]() { return orderpool->raw_list_empty(); };
     dispatcher->random_list_empty = [&]() {
       return orderpool->random_list_empty();
     };
@@ -1171,6 +1173,8 @@ std::pair<int, std::string> RSS::put_model_xml(const std::string &body) {
       v->orderpool = orderpool;
       v->resource = resource;
     }
+    orderpool->planner = planner;
+
     assert(dispatcher);
     CLOG(INFO, rss_log) << "run all ...\n";
     run();
@@ -1232,7 +1236,7 @@ void RSS::home_order(const std::string &name,
   const auto ord = std::make_shared<data::order::TransportOrder>(name);
   // std::hash<std::string> hash_fn;
   ord->create_time = time;
-  ord->dead_time = time + std::chrono::minutes(60);
+  ord->dead_time = time + std::chrono::minutes(60 * 24);
   ord->state = data::order::TransportOrder::State::RAW;
   // TODO type ?
   ord->type = "MOVE";
@@ -1257,7 +1261,8 @@ void RSS::home_order(const std::string &name,
   ord->intended_vehicle = v;
   ord->anytime_drop = true;
   std::unique_lock<std::shared_mutex> lock(orderpool->mut);
-  orderpool->push(ord);
+  orderpool->push_raw(ord);
+  dispatcher->notify();
 }
 
 void RSS::charge_order(
@@ -1268,7 +1273,7 @@ void RSS::charge_order(
   const auto ord = std::make_shared<data::order::TransportOrder>(name);
   // std::hash<std::string> hash_fn;
   ord->create_time = time;
-  ord->dead_time = time + std::chrono::minutes(60);
+  ord->dead_time = time + std::chrono::minutes(60 * 24);
   ord->state = data::order::TransportOrder::State::RAW;
   //  type ?
   ord->type = "Charge";
@@ -1289,7 +1294,8 @@ void RSS::charge_order(
   ord->driverorders.push_back(dr);
   ord->intended_vehicle = v;
   std::unique_lock<std::shared_mutex> lock(orderpool->mut);
-  orderpool->push(ord);
+  orderpool->push_raw(ord);
+  dispatcher->notify();
 }
 
 RSS::~RSS() {
@@ -1510,9 +1516,10 @@ std::pair<int, std::string> RSS::post_transport_order(
     ord->create_time = get_now_utc_time();
     if (req.contains("deadline") && !req["deadline"].empty()) {
       auto dt = get_time_from_str(req["deadline"].as_string());
-      ord->dead_time = dt.value_or(ord->create_time + std::chrono::minutes(60));
+      ord->dead_time =
+          dt.value_or(ord->create_time + std::chrono::minutes(60 * 24));
     } else {
-      ord->dead_time = ord->create_time + std::chrono::hours(1000000);
+      ord->dead_time = ord->create_time + std::chrono::hours(24);
     }
     if (req.contains("intendedVehicle")) {
       for (auto &v : dispatcher->vehicles) {
@@ -1635,7 +1642,7 @@ std::pair<int, std::string> RSS::post_transport_order(
     ord->state = data::order::TransportOrder::State::RAW;
     CLOG(INFO, dispatch_log) << ord->name << " status: [raw]\n";
 
-    orderpool->push(ord);
+    orderpool->push_raw(ord);
     lock2.unlock();
     dispatcher->notify();
     // return
@@ -1719,7 +1726,7 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
   auto ord = std::make_shared<data::order::TransportOrder>(
       "Move-" + uuids::to_string(get_uuid()));
   ord->create_time = get_now_utc_time();
-  ord->dead_time = ord->create_time + std::chrono::minutes(60);
+  ord->dead_time = ord->create_time + std::chrono::minutes(60 * 24);
   ord->intended_vehicle = *veh;
   ord->type = "-";
   ord->state = data::order::TransportOrder::State::RAW;
@@ -1731,7 +1738,7 @@ std::pair<int, std::string> RSS::post_move_order(const std::string &vehicle,
   ord->driverorders.push_back(dr);
   ord->peripheral_reservation_token = "null";
   std::unique_lock<std::shared_mutex> lock(orderpool->mut);
-  orderpool->push(ord);
+  orderpool->push_raw(ord);
   lock.unlock();
   dispatcher->notify();
   // return
@@ -3255,9 +3262,11 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
     dispatcher->get_next_random_ord = [&]() {
       return orderpool->get_next_random_ord();
     };
+    dispatcher->preprocess = [&]() { return orderpool->preprocess(); };
     dispatcher->random_list_empty = [&]() {
       return orderpool->random_list_empty();
     };
+    dispatcher->raw_list_empty = [&]() { return orderpool->raw_list_empty(); };
     dispatcher->get_next_ord = [&]() { return orderpool->get_next_ord(); };
     dispatcher->go_charge = [&](auto name, auto veh) {
       charge_order(name, veh);
@@ -3271,6 +3280,7 @@ std::pair<int, std::string> RSS::put_model(const std::string &body) {
       v->orderpool = orderpool;
       v->resource = resource;
     }
+    orderpool->planner = planner;
     assert(dispatcher);
     CLOG(INFO, rss_log) << "run all ...\n";
     run();

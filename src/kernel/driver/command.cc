@@ -26,54 +26,65 @@
   }
 namespace kernel::driver {
 std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
-  if (!v->current_order) {
-    return nullptr;
-  }
-  auto disptcher = v->dispatcher.lock();
-  auto vehs = disptcher->vehicles;
-  for (auto &x : vehs) {
-    if (x != v && x->state == Vehicle::State::EXECUTING) {
-      std::deque<std::shared_ptr<data::order::Step>> left_step(
-          v->current_order->driverorders[v->current_order->current_driver_index]
-              ->route->steps);
-      if (v->current_order->driverorders[v->current_order->current_driver_index]
-              ->route->current_step) {
-        left_step.push_front(
+  try {
+    if (!v->current_order) {
+      return nullptr;
+    }
+    auto disptcher = v->dispatcher.lock();
+    auto vehs = disptcher->vehicles;
+    for (auto &x : vehs) {
+      if (x != v && x->state == Vehicle::State::EXECUTING) {
+        std::deque<std::shared_ptr<data::order::Step>> left_step(
             v->current_order
                 ->driverorders[v->current_order->current_driver_index]
-                ->route->current_step);
-      }
-      std::unique_lock<std::shared_mutex> lock(x->current_order->mutex);
-      std::deque<std::shared_ptr<data::order::Step>> right_step(
-          x->current_order->driverorders[x->current_order->current_driver_index]
-              ->route->steps);
-      if (x->current_order->driverorders[x->current_order->current_driver_index]
-              ->route->current_step) {
-        right_step.push_front(
+                ->route->steps);
+        if (v->current_order
+                ->driverorders[v->current_order->current_driver_index]
+                ->route->current_step) {
+          left_step.push_front(
+              v->current_order
+                  ->driverorders[v->current_order->current_driver_index]
+                  ->route->current_step);
+        }
+        if (!x->current_order) {
+          return nullptr;
+        }
+        std::unique_lock<std::shared_mutex> lock(x->current_order->mutex);
+        std::deque<std::shared_ptr<data::order::Step>> right_step(
             x->current_order
                 ->driverorders[x->current_order->current_driver_index]
-                ->route->current_step);
-      }
-      lock.unlock();
-      float cur_cost = 0;  // mm单位
-      const float kLen = 2;
-      for (auto &cur_s : left_step) {
-        float v_cost = 0;
-        for (auto &v_s : right_step) {
-          if (cur_s->path == v_s->path &&
-              cur_s->vehicle_orientation != v_s->vehicle_orientation) {
-            if (fabs(cur_cost - v_cost) < kLen * (v_s->path->length)) {
-              LOG(DEBUG) << "swap conflict " << v->name << " " << x->name;
-              return x;
-            }
-          }
-          v_cost += v_s->path->length;
+                ->route->steps);
+        if (x->current_order
+                ->driverorders[x->current_order->current_driver_index]
+                ->route->current_step) {
+          right_step.push_front(
+              x->current_order
+                  ->driverorders[x->current_order->current_driver_index]
+                  ->route->current_step);
         }
-        cur_cost += cur_s->path->length;
+        lock.unlock();
+        float cur_cost = 0;  // mm单位
+        const float kLen = 2;
+        for (auto &cur_s : left_step) {
+          float v_cost = 0;
+          for (auto &v_s : right_step) {
+            if (cur_s->path == v_s->path &&
+                cur_s->vehicle_orientation != v_s->vehicle_orientation) {
+              if (fabs(cur_cost - v_cost) < kLen * (v_s->path->length)) {
+                LOG(DEBUG) << "swap conflict " << v->name << " " << x->name;
+                return x;
+              }
+            }
+            v_cost += v_s->path->length;
+          }
+          cur_cost += cur_s->path->length;
+        }
       }
     }
+    return nullptr;
+  } catch (...) {
+    return nullptr;
   }
-  return nullptr;
 }
 bool veh_conflict(std::shared_ptr<Vehicle> v) {
   auto driver_order =

@@ -154,6 +154,7 @@ std::vector<std::pair<std::vector<VertexPtr>, double>>
 Planner::find_paths_with_vertex(
     const std::shared_ptr<data::model::Point> &begin,
     const std::shared_ptr<data::model::Point> &end) {
+  std::unique_lock<std::mutex> lock(mutex);
   std::vector<std::pair<std::vector<VertexPtr>, double>> res;
   VertexPtr st{nullptr};
   VertexPtr ed{nullptr};
@@ -228,6 +229,7 @@ Planner::find_paths_with_vertex(
 std::vector<std::vector<std::shared_ptr<data::model::Point>>>
 Planner::find_paths(const std::shared_ptr<data::model::Point> &begin,
                     const std::shared_ptr<data::model::Point> &end) {
+  std::unique_lock<std::mutex> lock(mutex);
   std::vector<std::vector<std::shared_ptr<data::model::Point>>> res;
   VertexPtr st{nullptr};
   VertexPtr ed{nullptr};

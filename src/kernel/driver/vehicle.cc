@@ -93,6 +93,7 @@ void Vehicle::execute_action(
     LOG(DEBUG) << name << " " << "action ---- {"
                << dest->destination.lock()->name << "}\n";
     std::unique_lock<std::shared_mutex> lock(current_order->mutex);
+    auto ord = current_order;
     LOG(DEBUG) << name << " " << "action  {" << dest->destination.lock()->name
                << "}\n";
 
@@ -105,9 +106,14 @@ void Vehicle::execute_action(
     }
     lock.unlock();
     auto op_ret = action(dest);
+    lock.lock();
+    if (current_order != ord) {
+      CLOG(DEBUG, driver_log) << name << " " << "action {"
+                              << dest->destination.lock()->name << "} failed\n";
+      return;
+    }
     if (!op_ret) {
       // 订单失败
-      lock.lock();
       current_order->driverorders[current_order->current_driver_index]->state =
           data::order::DriverOrder::State::FAILED;
       current_order->state = data::order::TransportOrder::State::FAILED;
@@ -137,6 +143,7 @@ void Vehicle::execute_move(
       LOG(FATAL) << "ddd";
     }
     std::unique_lock<std::shared_mutex> lock(current_order->mutex);
+    auto ord = current_order;
     CLOG(DEBUG, driver_log)
         << name << " " << "move {" << steps.front()->name << "}\n";
     if (!current_order) {
@@ -147,9 +154,14 @@ void Vehicle::execute_move(
     }
     lock.unlock();
     auto move_ret = move(steps);
+    lock.lock();
+    if (current_order != ord) {
+      CLOG(DEBUG, driver_log)
+          << name << " " << "move {" << steps.front()->name << "} failed\n";
+      return;
+    }
     if (!move_ret) {
       // 订单失败
-      lock.lock();
       current_order->driverorders[current_order->current_driver_index]->state =
           data::order::DriverOrder::State::FAILED;
       current_order->state = data::order::TransportOrder::State::FAILED;
@@ -167,7 +179,8 @@ void Vehicle::execute_move(
       CLOG(DEBUG, driver_log) << name << " " << ss.str() << " ok\n";
     }
 
-    if (current_command) {
+    if (current_command &&
+        current_command->state == Command::State::EXECUTING) {
       current_command->vehicle_execute_cb(move_ret);
     }
   });
@@ -580,6 +593,9 @@ void Vehicle::next_command() {
     return;
   }
   if (current_order->state == data::order::TransportOrder::State::FAILED) {
+    // order->state = data::order::TransportOrder::State::FAILED;
+    CLOG(ERROR, driver_log) << name << " " << current_order->name
+                            << " failed : " << name << " state is FAILED";
     return;
   }
   if (current_order->state == data::order::TransportOrder::State::FINISHED) {
@@ -721,6 +737,7 @@ void SimVehicle::init() {
     state = State::UNKNOWN;
     return;
   }
+  orderpool.lock()->veh_ps[name] = last_point;
   current_point = last_point;
   this->position = current_point->position;
   if (integration_level == integrationLevel::TO_BE_IGNORED ||
@@ -896,6 +913,7 @@ void Rabbit3::onstate(const mqtt::const_message_ptr &msg) {
                 init_pos = false;
               } else {
                 init_pos = true;
+                orderpool.lock()->veh_ps[name] = last_point;
               }
             } else {
               if (!vdastate.agv_position.has_value()) {

@@ -7,10 +7,10 @@ namespace kernel {
 namespace allocate {
 class ResourceManager;
 class RuleBase;
-} // namespace allocate
+}  // namespace allocate
 namespace planner {
 class Planner {
-public:
+ public:
   Planner() = delete;
   explicit Planner(const std::shared_ptr<allocate::ResourceManager> &);
   ~Planner();
@@ -29,13 +29,13 @@ public:
   uint32_t calculate_turns(const std::vector<VertexPtr> &path,
                            float th = PI / 4);
   // 查找最短路径 返回vertex对象路径
-  std::vector<std::vector<std::shared_ptr<data::model::Point>>>
-  find_paths(const std::shared_ptr<data::model::Point> &,
-             const std::shared_ptr<data::model::Point> &);
+  std::vector<std::vector<std::shared_ptr<data::model::Point>>> find_paths(
+      const std::shared_ptr<data::model::Point> &,
+      const std::shared_ptr<data::model::Point> &);
 
-  std::vector<std::pair<std::vector<VertexPtr>, double>>
-  find_paths_with_vertex(const std::shared_ptr<data::model::Point> &begin,
-                         const std::shared_ptr<data::model::Point> &end);
+  std::vector<std::pair<std::vector<VertexPtr>, double>> find_paths_with_vertex(
+      const std::shared_ptr<data::model::Point> &begin,
+      const std::shared_ptr<data::model::Point> &end);
 
   // 查找带有次短路径的所有路径
   std::vector<std::vector<std::shared_ptr<data::model::Point>>>
@@ -46,14 +46,15 @@ public:
   std::vector<std::vector<std::shared_ptr<data::model::Point>>> to_model_path(
       std::vector<std::pair<std::vector<VertexPtr>, double>> src) const;
 
-public:
+ public:
   std::weak_ptr<allocate::ResourceManager> res;
-  std::vector<VertexPtr> vertexs;   // 顶点
-  std::vector<EdgePtr> edges;       // 边
+  std::vector<VertexPtr> vertexs;    // 顶点
+  std::vector<EdgePtr> edges;        // 边
   std::vector<ConsolePtr> consoles;  // 工作台
  private:
   VertexPtr cur_begin{nullptr};
   std::unique_ptr<Solver> solver;
+  std::mutex mutex;
 };
 }  // namespace planner
 }  // namespace kernel
