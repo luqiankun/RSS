@@ -113,6 +113,7 @@ class Actions {
     virtual jsoncons::json to_json() { return jsoncons::json::object(); };
   };
   explicit Actions(const std::map<std::string, std::string> &pro) {
+    // 从属性中读取配置参数
     std::regex N{R"(^vda5050:action.([^.]+)$)"};
     std::regex T{R"(^vda5050:action.([^.]+).blockingType$)"};
     std::regex P{R"(^vda5050:action.([^.]+).parameter.([^.]+)$)"};

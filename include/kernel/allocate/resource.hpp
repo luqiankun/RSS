@@ -27,18 +27,22 @@ class ResourceManager : public RSSObject {
   using RSSObject::RSSObject;
   enum class ResType { Point = 0, Location = 1, Err = 2, Path = 3 };
   ~ResourceManager() { CLOG(INFO, allocate_log) << name << " close\n"; }
-  bool claim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
-  bool allocate(std::vector<TCSResourcePtr>, const ClientPtr&);
-  bool unclaim(const std::vector<TCSResourcePtr>&, const ClientPtr&);
-  bool free(const std::vector<TCSResourcePtr>&, const ClientPtr&);
-  PointPtr get_recent_park_point(const PointPtr&) const;
-  LocationPtr get_recent_charge_loc(const PointPtr&) const;
-  std::shared_ptr<data::order::Route> paths_to_route(std::vector<PointPtr> ps);
+  bool claim(const std::vector<TCSResourcePtr>&, const ClientPtr&);  // 声明
+  bool allocate(std::vector<TCSResourcePtr>, const ClientPtr&);      // 分配
+  bool unclaim(const std::vector<TCSResourcePtr>&,
+               const ClientPtr&);                                   // 解除声明
+  bool free(const std::vector<TCSResourcePtr>&, const ClientPtr&);  // 释放
+  PointPtr get_recent_park_point(const PointPtr&) const;     // 获取最近停车点
+  LocationPtr get_recent_charge_loc(const PointPtr&) const;  // 获取最近充电点
+  std::shared_ptr<data::order::Route> paths_to_route(
+      std::vector<PointPtr> ps);  // 路径转路线
   std::pair<ResType, std::shared_ptr<RSSResource>> find(
-      const std::string& name);
+      const std::string& name);  // 查找资源
   std::vector<std::shared_ptr<data::model::Point>> get_all_idel_points(
-      std::shared_ptr<driver::Vehicle>, bool rm_self_alley = false);
-  std::pair<std::shared_ptr<data::model::Alleyway>, int> get_alleyway(PointPtr);
+      std::shared_ptr<driver::Vehicle>,
+      bool rm_self_alley = false);  // 获取所有空闲点,是否排除自己
+  std::pair<std::shared_ptr<data::model::Alleyway>, int> get_alleyway(
+      PointPtr);  // 获取 点所在的alleyway
 
  public:
   std::mutex mut;

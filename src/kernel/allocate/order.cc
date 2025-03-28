@@ -109,6 +109,7 @@ void OrderPool::push(const TransOrderPtr &order) {
     name = order->intended_vehicle.lock()->name;
   }
   if (name == "unspecified") {
+    //没有指定车辆
     random_orderpool.push_back(order);
     std::stable_sort(random_orderpool.begin(), random_orderpool.end(),
                      OrderCmp());
@@ -164,6 +165,7 @@ void OrderPool ::preprocess() {
       } else {
         std::vector<PointPtr> ps;
         for (auto &x : ord->driverorders) {
+          //检查可达
           auto p = x->destination->destination.lock();
           if (std::dynamic_pointer_cast<data::model::Point>(p)) {
             ps.push_back(std::dynamic_pointer_cast<data::model::Point>(p));

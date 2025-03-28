@@ -10,10 +10,12 @@ class Client : public RSSObject {
  public:
   ~Client() override = default;
   using RSSObject::RSSObject;
-  std::list<std::unordered_set<std::shared_ptr<RSSResource>>> claim_resources;
   std::list<std::unordered_set<std::shared_ptr<RSSResource>>>
-      allocated_resources;
-  std::unordered_set<std::shared_ptr<RSSResource>> future_allocate_resources;
+      claim_resources;  // 声明的资源
+  std::list<std::unordered_set<std::shared_ptr<RSSResource>>>
+      allocated_resources;  // 已分配的资源
+  std::unordered_set<std::shared_ptr<RSSResource>>
+      future_allocate_resources;  // 将来可能分配的资源
   std::string envelope_key;
   std::shared_mutex res_mut;
 };
@@ -38,7 +40,7 @@ class Scheduler : public RSSObject,
  public:
   std::vector<
       std::pair<std::string, std::list<std::shared_ptr<driver::Command>>>>
-      commands;
+      commands;  // 命令池
   std::weak_ptr<allocate::ResourceManager> resource;
   std::thread schedule_th;
   std::condition_variable con_var;

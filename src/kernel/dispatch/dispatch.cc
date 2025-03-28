@@ -26,7 +26,7 @@ VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
         v->avoid_state == driver::Vehicle::Avoid::Normal &&
         v->orderpool.lock()->idel_orderpool(v->name)) {
       if (!v->paused) {
-        idle_temp.emplace_back(v);
+        idle_temp.emplace_back(v);  // IDLE车辆
       }
     } else if (v->state == driver::Vehicle::State::EXECUTING) {
       busy_temp.emplace_back(v);
@@ -35,7 +35,7 @@ VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
     }
   }
   if (idle_temp.empty()) {
-    return nullptr;
+    return nullptr;  // 目前只能选空闲车辆
     if (busy_temp.empty()) {
       if (charge_temp.empty()) {
         return nullptr;
@@ -71,7 +71,7 @@ VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
     }
   } else {
     auto planner = idle_temp.front()->planner.lock();
-
+    // 排序，按离起点路径长度排序
     std::sort(idle_temp.begin(), idle_temp.end(),
               [=](const VehPtr &a, const VehPtr &b) {
                 auto a_len =
@@ -85,13 +85,13 @@ VehPtr Dispatcher::select_vehicle(const allocate::PointPtr &start) {
                 //           << b_len;
                 return a_len <= b_len;
               });
-    return idle_temp.front();
+    return idle_temp.front();  // 返回最近的
   }
 }
 
 std::vector<VehPtr> Dispatcher::deadlock_loop() {
   std::vector<VehPtr> res;
-  // 死锁检测
+  // 死锁检测，将要锁定的资源互相在对方那里
   for (auto &v : vehicles) {
     std::stack<VehPtr> vs;
     std::vector<VehPtr> exist;
@@ -119,6 +119,7 @@ std::vector<VehPtr> Dispatcher::deadlock_loop() {
 }
 
 std::set<VehPtr> Dispatcher::find_depends(const VehPtr &vs) {
+  // 查找阻挡车辆
   std::set<VehPtr> res;
   std::shared_lock<std::shared_mutex> lock(vs->res_mut);
   for (auto &f : vs->future_allocate_resources) {
@@ -224,7 +225,7 @@ void Dispatcher::dispatch_once() {
   //     }
   //   }
   // }
-  bool exist = false;
+  bool exist = false;  // 是否存在空闲车辆
   for (auto &x : vehicles) {
     if (x->state == driver::Vehicle::State::IDLE &&
         x->avoid_state == driver::Vehicle::Avoid::Normal &&
@@ -326,7 +327,7 @@ void Dispatcher::dispatch_once() {
           CLOG(INFO, dispatch_log)
               << current_ord->name << " status: [dispatchable]\n";
         } else {
-          conflict_pool->solve(current_ord);
+          conflict_pool->solve(current_ord);  // 解决一次
         }
 
       } else {
@@ -402,7 +403,7 @@ void Dispatcher::dispatch_once() {
   }
 }
 void Dispatcher::brake_deadlock(const std::vector<VehPtr> &d_loop) {
-  // TODO
+  // 重派优先级低的订单
   if (!d_loop.empty()) {
     if (!d_loop.front()->current_order) {
       if (d_loop.back()->current_order) {
@@ -429,7 +430,7 @@ void Dispatcher::brake_deadlock(const std::vector<VehPtr> &d_loop) {
   }
 }
 void Dispatcher::brake_blocklock(const std::vector<VehPtr> &d_loop) {
-  // TODO
+  // TODO暂时不用
   if (!d_loop.empty()) {
     // if (d_loop.back()->avoid_state == driver::Vehicle::Avoid::Avoiding &&
     //     d_loop.back()->state == driver::Vehicle::State::IDLE) {
@@ -509,6 +510,7 @@ void Dispatcher::run() {
 }
 int Conflict::update() {
   assert(state == State::Raw);
+  // 清空所有资源
   std::stack<VehPtr>().swap(vehicles);
   graph.clear();
   rm_depends.clear();
@@ -523,6 +525,7 @@ int Conflict::update() {
     // 不存在
     throw std::runtime_error("index_driver > driverorders.size()");
   }
+  // 查看路径上是否有阻挡车辆
   auto obj_ = order->driverorders[order->current_driver_index]
                   ->destination->destination.lock();
   auto obj_rss = resource_manager.lock()->find(obj_->name);
@@ -543,6 +546,7 @@ int Conflict::update() {
       auto veh2 = std::dynamic_pointer_cast<driver::Vehicle>(owner);
       if (veh2 == veh) continue;
       if (veh2->state == driver::Vehicle::State::IDLE) {
+        // IDEL车辆视为阻挡
         vehicles.push(veh2);
         rm_depends.insert(veh2);
         // if (veh2->avoid_state == driver::Vehicle::Avoid::Avoiding) {
@@ -585,6 +589,7 @@ void Conflict::solve_once() {
     if (vehicles.empty()) {
       state = State::Solved;
     } else {
+      // 为阻挡队列里每个车选一个点
       bool main_veh_move{false};
       while (!vehicles.empty() && !main_veh_move) {
         auto top = vehicles.top();
@@ -643,7 +648,7 @@ void Conflict::solve_once() {
         }
       }
       if (main_veh_move) {
-        state = State::SelfMove;
+        state = State::SelfMove;  // 需要自己移动
       } else {
         // 分完后判断是否冲突
         bool conflict = false;
@@ -727,10 +732,13 @@ void Conflict::solve_once() {
           std::vector<allocate::PointPtr> rm_ps;
           if (order->intended_vehicle.lock()->avoid_state ==
               driver::Vehicle::Avoid::Avoiding) {
-            rm_ps = order->intended_vehicle.lock()->avoid_points;
+            rm_ps = order->intended_vehicle.lock()
+                        ->avoid_points;  // 车辆当前在避让这些点
           }
-          rm_ps.insert(rm_ps.end(), path.begin(), path.end());
+          rm_ps.insert(rm_ps.end(), path.begin(),
+                       path.end());  // 为后续车辆选点是不能选这些点
           for (auto &x : graph) {
+            // 车辆设置为避让状态，设置当前的正在躲避的点
             x.first->avoid_state = driver::Vehicle::Avoid::Avoiding;
             x.first->avoid_points.clear();
             x.first->avoid_points = path;
@@ -745,6 +753,7 @@ void Conflict::solve_once() {
     state = State::Dispatching;
     dispthed.clear();
   } else if (state == State::Dispatching) {
+    // 冲突解决了，开始派发
     if (graph.empty()) {
       state = State::Dispatched;
     }
@@ -753,7 +762,7 @@ void Conflict::solve_once() {
       auto veh = node.first;
       auto point = node.second;
       auto path = planner.lock()->find_paths(veh->current_point, point).front();
-      // 判断是否有交换冲突
+      // 判断是否有交换冲突，有就先等待
       for (auto &v : dispatcher.lock()->vehicles) {
         if (v == veh) {
           continue;
@@ -792,6 +801,7 @@ void Conflict::solve_once() {
       graph.pop_back();
     }
   } else if (state == State::Dispatched) {
+    // 冲突车辆派发完了，派发主车辆
     auto veh = order->intended_vehicle.lock();
     auto path = planner.lock()->find_paths(veh->current_point, obj).front();
 

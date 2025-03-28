@@ -26,25 +26,27 @@ class Command : public RSSObject {
     DISPOSABLE,
     REDISBUTE
   };
-  DestPtr get_dest(const DriverOrderPtr &);
-  std::vector<StepPtr> get_step(const DriverOrderPtr &, uint32_t);
-  std::vector<StepPtr> get_step_nopop(const DriverOrderPtr &, uint32_t);
+  DestPtr get_dest(const DriverOrderPtr &);  // 获取目的地
+  std::vector<StepPtr> get_step(const DriverOrderPtr &, uint32_t);  // 获取步骤
+  std::vector<StepPtr> get_step_nopop(const DriverOrderPtr &,
+                                      uint32_t);  // 获取步骤,但不弹出
   std::vector<std::shared_ptr<RSSResource>> get_future(
-      const DriverOrderPtr &) const;
+      const DriverOrderPtr &) const;  // 获取未来要锁定的资源
   std::vector<std::shared_ptr<RSSResource>> get_next_allocate_res(
-      const DriverOrderPtr &, const std::shared_ptr<Vehicle> &);
-  void vehicle_execute_cb(bool);  // 车辆通知动作结果
-  void run_once();
+      const DriverOrderPtr &,
+      const std::shared_ptr<Vehicle> &);  // 获取下一步要锁定的资源
+  void vehicle_execute_cb(bool);          // 车辆通知动作结果
+  void run_once();                        // 处理一次
   ~Command() override;
 
  public:
   State state{State::INIT};
   std::weak_ptr<schedule::Scheduler> scheduler;
-  std::weak_ptr<driver::Vehicle> vehicle;
-  TransOrderPtr order;
-  std::function<void(std::vector<StepPtr>)> move;
-  std::function<void(const DestPtr)> action;
-  std::unordered_map<int, std::function<void()>> cbs;
+  std::weak_ptr<driver::Vehicle> vehicle;          // 所属车辆
+  TransOrderPtr order;                             // 当前订单
+  std::function<void(std::vector<StepPtr>)> move;  // 绑定车辆移动回调
+  std::function<void(const DestPtr)> action;       // 绑定车辆动作回调
+  std::unordered_map<int, std::function<void()>> cbs;  // 回调函数
 };
 
 }  // namespace driver

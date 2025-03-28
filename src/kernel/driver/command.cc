@@ -34,6 +34,7 @@ std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
     auto vehs = disptcher->vehicles;
     for (auto &x : vehs) {
       if (x != v && x->state == Vehicle::State::EXECUTING) {
+        // 提取两个车的路线，判断冲突
         std::deque<std::shared_ptr<data::order::Step>> left_step(
             v->current_order
                 ->driverorders[v->current_order->current_driver_index]
@@ -87,6 +88,7 @@ std::shared_ptr<Vehicle> veh_swap_conflict(std::shared_ptr<Vehicle> v) {
   }
 }
 bool veh_conflict(std::shared_ptr<Vehicle> v) {
+  // 查看当前车辆是否与其他车辆有阻挡冲突
   auto driver_order =
       v->current_order->driverorders[v->current_order->current_driver_index];
   if (driver_order->route->steps.empty()) {
@@ -116,6 +118,7 @@ bool veh_conflict(std::shared_ptr<Vehicle> v) {
 }
 // namespace driver
 std::vector<allocate::TCSResourcePtr> Command::get_next_allocate_res(
+    // 获取下次要申请的资源，用于判断死锁
     const allocate::DriverOrderPtr &driver_order,
     const std::shared_ptr<Vehicle> &veh) {
   const auto steps = get_step_nopop(driver_order, veh->send_queue_size);

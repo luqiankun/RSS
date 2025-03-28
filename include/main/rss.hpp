@@ -10,6 +10,10 @@ using json = jsoncons::json;
 using RET = std::pair<int, std::string>;
 inline std::string MQTT_IP{"127.0.0.1"};
 inline int MQTT_PORT{1883};
+/**
+ * @brief 管理调度系统的启动关闭，重置等
+ *
+ */
 class RSS : public std::enable_shared_from_this<RSS> {
  public:
   // transport order
@@ -65,6 +69,7 @@ class RSS : public std::enable_shared_from_this<RSS> {
   void cancel_vehicle_all_order(
       const std::string &vehicle_name) const;  // 取消某辆车所有订单
   void run();
+  // 车辆操作
   void add_vehicle(const std::string &type, const std::string &name);
   void paused_vehicle(const std::string &name) const;
   void recovery_vehicle(const std::string &name) const;

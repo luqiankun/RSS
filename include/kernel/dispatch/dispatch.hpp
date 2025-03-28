@@ -14,14 +14,14 @@ class Dispatcher : public RSSObject {
  public:
   using RSSObject::RSSObject;
   VehPtr select_vehicle(const allocate::PointPtr &);
-  std::set<VehPtr> find_depends(const VehPtr &);
-  std::vector<VehPtr> deadlock_loop();                // 死锁车辆环路
-  std::vector<VehPtr> block_loop();                   // 阻挡环路
-  void brake_deadlock(const std::vector<VehPtr> &);   // TODO 解锁
+  std::set<VehPtr> find_depends(const VehPtr &);     // 查找声明的资源所在的车辆
+  std::vector<VehPtr> deadlock_loop();               // 死锁车辆环路
+  std::vector<VehPtr> block_loop();                  // 阻挡环路
+  void brake_deadlock(const std::vector<VehPtr> &);  // TODO 解锁
   void brake_blocklock(const std::vector<VehPtr> &);  // TODO 移动避让
 
-  void dispatch_once();
-  void idle_detect();
+  void dispatch_once();  // 调度一次
+  void idle_detect();    // 检测空闲
   void run();
   void stop();
   void notify() {
@@ -31,7 +31,7 @@ class Dispatcher : public RSSObject {
   ~Dispatcher() override;
 
  public:
-  std::shared_ptr<ConflictPool> conflict_pool;
+  std::shared_ptr<ConflictPool> conflict_pool;  // 冲入解决器
   std::thread dispatch_th;
   std::thread preprocess_th;
   bool dispose{false};
@@ -44,20 +44,22 @@ class Dispatcher : public RSSObject {
   /// signals
   std::function<std::pair<allocate::ResourceManager::ResType,
                           allocate::TCSResourcePtr>(const std::string &)>
-      find_res;
-  std::function<void(const std::string &, VehPtr)> go_home;
-  std::function<allocate::PointPtr(allocate::PointPtr)> get_park_point;
-  std::function<void(const std::string &, VehPtr)> go_charge;
-  std::function<void(allocate::TransOrderPtr)> pop_order;
-  std::function<void(allocate::TransOrderPtr)> pathc_order;
-  std::function<std::pair<std::string, allocate::TransOrderPtr>()> get_next_ord;
-  std::function<void()> preprocess;
+      find_res;                                              // 查找资源
+  std::function<void(const std::string &, VehPtr)> go_home;  // 下单回停靠点
+  std::function<allocate::PointPtr(allocate::PointPtr)>
+      get_park_point;                                          // 获取最近停车点
+  std::function<void(const std::string &, VehPtr)> go_charge;  // 下单回充电点
+  std::function<void(allocate::TransOrderPtr)> pop_order;      // 弹出
+  std::function<void(allocate::TransOrderPtr)> pathc_order;    // 重新处理一次
   std::function<std::pair<std::string, allocate::TransOrderPtr>()>
-      get_next_random_ord;
-  std::function<bool()> random_list_empty;
-  std::function<bool()> raw_list_empty;
+      get_next_ord;                  // 获取下一个订单
+  std::function<void()> preprocess;  // 预处理
+  std::function<std::pair<std::string, allocate::TransOrderPtr>()>
+      get_next_random_ord;                  // 获取下一个随机订单
+  std::function<bool()> random_list_empty;  // 随机订单列表是否为空
+  std::function<bool()> raw_list_empty;     // 原始订单列表是否为空
 
-  std::function<bool()> order_empty;
+  std::function<bool()> order_empty;  // 订单池是否为空
 };
 const float kMaxOccupancy = 0.9;
 class Conflict {
@@ -74,14 +76,15 @@ class Conflict {
   float occupancy(std::shared_ptr<data::model::Alleyway>, VehPtr);  // 占用率
   float distance(allocate::PointPtr, allocate::PointPtr);           // 路径代价
   bool one_of_other(std::pair<VehPtr, allocate::PointPtr>,
-                    std::pair<VehPtr, allocate::PointPtr>);
+                    std::pair<VehPtr, allocate::PointPtr>);  // 路径是否包含
   void swap_obj(std::pair<VehPtr, allocate::PointPtr>,
-                std::pair<VehPtr, allocate::PointPtr>);
+                std::pair<VehPtr, allocate::PointPtr>);  // 交换目标点
   allocate::PointPtr select_point(VehPtr, std::vector<allocate::PointPtr>,
-                                  bool = false);
-  bool is_swap_conflict(std::vector<allocate::PointPtr> p, VehPtr v);
-  void solve_once();
-  int update();
+                                  bool = false);  // 选择目标点
+  bool is_swap_conflict(std::vector<allocate::PointPtr> p,
+                        VehPtr v);  // 是否交换冲突
+  void solve_once();                // 解决一次
+  int update();                     // 更新
 
  public:
   State state{Conflict::State::Raw};
@@ -92,22 +95,26 @@ class Conflict {
   std::shared_ptr<data::model::Point> obj;
   std::vector<allocate::PointPtr> path;
   allocate::TransOrderPtr order;
-  std::stack<VehPtr> vehicles;
-  std::set<VehPtr> rm_depends;
-  std::map<VehPtr, allocate::PointPtr> dispthed;
-  std::deque<std::pair<VehPtr, allocate::PointPtr>> graph;
+  std::stack<VehPtr> vehicles;                    // 阻挡车辆
+  std::set<VehPtr> rm_depends;                    // 排除的点，视为不阻挡
+  std::map<VehPtr, allocate::PointPtr> dispthed;  // 已派遣的
+  std::deque<std::pair<VehPtr, allocate::PointPtr>> graph;  // 冲突解决方案
 };
+/**
+ * @brief 冲突池
+ *
+ */
 class ConflictPool : public std::enable_shared_from_this<ConflictPool> {
  public:
   ConflictPool(std::shared_ptr<RSS> rss) : rss(rss) {}
-  Conflict::State get_state(allocate::TransOrderPtr);
-  void solve(allocate::TransOrderPtr);
-  void reset_state(allocate::TransOrderPtr);
+  Conflict::State get_state(allocate::TransOrderPtr);  // 获取冲突状态
+  void solve(allocate::TransOrderPtr);                 // 解决一次
+  void reset_state(allocate::TransOrderPtr);           // 重置冲突状态
 
  private:
   std::weak_ptr<RSS> rss;
   std::unordered_map<allocate::TransOrderPtr, std::shared_ptr<Conflict>>
-      conflicts;
+      conflicts;  // 订单冲突池，
   std::mutex mut;
 };
 }  // namespace kernel::dispatch

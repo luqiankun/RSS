@@ -18,6 +18,10 @@ namespace dispatch {
 class Dispatcher;
 }
 namespace driver {
+/**
+ * @brief 车辆基类
+ *
+ */
 class Vehicle : public schedule::Client,
                 public std::enable_shared_from_this<Vehicle> {
  public:
@@ -36,7 +40,7 @@ class Vehicle : public schedule::Client,
   std::string get_state() const;
   std::string get_process_state() const;
   void receive_task(const std::shared_ptr<data::order::TransportOrder> &);
-  void next_command();
+  void next_command();  // 获取下个命令
   void execute_move(
       const std::vector<std::shared_ptr<data::order::Step>> &);  // 执行移动回调
   void execute_action(
@@ -45,20 +49,20 @@ class Vehicle : public schedule::Client,
                // //
   void execute_instatn_action(
       const std::shared_ptr<vda5050::instantaction::Action> &);
-  void command_done();  // 命令完成回调
-  bool plan_route(allocate::TransOrderPtr);
-  void reroute();
-  void get_next_ord();
-  allocate::TransOrderPtr redistribute_cur_order();
+  void command_done();                               // 命令完成回调
+  bool plan_route(allocate::TransOrderPtr);          // 规划路径
+  void reroute();                                    // 重新规划路径
+  void get_next_ord();                               // 获取下一个订单
+  allocate::TransOrderPtr redistribute_cur_order();  // 重新分配订单
   void run();
   void cancel_all_order();
   void close();
   virtual bool action(
       const std::shared_ptr<data::order::DriverOrder::Destination>
-          &) = 0;  // 执行动作
-  virtual bool move(
-      const std::vector<std::shared_ptr<data::order::Step>> &) = 0;  // 执行移动
-  virtual void init() {};  // 初始化或者配置接收外部信息更新机器人状态
+          &) = 0;  // 具体执行动作
+  virtual bool move(const std::vector<std::shared_ptr<data::order::Step>>
+                        &) = 0;  // 具体执行移动
+  virtual void init() {};        // 初始化或者配置接收外部信息更新机器人状态
   virtual bool instant_action(
       const std::shared_ptr<data::model::Actions::Action> &) = 0;
   ~Vehicle() override;
@@ -74,17 +78,22 @@ class Vehicle : public schedule::Client,
   int energy_level_recharge{35};  // 只充电不接订单
   int energy_level_full{90};      // 满电
   int energy_level{100};
-  bool process_charging{false};
-  bool reroute_flag{false};
-  bool init_pos{false};
+  bool process_charging{
+      false};                // 是否正在处理充电任务，但不一定在充电，可能在路上
+  bool reroute_flag{false};  // 是否重新规划路径
+  bool init_pos{false};      // 是否有初始化位置
   integrationLevel integration_level{TO_BE_UTILIZED};
   std::string color;
   State state{State::UNKNOWN};
   proState process_state{proState::IDEL};
   bool paused{false};
-  nowOrder now_order_state{nowOrder::END};
-  Avoid avoid_state{Avoid::Normal};
-  std::vector<std::shared_ptr<data::model::Point>> avoid_points;
+  nowOrder now_order_state{
+      nowOrder::END};  // 当前订单是否是新订单标志，主要用在vda5050那里
+  Avoid avoid_state{
+      Avoid::
+          Normal};  // 当前是否在避让状态，处于避让状态时，不一定在移动中，也可能在等待避让订单派发
+  std::vector<std::shared_ptr<data::model::Point>>
+      avoid_points;  // 当前避让点，
   std::deque<std::shared_ptr<data::order::TransportOrder>> orders;
   std::weak_ptr<schedule::Scheduler> scheduler;
   std::weak_ptr<allocate::ResourceManager> resource;
@@ -112,6 +121,10 @@ class Vehicle : public schedule::Client,
   std::chrono::system_clock::time_point idle_time;
   std::vector<std::string> allowed_order_type;
 };
+/**
+ * @brief 仿真车辆
+ *
+ */
 class SimVehicle : public Vehicle {
  public:
   using Vehicle::Vehicle;
@@ -126,7 +139,10 @@ class SimVehicle : public Vehicle {
  public:
   int rate{1};  // 时间快进比例
 };
-
+/**
+ * @brief vda5050车辆
+ *
+ */
 class Rabbit3 : public Vehicle {
  public:
   Rabbit3(const std::string &name, const std::string &interface_name,
@@ -145,8 +161,8 @@ class Rabbit3 : public Vehicle {
   bool instant_action(
       const std::shared_ptr<data::model::Actions::Action> &) override;
   void init() override;
-  void onstate(const mqtt::const_message_ptr &);
-  void onconnect(const mqtt::const_message_ptr &);
+  void onstate(const mqtt::const_message_ptr &);    // mqtt 状态回调
+  void onconnect(const mqtt::const_message_ptr &);  // mqtt 连接回调
   bool run_script(const std::string &path,
                   std::map<std::string, std::string> param);
   ~Rabbit3() override;
@@ -171,6 +187,10 @@ class Rabbit3 : public Vehicle {
   uuids::uuid order_action_uuid;
   std::mutex python_mutex;
 };
+/**
+ * @brief 非法车辆
+ *
+ */
 class InvalidVehicle : public Vehicle {
  public:
   explicit InvalidVehicle(const std::string &name) : Vehicle(name) {}

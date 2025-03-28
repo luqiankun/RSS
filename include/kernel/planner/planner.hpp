@@ -33,6 +33,7 @@ class Planner {
       const std::shared_ptr<data::model::Point> &,
       const std::shared_ptr<data::model::Point> &);
 
+  // 查找带有最短路径的所有路径，并携带路径长度信息
   std::vector<std::pair<std::vector<VertexPtr>, double>> find_paths_with_vertex(
       const std::shared_ptr<data::model::Point> &begin,
       const std::shared_ptr<data::model::Point> &end);
@@ -42,7 +43,7 @@ class Planner {
   find_second_paths(const std::shared_ptr<data::model::Point> &begin,
                     const std::shared_ptr<data::model::Point> &end);
 
-  //
+  // 规划器的路径转tcs路径
   std::vector<std::vector<std::shared_ptr<data::model::Point>>> to_model_path(
       std::vector<std::pair<std::vector<VertexPtr>, double>> src) const;
 
