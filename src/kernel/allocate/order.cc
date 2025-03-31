@@ -89,6 +89,7 @@ void OrderPool::pop(const TransOrderPtr &order) {
 }
 
 void OrderPool::patch(const TransOrderPtr &order) {
+  // 如果在随机队列中，拿出，重新push
   for (auto it = random_orderpool.begin(); it != random_orderpool.end();) {
     if (*it == order) {
       it = random_orderpool.erase(it);
@@ -99,6 +100,7 @@ void OrderPool::patch(const TransOrderPtr &order) {
       ++it;
     }
   }
+  //不在随机队列中，直接push
   std::unique_lock<std::shared_mutex> lock(mut);
   push(order);
 }
@@ -109,7 +111,7 @@ void OrderPool::push(const TransOrderPtr &order) {
     name = order->intended_vehicle.lock()->name;
   }
   if (name == "unspecified") {
-    //没有指定车辆
+    // 没有指定车辆
     random_orderpool.push_back(order);
     std::stable_sort(random_orderpool.begin(), random_orderpool.end(),
                      OrderCmp());
@@ -165,7 +167,7 @@ void OrderPool ::preprocess() {
       } else {
         std::vector<PointPtr> ps;
         for (auto &x : ord->driverorders) {
-          //检查可达
+          // 检查可达
           auto p = x->destination->destination.lock();
           if (std::dynamic_pointer_cast<data::model::Point>(p)) {
             ps.push_back(std::dynamic_pointer_cast<data::model::Point>(p));

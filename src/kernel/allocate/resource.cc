@@ -96,6 +96,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
                                const ClientPtr &client) {
   std::unique_lock<std::mutex> lock(mut);
   std::unique_lock<std::shared_mutex> lock2(client->res_mut);
+  // 移除空的分配项
   for (auto it = client->allocated_resources.begin();
        it != client->allocated_resources.end();) {
     if (it->empty()) {
@@ -104,14 +105,15 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
       ++it;
     }
   }
-  for (auto it = client->allocated_resources.begin();
-       it != client->allocated_resources.end();) {
-    if (it->empty()) {
-      it = client->allocated_resources.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  // for (auto it = client->allocated_resources.begin();
+  //      it != client->allocated_resources.end();) {
+  //   if (it->empty()) {
+  //     it = client->allocated_resources.erase(it);
+  //   } else {
+  //     ++it;
+  //   }
+  // }
+  // 验证规则是否通过
   for (const auto &r : rules) {
     // LOG(INFO) << r->name;
     if (!r->pass(res, client)) {
@@ -121,6 +123,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
     }
   }
   std::stringstream ss;
+  // 加入envelope_key
   for (auto &r : res) {
     for (auto &p : points) {
       if (static_cast<RSSResource *>(r.get()) == p.get()) {
@@ -147,6 +150,7 @@ bool ResourceManager::allocate(std::vector<TCSResourcePtr> res,
     }
   }
   client->allocated_resources.emplace_back(res.begin(), res.end());
+  // future_allocate_resources 中的对应资源被移除
   for (auto &r : res) {
     for (auto x = client->future_allocate_resources.begin();
          x != client->future_allocate_resources.end();) {

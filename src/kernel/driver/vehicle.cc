@@ -1108,6 +1108,7 @@ bool Rabbit3::move(
   ord.manufacturer = mqtt_cli->manufacturer;
   ord.serial_number = mqtt_cli->serial_number;
   if (now_order_state == nowOrder::BEGIN) {
+    // 判断是否是重新开始计数，新订单重新开始计数，否则不重新开始计数
     ord.order_id = current_order->name;
     update_vda_order_id++;
     ord.order_update_id = update_vda_order_id;
@@ -1125,8 +1126,8 @@ bool Rabbit3::move(
     ord.order_update_id = update_vda_order_id;
   }
   last_step_count = 0;
-  std::set<std::string> wait_act_ord_start;
-  std::set<std::string> wait_act_ord_end;
+  std::set<std::string> wait_act_ord_start;  // 需要开始时执行的动作
+  std::set<std::string> wait_act_ord_end;    // 需要结束时执行的动作
   std::shared_ptr<data::model::Point> start_point;
   if (steps.front()->vehicle_orientation ==
       data::order::Step::Orientation::FORWARD) {
@@ -1150,11 +1151,12 @@ bool Rabbit3::move(
   start.node_position = pos;
   ord.nodes.push_back(start);
   //////////////////////////////////
-  std::vector<data::model::PeripheralActions::PeripheralAction> ready_action;
   std::vector<data::model::PeripheralActions::PeripheralAction>
-      after_allocated_action;
+      ready_action;  // 外设动作
   std::vector<data::model::PeripheralActions::PeripheralAction>
-      after_moved_action;
+      after_allocated_action;  // 分配后执行的动作
+  std::vector<data::model::PeripheralActions::PeripheralAction>
+      after_moved_action;  // 移动后执行的动作
   if (steps.front()->type == data::order::Step::Type::FRONT ||
       steps.size() == 1) {
     ready_action.insert(ready_action.end(), start_point->per_acts.acts.begin(),
@@ -1525,7 +1527,7 @@ bool Rabbit3::move(
   }
   assert(err.empty());
   auto msg = mqtt::make_message(prefix + "order", msg_str, 0, false);
-  mqtt_cli->mqtt_client->publish(msg)->wait();
+  mqtt_cli->mqtt_client->publish(msg)->wait();  // 发送
   // CLOG(INFO, driver_log) << "send order mqtt msg: \n"
   //                        << jsoncons::pretty_print(vaild) << "\n";
 
